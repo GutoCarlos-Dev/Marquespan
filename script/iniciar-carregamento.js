@@ -159,6 +159,16 @@ function valorExisteNoDatalist(datalistId, value) {
         .some(option => String(option.value || '').trim().toUpperCase() === valor);
 }
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[char]));
+}
+
 /**
  * Obtém o ID do item selecionado a partir do texto digitado.
  * @param {string} textoDigitado O texto digitado no campo item
@@ -799,10 +809,87 @@ function renderizarTabelaCarregamento() {
     tabela.appendChild(tbody);
 }
 
+function normalizarTextoResumo(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Z0-9]+/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase();
+}
+
+function obterGrupoItemResumo(item) {
+    const nome = normalizarTextoResumo(item?.item_nome);
+    if (nome.includes('ARMARIO')) return 'demais';
+    if (/\bESTEIRAS?\b/.test(nome)) return 'esteiras';
+    if (/\bFORMAS?\b/.test(nome)) return 'formas';
+    return 'demais';
+}
+
+function obterChaveClienteResumo(requisicao) {
+    return String(requisicao?.cliente_id || normalizarTextoResumo(requisicao?.cliente_nome));
+}
+
+function calcularResumoCarregamento() {
+    const motivos = {
+        'Cliente Novo': 0,
+        'Aumento': 0,
+        'Aumento+Troca': 0,
+        'Troca': 0,
+        'Retirada Parcial': 0,
+        'Retirada de Empréstimo': 0,
+        'Retirada Total': 0
+    };
+    const movimentacao = {
+        entrega: { demais: 0, esteiras: 0, formas: 0, total: 0 },
+        retorno: { demais: 0, esteiras: 0, formas: 0, total: 0 },
+        total: 0
+    };
+    const clientes = new Set();
+    const clientesNovos = new Set();
+    const todasRequisicoes = [
+        ...carregamentoState.requisicoesCarregamento,
+        ...carregamentoState.requisicoesTrocaRetirada
+    ];
+
+    todasRequisicoes.forEach(requisicao => {
+        const chaveCliente = obterChaveClienteResumo(requisicao);
+        if (chaveCliente) clientes.add(chaveCliente);
+        if (requisicao.motivo === 'Cliente Novo' && chaveCliente) clientesNovos.add(chaveCliente);
+        if (Object.hasOwn(motivos, requisicao.motivo)) motivos[requisicao.motivo]++;
+    });
+
+    [
+        ['entrega', carregamentoState.requisicoesCarregamento],
+        ['retorno', carregamentoState.requisicoesTrocaRetirada]
+    ].forEach(([tipoMovimentacao, requisicoes]) => {
+        requisicoes.forEach(requisicao => {
+            (requisicao.itens || []).forEach(item => {
+                const quantidade = Number(item.quantidade) || 0;
+                const grupo = obterGrupoItemResumo(item);
+                movimentacao[tipoMovimentacao][grupo] += quantidade;
+                movimentacao[tipoMovimentacao].total += quantidade;
+                movimentacao.total += quantidade;
+            });
+        });
+    });
+
+    return {
+        movimentacao,
+        motivos,
+        totalClientes: clientes.size,
+        clientesNovos: clientesNovos.size,
+        totalRequisicoes: todasRequisicoes.length
+    };
+}
+
 /**
  * Gera um PDF com todos os dados do carregamento atual.
  */
 async function gerarPDF() {
+    const botao = document.getElementById('btnGerarPDF');
+
     try {
         // Verifica se há dados para gerar o PDF
         if (carregamentoState.requisicoesCarregamento.length === 0 &&
@@ -811,29 +898,45 @@ async function gerarPDF() {
             return;
         }
 
-        console.log('=== DEBUG: gerarPDF ===');
-        console.log('Dados do carregamento:', carregamentoState);
-
         // Coleta os dados do cabeçalho
-        const semana = document.getElementById('semana').value;
+        const semana = document.getElementById('semana').value.trim();
         const dataCarregamento = document.getElementById('dataCarregamento').value;
-        const placa = document.getElementById('placa').value;
+        const placa = document.getElementById('placa').value.trim();
         const motoristaTexto = document.getElementById('motoristaInput').value.trim();
         const motoristaId = obterIdMotoristaPorTexto(motoristaTexto);
-        
-        if (!motoristaId && motoristaTexto !== "") {
-            console.warn('Motorista selecionado não encontrado no cadastro ou inativo.');
+        const conferente = document.getElementById('conferente').value.trim();
+        const supervisor = document.getElementById('supervisor').value.trim();
+
+        if (!semana || !dataCarregamento || !conferente) {
+            alert('Preencha Semana, Data/Hora e Conferente antes de gerar o PDF.');
+            return;
         }
-
-        const conferente = document.getElementById('conferente').value;
-        const supervisor = document.getElementById('supervisor').value;
-
-        console.log('Dados do cabeçalho:', { semana, dataCarregamento, placa, motoristaId, conferente, supervisor });
+        if (!valorExisteNoDatalist('placasVeiculosList', placa)) {
+            alert('Selecione uma placa válida cadastrada em Veículos.');
+            return;
+        }
+        if (!motoristaId) {
+            alert('Selecione um motorista ativo cadastrado em Funcionários.');
+            return;
+        }
+        if (supervisor && !valorExisteNoDatalist('supervisoresList', supervisor)) {
+            alert('Selecione um supervisor ativo cadastrado em Supervisores.');
+            return;
+        }
 
         const motoristaNome = await getMotoristaNomeById(motoristaId);
 
         // Formata a data e hora informadas no formulario.
         const dataFormatada = formatarDataHoraLocal(dataCarregamento);
+        if (!dataFormatada) {
+            alert('Informe uma data e hora válidas.');
+            return;
+        }
+
+        if (botao) {
+            botao.disabled = true;
+            botao.textContent = 'Gerando PDF...';
+        }
 
         // Cria o conteúdo HTML do PDF seguindo o layout especificado
         const conteudoPDF = `
@@ -897,6 +1000,11 @@ async function gerarPDF() {
                         border-collapse: collapse;
                         margin-bottom: 20px;
                         font-size: 12px;
+                        page-break-inside: auto;
+                    }
+                    tr {
+                        page-break-inside: avoid;
+                        page-break-after: auto;
                     }
                     th, td {
                         border: 1px solid #333;
@@ -911,6 +1019,14 @@ async function gerarPDF() {
                     .total-row {
                         background-color: #e8f4fd !important;
                         font-weight: bold;
+                    }
+                    h2 {
+                        font-size: 16px;
+                        margin: 20px 0 8px;
+                    }
+                    .empty-row {
+                        color: #666;
+                        font-style: italic;
                     }
                     .logo-placeholder {
                         width: 100px;
@@ -931,7 +1047,7 @@ async function gerarPDF() {
                     <div class="header-left">
                         <h1>🏢 MARQUESPAN</h1>
                         <div class="subtitle">Relatório de Carregamento</div>
-                        <div class="subtitle">Semana ${semana} - ${dataFormatada}</div>
+                        <div class="subtitle">Semana ${escapeHtml(semana)} - ${escapeHtml(dataFormatada)}</div>
                     </div>
                     <div class="header-right">
                         <div class="logo-placeholder">
@@ -942,33 +1058,24 @@ async function gerarPDF() {
 
                 <div class="info-section">
                     <div class="info-grid">
-                        <div class="info-item"><span class="info-label">SEMANA:</span> ${semana || 'N/A'}</div>
-                        <div class="info-item"><span class="info-label">DATA/HORA:</span> ${dataFormatada || 'N/A'}</div>
-                        <div class="info-item"><span class="info-label">PLACA:</span> ${placa || 'N/A'}</div>
-                        <div class="info-item"><span class="info-label">MOTORISTA:</span> ${motoristaNome || 'N/A'}</div>
-                        <div class="info-item"><span class="info-label">CONFERENTE:</span> ${conferente || 'N/A'}</div>
-                        <div class="info-item"><span class="info-label">SUPERVISOR:</span> ${supervisor || 'N/A'}</div>
+                        <div class="info-item"><span class="info-label">SEMANA:</span> ${escapeHtml(semana)}</div>
+                        <div class="info-item"><span class="info-label">DATA/HORA:</span> ${escapeHtml(dataFormatada)}</div>
+                        <div class="info-item"><span class="info-label">PLACA:</span> ${escapeHtml(placa)}</div>
+                        <div class="info-item"><span class="info-label">MOTORISTA:</span> ${escapeHtml(motoristaNome || motoristaTexto)}</div>
+                        <div class="info-item"><span class="info-label">CONFERENTE:</span> ${escapeHtml(conferente)}</div>
+                        <div class="info-item"><span class="info-label">SUPERVISOR:</span> ${escapeHtml(supervisor || 'N/A')}</div>
                     </div>
                 </div>
 
                 <div class="info-section">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Itens</th>
-                                <th>Clientes Novos</th>
-                                <th>Aumento</th>
-                                <th>Troca</th>
-                                <th>Retirada Parcial</th>
-                                <th>Retirada Empréstimo</th>
-                                <th>Retirada Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${gerarLinhaResumoPDF()}
-                        </tbody>
-                    </table>
+                    ${gerarResumoPDF()}
                 </div>
+
+                <h2>Itens carregados para entrega</h2>
+                ${gerarTabelaItensPDF(carregamentoState.requisicoesCarregamento)}
+
+                <h2>Itens de troca e retirada</h2>
+                ${gerarTabelaItensPDF(carregamentoState.requisicoesTrocaRetirada)}
 
                 <div style="margin-top: 30px; text-align: center; font-size: 10px; color: #666;">
                     <p>Relatório gerado em ${new Date().toLocaleString('pt-BR')}</p>
@@ -978,13 +1085,12 @@ async function gerarPDF() {
             </html>
         `;
 
-        console.log('HTML do PDF gerado:', conteudoPDF);
-
         // Configurações do PDF melhoradas
         const opcoes = {
             margin: [1, 1, 1, 1], // Margens: topo, direita, baixo, esquerda
             filename: `carregamento_semana_${semana}_${dataFormatada.replace(/[/:,\s]/g, '-')}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
+            pagebreak: { mode: ['css', 'legacy'], avoid: ['tr'] },
             html2canvas: {
                 scale: 2,
                 useCORS: true,
@@ -994,7 +1100,7 @@ async function gerarPDF() {
             jsPDF: {
                 unit: 'cm',
                 format: 'a4',
-                orientation: 'portrait',
+                orientation: 'landscape',
                 compress: true
             }
         };
@@ -1007,6 +1113,11 @@ async function gerarPDF() {
     } catch (error) {
         console.error('Erro ao gerar PDF:', error);
         alert('❌ Erro ao gerar PDF. Tente novamente.');
+    } finally {
+        if (botao) {
+            botao.disabled = false;
+            botao.innerHTML = '📄 Gerar PDF';
+        }
     }
 }
 
@@ -1034,68 +1145,103 @@ function gerarLinhasTabela(requisicoes) {
 
     return Object.values(itensAgrupados).map(item => `
         <tr>
-            <td>${item.item_nome.split(' - ')[0]}</td>
-            <td>${item.item_nome.split(' - ')[1] || ''}</td>
-            <td>${item.modelo}</td>
-            <td>${item.tipo}</td>
+            <td>${escapeHtml(item.item_nome)}</td>
+            <td>${escapeHtml(item.modelo)}</td>
+            <td>${escapeHtml(item.tipo)}</td>
             <td style="text-align: center;">${item.quantidade}</td>
-            <td>${item.motivos.join(', ')}</td>
+            <td>${escapeHtml([...new Set(item.motivos)].join(', '))}</td>
         </tr>
     `).join('');
 }
 
-/**
- * Gera a linha de resumo para a tabela principal do PDF
- */
-function gerarLinhaResumoPDF() {
-    // Cálculos das métricas
-    const totalItens = carregamentoState.requisicoesCarregamento.reduce((total, req) => {
-        return total + (req.itens ? req.itens.reduce((sum, item) => sum + item.quantidade, 0) : 0);
-    }, 0) + carregamentoState.requisicoesTrocaRetirada.reduce((total, req) => {
-        return total + (req.itens ? req.itens.reduce((sum, item) => sum + item.quantidade, 0) : 0);
-    }, 0);
-
-    const todosClientes = [
-        ...carregamentoState.requisicoesCarregamento.map(req => req.cliente_nome),
-        ...carregamentoState.requisicoesTrocaRetirada.map(req => req.cliente_nome)
-    ];
-    const totalClientes = [...new Set(todosClientes)].length;
-
-    const contagemMotivos = {
-        'Cliente Novo': 0,
-        'Aumento': 0,
-        'Aumento+Troca': 0,
-        'Troca': 0,
-        'Retirada Parcial': 0,
-        'Retirada de Empréstimo': 0,
-        'Retirada Total': 0
-    };
-
-    carregamentoState.requisicoesCarregamento.forEach(req => {
-        if (contagemMotivos.hasOwnProperty(req.motivo)) {
-            contagemMotivos[req.motivo]++;
-        }
-    });
-
-    carregamentoState.requisicoesTrocaRetirada.forEach(req => {
-        if (contagemMotivos.hasOwnProperty(req.motivo)) {
-            contagemMotivos[req.motivo]++;
-        }
-    });
-
-    const clientesNovos = carregamentoState.requisicoesCarregamento.filter(req => req.motivo === 'Cliente Novo').length +
-                         carregamentoState.requisicoesTrocaRetirada.filter(req => req.motivo === 'Cliente Novo').length;
-
+function gerarTabelaItensPDF(requisicoes) {
+    const linhas = gerarLinhasTabela(requisicoes);
     return `
-        <tr>
-            <td style="font-weight: bold; text-align: center; background-color: #e8f4fd;">${totalItens}</td>
-            <td style="font-weight: bold; text-align: center; background-color: #fff3cd;">${clientesNovos}</td>
-            <td style="text-align: center; background-color: #d1ecf1;">${contagemMotivos['Aumento']}</td>
-            <td style="text-align: center; background-color: #d4edda;">${contagemMotivos['Troca']}</td>
-            <td style="text-align: center; background-color: #f8d7da;">${contagemMotivos['Retirada Parcial']}</td>
-            <td style="text-align: center; background-color: #fff3cd;">${contagemMotivos['Retirada de Empréstimo']}</td>
-            <td style="text-align: center; background-color: #d1ecf1;">${contagemMotivos['Retirada Total']}</td>
-        </tr>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Modelo</th>
+                    <th>Tipo</th>
+                    <th>Quantidade</th>
+                    <th>Motivo</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${linhas || '<tr><td colspan="5" class="empty-row">Nenhum item neste grupo.</td></tr>'}
+            </tbody>
+        </table>
+    `;
+}
+
+/**
+ * Gera as tabelas de resumo para o PDF.
+ */
+function gerarResumoPDF() {
+    const resumo = calcularResumoCarregamento();
+    return `
+        <table>
+            <thead>
+                <tr><th colspan="10">Movimentação de equipamentos</th></tr>
+                <tr>
+                    <th>Entrega demais</th>
+                    <th>Entrega esteiras</th>
+                    <th>Entrega formas</th>
+                    <th>Total entrega</th>
+                    <th>Retorno demais</th>
+                    <th>Retorno esteiras</th>
+                    <th>Retorno formas</th>
+                    <th>Total retorno</th>
+                    <th>Total movimentado</th>
+                    <th>Total clientes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>${resumo.movimentacao.entrega.demais}</td>
+                    <td>${resumo.movimentacao.entrega.esteiras}</td>
+                    <td>${resumo.movimentacao.entrega.formas}</td>
+                    <td><strong>${resumo.movimentacao.entrega.total}</strong></td>
+                    <td>${resumo.movimentacao.retorno.demais}</td>
+                    <td>${resumo.movimentacao.retorno.esteiras}</td>
+                    <td>${resumo.movimentacao.retorno.formas}</td>
+                    <td><strong>${resumo.movimentacao.retorno.total}</strong></td>
+                    <td><strong>${resumo.movimentacao.total}</strong></td>
+                    <td><strong>${resumo.totalClientes}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr><th colspan="10">Requisições por motivo</th></tr>
+                <tr>
+                    <th>Cliente novo (req.)</th>
+                    <th>Aumento</th>
+                    <th>Aumento+Troca</th>
+                    <th>Troca</th>
+                    <th>Ret. parcial</th>
+                    <th>Ret. empréstimo</th>
+                    <th>Ret. total</th>
+                    <th>Total requisições</th>
+                    <th>Clientes novos únicos</th>
+                    <th>Total clientes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>${resumo.motivos['Cliente Novo']}</td>
+                    <td>${resumo.motivos['Aumento']}</td>
+                    <td>${resumo.motivos['Aumento+Troca']}</td>
+                    <td>${resumo.motivos['Troca']}</td>
+                    <td>${resumo.motivos['Retirada Parcial']}</td>
+                    <td>${resumo.motivos['Retirada de Empréstimo']}</td>
+                    <td>${resumo.motivos['Retirada Total']}</td>
+                    <td><strong>${resumo.totalRequisicoes}</strong></td>
+                    <td><strong>${resumo.clientesNovos}</strong></td>
+                    <td><strong>${resumo.totalClientes}</strong></td>
+                </tr>
+            </tbody>
+        </table>
     `;
 }
 
@@ -1528,111 +1674,81 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 function renderizarTabelaResumo() {
     const tabela = document.getElementById('tabelaResumo');
-    if (!tabela) return; // Se não existe a tabela, sai da função
+    if (!tabela) return;
+
+    const resumo = calcularResumoCarregamento();
     tabela.className = 'glass-table data-grid';
 
-    // Cabeçalho da tabela com todas as colunas solicitadas
+    if (!resumo.totalRequisicoes) {
+        tabela.innerHTML = `
+            <thead>
+                <tr><th>RESUMO GERAL DO CARREGAMENTO</th></tr>
+            </thead>
+            <tbody>
+                <tr><td style="text-align: center; color: #666;">Nenhuma requisição adicionada ao carregamento.</td></tr>
+            </tbody>
+        `;
+        return;
+    }
+
     tabela.innerHTML = `
         <thead>
             <tr>
-                <th colspan="8" style="text-align: center; background-color: #f8f9fa; font-weight: bold;">📊 RESUMO GERAL DO CARREGAMENTO</th>
+                <th colspan="10" style="text-align: center; background-color: #f8f9fa;">MOVIMENTAÇÃO DE EQUIPAMENTOS</th>
             </tr>
             <tr>
-                <th>TOTAL ITENS</th>
-                <th>CLI. NOVOS</th>
-                <th>AUMENTO</th>
-                <th>TROCA</th>
-                <th>RET. PARCIAL</th>
-                <th>RET. EMPRÉS.</th>
-                <th>RET. TOTAL</th>
-                <th>TOTAL CLI.</th>
+                <th>ENTREGA DEMAIS</th>
+                <th>ENTREGA ESTEIRAS</th>
+                <th>ENTREGA FORMAS</th>
+                <th>TOTAL ENTREGA</th>
+                <th>RETORNO DEMAIS</th>
+                <th>RETORNO ESTEIRAS</th>
+                <th>RETORNO FORMAS</th>
+                <th>TOTAL RETORNO</th>
+                <th>TOTAL MOVIMENTADO</th>
+                <th>TOTAL CLIENTES</th>
             </tr>
         </thead>
+        <tbody>
+            <tr>
+                <td>${resumo.movimentacao.entrega.demais}</td>
+                <td>${resumo.movimentacao.entrega.esteiras}</td>
+                <td>${resumo.movimentacao.entrega.formas}</td>
+                <td><strong>${resumo.movimentacao.entrega.total}</strong></td>
+                <td>${resumo.movimentacao.retorno.demais}</td>
+                <td>${resumo.movimentacao.retorno.esteiras}</td>
+                <td>${resumo.movimentacao.retorno.formas}</td>
+                <td><strong>${resumo.movimentacao.retorno.total}</strong></td>
+                <td><strong>${resumo.movimentacao.total}</strong></td>
+                <td><strong>${resumo.totalClientes}</strong></td>
+            </tr>
+            <tr>
+                <th colspan="10" style="text-align: center; background-color: #f8f9fa;">REQUISIÇÕES POR MOTIVO</th>
+            </tr>
+            <tr>
+                <th>CLIENTE NOVO (REQ.)</th>
+                <th>AUMENTO</th>
+                <th>AUMENTO+TROCA</th>
+                <th>TROCA</th>
+                <th>RET. PARCIAL</th>
+                <th>RET. EMPRÉSTIMO</th>
+                <th>RET. TOTAL</th>
+                <th>TOTAL REQUISIÇÕES</th>
+                <th>CLI. NOVOS ÚNICOS</th>
+                <th>TOTAL CLIENTES</th>
+            </tr>
+            <tr>
+                <td>${resumo.motivos['Cliente Novo']}</td>
+                <td>${resumo.motivos['Aumento']}</td>
+                <td>${resumo.motivos['Aumento+Troca']}</td>
+                <td>${resumo.motivos['Troca']}</td>
+                <td>${resumo.motivos['Retirada Parcial']}</td>
+                <td>${resumo.motivos['Retirada de Empréstimo']}</td>
+                <td>${resumo.motivos['Retirada Total']}</td>
+                <td><strong>${resumo.totalRequisicoes}</strong></td>
+                <td><strong>${resumo.clientesNovos}</strong></td>
+                <td><strong>${resumo.totalClientes}</strong></td>
+            </tr>
+        </tbody>
     `;
-    const tbody = document.createElement('tbody');
-
-    // === CÁLCULO DAS MÉTRICAS ===
-
-    // 1. Total de itens (soma de todos os itens de todas as requisições)
-    const totalItens = carregamentoState.requisicoesCarregamento.reduce((total, req) => {
-        return total + (req.itens ? req.itens.reduce((sum, item) => sum + item.quantidade, 0) : 0);
-    }, 0) + carregamentoState.requisicoesTrocaRetirada.reduce((total, req) => {
-        return total + (req.itens ? req.itens.reduce((sum, item) => sum + item.quantidade, 0) : 0);
-    }, 0);
-
-    // 2. Total de clientes únicos
-    const todosClientes = [
-        ...carregamentoState.requisicoesCarregamento.map(req => req.cliente_nome),
-        ...carregamentoState.requisicoesTrocaRetirada.map(req => req.cliente_nome)
-    ];
-    const totalClientes = [...new Set(todosClientes)].length;
-
-    // 3. Contagem por tipo de motivo
-    const contagemMotivos = {
-        'Cliente Novo': 0,
-        'Aumento': 0,
-        'Aumento+Troca': 0,
-        'Troca': 0,
-        'Retirada Parcial': 0,
-        'Retirada de Empréstimo': 0,
-        'Retirada Total': 0
-    };
-
-    // Conta os motivos de carregamento
-    carregamentoState.requisicoesCarregamento.forEach(req => {
-        if (contagemMotivos.hasOwnProperty(req.motivo)) {
-            contagemMotivos[req.motivo]++;
-        }
-    });
-
-    // Conta os motivos de troca/retirada
-    carregamentoState.requisicoesTrocaRetirada.forEach(req => {
-        if (contagemMotivos.hasOwnProperty(req.motivo)) {
-            contagemMotivos[req.motivo]++;
-        }
-    });
-
-    // 4. Clientes novos (contar quantas requisições são de "Cliente Novo")
-    const clientesNovos = carregamentoState.requisicoesCarregamento.filter(req => req.motivo === 'Cliente Novo').length +
-                         carregamentoState.requisicoesTrocaRetirada.filter(req => req.motivo === 'Cliente Novo').length;
-
-    // === RENDERIZAÇÃO DA TABELA ===
-
-    // Se não há dados, mostra mensagem
-    if (totalItens === 0) {
-        const trVazio = document.createElement('tr');
-        trVazio.innerHTML = `
-            <td colspan="8" style="text-align: center; color: #666;">
-                Nenhum item adicionado ao carregamento ainda.
-            </td>
-        `;
-        tbody.appendChild(trVazio);
-    } else {
-        // Cria linha com os dados calculados
-        const trDados = document.createElement('tr');
-        trDados.innerHTML = `
-            <td style="font-weight: bold; text-align: center; background-color: #e8f4fd;">${totalItens}</td>
-            <td style="font-weight: bold; text-align: center; background-color: #fff3cd;">${clientesNovos}</td>
-            <td style="text-align: center; background-color: #d1ecf1;">${contagemMotivos['Aumento']}</td>
-            <td style="text-align: center; background-color: #d4edda;">${contagemMotivos['Troca']}</td>
-            <td style="text-align: center; background-color: #f8d7da;">${contagemMotivos['Retirada Parcial']}</td>
-            <td style="text-align: center; background-color: #fff3cd;">${contagemMotivos['Retirada de Empréstimo']}</td>
-            <td style="text-align: center; background-color: #d1ecf1;">${contagemMotivos['Retirada Total']}</td>
-            <td style="font-weight: bold; text-align: center; background-color: #e8f4fd;">${totalClientes}</td>
-        `;
-        tbody.appendChild(trDados);
-
-        // Adiciona linha com detalhes dos itens por tipo
-        const trDetalhes = document.createElement('tr');
-        trDetalhes.innerHTML = `
-            <td colspan="8" style="font-size: 12px; color: #666; padding: 5px;">
-                <strong>Detalhes:</strong> ${contagemMotivos['Aumento+Troca']} Aumento+Troca |
-                Total Carregamento: ${carregamentoState.requisicoesCarregamento.length} |
-                Total Troca/Retirada: ${carregamentoState.requisicoesTrocaRetirada.length}
-            </td>
-        `;
-        tbody.appendChild(trDetalhes);
-    }
-
-    tabela.appendChild(tbody);
 }
