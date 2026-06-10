@@ -5,6 +5,20 @@ const IMPORTACAO_CARREGAMENTO_KEY = 'carregamentoImportadoXlsx';
 let clientesImportacao = [];
 let itensImportacao = [];
 
+function formatarCliente(cliente) {
+    return cliente ? `${cliente.codigo} - ${cliente.nome}` : '';
+}
+
+function atualizarDatalistClientes() {
+    const datalist = document.getElementById('clientes-list');
+    datalist.innerHTML = '';
+    clientesImportacao.forEach(cliente => {
+        const option = document.createElement('option');
+        option.value = formatarCliente(cliente);
+        datalist.appendChild(option);
+    });
+}
+
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({
         '&': '&amp;',
@@ -184,13 +198,7 @@ async function carregarCadastrosImportacao() {
     clientesImportacao = clientesResult.data || [];
     itensImportacao = itensResult.data || [];
 
-    const datalist = document.getElementById('clientes-list');
-    datalist.innerHTML = '';
-    clientesImportacao.forEach(cliente => {
-        const option = document.createElement('option');
-        option.value = `${cliente.codigo} - ${cliente.nome}`;
-        datalist.appendChild(option);
-    });
+    atualizarDatalistClientes();
 }
 
 function normalizarTexto(value) {
@@ -254,6 +262,40 @@ function encontrarClientePorArquivo(fileName) {
     if (!pontuados.length) return null;
     if (pontuados[1] && pontuados[0].pontuacao === pontuados[1].pontuacao) return null;
     return pontuados[0].cliente;
+}
+
+function extrairClienteCelula(value) {
+    const texto = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!texto) return { codigo: '', nome: '', texto: '' };
+
+    const match = texto.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+    if (!match) return { codigo: '', nome: texto, texto };
+
+    return {
+        nome: match[1].trim(),
+        codigo: match[2].trim(),
+        texto
+    };
+}
+
+function encontrarClientePorDados(dadosCliente) {
+    const codigo = normalizarBusca(dadosCliente?.codigo);
+    const nome = normalizarBusca(dadosCliente?.nome);
+
+    if (codigo) {
+        const porCodigo = clientesImportacao.find(cliente =>
+            normalizarBusca(cliente.codigo) === codigo
+        );
+        if (porCodigo) return porCodigo;
+    }
+
+    if (nome) {
+        return clientesImportacao.find(cliente =>
+            normalizarBusca(cliente.nome) === nome
+        ) || null;
+    }
+
+    return null;
 }
 
 function obterMotivoArquivo(fileName, motivoPlanilha) {
@@ -425,6 +467,12 @@ btnAtualizar.addEventListener("click", () => {
 });
 document.getElementById("btnGerarXLS").addEventListener("click", gerarXLSResumo);
 document.getElementById('btnIniciarCarregamento').addEventListener('click', prepararInicioCarregamento);
+document.getElementById('formCadastroClienteImportacao').addEventListener('submit', salvarClienteImportacao);
+document.getElementById('btnFecharCadastroCliente').addEventListener('click', fecharCadastroCliente);
+document.getElementById('btnCancelarCadastroCliente').addEventListener('click', fecharCadastroCliente);
+document.getElementById('modalCadastroCliente').addEventListener('click', event => {
+    if (event.target.id === 'modalCadastroCliente') fecharCadastroCliente();
+});
 
 document.getElementById("fileUpload").addEventListener("change", function(e) {
     const files = e.target.files;
@@ -468,6 +516,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             const sheet = workbook.Sheets[cfg.sheet];
             const motivoCell = sheet[cfg.motivoCell];
             const motivo = motivoCell ? motivoCell.v : "Não informado";
+            const dadosClientePlanilha = extrairClienteCelula(sheet.C4?.v);
 
             const rows = [];
             for (let r = cfg.startRow; r <= cfg.endRow; r++) {
@@ -500,16 +549,19 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                 type = "retorno";
             }
             const gridIndex = grids.length;
-            const clienteSugerido = encontrarClientePorArquivo(file.name);
-            const clienteSugeridoTexto = clienteSugerido
-                ? `${clienteSugerido.codigo} - ${clienteSugerido.nome}`
-                : '';
+            const clienteSugerido = encontrarClientePorDados(dadosClientePlanilha) ||
+                encontrarClientePorArquivo(file.name);
+            const clienteSugeridoTexto = formatarCliente(clienteSugerido);
+            const clientePendenteTexto = dadosClientePlanilha.codigo && dadosClientePlanilha.nome
+                ? `${dadosClientePlanilha.codigo} - ${dadosClientePlanilha.nome}`
+                : dadosClientePlanilha.nome;
             grids.push({
                 type,
                 rows,
                 arquivo: file.name,
                 motivo: obterMotivoArquivo(file.name, motivo),
-                cliente: clienteSugeridoTexto,
+                cliente: clienteSugeridoTexto || clientePendenteTexto,
+                clientePlanilha: dadosClientePlanilha,
                 ordem: ''
             });
 
@@ -544,7 +596,11 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             // Cria tabela HTML
             let html = `<article class="arquivo-card"><h4><i class="fas fa-file-excel"></i> ${escapeHtml(file.name)}</h4>`;
             html += `<div class="arquivo-meta"><div class="motivo-box"><strong>Motivo:</strong> ${escapeHtml(motivo)}</div>`;
-            html += `<label class="cliente-box"><strong>Cliente:</strong> <input type="text" class="cliente-importacao" data-grid="${gridIndex}" list="clientes-list" value="${escapeHtml(clienteSugeridoTexto)}" placeholder="Código - Cliente" required></label>`;
+            html += `<label class="cliente-box"><strong>Cliente:</strong> <input type="text" class="cliente-importacao" data-grid="${gridIndex}" list="clientes-list" value="${escapeHtml(clienteSugeridoTexto || clientePendenteTexto)}" placeholder="Código - Cliente" required>`;
+            if (!clienteSugerido) {
+                html += `<button type="button" class="btn-glass btn-green btn-cadastrar-cliente" data-grid="${gridIndex}"><i class="fas fa-user-plus"></i> Cadastrar</button>`;
+            }
+            html += `<small class="cliente-origem">Origem: célula C4${dadosClientePlanilha.texto ? ` - ${escapeHtml(dadosClientePlanilha.texto)}` : ' não preenchida'}</small></label>`;
             html += `<label class="ordem-box"><strong>Ordem:</strong> <input type="text" class="ordem-importacao" data-grid="${gridIndex}" placeholder="0000" maxlength="4"></label></div>`;
             html += `<div class="data-table"><table data-index="${gridIndex}"><thead><tr>`;
             cfg.headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
@@ -624,6 +680,12 @@ tablesContainer.addEventListener("change", function(e) {
 
     // Atualiza automaticamente ao alterar:
     recalcularTotais();
+});
+
+tablesContainer.addEventListener('click', event => {
+    const button = event.target.closest('.btn-cadastrar-cliente');
+    if (!button) return;
+    abrirCadastroCliente(Number(button.dataset.grid));
 });
 
 // Função para gerar XLS de resumo
@@ -753,6 +815,85 @@ function gerarXLSResumo() {
     XLSX.writeFile(wb, `resumo_carregamento_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
+function abrirCadastroCliente(gridIndex) {
+    const grid = grids[gridIndex];
+    if (!grid) return;
+
+    document.getElementById('clienteGridIndex').value = String(gridIndex);
+    document.getElementById('clienteCodigoImportacao').value = grid.clientePlanilha?.codigo || '';
+    document.getElementById('clienteNomeImportacao').value = grid.clientePlanilha?.nome || '';
+    document.getElementById('clienteCidadeImportacao').value = '';
+    document.getElementById('clienteEstadoImportacao').value = '';
+    document.getElementById('modalCadastroCliente').classList.remove('hidden');
+    document.getElementById('clienteCidadeImportacao').focus();
+}
+
+function fecharCadastroCliente() {
+    document.getElementById('modalCadastroCliente').classList.add('hidden');
+    document.getElementById('formCadastroClienteImportacao').reset();
+    document.getElementById('clienteGridIndex').value = '';
+}
+
+async function salvarClienteImportacao(event) {
+    event.preventDefault();
+
+    const gridIndex = Number(document.getElementById('clienteGridIndex').value);
+    const codigo = document.getElementById('clienteCodigoImportacao').value.trim();
+    const nome = document.getElementById('clienteNomeImportacao').value.trim();
+    const cidade = document.getElementById('clienteCidadeImportacao').value.trim();
+    const estado = document.getElementById('clienteEstadoImportacao').value.trim().toUpperCase();
+
+    if (!codigo || !nome || !cidade || !estado) {
+        alert('Preencha código, nome, cidade e estado.');
+        return;
+    }
+
+    const existente = encontrarClientePorDados({ codigo, nome });
+    if (existente) {
+        aplicarClienteCadastrado(existente, gridIndex);
+        fecharCadastroCliente();
+        return;
+    }
+
+    const { data, error } = await supabaseClient
+        .from('clientes')
+        .insert([{ codigo, nome, cidade, estado }])
+        .select('id, codigo, nome')
+        .single();
+
+    if (error) {
+        console.error('Erro ao cadastrar cliente durante a importação:', error);
+        alert(`Não foi possível cadastrar o cliente: ${error.message}`);
+        return;
+    }
+
+    clientesImportacao.push(data);
+    clientesImportacao.sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+    atualizarDatalistClientes();
+    aplicarClienteCadastrado(data, gridIndex);
+    fecharCadastroCliente();
+    atualizarStatus(`Cliente ${formatarCliente(data)} cadastrado e associado às requisições.`);
+}
+
+function aplicarClienteCadastrado(cliente, gridIndexOrigem) {
+    const codigo = normalizarBusca(cliente.codigo);
+    const nome = normalizarBusca(cliente.nome);
+
+    grids.forEach((grid, index) => {
+        const mesmoCodigo = codigo &&
+            normalizarBusca(grid.clientePlanilha?.codigo) === codigo;
+        const mesmoNome = nome &&
+            normalizarBusca(grid.clientePlanilha?.nome) === nome;
+
+        if (index !== gridIndexOrigem && !mesmoCodigo && !mesmoNome) return;
+
+        grid.cliente = formatarCliente(cliente);
+        const input = tablesContainer.querySelector(`.cliente-importacao[data-grid="${index}"]`);
+        if (input) input.value = grid.cliente;
+        tablesContainer.querySelector(`.btn-cadastrar-cliente[data-grid="${index}"]`)?.remove();
+    });
+}
+
 function prepararInicioCarregamento() {
     if (!grids.length) {
         alert('Importe pelo menos uma requisição antes de iniciar o carregamento.');
@@ -785,7 +926,9 @@ function prepararInicioCarregamento() {
 
     const erros = new Set();
     const requisicoes = grids.map((grid, index) => {
-        const cliente = encontrarCliente(grid.cliente) || encontrarClientePorArquivo(grid.arquivo);
+        const cliente = encontrarCliente(grid.cliente) ||
+            encontrarClientePorDados(grid.clientePlanilha) ||
+            encontrarClientePorArquivo(grid.arquivo);
         if (!cliente) {
             erros.add(`Arquivo ${grid.arquivo}: selecione um cliente válido.`);
         }

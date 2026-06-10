@@ -120,6 +120,57 @@
     width: calc(100% - 70px);
 }
 
+.cliente-box .btn-cadastrar-cliente {
+    margin-left: 8px;
+    padding: 6px 10px;
+}
+
+.cliente-origem {
+    color: #6c757d;
+    display: block;
+    font-size: 0.78rem;
+    margin: 5px 0 0 72px;
+}
+
+.import-modal {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: 20px;
+    position: fixed;
+    z-index: 10000;
+}
+
+.import-modal-content {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+    max-width: 720px;
+    padding: 22px;
+    width: 100%;
+}
+
+.import-modal-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.import-modal-header h3 {
+    color: #006937;
+    margin: 0;
+}
+
+.modal-close {
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-size: 1.8rem;
+}
+
 .data-table {
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 12px;
