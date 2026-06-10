@@ -606,7 +606,17 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
 
             const sheet = workbook.Sheets[cfg.sheet];
             const motivoCell = sheet[cfg.motivoCell];
-            const motivo = motivoCell ? motivoCell.v : "Não informado";
+            // Fallback: se a célula esperada não estiver preenchida, tenta a célula I11 (descrição)
+            let motivo = motivoCell ? String(motivoCell.v || '').trim() : '';
+            let motivoOrigem = `${cfg.sheet}!${cfg.motivoCell}`;
+            if (!motivo) {
+                const fallbackCell = sheet['I11'];
+                if (fallbackCell && String(fallbackCell.v || '').trim()) {
+                    motivo = String(fallbackCell.v).trim();
+                    motivoOrigem = `${cfg.sheet}!I11`;
+                }
+            }
+            if (!motivo) motivo = "Não informado";
             const dadosClientePlanilha = extrairClienteCelula(sheet[cfg.clienteCell]?.v);
             const cidadePlanilha = String(sheet[cfg.cidadeCell]?.v || '').trim();
             const estadoSheet = cfg.estadoSheet ? workbook.Sheets[cfg.estadoSheet] : null;
@@ -695,7 +705,7 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
 
             // Cria tabela HTML
             let html = `<article class="arquivo-card"><h4><i class="fas fa-file-excel"></i> ${escapeHtml(file.name)}</h4>`;
-            html += `<div class="arquivo-meta"><div class="motivo-box"><strong>Motivo:</strong> ${escapeHtml(motivo)}</div>`;
+            html += `<div class="arquivo-meta"><div class="motivo-box"><strong>Motivo:</strong> ${escapeHtml(motivo)} <small style="margin-left:8px; color:#888;">(origem: ${escapeHtml(motivoOrigem)})</small></div>`;
             html += `<label class="cliente-box"><strong>Cliente:</strong> <input type="text" class="cliente-importacao" data-grid="${gridIndex}" list="clientes-list" value="${escapeHtml(clienteSugeridoTexto || clientePendenteTexto)}" placeholder="Código - Cliente" required>`;
             if (!clienteSugerido) {
                 html += `<button type="button" class="btn-glass btn-green btn-cadastrar-cliente" data-grid="${gridIndex}"><i class="fas fa-user-plus"></i> Cadastrar</button>`;
