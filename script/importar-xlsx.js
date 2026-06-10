@@ -419,25 +419,47 @@ function normalizeEquipment(equip) {
     return String(equip || '').replace(/\s+/g, ' ').trim().toUpperCase();
 }
 
+function obterGrupoResumoEquipamento(equipamento) {
+    const nome = normalizarBusca(equipamento);
+    if (nome === 'ESTEIRA' || nome === 'ESTEIRAS') return 'esteiras';
+    if (nome === 'FORMA' || nome === 'FORMAS') return 'formas';
+    return 'demais';
+}
+
 function recalcularTotais() {
     let totalEquip_Carreg = 0, totalNovos_Carreg = 0, totalUsados_Carreg = 0;
+    let totalEsteiras_Carreg = 0, totalFormas_Carreg = 0;
     let totalEquip_Retorno = 0, totalNovos_Retorno = 0, totalUsados_Retorno = 0;
+    let totalEsteiras_Retorno = 0, totalFormas_Retorno = 0;
 
     grids.forEach(grid => {
         grid.rows.forEach(r => {
             const qtd = parseFloat(r[0]) || 0;
+            const grupo = obterGrupoResumoEquipamento(r[1]);
             const nMark = String(r[3] || '').trim().toUpperCase();
             const uMark = String(r[4] || '').trim().toUpperCase();
             const addQtd = qtd > 0 ? qtd : 1;
 
             if (grid.type === "carregamento") {
-                totalEquip_Carreg += qtd;
-                if (nMark === "X") totalNovos_Carreg += addQtd;
-                if (uMark === "X") totalUsados_Carreg += addQtd;
+                if (grupo === 'esteiras') {
+                    totalEsteiras_Carreg += qtd;
+                } else if (grupo === 'formas') {
+                    totalFormas_Carreg += qtd;
+                } else {
+                    totalEquip_Carreg += qtd;
+                    if (nMark === "X") totalNovos_Carreg += addQtd;
+                    if (uMark === "X") totalUsados_Carreg += addQtd;
+                }
             } else if (grid.type === "retorno") {
-                totalEquip_Retorno += qtd;
-                if (nMark === "X") totalNovos_Retorno += addQtd;
-                if (uMark === "X") totalUsados_Retorno += addQtd;
+                if (grupo === 'esteiras') {
+                    totalEsteiras_Retorno += qtd;
+                } else if (grupo === 'formas') {
+                    totalFormas_Retorno += qtd;
+                } else {
+                    totalEquip_Retorno += qtd;
+                    if (nMark === "X") totalNovos_Retorno += addQtd;
+                    if (uMark === "X") totalUsados_Retorno += addQtd;
+                }
             }
         });
     });
@@ -446,15 +468,19 @@ function recalcularTotais() {
       <div class="resumo-section">
         <div class="resumo-card">
           <h3>🚚 Carregamento (NOVO/TROCA/AMT)</h3>
-          <p><b>Total de Equipamentos:</b> <span class="total">${totalEquip_Carreg}</span></p>
-          <p><b>Novos (N):</b> <span class="total">${totalNovos_Carreg}</span></p>
-          <p><b>Usados (U):</b> <span class="total">${totalUsados_Carreg}</span></p>
+          <p><b>Demais Equipamentos:</b> <span class="total">${totalEquip_Carreg}</span></p>
+          <p><b>Novos (demais):</b> <span class="total">${totalNovos_Carreg}</span></p>
+          <p><b>Usados (demais):</b> <span class="total">${totalUsados_Carreg}</span></p>
+          <p><b>Esteiras:</b> <span class="total">${totalEsteiras_Carreg}</span></p>
+          <p><b>Formas:</b> <span class="total">${totalFormas_Carreg}</span></p>
         </div>
         <div class="resumo-card">
           <h3>🔄 Retorno (RP/RT)</h3>
-          <p><b>Total de Equipamentos:</b> <span class="total">${totalEquip_Retorno}</span></p>
-          <p><b>Novos (N):</b> <span class="total">${totalNovos_Retorno}</span></p>
-          <p><b>Usados (U):</b> <span class="total">${totalUsados_Retorno}</span></p>
+          <p><b>Demais Equipamentos:</b> <span class="total">${totalEquip_Retorno}</span></p>
+          <p><b>Novos (demais):</b> <span class="total">${totalNovos_Retorno}</span></p>
+          <p><b>Usados (demais):</b> <span class="total">${totalUsados_Retorno}</span></p>
+          <p><b>Esteiras:</b> <span class="total">${totalEsteiras_Retorno}</span></p>
+          <p><b>Formas:</b> <span class="total">${totalFormas_Retorno}</span></p>
         </div>
       </div>
     `;
