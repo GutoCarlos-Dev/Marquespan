@@ -1,168 +1,93 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Importar XLSX - Marquespan</title>
-
-    <!-- CSS do projeto -->
-    <link rel="stylesheet" href="css/index.css">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/importar-xlsx.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Biblioteca XLSX -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Importar XLSX - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/menu.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/iniciar-carregamento.css">
+  <link rel="stylesheet" href="css/importar-xlsx.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-    <!-- 🟩 Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-        <img src="logo.png" alt="Logo Marquespan" class="logo">
-        <div class="usuario-logado" id="usuario-logado">👤 Olá, Usuário</div>
-        <nav>
-            <a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
-            <a href="veiculos.html"><i class="fas fa-truck"></i> <span>Veículos</span></a>
-            <a href="#"><i class="fas fa-gas-pump"></i> <span>Abastecimentos</span></a>
-            <div class="menu-group">
-                <button class="menu-toggle">
-                    <i class="fas fa-tools"></i> <span>Manutenções</span> <i class="fas fa-caret-down"></i>
-                </button>
-                <div class="submenu">
-                    <a href="incluir-manutencao.html">Incluir Manutenção</a>
-                    <a href="buscar-manutencao.html">Buscar Manutenção</a>
-                </div>
-            </div>
-            <div class="menu-group">
-                <button class="menu-toggle">
-                    <i class="fas fa-truck-loading"></i> <span>Carregamento</span> <i class="fas fa-caret-down"></i>
-                </button>
-                <div class="submenu">
-                    <a href="cadastro-carregamento.html">Cadastro</a>
-                    <a href="iniciar-carregamento.html">Iniciar Carregamento</a>
-                    <a href="importar-xlsx.html">Importar XLSX</a>
-                    <a href="buscar-carregamento.html">Buscar Carregamento</a>
-                </div>
-            </div>
-            <a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>Custos</span></a>
-            <a href="usuarios.html"><i class="fas fa-users"></i> Usuários</a>
-            <a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a>
-        </nav>
-    </div>
+  <div id="menu-container"></div>
 
-    <!-- 🧱 Conteúdo principal -->
-    <div class="main-content">
-        <header class="header">📦 Importar Requisições XLSX</header>
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-file-excel"></i> Importar Requisições XLSX</h1>
+    </header>
 
-        <!-- Cabeçalho do carregamento -->
-        <div class="importar-xlsx-header">
-            <h2>📤 Importar Requisições de Equipamentos</h2>
-            <p class="subtitle">Faça upload dos arquivos XLSX para processar as requisições</p>
+    <section class="glass-panel">
+      <h3><i class="fas fa-truck-loading"></i> Dados do Carregamento</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="semana">Semana:</label>
+          <input type="text" id="semana" class="glass-input" placeholder="Ex.: 24-2026" required>
         </div>
-
-        <!-- Formulário de dados do carregamento -->
-        <div class="importar-xlsx-form">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="semana">Semana:</label>
-                    <input type="text" id="semana" placeholder="Número da Semana">
-                </div>
-                <div class="form-group">
-                    <label for="data">Data:</label>
-                    <input type="date" id="data">
-                </div>
-                <div class="form-group">
-                    <label for="placa">Placa:</label>
-                    <input type="text" id="placa" placeholder="Placa do Veículo" list="placas-list">
-                    <datalist id="placas-list">
-                        <!-- Opções serão preenchidas pelo JavaScript -->
-                    </datalist>
-                </div>
-                <div class="form-group">
-                    <label for="motorista">Motorista:</label>
-                    <input type="text" id="motorista" placeholder="Nome do Motorista">
-                </div>
-                <div class="form-group">
-                    <label for="conferente">Conferente: <span class="auto-fill-indicator">🔄 Auto</span></label>
-                    <input type="text" id="conferente" placeholder="Usuário logado" disabled>
-                    <input type="hidden" id="usuario-logado-hidden">
-                </div>
-                <div class="form-group">
-                    <label for="supervisor">Supervisor:</label>
-                    <select id="supervisor">
-                        <option value="">Selecione...</option>
-                        <option>ALEXANDRE</option>
-                        <option>IAMARINO</option>
-                        <option>CLAUDINEI</option>
-                        <option>CLEITON</option>
-                        <option>EDUARDO</option>
-                        <option>JADILSON</option>
-                        <option>JONATHAN</option>
-                        <option>LEANDRO</option>
-                        <option>MARCOS</option>
-                        <option>MAURO</option>
-                        <option>RAFAEL</option>
-                        <option>RUI</option>
-                        <option>SERGIO</option>
-                        <option>WUILISMAR</option>
-                        <option>WASHINGTON</option>
-                    </select>
-                </div>
-                            </div>
+        <div class="form-group">
+          <label for="dataHora">Data/Hora:</label>
+          <input type="datetime-local" id="dataHora" class="glass-input" step="60" required>
         </div>
-
-        <!-- Seção de upload -->
-        <div class="upload-section">
-            <h3>📁 Selecionar Arquivos XLSX</h3>
-            <div class="file-input-container">
-                <input type="file" id="fileUpload" multiple accept=".xlsx">
-            </div>
-            
+        <div class="form-group">
+          <label for="placa">Placa:</label>
+          <input type="text" id="placa" class="glass-input" placeholder="Selecione um veículo cadastrado" list="placas-list" required>
+          <datalist id="placas-list"></datalist>
         </div>
-
-        <!-- Botão atualizar -->
-        <div class="update-button-container">
-            <button class="btn-atualizar" id="btnAtualizar">
-                <i class="fas fa-sync-alt"></i> Atualizar Totais
-            </button>
-            <button class="btn-gerar-xls" id="btnGerarXLS">
-                <i class="fas fa-file-excel"></i> Gerar XLS de Resumo
-            </button>
+        <div class="form-group">
+          <label for="motorista">Motorista:</label>
+          <input type="text" id="motorista" class="glass-input" placeholder="Selecione um motorista ativo" list="motoristas-list" required>
+          <datalist id="motoristas-list"></datalist>
         </div>
+        <div class="form-group">
+          <label for="conferente">Conferente:</label>
+          <input type="text" id="conferente" class="glass-input" placeholder="Usuário logado" disabled>
+          <input type="hidden" id="usuario-logado-hidden">
+        </div>
+        <div class="form-group">
+          <label for="supervisor">Supervisor:</label>
+          <input type="text" id="supervisor" class="glass-input" placeholder="Selecione um supervisor ativo" list="supervisores-list">
+          <datalist id="supervisores-list"></datalist>
+        </div>
+      </div>
+    </section>
 
-        <!-- Tabelas de dados -->
-        <div id="tables" class="tables-section"></div>
+    <section class="glass-panel upload-panel">
+      <h3><i class="fas fa-folder-open"></i> Selecionar Arquivos</h3>
+      <label class="upload-dropzone" for="fileUpload">
+        <i class="fas fa-cloud-arrow-up"></i>
+        <strong>Selecione um ou mais arquivos XLSX</strong>
+        <span id="fileSelectionText">Nenhum arquivo selecionado</span>
+      </label>
+      <input type="file" id="fileUpload" multiple accept=".xlsx,.xls">
+      <p class="upload-help">Os nomes dos arquivos devem conter marcadores como (NOVO), (TROCA), (AMT), (RP), (RT) ou (RE).</p>
+    </section>
 
-        <!-- Resumo -->
-        <div id="resumo"></div>
+    <section class="form-actions import-actions">
+      <button type="button" class="btn-glass btn-blue" id="btnAtualizar">
+        <i class="fas fa-calculator"></i> Atualizar Totais
+      </button>
+      <button type="button" class="btn-glass btn-green" id="btnGerarXLS">
+        <i class="fas fa-file-excel"></i> Gerar XLS de Resumo
+      </button>
+      <button type="button" class="btn-glass btn-orange" id="btnIniciarCarregamento">
+        <i class="fas fa-truck-loading"></i> Iniciar Carregamento
+      </button>
+    </section>
 
-        <footer class="footer">
-            &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
-        </footer>
-    </div>
+    <div id="importStatus" class="import-status hidden" role="status"></div>
+    <datalist id="clientes-list"></datalist>
+    <section id="tables" class="tables-section"></section>
+    <section id="resumo"></section>
 
-    <!-- 🚀 Scripts -->
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('collapsed');
-        }
+    <footer class="footer">
+      &copy; 2026 GTSYSTEM - Marquespan. Todos os direitos reservados.
+    </footer>
+  </main>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-            const divUsuario = document.getElementById('usuario-logado');
-            if (usuario && usuario.nome) {
-                divUsuario.textContent = `👤 Olá, ${usuario.nome}`;
-            }
-        });
-
-        document.querySelectorAll('.menu-toggle').forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.parentElement.classList.toggle('active');
-            });
-        });
-    </script>
-    <script type="module" src="./script/auth-guard.js"></script>
-    <script type="module" src="./script/importar-xlsx.js"></script>
-
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/importar-xlsx.js?v=20260610-3"></script>
 </body>
 </html>

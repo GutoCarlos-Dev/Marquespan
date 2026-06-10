@@ -1,5 +1,67 @@
 import { supabaseClient } from './supabase.js';
 
+const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+const IMPORTACAO_CARREGAMENTO_KEY = 'carregamentoImportadoXlsx';
+let clientesImportacao = [];
+let itensImportacao = [];
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[char]));
+}
+
+function obterDataHoraLocalAtual() {
+    const partes = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: TIMEZONE_SAO_PAULO,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+    }).formatToParts(new Date()).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+    }, {});
+
+    return `${partes.year}-${partes.month}-${partes.day}T${partes.hour}:${partes.minute}`;
+}
+
+function obterSemanaIso(value) {
+    const match = String(value || '').slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return '';
+
+    const data = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    const diaSemana = data.getUTCDay() || 7;
+    data.setUTCDate(data.getUTCDate() + 4 - diaSemana);
+    const anoIso = data.getUTCFullYear();
+    const inicioAno = new Date(Date.UTC(anoIso, 0, 1));
+    const semana = Math.ceil((((data - inicioAno) / 86400000) + 1) / 7);
+    return `${String(semana).padStart(2, '0')}-${anoIso}`;
+}
+
+function preencherSemanaPelaData() {
+    document.getElementById('semana').value = obterSemanaIso(document.getElementById('dataHora').value);
+}
+
+function valorExisteNoDatalist(datalistId, value) {
+    const valor = String(value || '').trim().toUpperCase();
+    return Boolean(valor) && Array.from(document.getElementById(datalistId)?.options || [])
+        .some(option => String(option.value || '').trim().toUpperCase() === valor);
+}
+
+function atualizarStatus(message, error = false) {
+    const status = document.getElementById('importStatus');
+    status.textContent = message;
+    status.classList.toggle('error', error);
+    status.classList.toggle('hidden', !message);
+}
+
 /**
  * Script para Importação de XLSX - Marquespan
  * Lógica específica para interpretar arquivos de importação
@@ -29,8 +91,9 @@ async function preencherPlacas() {
     try {
         const { data, error } = await supabaseClient
             .from('veiculos')
-            .select('placa')
-            .not('placa', 'is', null); // Exclui registros onde placa é nula
+            .select('placa, modelo, situacao')
+            .not('placa', 'is', null)
+            .order('placa');
 
         if (error) {
             console.error('Erro ao buscar placas:', error);
@@ -42,9 +105,12 @@ async function preencherPlacas() {
         datalistPlacas.innerHTML = '';
 
         // Adiciona as placas como opções
-        data.forEach(veiculo => {
+        data
+          .filter(veiculo => !veiculo.situacao || String(veiculo.situacao).toLowerCase() === 'ativo')
+          .forEach(veiculo => {
             const option = document.createElement('option');
             option.value = veiculo.placa;
+            option.label = veiculo.modelo || '';
             datalistPlacas.appendChild(option);
         });
 
@@ -55,7 +121,230 @@ async function preencherPlacas() {
     }
 }
 
-document.getElementById("supervisor").value
+async function preencherMotoristas() {
+    const datalist = document.getElementById('motoristas-list');
+    const { data, error } = await supabaseClient
+        .from('funcionario')
+        .select('nome, nome_completo, funcao, status')
+        .ilike('funcao', 'Motorista%')
+        .eq('status', 'Ativo')
+        .order('nome');
+
+    if (error) {
+        console.error('Erro ao buscar motoristas:', error);
+        return;
+    }
+
+    datalist.innerHTML = '';
+    (data || []).forEach(motorista => {
+        const option = document.createElement('option');
+        option.value = motorista.nome;
+        option.label = motorista.nome_completo || motorista.funcao || '';
+        datalist.appendChild(option);
+    });
+}
+
+async function preencherSupervisores() {
+    const datalist = document.getElementById('supervisores-list');
+    const { data, error } = await supabaseClient
+        .from('supervisores')
+        .select('nome, nome_completo')
+        .eq('status', 'ATIVO')
+        .order('nome');
+
+    if (error) {
+        console.error('Erro ao buscar supervisores:', error);
+        return;
+    }
+
+    datalist.innerHTML = '';
+    (data || []).forEach(supervisor => {
+        const option = document.createElement('option');
+        option.value = supervisor.nome;
+        option.label = supervisor.nome_completo || '';
+        datalist.appendChild(option);
+    });
+}
+
+async function carregarCadastrosImportacao() {
+    const [clientesResult, itensResult] = await Promise.all([
+        supabaseClient
+            .from('clientes')
+            .select('id, codigo, nome')
+            .order('nome'),
+        supabaseClient
+            .from('itens')
+            .select('id, codigo, nome, tipo')
+            .order('nome')
+    ]);
+
+    if (clientesResult.error) throw clientesResult.error;
+    if (itensResult.error) throw itensResult.error;
+
+    clientesImportacao = clientesResult.data || [];
+    itensImportacao = itensResult.data || [];
+
+    const datalist = document.getElementById('clientes-list');
+    datalist.innerHTML = '';
+    clientesImportacao.forEach(cliente => {
+        const option = document.createElement('option');
+        option.value = `${cliente.codigo} - ${cliente.nome}`;
+        datalist.appendChild(option);
+    });
+}
+
+function normalizarTexto(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase();
+}
+
+function normalizarBusca(value) {
+    return normalizarTexto(value)
+        .replace(/[^A-Z0-9]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function obterNomeClienteDoArquivo(fileName) {
+    return normalizarBusca(
+        String(fileName || '')
+            .replace(/\.(xlsx?|xls)$/i, '')
+            .replace(/\s*\([^)]*\)\s*$/g, '')
+    );
+}
+
+function obterTokens(value) {
+    return normalizarBusca(value)
+        .split(' ')
+        .filter(token => token.length > 1);
+}
+
+function encontrarClientePorArquivo(fileName) {
+    const nomeArquivo = obterNomeClienteDoArquivo(fileName);
+    if (!nomeArquivo) return null;
+
+    const correspondenciaExata = clientesImportacao.find(cliente =>
+        normalizarBusca(cliente.nome) === nomeArquivo
+    );
+    if (correspondenciaExata) return correspondenciaExata;
+
+    const candidatosContidos = clientesImportacao.filter(cliente => {
+        const nomeCliente = normalizarBusca(cliente.nome);
+        return nomeCliente.includes(nomeArquivo) || nomeArquivo.includes(nomeCliente);
+    });
+    if (candidatosContidos.length === 1) return candidatosContidos[0];
+
+    const tokensArquivo = obterTokens(nomeArquivo);
+    const pontuados = clientesImportacao
+        .map(cliente => {
+            const tokensCliente = new Set(obterTokens(cliente.nome));
+            const comuns = tokensArquivo.filter(token => tokensCliente.has(token)).length;
+            return {
+                cliente,
+                pontuacao: tokensArquivo.length ? comuns / tokensArquivo.length : 0
+            };
+        })
+        .filter(resultado => resultado.pontuacao >= 0.8)
+        .sort((a, b) => b.pontuacao - a.pontuacao);
+
+    if (!pontuados.length) return null;
+    if (pontuados[1] && pontuados[0].pontuacao === pontuados[1].pontuacao) return null;
+    return pontuados[0].cliente;
+}
+
+function obterMotivoArquivo(fileName, motivoPlanilha) {
+    const name = normalizarTexto(fileName);
+    if (name.includes('(NOVO)')) return 'Cliente Novo';
+    if (name.includes('(AMT+TROCA)')) return 'Aumento+Troca';
+    if (name.includes('(AMT)')) return 'Aumento+Troca';
+    if (name.includes('(AM)')) return 'Aumento';
+    if (name.includes('(TROCA+RP)')) return 'Troca';
+    if (name.includes('(RE)')) return 'Retirada de Empréstimo';
+    if (name.includes('(RP)')) return 'Retirada Parcial';
+    if (name.includes('(RT)')) return 'Retirada Total';
+    if (name.includes('(TROCA)')) return 'Troca';
+
+    const motivo = normalizarTexto(motivoPlanilha);
+    if (motivo.includes('CLIENTE NOVO')) return 'Cliente Novo';
+    if (motivo.includes('AUMENTO') && motivo.includes('TROCA')) return 'Aumento+Troca';
+    if (motivo.includes('AUMENTO')) return 'Aumento';
+    if (motivo.includes('EMPREST')) return 'Retirada de Empréstimo';
+    if (motivo.includes('PARCIAL')) return 'Retirada Parcial';
+    if (motivo.includes('TOTAL')) return 'Retirada Total';
+    return 'Troca';
+}
+
+function encontrarCliente(value) {
+    const normalizado = normalizarBusca(value);
+    return clientesImportacao.find(cliente =>
+        normalizarBusca(`${cliente.codigo} - ${cliente.nome}`) === normalizado ||
+        normalizarBusca(cliente.codigo) === normalizado ||
+        normalizarBusca(cliente.nome) === normalizado
+    );
+}
+
+function singularizarEquipamento(value) {
+    const texto = normalizarBusca(value);
+    if (texto.endsWith('ES')) return texto.slice(0, -2);
+    if (texto.endsWith('S')) return texto.slice(0, -1);
+    return texto;
+}
+
+function obterTipoItemDaLinha(row) {
+    const novo = normalizarTexto(row[3]) === 'X';
+    const usado = normalizarTexto(row[4]) === 'X';
+    if (novo && !usado) return 'NOVO';
+    if (usado && !novo) return 'USADO';
+    return '';
+}
+
+function encontrarItem(nomeEquipamento, modeloEquipamento, tipoEsperado) {
+    const equipamento = normalizarBusca(nomeEquipamento);
+    const modelo = normalizarBusca(modeloEquipamento);
+    const equipamentoModelo = normalizarBusca(`${equipamento} ${modelo}`);
+    const equipamentoSemNumero = equipamento.replace(/\s+\d+(?:\s*[A-Z]+)?$/, '').trim();
+    const singular = singularizarEquipamento(equipamento);
+    const singularSemNumero = singularizarEquipamento(equipamentoSemNumero);
+
+    const candidatos = itensImportacao
+        .map(item => {
+            const nome = normalizarBusca(item.nome);
+            const codigo = normalizarBusca(item.codigo);
+            const codigoNome = normalizarBusca(`${item.codigo} ${item.nome}`);
+            let pontuacao = 0;
+
+            if (codigoNome === equipamento || codigo === equipamento) pontuacao = 120;
+            if (nome === equipamentoModelo && modelo) pontuacao = Math.max(pontuacao, 115);
+            if (nome === equipamento) pontuacao = Math.max(pontuacao, 110);
+            if (nome === singular) pontuacao = Math.max(pontuacao, 105);
+            if (nome === equipamentoSemNumero) pontuacao = Math.max(pontuacao, 100);
+            if (nome === singularSemNumero) pontuacao = Math.max(pontuacao, 95);
+            if (modelo && nome.includes(equipamento) && nome.includes(modelo)) {
+                pontuacao = Math.max(pontuacao, 90);
+            }
+            if (equipamento.includes(nome) || nome.includes(equipamento)) {
+                pontuacao = Math.max(pontuacao, 70);
+            }
+            if (singular && (singular.includes(nome) || nome.includes(singular))) {
+                pontuacao = Math.max(pontuacao, 65);
+            }
+
+            const tipo = normalizarTexto(item.tipo);
+            if (tipoEsperado && tipo === tipoEsperado) pontuacao += 20;
+            if (tipoEsperado && tipo && tipo !== tipoEsperado) pontuacao -= 30;
+
+            return { item, pontuacao };
+        })
+        .filter(resultado => resultado.pontuacao >= 65)
+        .sort((a, b) => b.pontuacao - a.pontuacao);
+
+    if (!candidatos.length) return null;
+    return candidatos[0].item;
+}
 
 const tablesContainer = document.getElementById("tables");
 const resumoDiv = document.getElementById("resumo");
@@ -85,7 +374,7 @@ const equipamentosFixos = [
 ];
 
 function normalizeEquipment(equip) {
-    return equip.replace(/\s+/g, ' ').trim().toUpperCase();
+    return String(equip || '').replace(/\s+/g, ' ').trim().toUpperCase();
 }
 
 function recalcularTotais() {
@@ -95,8 +384,8 @@ function recalcularTotais() {
     grids.forEach(grid => {
         grid.rows.forEach(r => {
             const qtd = parseFloat(r[0]) || 0;
-            const nMark = r[3].toString().trim().toUpperCase();
-            const uMark = r[4].toString().trim().toUpperCase();
+            const nMark = String(r[3] || '').trim().toUpperCase();
+            const uMark = String(r[4] || '').trim().toUpperCase();
             const addQtd = qtd > 0 ? qtd : 1;
 
             if (grid.type === "carregamento") {
@@ -135,13 +424,18 @@ btnAtualizar.addEventListener("click", () => {
     // This ensures the totals are recalculated and displayed correctly
 });
 document.getElementById("btnGerarXLS").addEventListener("click", gerarXLSResumo);
+document.getElementById('btnIniciarCarregamento').addEventListener('click', prepararInicioCarregamento);
 
 document.getElementById("fileUpload").addEventListener("change", function(e) {
     const files = e.target.files;
+    document.getElementById('fileSelectionText').textContent = files.length
+        ? `${files.length} ${files.length === 1 ? 'arquivo selecionado' : 'arquivos selecionados'}`
+        : 'Nenhum arquivo selecionado';
     tablesContainer.innerHTML = "";
     resumoDiv.innerHTML = "";
     grids = [];
     motivos = {};
+    atualizarStatus(files.length ? 'Processando arquivos...' : '');
 
     for (const file of files) {
         const reader = new FileReader();
@@ -150,7 +444,10 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             const workbook = XLSX.read(data, {type: 'array'});
 
             const name = file.name.toUpperCase();
-            const isCarregamento = name.includes("(NOVO)") || name.includes("(TROCA)") || name.includes("(AMT)");
+            const isCarregamento = name.includes("(NOVO)") ||
+                name.includes("(TROCA)") ||
+                name.includes("(AMT)") ||
+                name.includes("(AMT+TROCA)");
             const isRetorno = name.includes("(RP)") || name.includes("(RT)") || (name.includes("(RT)") && name.includes("(RP)")) || name.includes("(RE)");
             const isNovo = name.includes("(NOVO)");
 
@@ -161,9 +458,10 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
                   headers: ["QTD","EQUIP","MOD.","N","U"], filterQtd: false };
 
             if (!workbook.SheetNames.includes(cfg.sheet)) {
-                tablesContainer.innerHTML += `<p style="color:red;text-align:center;">
-                  ❌ O arquivo <b>${file.name}</b> não possui a aba "${cfg.sheet}".
-                </p>`;
+                tablesContainer.insertAdjacentHTML('beforeend', `<article class="arquivo-card">
+                  <p>O arquivo <strong>${escapeHtml(file.name)}</strong> não possui a aba "${escapeHtml(cfg.sheet)}".</p>
+                </article>`);
+                atualizarStatus('Um ou mais arquivos não possuem o formato esperado.', true);
                 return;
             }
 
@@ -201,9 +499,18 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             } else if (isCarregamento && isRetorno) {
                 type = "retorno";
             }
+            const gridIndex = grids.length;
+            const clienteSugerido = encontrarClientePorArquivo(file.name);
+            const clienteSugeridoTexto = clienteSugerido
+                ? `${clienteSugerido.codigo} - ${clienteSugerido.nome}`
+                : '';
             grids.push({
-                type: type,
-                rows: rows
+                type,
+                rows,
+                arquivo: file.name,
+                motivo: obterMotivoArquivo(file.name, motivo),
+                cliente: clienteSugeridoTexto,
+                ordem: ''
             });
 
             // Contar motivos baseado no nome do arquivo
@@ -213,7 +520,12 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             if (name.includes("(AM)")) {
                 motivos["AUMENTO"] = (motivos["AUMENTO"] || 0) + 1;
             }
-            if (name.includes("(AMT)") || name.includes("(TROCA)") || name.includes("(TROCA+RP)")) {
+            if (
+                name.includes("(AMT)") ||
+                name.includes("(AMT+TROCA)") ||
+                name.includes("(TROCA)") ||
+                name.includes("(TROCA+RP)")
+            ) {
                 motivos["TROCA"] = (motivos["TROCA"] || 0) + 1;
             }
             if (name.includes("(RP)")) {
@@ -230,40 +542,56 @@ document.getElementById("fileUpload").addEventListener("change", function(e) {
             }
 
             // Cria tabela HTML
-            let html = `<h4>Arquivo: ${file.name}</h4>`;
-            html += `<div class="motivo-box">Motivo: ${motivo}</div>`;
-            html += `<div class="ordem-box" style="color: red; text-align: center;">Ordem: <input type="text" id="ordem-${grids.length - 1}" placeholder="Ordem de Carregamento" maxlength="4" style="width: 50px;"></div>`;
-            html += `<div class="data-table"><table data-index="${grids.length - 1}"><thead><tr>`;
-            cfg.headers.forEach(h => html += `<th>${h}</th>`);
+            let html = `<article class="arquivo-card"><h4><i class="fas fa-file-excel"></i> ${escapeHtml(file.name)}</h4>`;
+            html += `<div class="arquivo-meta"><div class="motivo-box"><strong>Motivo:</strong> ${escapeHtml(motivo)}</div>`;
+            html += `<label class="cliente-box"><strong>Cliente:</strong> <input type="text" class="cliente-importacao" data-grid="${gridIndex}" list="clientes-list" value="${escapeHtml(clienteSugeridoTexto)}" placeholder="Código - Cliente" required></label>`;
+            html += `<label class="ordem-box"><strong>Ordem:</strong> <input type="text" class="ordem-importacao" data-grid="${gridIndex}" placeholder="0000" maxlength="4"></label></div>`;
+            html += `<div class="data-table"><table data-index="${gridIndex}"><thead><tr>`;
+            cfg.headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
             html += `</tr></thead><tbody>`;
 
             rows.forEach((row, i) => {
                 html += `<tr data-row="${i}">`;
                 row.forEach((cell, j) => {
                     if (j === 0) { // QTD column - make it disabled
-                        html += `<td contenteditable="false" style="background-color: #f0f0f0;">${cell}</td>`;
+                        html += `<td contenteditable="false">${escapeHtml(cell)}</td>`;
                     } else if (j === 1) { // EQUIP column
-                        html += `<td contenteditable="false" style="background-color: #f0f0f0;">${cell}</td>`;
+                        html += `<td contenteditable="false">${escapeHtml(cell)}</td>`;
                     } else if (j === 2) { // MOD column - make it disabled
-                        html += `<td contenteditable="false" style="background-color: #f0f0f0;">${cell}</td>`;
+                        html += `<td contenteditable="false">${escapeHtml(cell)}</td>`;
                     } else if (j === 3 || j === 4) {
-                        html += `<td contenteditable="true">${cell}</td>`;
+                        html += `<td contenteditable="true">${escapeHtml(cell)}</td>`;
                     } else {
-                        html += `<td>${cell}</td>`;
+                        html += `<td>${escapeHtml(cell)}</td>`;
                     }
                 });
                 html += "</tr>";
             });
-            html += "</tbody></table></div>";
+            html += "</tbody></table></div></article>";
 
             tablesContainer.innerHTML += html;
+            recalcularTotais();
+            atualizarStatus(`${grids.length} ${grids.length === 1 ? 'arquivo processado' : 'arquivos processados'}.`);
         };
+        reader.onerror = () => atualizarStatus(`Erro ao ler o arquivo ${file.name}.`, true);
         reader.readAsArrayBuffer(file);
     }
 });
 
 // Escuta alterações nas células editáveis
 tablesContainer.addEventListener("input", function(e) {
+    if (e.target.matches('.cliente-importacao')) {
+        const gridIndex = Number(e.target.dataset.grid);
+        if (grids[gridIndex]) grids[gridIndex].cliente = e.target.value.trim();
+        return;
+    }
+
+    if (e.target.matches('.ordem-importacao')) {
+        const gridIndex = Number(e.target.dataset.grid);
+        if (grids[gridIndex]) grids[gridIndex].ordem = e.target.value.trim();
+        return;
+    }
+
     const td = e.target.closest("td[contenteditable]");
     if (!td) return;
 
@@ -305,13 +633,36 @@ function gerarXLSResumo() {
         return;
     }
 
+    const placaInformada = document.getElementById('placa').value.trim();
+    const motoristaInformado = document.getElementById('motorista').value.trim();
+    const supervisorInformado = document.getElementById('supervisor').value.trim();
+    const semanaInformada = document.getElementById('semana').value.trim();
+    const dataHoraInformada = document.getElementById('dataHora').value;
+
+    if (!semanaInformada || !dataHoraInformada) {
+        alert('Preencha os campos Semana e Data/Hora.');
+        return;
+    }
+    if (!valorExisteNoDatalist('placas-list', placaInformada)) {
+        alert('Selecione uma placa válida cadastrada em Veículos.');
+        return;
+    }
+    if (!valorExisteNoDatalist('motoristas-list', motoristaInformado)) {
+        alert('Selecione um motorista ativo cadastrado em Funcionários.');
+        return;
+    }
+    if (supervisorInformado && !valorExisteNoDatalist('supervisores-list', supervisorInformado)) {
+        alert('Selecione um supervisor ativo cadastrado em Supervisores.');
+        return;
+    }
+
     // Obter dados do formulário
-    const semana = document.getElementById('semana').value || 'Não informado';
-    const data = document.getElementById('data').value || 'Não informado';
-    const placa = document.getElementById('placa').value || 'Não informado';
-    const motorista = document.getElementById('motorista').value || 'Não informado';
+    const semana = semanaInformada;
+    const data = dataHoraInformada;
+    const placa = placaInformada;
+    const motorista = motoristaInformado;
     const conferente = document.getElementById('conferente').value || 'Não informado';
-    const supervisor = document.getElementById('supervisor').value || 'Não informado';
+    const supervisor = supervisorInformado || 'Não informado';
 
     // Lista de equipamentos fixos
     const equipamentosFixos = [
@@ -343,10 +694,10 @@ function gerarXLSResumo() {
     // Agregar totais por equipamento
     grids.forEach(grid => {
         grid.rows.forEach(r => {
-            const equip = r[1].toString().trim().toUpperCase(); // EQUIP
+            const equip = String(r[1] || '').trim().toUpperCase(); // EQUIP
             const qtd = parseFloat(r[0]) || 0;
-            const nMark = r[3].toString().trim().toUpperCase();
-            const uMark = r[4].toString().trim().toUpperCase();
+            const nMark = String(r[3] || '').trim().toUpperCase();
+            const uMark = String(r[4] || '').trim().toUpperCase();
 
             if (equipamentos[equip]) {
                 const addQtd = qtd > 0 ? qtd : 1;
@@ -363,7 +714,7 @@ function gerarXLSResumo() {
     // Criar dados para o XLS
     const headerData = [
         ['Semana:', semana],
-        ['Data:', data],
+        ['Data/Hora:', data],
         ['Placa:', placa],
         ['Motorista:', motorista],
         ['Conferente:', conferente],
@@ -400,6 +751,102 @@ function gerarXLSResumo() {
 
     // Download
     XLSX.writeFile(wb, `resumo_carregamento_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+function prepararInicioCarregamento() {
+    if (!grids.length) {
+        alert('Importe pelo menos uma requisição antes de iniciar o carregamento.');
+        return;
+    }
+
+    const semana = document.getElementById('semana').value.trim();
+    const dataHora = document.getElementById('dataHora').value;
+    const placa = document.getElementById('placa').value.trim();
+    const motorista = document.getElementById('motorista').value.trim();
+    const conferente = document.getElementById('conferente').value.trim();
+    const supervisor = document.getElementById('supervisor').value.trim();
+
+    if (!semana || !dataHora) {
+        alert('Preencha os campos Semana e Data/Hora.');
+        return;
+    }
+    if (!valorExisteNoDatalist('placas-list', placa)) {
+        alert('Selecione uma placa válida cadastrada em Veículos.');
+        return;
+    }
+    if (!valorExisteNoDatalist('motoristas-list', motorista)) {
+        alert('Selecione um motorista ativo cadastrado em Funcionários.');
+        return;
+    }
+    if (supervisor && !valorExisteNoDatalist('supervisores-list', supervisor)) {
+        alert('Selecione um supervisor ativo cadastrado em Supervisores.');
+        return;
+    }
+
+    const erros = new Set();
+    const requisicoes = grids.map((grid, index) => {
+        const cliente = encontrarCliente(grid.cliente) || encontrarClientePorArquivo(grid.arquivo);
+        if (!cliente) {
+            erros.add(`Arquivo ${grid.arquivo}: selecione um cliente válido.`);
+        }
+
+        const itens = grid.rows
+            .filter(row => (parseFloat(row[0]) || 0) > 0 && normalizarTexto(row[1]))
+            .map(row => {
+                const tipoEsperado = obterTipoItemDaLinha(row);
+                const item = encontrarItem(row[1], row[2], tipoEsperado);
+                if (!item) {
+                    const detalheModelo = normalizarTexto(row[2]) ? `, modelo "${row[2]}"` : '';
+                    const detalheTipo = tipoEsperado ? `, tipo ${tipoEsperado}` : '';
+                    erros.add(`Item "${row[1]}"${detalheModelo}${detalheTipo} não encontrado no cadastro.`);
+                }
+
+                return {
+                    item_id: item?.id || null,
+                    item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
+                    modelo: String(row[2] || '').trim(),
+                    tipo: item?.tipo || '',
+                    quantidade: parseFloat(row[0]) || 0
+                };
+            });
+
+        if (!itens.length) {
+            erros.add(`Arquivo ${grid.arquivo}: nenhuma quantidade válida foi encontrada.`);
+        }
+
+        return {
+            cliente_id: cliente?.id || null,
+            cliente_nome: cliente ? `${cliente.codigo} - ${cliente.nome}` : grid.cliente,
+            motivo: grid.motivo,
+            ordem: grid.ordem,
+            arquivo: grid.arquivo,
+            itens
+        };
+    });
+
+    const listaErros = Array.from(erros);
+    if (listaErros.length) {
+        atualizarStatus(listaErros.join(' '), true);
+        alert(listaErros.slice(0, 12).join('\n'));
+        return;
+    }
+
+    const rascunho = {
+        versao: 1,
+        criado_em: new Date().toISOString(),
+        cabecalho: {
+            semana,
+            data_hora: dataHora,
+            placa,
+            motorista,
+            conferente,
+            supervisor
+        },
+        requisicoes
+    };
+
+    localStorage.setItem(IMPORTACAO_CARREGAMENTO_KEY, JSON.stringify(rascunho));
+    window.location.href = 'iniciar-carregamento.html';
 }
 
 // Função para adicionar nova linha
@@ -468,8 +915,23 @@ document.addEventListener('click', function(e) {
 });
 
 // Inicialização quando a página carrega
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('Inicializando página de importação XLSX...');
     preencherConferente();
-    preencherPlacas(); // Carrega as placas do banco de dados
+    try {
+        await Promise.all([
+            preencherPlacas(),
+            preencherMotoristas(),
+            preencherSupervisores(),
+            carregarCadastrosImportacao()
+        ]);
+    } catch (error) {
+        console.error('Erro ao carregar cadastros da importação:', error);
+        atualizarStatus('Não foi possível carregar clientes e itens cadastrados.', true);
+    }
+
+    const dataHora = document.getElementById('dataHora');
+    dataHora.value = obterDataHoraLocalAtual();
+    preencherSemanaPelaData();
+    dataHora.addEventListener('change', preencherSemanaPelaData);
 });

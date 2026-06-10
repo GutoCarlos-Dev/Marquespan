@@ -4,6 +4,7 @@ import { supabaseClient as supabase } from './supabase.js';
 const MOTIVOS_QUE_ADICIONAM = ['Aumento', 'Aumento+Troca', 'Cliente Novo'];
 const MOTIVOS_QUE_NAO_ADICIONAM = ['Troca', 'Retirada Parcial', 'Retirada Total', 'Retirada de Empréstimo'];
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+const IMPORTACAO_CARREGAMENTO_KEY = 'carregamentoImportadoXlsx';
 
 function obterPartesDataHoraSaoPaulo(date = new Date()) {
     return new Intl.DateTimeFormat('sv-SE', {
@@ -1370,17 +1371,68 @@ function preencherItensImportados(items) {
     console.log('Itens adicionados à requisição:', requisicaoAtual.itens);
 }
 
+function carregarImportacaoXlsx() {
+    const raw = localStorage.getItem(IMPORTACAO_CARREGAMENTO_KEY);
+    if (!raw) return false;
+
+    try {
+        const importacao = JSON.parse(raw);
+        const cabecalho = importacao?.cabecalho || {};
+        const requisicoes = Array.isArray(importacao?.requisicoes) ? importacao.requisicoes : [];
+
+        if (!requisicoes.length) {
+            throw new Error('A importação não possui requisições.');
+        }
+
+        document.getElementById('semana').value = cabecalho.semana || '';
+        document.getElementById('dataCarregamento').value = cabecalho.data_hora || obterDataHoraLocalAtual();
+        document.getElementById('placa').value = cabecalho.placa || '';
+        document.getElementById('motoristaInput').value = cabecalho.motorista || '';
+        document.getElementById('conferente').value = cabecalho.conferente || '';
+        document.getElementById('supervisor').value = cabecalho.supervisor || '';
+
+        carregamentoState.requisicoesCarregamento = [];
+        carregamentoState.requisicoesTrocaRetirada = [];
+
+        requisicoes.forEach(requisicao => {
+            const normalizada = {
+                cliente_id: requisicao.cliente_id,
+                cliente_nome: requisicao.cliente_nome,
+                motivo: requisicao.motivo,
+                ordem: requisicao.ordem || '',
+                arquivo: requisicao.arquivo || '',
+                itens: (requisicao.itens || []).map(item => ({
+                    item_id: item.item_id,
+                    item_nome: item.item_nome,
+                    modelo: item.modelo || '',
+                    tipo: item.tipo || '',
+                    quantidade: Number(item.quantidade) || 0
+                }))
+            };
+
+            if (MOTIVOS_QUE_ADICIONAM.includes(normalizada.motivo)) {
+                carregamentoState.requisicoesCarregamento.push(normalizada);
+            } else if (MOTIVOS_QUE_NAO_ADICIONAM.includes(normalizada.motivo)) {
+                carregamentoState.requisicoesTrocaRetirada.push(normalizada);
+            }
+        });
+
+        renderizarTabelaCarregamento();
+        renderizarTabelaTrocaRetirada();
+        renderizarTabelaResumo();
+        localStorage.removeItem(IMPORTACAO_CARREGAMENTO_KEY);
+
+        alert(`${requisicoes.length} requisição(ões) importada(s) e pronta(s) para o carregamento.`);
+        return true;
+    } catch (error) {
+        console.error('Erro ao carregar importação XLSX:', error);
+        alert(`Não foi possível carregar as requisições importadas: ${error.message}`);
+        return false;
+    }
+}
+
 // Executa quando o DOM está totalmente carregado
-document.addEventListener('DOMContentLoaded', () => {
-    carregarClientesNoDatalist();
-    carregarVeiculosNoDatalist();
-    carregarItensNoModal();
-    carregarMotoristasNoDatalist();
-    carregarSupervisoresNoDatalist();
-
-    // Verifica se há dados importados do PDF
-    checkForImportedData();
-
+document.addEventListener('DOMContentLoaded', async () => {
     // Preenche campos automáticos
     const campoDataCarregamento = document.getElementById('dataCarregamento');
     campoDataCarregamento.value = obterDataHoraLocalAtual();
@@ -1390,6 +1442,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (usuario && usuario.nome) {
         document.getElementById('conferente').value = usuario.nome;
     }
+
+    await Promise.all([
+        carregarClientesNoDatalist(),
+        carregarVeiculosNoDatalist(),
+        carregarItensNoModal(),
+        carregarMotoristasNoDatalist(),
+        carregarSupervisoresNoDatalist()
+    ]);
+
+    const carregouXlsx = carregarImportacaoXlsx();
+    if (!carregouXlsx) checkForImportedData();
 
     // Lógica para o Modal de Clientes
     const modalCliente = document.getElementById('modalCliente');
