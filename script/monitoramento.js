@@ -479,6 +479,8 @@ async function carregarFiliais() {
 
         if (error) throw error;
         select.innerHTML = filialUsuario ? '' : '<option value="">Todas</option>';
+        // Se o usuário não tem filial atribuída, permita selecionar qualquer filial
+        select.disabled = !!filialUsuario;
 
         if (data) {
             data
