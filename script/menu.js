@@ -63,16 +63,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Presença online — anuncia o usuário no canal compartilhado
       if (usuario?.id) {
+        // Canal de presença (apenas para rastrear quem está online)
         const canalPresenca = supabaseClient.channel('presenca_usuarios', {
           config: { presence: { key: String(usuario.id) } }
         });
+        canalPresenca.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await canalPresenca.track({
+              user_id:   usuario.id,
+              nome:      usuario.nome || 'Usuário',
+              filial:    usuario.filial || '',
+              pagina:    window.location.pathname.split('/').pop() || 'dashboard.html',
+              entrou_em: new Date().toISOString()
+            });
+          }
+        });
 
-        canalPresenca
+        // Canal dedicado exclusivamente para sinais do admin (força logout, etc.)
+        const canalSinais = supabaseClient.channel('sinais_admin');
+        canalSinais
           .on('broadcast', { event: 'force_logout' }, async ({ payload }) => {
             if (String(payload?.user_id) !== String(usuario.id)) return;
 
             // Confirma ao admin que o logout foi recebido
-            canalPresenca.send({
+            canalSinais.send({
               type: 'broadcast',
               event: 'logout_confirmado',
               payload: { nome: usuario.nome }
@@ -83,17 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.removeItem('marquespan_auth_version');
             window.location.href = 'index.html';
           })
-          .subscribe(async (status) => {
-            if (status === 'SUBSCRIBED') {
-              await canalPresenca.track({
-                user_id:   usuario.id,
-                nome:      usuario.nome || 'Usuário',
-                filial:    usuario.filial || '',
-                pagina:    window.location.pathname.split('/').pop() || 'dashboard.html',
-                entrou_em: new Date().toISOString()
-              });
-            }
-          });
+          .subscribe();
       }
 
       // Adiciona funcionalidade de toggle para os submenus

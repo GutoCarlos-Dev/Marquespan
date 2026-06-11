@@ -2,9 +2,12 @@ import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
 const POR_PAGINA = 100;
+const LOTE_EXPORT = 1000;
 let paginaAtual = 1;
 let totalRegistros = 0;
 let canalPresenca = null;
+let canalSinais = null;
+let filtrosAtivos = null; // null = nenhuma busca feita ainda
 
 // Verificação de acesso — somente administrador
 const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -22,7 +25,11 @@ function escapeHtml(v) {
 
 function formatarTs(ts) {
     if (!ts) return '-';
-    return new Date(ts).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return new Date(ts).toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
 }
 
 const NOMES_PAGINA = {
@@ -46,8 +53,6 @@ const nomePagina = p => NOMES_PAGINA[p] || (p ? p.replace('.html', '') : 'Sistem
 // Presença — usuários online
 // ---------------------------------------------------------------------------
 function renderOnlineUsers(state) {
-    // Cada key pode ter múltiplas entradas (uma por aba aberta).
-    // Deduplica por user_id mantendo a aba com a entrada mais recente.
     const allPresences = Object.values(state).flat();
     const mapaUsuarios = new Map();
     allPresences.forEach(u => {
@@ -88,13 +93,19 @@ function renderOnlineUsers(state) {
 }
 
 function iniciarPresenca() {
+    // Canal de presença — apenas para rastrear quem está online
     canalPresenca = supabaseClient.channel('presenca_usuarios');
     canalPresenca
         .on('presence', { event: 'sync' }, () => {
             renderOnlineUsers(canalPresenca.presenceState());
         })
+        .subscribe();
+
+    // Canal dedicado para sinais do admin — separado do canal de presença
+    // para evitar conflitos de config e garantir entrega do broadcast
+    canalSinais = supabaseClient.channel('sinais_admin');
+    canalSinais
         .on('broadcast', { event: 'logout_confirmado' }, ({ payload }) => {
-            // Feedback visual quando o usuário confirma que foi deslogado
             const nome = payload?.nome || 'Usuário';
             const toast = document.createElement('div');
             toast.textContent = `✅ ${nome} foi desconectado com sucesso.`;
@@ -110,14 +121,19 @@ function iniciarPresenca() {
         .subscribe();
 }
 
-window.forcarDeslogar = function(userId, nome) {
+window.forcarDeslogar = async function(userId, nome) {
     if (!confirm(`Deseja forçar o logout de "${nome}"?\n\nO usuário será redirecionado para a tela de login imediatamente.`)) return;
 
-    canalPresenca.send({
+    const resultado = await canalSinais.send({
         type: 'broadcast',
         event: 'force_logout',
         payload: { user_id: String(userId), nome }
     });
+
+    if (resultado !== 'ok') {
+        alert(`Erro ao enviar sinal de logout: ${resultado}\nVerifique a conexão e tente novamente.`);
+        return;
+    }
 
     registrarAuditoria('EXCLUIR', 'Sistema', `Logout forçado do usuário: ${nome} (ID ${userId})`);
 };
@@ -148,20 +164,35 @@ function buildQuery(base, f) {
     return base;
 }
 
+function mostrarEstadoInicial() {
+    const tbody = document.getElementById('tbodyAuditoria');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="6" style="text-align:center;padding:32px;color:#888;">
+                <i class="fas fa-filter" style="font-size:2rem;margin-bottom:10px;display:block;opacity:0.3;"></i>
+                Use os filtros acima e clique em <strong>Filtrar</strong> para carregar os registros.
+            </td>
+        </tr>`;
+    document.getElementById('paginacaoInfo').textContent = '';
+    document.getElementById('btnPrev').disabled = true;
+    document.getElementById('btnNext').disabled = true;
+}
+
 async function carregarLog() {
     const tbody = document.getElementById('tbodyAuditoria');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#888;">Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>';
 
-    const f = getFiltros();
+    const f = filtrosAtivos;
     const inicio = (paginaAtual - 1) * POR_PAGINA;
     const fim    = paginaAtual * POR_PAGINA - 1;
 
-    let query = buildQuery(
-        supabaseClient.from('auditoria_sistema').select('*', { count: 'exact' }).order('timestamp', { ascending: false }).range(inicio, fim),
+    const { data, error, count } = await buildQuery(
+        supabaseClient.from('auditoria_sistema')
+            .select('*', { count: 'exact' })
+            .order('timestamp', { ascending: false })
+            .range(inicio, fim),
         f
     );
-
-    const { data, error, count } = await query;
 
     if (error) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">Erro ao carregar dados. Verifique se a tabela foi criada no Supabase.</td></tr>';
@@ -208,40 +239,95 @@ async function carregarStatsHoje() {
     document.getElementById('countHoje').textContent = (count ?? 0).toLocaleString('pt-BR');
 }
 
+async function carregarContadorTotal() {
+    const { count } = await supabaseClient
+        .from('auditoria_sistema')
+        .select('*', { count: 'exact', head: true });
+    document.getElementById('countTotal').textContent = (count ?? 0).toLocaleString('pt-BR');
+    totalRegistros = count ?? 0;
+}
+
+// ---------------------------------------------------------------------------
+// Busca em lote — garante que o limite de 1000 linhas por request não trunque
+// ---------------------------------------------------------------------------
+async function buscarTodosEmLote(f) {
+    const btnExport = document.querySelector('[onclick="exportarXLSX()"]');
+    const textoOriginal = btnExport?.innerHTML;
+    if (btnExport) btnExport.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+
+    const todos = [];
+    let offset = 0;
+
+    try {
+        while (true) {
+            const { data, error } = await buildQuery(
+                supabaseClient.from('auditoria_sistema')
+                    .select('timestamp, usuario_nome, filial, acao, modulo, descricao')
+                    .order('timestamp', { ascending: false })
+                    .range(offset, offset + LOTE_EXPORT - 1),
+                f
+            );
+
+            if (error) throw error;
+            if (!data?.length) break;
+
+            todos.push(...data);
+            if (data.length < LOTE_EXPORT) break; // último lote
+            offset += LOTE_EXPORT;
+
+            if (btnExport) btnExport.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${todos.length.toLocaleString('pt-BR')} registros...`;
+        }
+    } finally {
+        if (btnExport && textoOriginal) btnExport.innerHTML = textoOriginal;
+    }
+
+    return todos;
+}
+
 // ---------------------------------------------------------------------------
 // Ações globais (chamadas pelo HTML)
 // ---------------------------------------------------------------------------
 window.aplicarFiltros = function () {
+    filtrosAtivos = getFiltros();
     paginaAtual = 1;
     carregarLog();
 };
 
 window.limparFiltros = function () {
-    ['filtroDataInicio', 'filtroDataFim', 'filtroUsuario'].forEach(id => document.getElementById(id).value = '');
-    ['filtroModulo', 'filtroAcao'].forEach(id => document.getElementById(id).value = '');
+    ['filtroDataInicio', 'filtroDataFim', 'filtroUsuario'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+    ['filtroModulo', 'filtroAcao'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+    filtrosAtivos = null;
     paginaAtual = 1;
-    carregarLog();
+    mostrarEstadoInicial();
 };
 
 window.mudarPagina = function (dir) {
+    if (!filtrosAtivos) return;
     paginaAtual = Math.max(1, paginaAtual + dir);
     carregarLog();
 };
 
 window.exportarXLSX = async function () {
-    const f = getFiltros();
-    let query = buildQuery(
-        supabaseClient.from('auditoria_sistema')
-            .select('timestamp, usuario_nome, filial, acao, modulo, descricao')
-            .order('timestamp', { ascending: false })
-            .limit(5000),
-        f
-    );
+    const f = filtrosAtivos ?? getFiltros();
 
-    const { data, error } = await query;
-    if (error || !data?.length) { alert('⚠️ Sem dados para exportar com os filtros atuais.'); return; }
+    let dados;
+    try {
+        dados = await buscarTodosEmLote(f);
+    } catch (err) {
+        alert('Erro ao buscar dados para exportação: ' + err.message);
+        return;
+    }
 
-    const rows = data.map(r => ({
+    if (!dados.length) {
+        alert('⚠️ Sem dados para exportar com os filtros atuais.');
+        return;
+    }
+
+    const rows = dados.map(r => ({
         'Data/Hora':  formatarTs(r.timestamp),
         'Usuário':    r.usuario_nome,
         'Filial':     r.filial || '-',
@@ -260,16 +346,15 @@ window.exportarXLSX = async function () {
 // ---------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     iniciarPresenca();
-    carregarLog();
     carregarStatsHoje();
+    carregarContadorTotal();
+    mostrarEstadoInicial();
 
-    // Enter nos campos de filtro dispara a busca
+    // Enter nos campos de texto/data dispara a busca (ação explícita do usuário)
     ['filtroUsuario', 'filtroDataInicio', 'filtroDataFim'].forEach(id => {
         document.getElementById(id)?.addEventListener('keydown', e => {
             if (e.key === 'Enter') aplicarFiltros();
         });
     });
-    ['filtroModulo', 'filtroAcao'].forEach(id => {
-        document.getElementById(id)?.addEventListener('change', aplicarFiltros);
-    });
+    // Selects NÃO disparam filtro automático — usuário precisa clicar em Filtrar
 });
