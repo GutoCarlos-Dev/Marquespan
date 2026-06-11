@@ -1,5 +1,6 @@
 // script/despesas.js - Lógica para o módulo de Cadastro de Despesas
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const DespesasUI = {
     init() {
@@ -305,6 +306,7 @@ const DespesasUI = {
             const { error } = await supabaseClient.from('despesas').upsert(payload);
             if (error) throw error;
 
+            registrarAuditoria(this.editingIdInput.value ? 'ALTERAR' : 'INCLUIR', 'Despesas', `${this.editingIdInput.value ? 'Alteração' : 'Inclusão'} de despesa`);
             alert('✅ Despesa salva com sucesso!');
             this.clearForm();
             this.renderGrid();
@@ -407,6 +409,7 @@ const DespesasUI = {
             if (confirm('Tem certeza que deseja excluir esta despesa?')) {
                 try {
                     await supabaseClient.from('despesas').delete().eq('id', id);
+                    registrarAuditoria('EXCLUIR', 'Despesas', `Exclusão de despesa ID ${id}`);
                     this.renderGrid();
                 } catch (err) {
                     alert('❌ Não foi possível excluir a despesa: ' + err.message);

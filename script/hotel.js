@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
+import { registrarAuditoria } from './auditoria-utils.js';
 
 class HotelManager {
     constructor() {
@@ -114,6 +115,7 @@ class HotelManager {
             alert('Erro ao salvar hotel: ' + result.error.message);
         } else {
             const savedHotel = result.data;
+            registrarAuditoria(id ? 'ALTERAR' : 'INCLUIR', 'Hotel', `${id ? 'Alteração' : 'Inclusão'} de hotel: ${hotelData.nome}`);
             alert(`Hotel ${id ? 'atualizado' : 'cadastrado'} com sucesso!`);
             this.clearHotelForm();
 
@@ -148,7 +150,7 @@ class HotelManager {
             if (confirm('Tem certeza que deseja excluir este hotel?')) {
                 const { error } = await supabaseClient.from('hoteis').delete().eq('id', id);
                 if (error) alert('Erro ao excluir: ' + error.message);
-                else this.renderHotels();
+                else { registrarAuditoria('EXCLUIR', 'Hotel', `Exclusão de hotel ID ${id}`); this.renderHotels(); }
             }
         } else if (btn.classList.contains('btn-manage-rooms')) {
             this.openQuartosPanel(id, btn.dataset.name);

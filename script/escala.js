@@ -1,5 +1,6 @@
 // script/escala.js
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 // Variável para armazenar os dados da seção PADRÃO do dia atual
 let dadosPadraoDoDia = [];
@@ -787,6 +788,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (insertError) throw insertError;
                         }
                     }
+                    registrarAuditoria('INCLUIR', 'Escala', 'Planejamento aplicado à escala');
                     alert('Planejamento aplicado à escala com sucesso!');
                     modalCopiarPlanejamento.style.display = 'none';
                 } else {
@@ -862,6 +864,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (insertError) throw insertError;
 
             await carregarPlanejamento(semanaDestino);
+            registrarAuditoria('INCLUIR', 'Escala', `Planejamento preenchido com modelo para semana ${semanaDestino}`);
             alert('Planejamento preenchido com o modelo com sucesso.');
         } catch (err) {
             console.error('Erro ao copiar modelo de planejamento:', err);
@@ -1971,6 +1974,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (error) throw error;
             }
 
+            registrarAuditoria('INCLUIR', 'Escala', `Cópia de escala para semana ${semanaDestino}`);
             alert('Cópia realizada com sucesso!');
             modalCopiarEscala.style.display = 'none';
             
@@ -2133,6 +2137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         .from('planejamento_semanal')
                         .insert(parsed.inserts.map(item => comAuditoria(item)));
                     if (error) throw error;
+                    registrarAuditoria('INCLUIR', 'Escala', `Importação de planejamento semanal para semana ${semana} (${parsed.inserts.length} registros)`);
                     alert('Planejamento semanal importado com sucesso!');
                     carregarPlanejamento(semana);
                 }
@@ -3757,6 +3762,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (error) throw error;
                 }
             }
+            registrarAuditoria('EXCLUIR', 'Escala', 'Exclusão de células da escala');
             alert('Exclusão realizada com sucesso.');
             const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
             const semana = selectSemana.value;
@@ -5078,6 +5084,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (itensError) throw itensError;
 
+            registrarAuditoria('INCLUIR', 'Escala', 'Registro de diária na escala');
             alert('Diaria registrada com sucesso.');
         } catch (error) {
             console.error('Erro ao salvar diaria:', error);
@@ -7637,6 +7644,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .in('id', ids);
 
                 if (error) throw error;
+                registrarAuditoria('EXCLUIR', 'Escala', `Exclusão de ${ids.length} item(ns) do planejamento semanal`);
                 alert('Itens excluídos com sucesso!');
                 carregarPlanejamento(selectSemana.value);
                 if (selectAllPlan) selectAllPlan.checked = false;
@@ -9104,6 +9112,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (error) throw error;
                     }
                 }
+                registrarAuditoria('EXCLUIR', 'Escala', 'Exclusão de registros selecionados da escala');
                 alert('Exclusão realizada com sucesso.');
                 const activeTab = document.querySelector('.tab-btn.active');
                 if (activeTab.dataset.tab === 'planejamento') carregarPlanejamento(selectSemana.value);

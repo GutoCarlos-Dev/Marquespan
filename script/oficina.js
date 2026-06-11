@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     setupTabs();
@@ -109,6 +110,7 @@ async function salvarOficina(e) {
 
         if (error) throw error;
 
+        registrarAuditoria(id ? 'ALTERAR' : 'INCLUIR', 'Oficina', `${id ? 'Alteração' : 'Inclusão'} de oficina: ${nome}`);
         alert('Oficina salva com sucesso!');
         limparFormularioOficina();
         carregarOficinas();
@@ -151,6 +153,7 @@ async function excluirOficina(id) {
                     const { error: deleteError } = await supabaseClient.from('oficinas').delete().eq('id', id);
                     if (deleteError) throw deleteError;
 
+                    registrarAuditoria('EXCLUIR', 'Oficina', `Exclusão de oficina ID ${id} (com desvinculação de registros)`);
                     alert('Oficina excluída e registros desvinculados com sucesso!');
                     carregarOficinas();
                     return;
@@ -248,6 +251,7 @@ async function salvarItem(e) {
 
         if (error) throw error;
 
+        registrarAuditoria(id ? 'ALTERAR' : 'INCLUIR', 'Oficina', `${id ? 'Alteração' : 'Inclusão'} de item de verificação: ${descricao}`);
         alert('Item salvo com sucesso!');
         limparFormularioItem();
         carregarItens(); // Recarrega tabela e select

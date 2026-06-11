@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 let veiculosData = [];
 let currentSort = { column: null, direction: 'asc' };
@@ -578,6 +579,7 @@ async function salvarVeiculo(e) {
             if (fotoError) throw fotoError;
         }
 
+        registrarAuditoria(id ? 'ALTERAR' : 'INCLUIR', 'Veículos', `${id ? 'Alteração' : 'Inclusão'} do veículo placa ${payload.placa}`);
         alert('Veículo salvo com sucesso!');
         fecharModalVeiculo();
         carregarVeiculos();
@@ -625,6 +627,7 @@ async function excluirVeiculo(id) {
     try {
         const { error } = await supabaseClient.from('veiculos').delete().eq('id', id);
         if (error) throw error;
+        registrarAuditoria('EXCLUIR', 'Veículos', `Exclusão do veículo ID ${id}`);
         carregarVeiculos();
     } catch (err) {
         console.error('Erro ao excluir:', err);

@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const EstoqueGeralUI = {
     init() {
@@ -385,6 +386,7 @@ const EstoqueGeralUI = {
             const { error } = await supabaseClient.from('produtos').upsert({ id: id || undefined, ...payload });
             if (error) throw error;
 
+            registrarAuditoria(id ? 'ALTERAR' : 'INCLUIR', 'Estoque', `${id ? 'Alteração' : 'Inclusão'} do produto: ${payload.nome}`);
             alert('✅ Produto salvo com sucesso!');
             this.clearProdutoForm();
             this.renderProdutosGrid();
@@ -686,6 +688,7 @@ const EstoqueGeralUI = {
             const { error } = await supabaseClient.from('prateleiras').upsert({ id: id || undefined, ...payload });
             if (error) throw error;
 
+            registrarAuditoria(id ? 'ALTERAR' : 'INCLUIR', 'Estoque', `${id ? 'Alteração' : 'Inclusão'} de prateleira: ${payload.nome}`);
             alert('✅ Prateleira salva com sucesso!');
             this.clearPrateleiraForm();
             this.renderPrateleirasGrid();
@@ -885,8 +888,9 @@ const EstoqueGeralUI = {
                 data: new Date()
             };
 
+            registrarAuditoria('INCLUIR', 'Estoque', `Saída de ${this.carrinhoRetirada.length} item(ns) por ${responsavel}`);
             alert('✅ Saída registrada com sucesso!');
-            
+
             if (this.btnGerarPdfSaida) {
                 this.btnGerarPdfSaida.disabled = false;
                 this.btnGerarPdfSaida.style.cursor = 'pointer';
@@ -1159,6 +1163,7 @@ const EstoqueGeralUI = {
 
             if (movError) throw movError;
 
+            registrarAuditoria('ALTERAR', 'Estoque', `Ajuste de estoque (batimento) produto ID ${id}: ${diferenca > 0 ? '+' : ''}${diferenca}`);
             alert('✅ Estoque ajustado com sucesso!');
             this.formBatimento.reset();
             this.batimentoProdutoId.value = '';

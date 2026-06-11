@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 let dadosGrid = [];
 let currentSort = { field: 'data', ascending: false };
@@ -426,6 +427,7 @@ async function handleImportarXlsx(event) {
         } else {
             mostrarMensagemFiltroObrigatorio();
         }
+        registrarAuditoria('INCLUIR', 'Controle Cadeado', `Importação de ${registros.length} registros de controle de cadeado`);
         alert('Importacao concluida com sucesso!');
     } catch (error) {
         console.error('Erro ao importar XLSX:', error);
@@ -438,5 +440,6 @@ window.excluirRegistro = async (id) => {
     if (!confirm('Excluir este registro?')) return;
     const { error } = await supabaseClient.from('controle_cadeado').delete().eq('id', id);
     if (error) return alert('Erro ao excluir');
+    registrarAuditoria('EXCLUIR', 'Controle Cadeado', `Exclusão de registro de controle cadeado ID ${id}`);
     buscarDados();
 };

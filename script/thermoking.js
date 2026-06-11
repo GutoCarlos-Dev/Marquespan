@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 let tkData = [];
 let currentSort = { column: 'numero_serie', direction: 'asc' };
@@ -156,6 +157,7 @@ async function salvarTK(e) {
     if (error) {
         alert('Erro ao salvar: ' + error.message);
     } else {
+        registrarAuditoria(id ? 'ALTERAR' : 'INCLUIR', 'Thermoking', `${id ? 'Alteração' : 'Inclusão'} de Thermoking nº série ${payload.numero_serie}`);
         alert('Salvo com sucesso!');
         fecharModalTK();
         carregarTK();
@@ -171,7 +173,9 @@ async function handleTableClick(e) {
         abrirModalTK(item);
     } else if (e.target.closest('.btn-delete')) {
         if (confirm('Deseja realmente excluir este registro?')) {
+            const item = tkData.find(x => x.id == id);
             await supabaseClient.from('thermoking').delete().eq('id', id);
+            registrarAuditoria('EXCLUIR', 'Thermoking', `Exclusão de Thermoking nº série ${item?.numero_serie || id}`);
             carregarTK();
         }
     }

@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const TIMEZONE_BRASILIA = 'America/Sao_Paulo';
 const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
@@ -443,10 +444,12 @@ const PedagioUI = {
             if (this.editingLancamentoId) {
                 const { error } = await supabaseClient.from('pedagios_lancamentos').update(payload).eq('id', this.editingLancamentoId);
                 if (error) throw error;
+                registrarAuditoria('ALTERAR', 'Pedágio', `Alteração de lançamento de pedágio ID ${this.editingLancamentoId}`);
                 alert('Lançamento atualizado com sucesso!');
             } else {
                 const { error } = await supabaseClient.from('pedagios_lancamentos').insert(payload);
                 if (error) throw error;
+                registrarAuditoria('INCLUIR', 'Pedágio', `Inclusão de lançamento de pedágio`);
                 alert('Lançamento salvo com sucesso!');
             }
             this.fecharModalLancamento();
@@ -647,6 +650,7 @@ const PedagioUI = {
         try {
             const { error } = await supabaseClient.from('pedagios_lancamentos').delete().eq('id', id);
             if (error) throw error;
+            registrarAuditoria('EXCLUIR', 'Pedágio', `Exclusão de lançamento de pedágio ID ${id}`);
             alert('Lançamento excluído com sucesso!');
             this.carregarLancamentos();
         } catch (error) {
@@ -676,6 +680,7 @@ const PedagioUI = {
                 if (error) throw error;
             }
 
+            registrarAuditoria('EXCLUIR', 'Pedágio', `Exclusão em lote de ${ids.length} lançamento(s) de pedágio`);
             alert(`${ids.length} lançamento(s) excluído(s) com sucesso!`);
             this.carregarLancamentos();
         } catch (error) {
@@ -893,9 +898,11 @@ const PedagioUI = {
         try {
             if (this.editingEmpresaId) {
                 await supabaseClient.from('pedagios_empresas').update(payload).eq('id', this.editingEmpresaId);
+                registrarAuditoria('ALTERAR', 'Pedágio', `Alteração de empresa de pedágio: ${nome}`);
                 alert('Empresa de pedágio atualizada com sucesso!');
             } else {
                 await supabaseClient.from('pedagios_empresas').insert(payload);
+                registrarAuditoria('INCLUIR', 'Pedágio', `Inclusão de empresa de pedágio: ${nome}`);
                 alert('Empresa de pedágio cadastrada com sucesso!');
             }
             this.limparFormEmpresaPedagio();
@@ -948,6 +955,7 @@ const PedagioUI = {
         try {
             const { error } = await supabaseClient.from('pedagios_empresas').delete().eq('id', id);
             if (error) throw error;
+            registrarAuditoria('EXCLUIR', 'Pedágio', `Exclusão de empresa de pedágio ID ${id}`);
             alert('Empresa de pedágio excluída com sucesso!');
             this.carregarEmpresasPedagio();
         } catch (error) {

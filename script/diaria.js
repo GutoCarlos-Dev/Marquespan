@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const IMPORT_DAYS = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
 const CACHE_DATAS = {};
@@ -796,6 +797,7 @@ async function salvarDiariaSemana() {
             .insert(itens.map(item => comAuditoria({ ...item, diaria_id: diaria.id })));
         if (insertError) throw insertError;
 
+        registrarAuditoria('INCLUIR', 'Diária', `Registro de diária - Semana: ${semana}, Filial: ${getFilial()}`);
         alert('Diaria registrada com sucesso.');
     } catch (error) {
         console.error('Erro ao salvar diaria:', error);

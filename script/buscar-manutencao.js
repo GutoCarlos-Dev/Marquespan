@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
+import { registrarAuditoria } from './auditoria-utils.js';
 
 let dadosExportacao = [];
 let todosRegistros = []; // Armazena todos os registros buscados
@@ -794,6 +795,7 @@ async function excluirManutencao(id) {
     const { error } = await supabaseClient.from('manutencao').delete().eq('id', id);
     if (error) throw error;
 
+    registrarAuditoria('EXCLUIR', 'Manutenção', `Exclusão de manutenção ID ${id}`);
     alert('✅ Manutenção excluída com sucesso!');
     buscarManutencao(); // Atualiza a tabela
   } catch (error) {

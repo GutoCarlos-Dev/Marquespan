@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 import { getStatusClass, normalizarStatus, STATUS_CLASSES } from './coletar-manutencao/status.js';
 import { processarImportacaoColetaManutencao } from './coletar-manutencao/importacao.js';
 import { exportarRelatorioExcel } from './coletar-manutencao/export-excel.js';
@@ -1101,6 +1102,7 @@ const ColetarManutencaoUI = {
                 console.error('Erro ao atualizar situação do veículo:', errVeiculo);
             }
 
+            registrarAuditoria(this.editingId ? 'ALTERAR' : 'INCLUIR', 'Coleta Manutenção', `${this.editingId ? 'Atualização' : 'Registro'} de coleta - Placa: ${placa}`);
             alert(`✅ Coleta ${this.editingId ? 'atualizada' : 'registrada'} com sucesso!`);
             this.fecharModal();
             this.limparRascunho(); // Limpa rascunho após sucesso
@@ -1362,7 +1364,7 @@ const ColetarManutencaoUI = {
             
             const { error } = await supabaseClient.from('coletas_manutencao').delete().eq('id', id);
             if (error) throw error;
-            
+            registrarAuditoria('EXCLUIR', 'Coleta Manutenção', `Exclusão de coleta ID ${id}`);
             this.carregarLancamentos();
 
             // Se a aba de relatório estiver visível, atualiza ela também

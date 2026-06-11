@@ -1,5 +1,6 @@
 // rotas.js - Lógica para o módulo de Cadastro de Rotas
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 class SupabaseService {
   static async list(table, cols='*', opts={}){
@@ -163,6 +164,7 @@ const RotasUI = {
             const { error } = await supabaseClient.from('rotas').upsert(payload, { onConflict: 'numero' });
             if (error) throw error;
 
+            registrarAuditoria(payload.id ? 'ALTERAR' : 'INCLUIR', 'Rotas', `${payload.id ? 'Alteração' : 'Inclusão'} da rota nº ${payload.numero}`);
             alert('✅ Rota salva com sucesso!');
             this.clearForm();
             this.renderGrid();
@@ -208,7 +210,9 @@ const RotasUI = {
         if (btn.classList.contains('btn-delete')) {
             if (confirm('Tem certeza que deseja excluir esta rota?')) {
                 try {
+                    const rotaExcluida = this._data?.find(r => r.id == id);
                     await this.SupabaseService.remove('rotas', { field: 'id', value: id });
+                    registrarAuditoria('EXCLUIR', 'Rotas', `Exclusão da rota nº ${rotaExcluida?.numero || id}`);
                     this.renderGrid();
                 } catch (err) {
                     console.error('Erro ao excluir rota', err);

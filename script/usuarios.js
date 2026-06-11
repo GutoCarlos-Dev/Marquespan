@@ -1,4 +1,5 @@
 import { supabaseClient, supabaseKey } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const USUARIOS_PAGE_ID = 'usuarios.html';
 const ADMIN_USUARIOS_FUNCTION_URL = 'https://hlzcycvlcuhgnnjkmslt.supabase.co/functions/v1/admin-usuarios';
@@ -355,6 +356,7 @@ async function salvarUsuario(e) {
             throw new Error(result.error || 'Erro ao salvar usuário.');
         }
 
+        registrarAuditoria(id ? 'ALTERAR' : 'INCLUIR', 'Usuários', `${id ? 'Alteração' : 'Inclusão'} do usuário ${nome} (Nível: ${nivel})`);
         alert('✅ Usuário salvo com sucesso!');
         document.getElementById('btnCancelar').click();
         carregarUsuarios();
@@ -407,6 +409,7 @@ async function excluirUsuario(id) {
             throw new Error(result.error || 'Erro ao excluir usuario.');
         }
         
+        registrarAuditoria('EXCLUIR', 'Usuários', `Exclusão do usuário ID ${id}`);
         alert('Usuário excluído com sucesso!');
         carregarUsuarios();
     } catch (err) {

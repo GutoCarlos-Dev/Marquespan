@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const SUPERVISOR_PAGE_ID = 'supervisor.html';
 
@@ -193,10 +194,12 @@ const SupervisorUI = {
             if (id) {
                 const { error } = await supabaseClient.from('supervisores').update(payload).eq('id', id);
                 if (error) throw error;
+                registrarAuditoria('ALTERAR', 'Supervisor', `Alteração do supervisor ${payload.nome}`);
                 alert('✅ Supervisor atualizado com sucesso!');
             } else {
                 const { error } = await supabaseClient.from('supervisores').insert([payload]);
                 if (error) throw error;
+                registrarAuditoria('INCLUIR', 'Supervisor', `Inclusão do supervisor ${payload.nome}`);
                 alert('✅ Supervisor cadastrado com sucesso!');
             }
             this.clearForm();
@@ -228,6 +231,7 @@ const SupervisorUI = {
         try {
             const { error } = await supabaseClient.from('supervisores').delete().eq('id', id);
             if (error) throw error;
+            registrarAuditoria('EXCLUIR', 'Supervisor', `Exclusão do supervisor ID ${id}`);
             alert('✅ Supervisor excluído com sucesso!');
             this.carregarSupervisores();
         } catch (err) {

@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const STORAGE_KEY_RASCUNHO = 'marquespan_coleta_km_rascunho';
 
@@ -346,6 +347,7 @@ async function salvarColetaCompleta() {
 
         if (error) throw error;
         
+        registrarAuditoria('INCLUIR', 'Coleta KM', `Inclusão de coleta de KM com ${dadosParaInserir.length} registros`);
         alert('Coleta de KM salva com sucesso!');
         itensColeta = []; // Limpa a lista de itens em memória
         originalDataColeta = null; // Reseta a referência de edição para um novo lote
@@ -585,6 +587,7 @@ window.excluirBatchColeta = async function(dataColeta) {
 
         if (error) throw error;
         
+        registrarAuditoria('EXCLUIR', 'Coleta KM', `Exclusão do lote de coleta de KM da data ${dataColeta}`);
         alert('Lote excluído com sucesso!');
         carregarHistorico();
     } catch (error) {
