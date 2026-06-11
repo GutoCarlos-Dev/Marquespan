@@ -45,7 +45,19 @@ const nomePagina = p => NOMES_PAGINA[p] || (p ? p.replace('.html', '') : 'Sistem
 // Presença — usuários online
 // ---------------------------------------------------------------------------
 function renderOnlineUsers(state) {
-    const users = Object.values(state).flat();
+    // Cada key pode ter múltiplas entradas (uma por aba aberta).
+    // Deduplica por user_id mantendo a aba com a entrada mais recente.
+    const allPresences = Object.values(state).flat();
+    const mapaUsuarios = new Map();
+    allPresences.forEach(u => {
+        const chave = u.user_id ?? u.nome;
+        const existente = mapaUsuarios.get(chave);
+        if (!existente || new Date(u.entrou_em) > new Date(existente.entrou_em)) {
+            mapaUsuarios.set(chave, u);
+        }
+    });
+    const users = [...mapaUsuarios.values()];
+
     document.getElementById('countOnline').textContent = users.length;
 
     const container = document.getElementById('onlineUsersGrid');
