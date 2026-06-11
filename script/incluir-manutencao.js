@@ -150,28 +150,10 @@ function preencherModeloVeiculo() {
     const veiculo = veiculosCache.find(v => normalizarPlaca(v.placa) === placaSelecionada);
 
     modeloInput.value = veiculo ? (veiculo.modelo || '') : '';
-    atualizarObrigatoriedadeModelo();
 }
 
 function normalizarPlaca(valor) {
     return String(valor || '').trim().toUpperCase();
-}
-
-function placaDispensaModelo(valor) {
-    return normalizarPlaca(valor) === 'CONTROLE';
-}
-
-function atualizarObrigatoriedadeModelo() {
-    const placaInput = document.getElementById('veiculo');
-    const modeloInput = document.getElementById('modeloVeiculo');
-    const modeloLabel = document.querySelector('label[for="modeloVeiculo"]');
-    if (!placaInput || !modeloInput || !modeloLabel) return;
-
-    const modeloOpcional = placaDispensaModelo(placaInput.value);
-    modeloLabel.textContent = modeloOpcional ? 'Modelo (opcional para CONTROLE)' : 'Modelo *';
-    modeloInput.placeholder = modeloOpcional
-        ? 'Nao obrigatorio para a placa CONTROLE'
-        : 'Preenchido automaticamente';
 }
 
 async function carregarFiliais() {
@@ -316,12 +298,6 @@ async function salvarManutencao() {
     { valor: dados.numeroOS,    nome: 'Número da OS' },
     { valor: dados.fornecedor,  nome: 'Fornecedor' },
   ];
-  if (!placaDispensaModelo(dados.veiculo)) {
-    camposObrigatorios.push({
-      valor: document.getElementById('modeloVeiculo').value,
-      nome: 'Modelo'
-    });
-  }
   const faltando = camposObrigatorios.filter(c => !c.valor).map(c => c.nome);
   if (faltando.length > 0) {
     alert(`⚠️ Preencha os campos obrigatórios:\n• ${faltando.join('\n• ')}`);
@@ -482,7 +458,6 @@ function limparFormularioInteligente() {
     // Limpa o campo de modelo se o campo de placa não for fixo
     const modeloInput = document.getElementById('modeloVeiculo');
     if (modeloInput && !camposFixos.includes('veiculo')) modeloInput.value = '';
-    atualizarObrigatoriedadeModelo();
 
     // Recalcula totais caso valores tenham sido limpos
     calcularTotalFiscal();
