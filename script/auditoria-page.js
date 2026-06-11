@@ -47,6 +47,13 @@ const NOMES_PAGINA = {
     'escala.html': 'Escala',
     'diaria.html': 'Diária',
     'portaria-controle-acesso.html': 'Portaria',
+    'retorno-rota.html': 'Retorno de Rota',
+    'retorno-rota-mobile.html': 'Retorno de Rota Mobile',
+    'fiscalizacao-acompanhamento-mobile.html': 'Fiscalização Acompanhamento Mobile',
+    'fiscalizacao-ocorrencia-mobile.html': 'Fiscalização Ocorrência Mobile',
+    'mobile-engraxe.html': 'Engraxe Mobile',
+    'mobile-lavagem.html': 'Lavagem Mobile',
+    'mobile-coletar-km.html': 'Coleta KM Mobile',
     'compras.html': 'Compras',
     'estoque_geral.html': 'Estoque',
 };
