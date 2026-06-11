@@ -42,6 +42,23 @@ function statusClass(status) {
         .replace(/[^a-z0-9_-]/g, '-');
 }
 
+function maskCPF(value) {
+    let v = value.replace(/[^0-9Xx]/g, '').toUpperCase().slice(0, 11);
+    if (v.length > 9) return v.slice(0,3) + '.' + v.slice(3,6) + '.' + v.slice(6,9) + '-' + v.slice(9);
+    if (v.length > 6) return v.slice(0,3) + '.' + v.slice(3,6) + '.' + v.slice(6);
+    if (v.length > 3) return v.slice(0,3) + '.' + v.slice(3);
+    return v;
+}
+
+function maskPhone(value) {
+    let v = value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 10) return '(' + v.slice(0,2) + ')' + v.slice(2,7) + '-' + v.slice(7);
+    if (v.length > 6)  return '(' + v.slice(0,2) + ')' + v.slice(2,6) + '-' + v.slice(6);
+    if (v.length > 2)  return '(' + v.slice(0,2) + ')' + v.slice(2);
+    if (v.length > 0)  return '(' + v;
+    return v;
+}
+
 const FuncionarioUI = {
     currentFuncaoBeforeEdit: null,
     sortConfig: { column: 'nome', direction: 'asc' }, // Estado inicial da ordenação
@@ -213,6 +230,20 @@ const FuncionarioUI = {
                 if (editButton?.dataset.id) this.loadForEditing(editButton.dataset.id);
                 if (deleteButton?.dataset.id) this.deleteFuncionario(deleteButton.dataset.id);
             });
+        }
+
+        // Máscaras de formatação
+        const cpfInput = document.getElementById('funcCPF');
+        if (cpfInput) {
+            cpfInput.addEventListener('input', () => { cpfInput.value = maskCPF(cpfInput.value); });
+        }
+        const contatoCorp = document.getElementById('funcContatoCorp');
+        if (contatoCorp) {
+            contatoCorp.addEventListener('input', () => { contatoCorp.value = maskPhone(contatoCorp.value); });
+        }
+        const contatoPessoal = document.getElementById('funcContatoPessoal');
+        if (contatoPessoal) {
+            contatoPessoal.addEventListener('input', () => { contatoPessoal.value = maskPhone(contatoPessoal.value); });
         }
     },
 
