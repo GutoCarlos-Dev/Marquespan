@@ -157,6 +157,32 @@
     </div>
   </div>
 
+  <div id="modalSaidaAcesso" class="modal-overlay hidden">
+    <div class="modal-content portaria-modal-sm">
+      <div class="modal-header">
+        <h3>Conferencia de Saida</h3>
+        <button type="button" id="btnFecharSaidaAcesso" class="close-button">&times;</button>
+      </div>
+      <form id="formSaidaAcesso">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="saidaPlacaVeiculo">Placa/Cavalo na Saida</label>
+            <input type="text" id="saidaPlacaVeiculo" class="glass-input" required placeholder="AAA0A00">
+          </div>
+          <div class="form-group">
+            <label for="saidaCarretaCacamba">Carreta/Ca&ccedil;amba na Saida (Opcional)</label>
+            <input type="text" id="saidaCarretaCacamba" class="glass-input" placeholder="AAA0A00">
+          </div>
+          <div id="resumoEntradaSaida" class="conferencia-resumo"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btnCancelarSaidaAcesso" class="btn-custom btn-red">Cancelar</button>
+          <button type="submit" id="btnConfirmarSaidaAcesso" class="btn-custom btn-green">Confirmar Saida</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="modalEmpresa" class="modal-overlay hidden">
     <div class="modal-content portaria-modal-sm">
       <div class="modal-header">

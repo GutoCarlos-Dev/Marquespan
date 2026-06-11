@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatorio de Acessos - Portaria</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/buscar-manutencao.css">
+  <link rel="stylesheet" href="css/relatorio-acesso-portaria.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="logo.png" type="image/png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div id="menu-container"></div>
+
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-clipboard-check"></i> Relatorio de Auditoria de Acessos</h1>
+    </header>
+
+    <section class="glass-panel">
+      <h3><i class="fas fa-filter"></i> Filtros de Auditoria</h3>
+      <form id="formFiltrosRelatorio">
+        <div class="auditoria-filtros">
+          <div class="form-group-filter">
+            <label for="tipoPeriodo">Periodo por</label>
+            <select id="tipoPeriodo" class="glass-input">
+              <option value="created_at">Cadastro</option>
+              <option value="entrada_em" selected>Entrada</option>
+              <option value="saida_em">Saida</option>
+            </select>
+          </div>
+          <div class="form-group-filter">
+            <label for="dataInicial">Data inicial</label>
+            <input type="date" id="dataInicial" class="glass-input">
+          </div>
+          <div class="form-group-filter">
+            <label for="dataFinal">Data final</label>
+            <input type="date" id="dataFinal" class="glass-input">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroStatus">Status</label>
+            <select id="filtroStatus" class="glass-input">
+              <option value="">Todos</option>
+              <option value="aguardando">Aguardando</option>
+              <option value="entrada">Dentro da empresa</option>
+              <option value="saida">Saida registrada</option>
+            </select>
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroDivergencia">Conferencia</label>
+            <select id="filtroDivergencia" class="glass-input">
+              <option value="">Todas</option>
+              <option value="qualquer">Com qualquer divergencia</option>
+              <option value="placa">Divergencia de cavalo</option>
+              <option value="carreta">Divergencia de carreta/cacamba</option>
+              <option value="sem">Sem divergencia</option>
+              <option value="incompleto">Fluxo incompleto</option>
+            </select>
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroPessoa">Pessoa/Motorista</label>
+            <input type="text" id="filtroPessoa" class="glass-input" placeholder="Nome do motorista">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroDocumento">CPF/RG/CNH</label>
+            <input type="text" id="filtroDocumento" class="glass-input" placeholder="Documento">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroEmpresa">Empresa</label>
+            <input type="text" id="filtroEmpresa" class="glass-input" placeholder="Nome ou documento">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroPlaca">Placa/Cavalo</label>
+            <input type="text" id="filtroPlaca" class="glass-input" placeholder="Entrada ou saida">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroCarreta">Carreta/Ca&ccedil;amba</label>
+            <input type="text" id="filtroCarreta" class="glass-input" placeholder="Entrada ou saida">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroSetor">Setor</label>
+            <input type="text" id="filtroSetor" class="glass-input" placeholder="Setor de destino">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroProduto">Produto/Servico</label>
+            <input type="text" id="filtroProduto" class="glass-input" placeholder="Produto ou servico">
+          </div>
+          <div class="form-group-filter">
+            <label for="filtroUsuario">Usuario</label>
+            <input type="text" id="filtroUsuario" class="glass-input" placeholder="Usuario do registro">
+          </div>
+        </div>
+        <div class="auditoria-acoes">
+          <button type="submit" id="btnBuscar" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+          <button type="button" id="btnLimpar" class="btn-glass btn-muted"><i class="fas fa-eraser"></i> Limpar</button>
+          <button type="button" id="btnExcel" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Excel</button>
+          <button type="button" id="btnPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="auditoria-kpis">
+      <div class="auditoria-kpi"><span>Registros</span><strong id="kpiTotal">0</strong></div>
+      <div class="auditoria-kpi kpi-blue"><span>Dentro da empresa</span><strong id="kpiDentro">0</strong></div>
+      <div class="auditoria-kpi kpi-green"><span>Saidas</span><strong id="kpiSaidas">0</strong></div>
+      <div class="auditoria-kpi kpi-red"><span>Divergencias</span><strong id="kpiDivergencias">0</strong></div>
+      <div class="auditoria-kpi kpi-orange"><span>Pessoas distintas</span><strong id="kpiPessoas">0</strong></div>
+    </section>
+
+    <section class="glass-panel">
+      <div class="auditoria-resultados-header">
+        <h3><i class="fas fa-list"></i> Entradas e Saidas</h3>
+        <input type="text" id="filtroLocal" class="glass-input" placeholder="Filtrar resultados exibidos...">
+      </div>
+      <div class="auditoria-legenda">
+        <span class="legenda-ok">Sem divergencia</span>
+        <span class="legenda-alerta">Divergencia entrada x saida</span>
+        <span class="legenda-incompleta">Fluxo incompleto</span>
+      </div>
+      <div class="table-responsive auditoria-table-wrap">
+        <table class="data-grid auditoria-table">
+          <thead>
+            <tr>
+              <th>Cadastro</th>
+              <th>Entrada</th>
+              <th>Saida</th>
+              <th>Tempo interno</th>
+              <th>Pessoa</th>
+              <th>Documento</th>
+              <th>Empresa</th>
+              <th>Cavalo entrada</th>
+              <th>Cavalo saida</th>
+              <th>Carreta entrada</th>
+              <th>Carreta saida</th>
+              <th>Conferencia</th>
+              <th>Setor</th>
+              <th>Produto/Servico</th>
+              <th>Observacoes</th>
+              <th>Status</th>
+              <th>Usuario</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyRelatorio">
+            <tr><td colspan="17" class="auditoria-empty">Utilize os filtros para pesquisar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/relatorio-acesso-portaria.js" defer></script>
+</body>
+</html>

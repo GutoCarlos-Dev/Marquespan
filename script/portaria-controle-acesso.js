@@ -6,6 +6,7 @@ let pessoas = [];
 let setores = [];
 let acessos = [];
 let acessoEditandoId = null;
+let acessoSaidaId = null;
 let modalRetornoCadastro = null;
 const niveisComExclusao = ['administrador', 'gerencia'];
 
@@ -26,11 +27,16 @@ function bindEvents() {
   document.getElementById('filtroBusca').addEventListener('input', renderizarTabela);
   document.getElementById('filtroStatus').addEventListener('change', buscarAcessos);
   document.getElementById('formAcesso').addEventListener('submit', salvarAcesso);
+  document.getElementById('formSaidaAcesso').addEventListener('submit', confirmarSaidaAcesso);
   document.getElementById('formEmpresa').addEventListener('submit', salvarEmpresa);
   document.getElementById('formPessoa').addEventListener('submit', salvarPessoa);
   document.getElementById('formSetor').addEventListener('submit', salvarSetor);
   document.getElementById('btnFecharAcesso').addEventListener('click', fecharModalAcesso);
   document.getElementById('btnCancelarAcesso').addEventListener('click', fecharModalAcesso);
+  document.getElementById('btnFecharSaidaAcesso').addEventListener('click', fecharModalSaidaAcesso);
+  document.getElementById('btnCancelarSaidaAcesso').addEventListener('click', fecharModalSaidaAcesso);
+  document.getElementById('saidaPlacaVeiculo').addEventListener('input', atualizarResumoSaida);
+  document.getElementById('saidaCarretaCacamba').addEventListener('input', atualizarResumoSaida);
   document.getElementById('btnCadastroEmpresa').addEventListener('click', () => abrirModalCadastro('modalEmpresa'));
   document.getElementById('btnCadastroPessoa').addEventListener('click', () => abrirModalCadastro('modalPessoa'));
   document.getElementById('btnCadastroSetor').addEventListener('click', () => abrirModalCadastro('modalSetor'));
@@ -64,7 +70,7 @@ function bindEvents() {
   document.querySelectorAll('.modal-overlay').forEach(modal => {
     modal.addEventListener('click', event => {
       if (event.target !== modal) return;
-      if (modal.id === 'modalAcesso') return;
+      if (modal.id === 'modalAcesso' || modal.id === 'modalSaidaAcesso') return;
       fecharModalCadastro(modal.id);
     });
   });
@@ -217,6 +223,55 @@ function fecharModalCadastro(id) {
 
 function esconderTodosModais() {
   document.querySelectorAll('.modal-overlay').forEach(modal => modal.classList.add('hidden'));
+}
+
+function abrirModalSaidaAcesso(item) {
+  acessoSaidaId = item.id;
+  const placaEntrada = item.placa_entrada || item.placa_veiculo || '';
+  const carretaEntrada = item.carreta_cacamba_entrada || item.carreta_cacamba || '';
+  document.getElementById('saidaPlacaVeiculo').value = placaEntrada;
+  document.getElementById('saidaCarretaCacamba').value = carretaEntrada;
+  document.getElementById('modalSaidaAcesso').classList.remove('hidden');
+  atualizarResumoSaida();
+  document.getElementById('saidaPlacaVeiculo').focus();
+}
+
+function fecharModalSaidaAcesso() {
+  acessoSaidaId = null;
+  document.getElementById('modalSaidaAcesso').classList.add('hidden');
+}
+
+function atualizarResumoSaida() {
+  const item = acessos.find(acesso => acesso.id === acessoSaidaId);
+  if (!item) return;
+  const placaEntrada = normalizarBusca(item.placa_entrada || item.placa_veiculo);
+  const carretaEntrada = normalizarBusca(item.carreta_cacamba_entrada || item.carreta_cacamba);
+  const placaSaida = normalizarBusca(document.getElementById('saidaPlacaVeiculo').value);
+  const carretaSaida = normalizarBusca(document.getElementById('saidaCarretaCacamba').value);
+  const divergente = placaEntrada !== placaSaida || carretaEntrada !== carretaSaida;
+  const resumo = document.getElementById('resumoEntradaSaida');
+  resumo.classList.toggle('divergente', divergente);
+  resumo.innerHTML = `
+    <strong>Entrada:</strong> Cavalo ${escapeHtml(placaEntrada || '-')} | Carreta/Cacamba ${escapeHtml(carretaEntrada || '-')}<br>
+    <strong>Saida:</strong> Cavalo ${escapeHtml(placaSaida || '-')} | Carreta/Cacamba ${escapeHtml(carretaSaida || '-')}<br>
+    <strong>Conferencia:</strong> ${divergente ? 'DIVERGENCIA IDENTIFICADA' : 'SEM DIVERGENCIA'}
+  `;
+}
+
+async function confirmarSaidaAcesso(event) {
+  event.preventDefault();
+  const item = acessos.find(acesso => acesso.id === acessoSaidaId);
+  if (!item) return;
+  const payload = {
+    status: 'saida',
+    saida_em: new Date().toISOString(),
+    placa_saida: textoMaiusculo(document.getElementById('saidaPlacaVeiculo').value) || null,
+    carreta_cacamba_saida: textoMaiusculo(document.getElementById('saidaCarretaCacamba').value) || null
+  };
+  const { error } = await supabaseClient.from('portaria_acessos').update(payload).eq('id', item.id);
+  if (error) return alert(`Erro ao registrar saida: ${error.message}`);
+  fecharModalSaidaAcesso();
+  await buscarAcessos();
 }
 
 function preencherDadosEmpresa() {
@@ -814,11 +869,16 @@ async function handleTabelaClick(event) {
   }
 
   if (button.dataset.action === 'entrada') {
-    await atualizarStatusAcesso(item.id, { status: 'entrada', entrada_em: new Date().toISOString() });
+    await atualizarStatusAcesso(item.id, {
+      status: 'entrada',
+      entrada_em: new Date().toISOString(),
+      placa_entrada: item.placa_veiculo || null,
+      carreta_cacamba_entrada: item.carreta_cacamba || null
+    });
   }
 
   if (button.dataset.action === 'saida') {
-    await atualizarStatusAcesso(item.id, { status: 'saida', saida_em: new Date().toISOString() });
+    abrirModalSaidaAcesso(item);
   }
 
   if (button.dataset.action === 'excluir') {

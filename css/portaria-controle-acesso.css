@@ -89,8 +89,27 @@ body.portaria-menu-oculto .portaria-menu-toggle i {
 #formSetor input[type="text"],
 #formSetor textarea,
 #acessoProdutoServico,
-#acessoObservacoes {
+#acessoObservacoes,
+#saidaPlacaVeiculo,
+#saidaCarretaCacamba {
   text-transform: uppercase;
+}
+
+.conferencia-resumo {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #dbe3ea;
+  border-left: 4px solid #006a2d;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.conferencia-resumo.divergente {
+  border-left-color: #dc3545;
+  background: #fff5f5;
+  color: #721c24;
 }
 
 .portaria-modal {
