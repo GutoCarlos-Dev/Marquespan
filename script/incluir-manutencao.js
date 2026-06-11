@@ -154,7 +154,7 @@ function preencherModeloVeiculo() {
 async function carregarFiliais() {
   const { data, error } = await supabaseClient.from('filiais').select('nome, sigla').order('nome');
   if (error) return console.error('Erro ao carregar filiais:', error);
-  
+
   const selects = ['filial', 'tabFornFilial', 'modalFornFilial', 'tabTituloFilial'];
   selects.forEach(id => {
       const select = document.getElementById(id);
@@ -167,6 +167,12 @@ async function carregarFiliais() {
           });
       }
   });
+
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+  const filialSelect = document.getElementById('filial');
+  if (usuario?.filial && filialSelect) {
+      filialSelect.value = usuario.filial;
+  }
 }
 
 async function carregarTitulosManutencao() {
@@ -278,8 +284,19 @@ async function salvarManutencao() {
     descricao: document.getElementById('descricao').value
   };
 
-  if (!dados.status || !dados.veiculo || !dados.data) {
-    alert('⚠️ Preencha os campos obrigatórios: Status, Placa e Data.');
+  const camposObrigatorios = [
+    { valor: dados.status,      nome: 'Status' },
+    { valor: dados.veiculo,     nome: 'Placa' },
+    { valor: dados.data,        nome: 'Data' },
+    { valor: dados.filial,      nome: 'Filial' },
+    { valor: dados.tipo,        nome: 'Tipo' },
+    { valor: document.getElementById('modeloVeiculo').value, nome: 'Modelo' },
+    { valor: dados.numeroOS,    nome: 'Número da OS' },
+    { valor: dados.fornecedor,  nome: 'Fornecedor' },
+  ];
+  const faltando = camposObrigatorios.filter(c => !c.valor).map(c => c.nome);
+  if (faltando.length > 0) {
+    alert(`⚠️ Preencha os campos obrigatórios:\n• ${faltando.join('\n• ')}`);
     return;
   }
 
@@ -1134,6 +1151,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('valorNfe')?.addEventListener('input', calcularTotalFiscal);
   document.getElementById('valorNfse')?.addEventListener('input', calcularTotalFiscal);
   document.getElementById('btnToggleMenuLateral')?.addEventListener('click', toggleMenuLateralManutencao);
+
+  // Descrição Detalhada — sempre maiúsculo
+  const descricaoTextarea = document.getElementById('descricao');
+  if (descricaoTextarea) {
+      descricaoTextarea.addEventListener('input', () => {
+          const pos = descricaoTextarea.selectionStart;
+          descricaoTextarea.value = descricaoTextarea.value.toUpperCase();
+          descricaoTextarea.setSelectionRange(pos, pos);
+      });
+  }
 
   // Listener Busca Fornecedor Modal
   document.getElementById('novoFornecedor').addEventListener('input', handleBuscaFornecedorModal);

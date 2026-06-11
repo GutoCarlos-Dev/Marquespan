@@ -107,11 +107,11 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="filial">Filial</label>
+                                <label for="filial">Filial *</label>
                                 <select id="filial"></select>
                             </div>
                             <div class="form-group">
-                                <label for="tipoManutencao">Tipo</label>
+                                <label for="tipoManutencao">Tipo *</label>
                                 <select id="tipoManutencao">
                                     <option value="">Selecione</option>
                                     <option value="CORRETIVA">CORRETIVA</option>
@@ -153,7 +153,7 @@
                                 <datalist id="listaPlacas"></datalist>
                             </div>
                             <div class="form-group">
-                                <label for="modeloVeiculo">Modelo</label>
+                                <label for="modeloVeiculo">Modelo *</label>
                                 <input type="text" id="modeloVeiculo" class="glass-input" placeholder="Preenchido automaticamente" readonly style="background-color: #e9ecef; cursor: not-allowed;">
                             </div>
                         </div>
@@ -170,7 +170,7 @@
                         <h3><i class="fas fa-file-invoice-dollar"></i> Dados Fiscais</h3>
                         <div class="form-row">
                             <div class="form-group" style="flex: 2;">
-                                <label for="fornecedor">Fornecedor</label>
+                                <label for="fornecedor">Fornecedor *</label>
                                 <div style="display: flex; gap: 5px;">
                                     <input type="text" id="fornecedor" list="listaFornecedores" placeholder="Digite ou selecione">
                                     <button type="button" class="btn-glass btn-blue" style="padding: 6px 12px;" onclick="abrirModalFornecedor()" title="Novo Fornecedor">
@@ -213,14 +213,14 @@
                         <h3><i class="fas fa-info-circle"></i> Outras Informações</h3>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="numeroOS">Número da OS</label>
+                                <label for="numeroOS">Número da OS *</label>
                                 <input type="text" id="numeroOS">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group" style="flex: 1;">
                                 <label for="descricao">Descrição Detalhada</label>
-                                <textarea id="descricao" rows="3" placeholder="Detalhes adicionais..."></textarea>
+                                <textarea id="descricao" rows="3" placeholder="Detalhes adicionais..." style="text-transform: uppercase;"></textarea>
                             </div>
                         </div>
                         <div class="form-row">
