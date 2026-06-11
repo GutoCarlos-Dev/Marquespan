@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
 const SEMANAS = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
@@ -1489,6 +1490,7 @@ async function salvarTudo() {
         atualizarIdsSalvos(data || []);
         gridData.forEach(row => { row._dirty = false; });
         await carregarDados();
+        registrarAuditoria('ALTERAR', 'Peso de Rota', `${data.length} linha(s) de peso de rota salvas`);
         alert(`${data.length} linha(s) de peso de rota salvas e conferidas no banco.`);
     } catch (error) {
         console.error('Erro ao salvar peso de rota:', error);
@@ -1671,6 +1673,7 @@ async function excluirSelecionados() {
             if (error) throw error;
         }
 
+        registrarAuditoria('EXCLUIR', 'Peso de Rota', `Exclusão de ${idsParaExcluir.length} linha(s) de peso de rota`);
         gridData = gridData.filter((_, index) => !indices.includes(index));
         renderGrid();
     } catch (error) {

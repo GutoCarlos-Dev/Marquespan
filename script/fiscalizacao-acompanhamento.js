@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 let acompanhamentos = [];
 let acompanhamentoEditandoId = null;
@@ -472,6 +473,7 @@ async function salvarAcompanhamento(event) {
     btn.textContent = 'Salvar Alteracoes';
     atualizarBotaoCompartilharModal();
     await buscarAcompanhamentos();
+    registrarAuditoria(estavaEditando ? 'ALTERAR' : 'INCLUIR', 'Fiscalização Acompanhamento', `${estavaEditando ? 'Alteração' : 'Inclusão'} de acompanhamento`);
     alert(estavaEditando ? 'Acompanhamento atualizado com sucesso! Botao de compartilhamento habilitado.' : 'Acompanhamento registrado com sucesso! Botao de compartilhamento habilitado.');
   } catch (error) {
     console.error('Erro ao salvar acompanhamento:', error);
@@ -537,6 +539,7 @@ async function excluirAcompanhamento(item) {
     if (error) throw error;
 
     await buscarAcompanhamentos();
+    registrarAuditoria('EXCLUIR', 'Fiscalização Acompanhamento', `Exclusão de acompanhamento da placa ${item.placa || item.id}`);
     alert('Acompanhamento excluido com sucesso!');
   } catch (error) {
     console.error('Erro ao excluir acompanhamento:', error);

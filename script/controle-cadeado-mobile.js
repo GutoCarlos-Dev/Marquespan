@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     const dataInput = document.getElementById('mobileData');
@@ -80,6 +81,7 @@ async function salvarLancamento(event) {
         document.getElementById('mobileQuantidade').value = '1';
 
         await carregarUltimosLancamentos();
+        registrarAuditoria('INCLUIR', 'Controle Cadeado', `Lançamento de cadeado via app mobile: motorista ${payload.motorista}`);
         alert('Lancamento salvo com sucesso!');
     } catch (error) {
         console.error('Erro ao salvar lancamento:', error);

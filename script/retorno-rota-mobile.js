@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
 
@@ -1013,6 +1014,7 @@ async function saveRetorno() {
             allData.unshift(savedData);
         }
 
+        registrarAuditoria(currentItem?.id ? 'ALTERAR' : 'INCLUIR', 'Retorno de Rota', `${currentItem?.id ? 'Alteração' : 'Inclusão'} de retorno de rota via app mobile`);
         alert('Retorno salvo com sucesso!');
         retornoSnapshotInicial = null;
         currentItem = null;

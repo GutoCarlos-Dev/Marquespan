@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 let ocorrencias = [];
 let ocorrenciaEditandoId = null;
@@ -374,6 +375,7 @@ async function salvarOcorrencia(event) {
     atualizarBotaoCompartilharModal();
     await carregarAnexosExistentes(idOcorrencia);
     await buscarOcorrencias();
+    registrarAuditoria(estavaEditando ? 'ALTERAR' : 'INCLUIR', 'Fiscalização Ocorrência', `${estavaEditando ? 'Alteração' : 'Inclusão'} de ocorrência`);
     alert(estavaEditando ? 'Ocorrencia atualizada com sucesso! Botao de compartilhamento habilitado.' : 'Ocorrencia registrada com sucesso! Botao de compartilhamento habilitado.');
   } catch (error) {
     console.error('Erro ao salvar ocorrencia:', error);
@@ -404,6 +406,7 @@ async function excluirOcorrencia(item) {
     if (error) throw error;
 
     await buscarOcorrencias();
+    registrarAuditoria('EXCLUIR', 'Fiscalização Ocorrência', `Exclusão de ocorrência da placa ${item.placa || item.id}`);
     alert('Ocorrencia excluida com sucesso!');
   } catch (error) {
     console.error('Erro ao excluir ocorrencia:', error);

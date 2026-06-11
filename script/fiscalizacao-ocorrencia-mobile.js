@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 let ocorrencias = [];
 let ocorrenciaEditandoId = null;
@@ -224,6 +225,7 @@ async function salvarOcorrencia(event) {
     document.getElementById('mobileFiltroDataAte').value = payload.data_ocorrencia;
     fecharModal();
     await carregarOcorrencias();
+    registrarAuditoria(estavaEditando ? 'ALTERAR' : 'INCLUIR', 'Fiscalização Ocorrência', `${estavaEditando ? 'Alteração' : 'Inclusão'} de ocorrência via app mobile`);
     alert(estavaEditando ? 'Ocorrencia atualizada com sucesso!' : 'Ocorrencia registrada com sucesso!');
   } catch (error) {
     console.error('Erro ao salvar ocorrencia:', error);

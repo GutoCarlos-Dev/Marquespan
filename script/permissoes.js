@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 let PAGINAS_SISTEMA = [];
 
@@ -208,6 +209,7 @@ async function salvarPermissoes() {
         alert('❌ Erro ao salvar permissões.');
         console.error(error);
     } else {
+        registrarAuditoria('ALTERAR', 'Permissões', `Atualização de permissões do nível: ${nivelSelecionado}`);
         alert('✅ Permissões salvas com sucesso!');
     }
 }
@@ -248,6 +250,7 @@ async function adicionarNovoNivel() {
         alert('❌ Erro ao criar o novo nível.');
         console.error('Erro ao adicionar nível:', error);
     } else {
+        registrarAuditoria('INCLUIR', 'Permissões', `Criação do novo nível de acesso: ${novoNivel}`);
         alert('✅ Nível adicionado com sucesso!');
         input.value = ''; // Limpa o campo
         

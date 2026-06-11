@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
 import { calcularEstoqueAtual } from './abastecimento/estoque-service.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
 const OFFSET_SAO_PAULO = '-03:00';
@@ -448,6 +449,7 @@ async function salvarAbastecimento(e) {
 
         if (error) throw error;
 
+        registrarAuditoria('INCLUIR', 'Abastecimento', `Abastecimento(s) registrado(s) via app mobile: placa ${placa}`);
         alert(`Abastecimento(s) registrado(s) com sucesso!`);
         
         // Limpa campos específicos, mantendo data e bico para agilizar o próximo

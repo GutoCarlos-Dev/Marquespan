@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
 
@@ -640,6 +641,7 @@ async function deleteSelectedRows() {
                 .delete()
                 .in('id', idsToDelete);
             if (error) throw error;
+            registrarAuditoria('EXCLUIR', 'Retorno de Rota', `Exclusão de ${idsToDelete.length} linha(s) de retorno de rota`);
         } catch (error) {
             console.error('Erro ao excluir registros do banco:', error);
             alert('Erro ao excluir alguns registros do banco de dados.');
@@ -1372,6 +1374,7 @@ async function saveAllData() {
 
         if (error) throw error;
 
+        registrarAuditoria('INCLUIR', 'Retorno de Rota', `Registro de retorno de rota: ${dataRetorno} (${dataToSave.length} linha(s))`);
         alert('✅ Dados salvos com sucesso!');
         loadDataFromSupabase(); // Recarrega os dados para obter IDs e confirmar
     } catch (error) {

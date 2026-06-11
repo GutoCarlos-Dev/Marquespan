@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
+import { registrarAuditoria } from './auditoria-utils.js';
 
 class SupabaseService {
   static async list(table, cols='*', opts={}){
@@ -797,6 +798,7 @@ const UI = {
         }
       }
 
+      registrarAuditoria(this.editingQuotationId ? 'ALTERAR' : 'INCLUIR', 'Compras', `${this.editingQuotationId ? 'Alteração' : 'Inclusão'} de cotação`);
       alert(`Cotação ${this.editingQuotationId ? 'atualizada' : 'registrada'} com sucesso!`);
       this.clearQuotationForm(); this.renderSavedQuotations();
     }catch(e){console.error('Erro registrar cotação',e); alert('Erro ao registrar. Verifique console.')}
@@ -1263,9 +1265,11 @@ const UI = {
     try {
       if (editingId) {
         await SupabaseService.update('produtos', payload, { field: 'id', value: editingId });
+        registrarAuditoria('ALTERAR', 'Compras', `Alteração de produto: ${payload.nome}`);
         alert('✅ Produto atualizado com sucesso!');
       } else {
         await SupabaseService.insert('produtos', payload);
+        registrarAuditoria('INCLUIR', 'Compras', `Inclusão de produto: ${payload.nome}`);
         alert('✅ Produto cadastrado com sucesso!');
       }
       this.clearProductForm();
@@ -1329,9 +1333,11 @@ const UI = {
     try {
       if (editingId) {
         await SupabaseService.update('fornecedores', payload, { field: 'id', value: editingId });
+        registrarAuditoria('ALTERAR', 'Compras', `Alteração de fornecedor: ${payload.nome}`);
         alert('✅ Fornecedor atualizado com sucesso!');
       } else {
         await SupabaseService.insert('fornecedores', payload);
+        registrarAuditoria('INCLUIR', 'Compras', `Inclusão de fornecedor: ${payload.nome}`);
         alert('✅ Fornecedor cadastrado com sucesso!');
       }
       this.clearFornecedorForm();
@@ -1757,6 +1763,7 @@ const UI = {
     if(confirm('Excluir cotação?')) {
       try {
         await SupabaseService.remove('cotacoes', {field:'id',value:id});
+        registrarAuditoria('EXCLUIR', 'Compras', `Exclusão de cotação ID ${id}`);
         this.renderSavedQuotations();
       } catch(e) {
         console.error(e);
@@ -1878,6 +1885,7 @@ const UI = {
             // 5. Atualizar a cotação
             await SupabaseService.update('cotacoes', updatePayload, { field: 'id', value: cotacaoId });
             
+            registrarAuditoria('INCLUIR', 'Compras', `Recebimento registrado para cotação ID ${cotacaoId}`);
             alert('Recebimento salvo com sucesso!');
             this.closeRecebimentoPanel();
             this.renderSavedQuotations();

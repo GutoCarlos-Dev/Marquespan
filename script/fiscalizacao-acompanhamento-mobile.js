@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 let acompanhamentos = [];
 let acompanhamentoEditandoId = null;
@@ -374,6 +375,7 @@ async function salvarAcompanhamento(event) {
     document.getElementById('mobileFiltroDataAte').value = payload.data_acompanhamento;
     fecharModal();
     await carregarAcompanhamentos();
+    registrarAuditoria(estavaEditando ? 'ALTERAR' : 'INCLUIR', 'Fiscalização Acompanhamento', `${estavaEditando ? 'Alteração' : 'Inclusão'} de acompanhamento via app mobile`);
     alert(estavaEditando ? 'Acompanhamento atualizado com sucesso!' : 'Acompanhamento registrado com sucesso!');
   } catch (error) {
     console.error('Erro ao salvar acompanhamento:', error);
