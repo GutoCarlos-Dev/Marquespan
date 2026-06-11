@@ -82,6 +82,15 @@ body.portaria-menu-oculto .portaria-menu-toggle i {
   z-index: 1;
 }
 
+#formEmpresa input[type="text"],
+#formEmpresa textarea,
+#formPessoa input[type="text"],
+#formPessoa textarea,
+#formSetor input[type="text"],
+#formSetor textarea {
+  text-transform: uppercase;
+}
+
 .portaria-modal {
   max-width: 920px;
 }

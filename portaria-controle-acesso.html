@@ -79,7 +79,8 @@
               <th>Empresa</th>
               <th>Documento</th>
               <th>Pessoa</th>
-              <th>Placa</th>
+              <th>Placa/Cavalo</th>
+              <th>Carreta/Ca&ccedil;amba</th>
               <th>Setor</th>
               <th>Produto/Servico</th>
               <th>Entrada</th>
@@ -89,7 +90,7 @@
             </tr>
           </thead>
           <tbody id="tbodyAcessos">
-            <tr><td colspan="11" style="text-align:center; padding:20px;">Utilize os filtros para pesquisar.</td></tr>
+            <tr><td colspan="12" style="text-align:center; padding:20px;">Utilize os filtros para pesquisar.</td></tr>
           </tbody>
         </table>
       </div>
@@ -106,11 +107,8 @@
         <div class="modal-body">
           <div class="form-grid-2-cols">
             <div class="form-group form-group-full">
-              <label for="acessoEmpresa">CNPJ/CPF ou Nome da Empresa</label>
-              <div class="input-action-row">
-                <input type="text" id="acessoEmpresa" list="listaEmpresasPortaria" class="glass-input" required placeholder="Digite ou selecione a empresa">
-                <button type="button" id="btnAbrirEmpresaNoAcesso" class="btn-mini" title="Cadastrar empresa"><i class="fas fa-plus"></i></button>
-              </div>
+              <label for="acessoDocumentoPessoa">CPF/RG/CNH do Motorista</label>
+              <input type="text" id="acessoDocumentoPessoa" class="glass-input" required placeholder="Digite o documento para localizar o motorista" autocomplete="off">
             </div>
             <div class="form-group">
               <label for="acessoPessoa">Pessoa com Produto/Servico</label>
@@ -120,12 +118,19 @@
               </div>
             </div>
             <div class="form-group">
-              <label for="acessoDocumentoPessoa">CPF/RG da Pessoa</label>
-              <input type="text" id="acessoDocumentoPessoa" class="glass-input">
+              <label for="acessoEmpresa">CNPJ/CPF ou Nome da Empresa</label>
+              <div class="input-action-row">
+                <input type="text" id="acessoEmpresa" list="listaEmpresasPortaria" class="glass-input" required placeholder="Digite ou selecione a empresa">
+                <button type="button" id="btnAbrirEmpresaNoAcesso" class="btn-mini" title="Cadastrar empresa"><i class="fas fa-plus"></i></button>
+              </div>
             </div>
             <div class="form-group">
-              <label for="acessoPlacaVeiculo">Placa do Veiculo</label>
+              <label for="acessoPlacaVeiculo">Placa/Cavalo</label>
               <input type="text" id="acessoPlacaVeiculo" class="glass-input" placeholder="AAA0A00" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+              <label for="acessoCarretaCacamba">Carreta/Ca&ccedil;amba (Opcional)</label>
+              <input type="text" id="acessoCarretaCacamba" class="glass-input" placeholder="AAA0A00" style="text-transform: uppercase;">
             </div>
             <div class="form-group">
               <label for="acessoSetor">Setor de Destino</label>

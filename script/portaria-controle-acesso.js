@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function bindEvents() {
+  configurarCamposMaiusculos();
   document.getElementById('btnNovoAcesso').addEventListener('click', () => abrirModalAcesso());
   document.getElementById('btnBuscarAcessos').addEventListener('click', buscarAcessos);
   document.getElementById('filtroBusca').addEventListener('input', renderizarTabela);
@@ -41,6 +42,7 @@ function bindEvents() {
   document.getElementById('btnAbrirSetorNoAcesso').addEventListener('click', () => abrirModalCadastro('modalSetor', 'modalAcesso'));
   document.getElementById('acessoEmpresa').addEventListener('change', preencherDadosEmpresa);
   document.getElementById('acessoPessoa').addEventListener('change', preencherDadosPessoa);
+  document.getElementById('acessoDocumentoPessoa').addEventListener('input', preencherDadosPessoaPorDocumento);
   document.getElementById('buscaEmpresaCadastro').addEventListener('input', renderBuscaEmpresaCadastro);
   document.getElementById('buscaPessoaCadastro').addEventListener('input', renderBuscaPessoaCadastro);
   document.getElementById('buscaSetorCadastro').addEventListener('input', renderBuscaSetorCadastro);
@@ -62,13 +64,26 @@ function bindEvents() {
   document.querySelectorAll('.modal-overlay').forEach(modal => {
     modal.addEventListener('click', event => {
       if (event.target !== modal) return;
-      if (modal.id === 'modalAcesso') {
-        fecharModalAcesso();
-      } else {
-        fecharModalCadastro(modal.id);
-      }
+      if (modal.id === 'modalAcesso') return;
+      fecharModalCadastro(modal.id);
     });
   });
+}
+
+function configurarCamposMaiusculos() {
+  document.querySelectorAll('#formEmpresa input[type="text"], #formEmpresa textarea, #formPessoa input[type="text"], #formPessoa textarea, #formSetor input[type="text"], #formSetor textarea')
+    .forEach(campo => {
+      campo.addEventListener('input', () => {
+        const inicioSelecao = campo.selectionStart;
+        const fimSelecao = campo.selectionEnd;
+        campo.value = String(campo.value || '').toLocaleUpperCase('pt-BR');
+        campo.setSelectionRange?.(inicioSelecao, fimSelecao);
+      });
+    });
+}
+
+function textoMaiusculo(valor) {
+  return String(valor || '').trim().toLocaleUpperCase('pt-BR');
 }
 
 function toggleMenuLateral() {
@@ -141,6 +156,16 @@ function encontrarPessoa(valor) {
   );
 }
 
+function normalizarDocumento(valor) {
+  return normalizarBusca(valor).replace(/[^A-Z0-9]/g, '');
+}
+
+function encontrarPessoaPorDocumento(valor) {
+  const documento = normalizarDocumento(valor);
+  if (!documento) return null;
+  return pessoas.find(pessoa => normalizarDocumento(pessoa.documento) === documento) || null;
+}
+
 function encontrarSetor(valor) {
   const busca = normalizarBusca(valor);
   return setores.find(setor => normalizarBusca(setor.nome) === busca);
@@ -156,10 +181,12 @@ function abrirModalAcesso(item = null) {
   document.getElementById('acessoPessoa').value = item ? [item.pessoa_nome, item.pessoa_documento].filter(Boolean).join(' - ') : '';
   document.getElementById('acessoDocumentoPessoa').value = item?.pessoa_documento || '';
   document.getElementById('acessoPlacaVeiculo').value = item?.placa_veiculo || '';
+  document.getElementById('acessoCarretaCacamba').value = item?.carreta_cacamba || '';
   document.getElementById('acessoSetor').value = item?.setor_nome || '';
   document.getElementById('acessoProdutoServico').value = item?.produto_servico || '';
   document.getElementById('acessoObservacoes').value = item?.observacoes || '';
   document.getElementById('modalAcesso').classList.remove('hidden');
+  document.getElementById('acessoDocumentoPessoa').focus();
 }
 
 function fecharModalAcesso() {
@@ -200,8 +227,23 @@ function preencherDadosEmpresa() {
 function preencherDadosPessoa() {
   const pessoa = encontrarPessoa(document.getElementById('acessoPessoa').value);
   if (!pessoa) return;
+  preencherDadosPessoaSelecionada(pessoa);
+}
+
+function preencherDadosPessoaPorDocumento() {
+  const pessoa = encontrarPessoaPorDocumento(document.getElementById('acessoDocumentoPessoa').value);
+  if (!pessoa) return;
+  preencherDadosPessoaSelecionada(pessoa);
+}
+
+function preencherDadosPessoaSelecionada(pessoa) {
   document.getElementById('acessoPessoa').value = formatarPessoaOpcao(pessoa);
   document.getElementById('acessoDocumentoPessoa').value = pessoa.documento || '';
+  const empresa = empresas.find(item => String(item.id) === String(pessoa.empresa_id))
+    || encontrarEmpresa(pessoa.empresa_nome);
+  document.getElementById('acessoEmpresa').value = empresa
+    ? formatarEmpresaOpcao(empresa)
+    : pessoa.empresa_nome || '';
 }
 
 function limparResultadosCadastro(modalId) {
@@ -284,8 +326,7 @@ function selecionarCadastro(tipo, id) {
     const pessoa = pessoas.find(item => item.id === id);
     if (!pessoa) return;
     preencherFormularioPessoa(pessoa);
-    document.getElementById('acessoPessoa').value = formatarPessoaOpcao(pessoa);
-    document.getElementById('acessoDocumentoPessoa').value = pessoa.documento || '';
+    preencherDadosPessoaSelecionada(pessoa);
   }
 
   if (tipo === 'setor') {
@@ -435,6 +476,7 @@ async function salvarAcesso(event) {
       pessoa_nome: pessoa?.nome || pessoaValor.split(' - ')[0] || pessoaValor,
       pessoa_documento: document.getElementById('acessoDocumentoPessoa').value.trim() || pessoa?.documento || extrairDocumento(pessoaValor),
       placa_veiculo: document.getElementById('acessoPlacaVeiculo').value.trim().toUpperCase() || null,
+      carreta_cacamba: document.getElementById('acessoCarretaCacamba').value.trim().toUpperCase() || null,
       setor_nome: setor?.nome || document.getElementById('acessoSetor').value.trim(),
       produto_servico: document.getElementById('acessoProdutoServico').value.trim() || null,
       observacoes: document.getElementById('acessoObservacoes').value.trim() || null
@@ -471,10 +513,10 @@ function extrairDocumento(valor) {
 async function salvarEmpresa(event) {
   event.preventDefault();
   const payload = {
-    nome: document.getElementById('empresaNome').value.trim().toUpperCase(),
-    documento: document.getElementById('empresaDocumento').value.trim() || null,
-    telefone: document.getElementById('empresaTelefone').value.trim() || null,
-    observacoes: document.getElementById('empresaObservacoes').value.trim() || null
+    nome: textoMaiusculo(document.getElementById('empresaNome').value),
+    documento: textoMaiusculo(document.getElementById('empresaDocumento').value) || null,
+    telefone: textoMaiusculo(document.getElementById('empresaTelefone').value) || null,
+    observacoes: textoMaiusculo(document.getElementById('empresaObservacoes').value) || null
   };
   const existente = empresas.find(item =>
     (payload.documento && normalizarBusca(item.documento) === normalizarBusca(payload.documento)) ||
@@ -497,11 +539,11 @@ async function salvarPessoa(event) {
   event.preventDefault();
   const empresa = encontrarEmpresa(document.getElementById('pessoaEmpresa').value);
   const payload = {
-    nome: document.getElementById('pessoaNome').value.trim().toUpperCase(),
-    documento: document.getElementById('pessoaDocumento').value.trim() || null,
-    telefone: document.getElementById('pessoaTelefone').value.trim() || null,
+    nome: textoMaiusculo(document.getElementById('pessoaNome').value),
+    documento: textoMaiusculo(document.getElementById('pessoaDocumento').value) || null,
+    telefone: textoMaiusculo(document.getElementById('pessoaTelefone').value) || null,
     empresa_id: empresa?.id || null,
-    empresa_nome: empresa?.nome || document.getElementById('pessoaEmpresa').value.trim() || null
+    empresa_nome: empresa?.nome || textoMaiusculo(document.getElementById('pessoaEmpresa').value) || null
   };
   const existente = pessoas.find(item =>
     (payload.documento && normalizarBusca(item.documento) === normalizarBusca(payload.documento)) ||
@@ -525,9 +567,9 @@ async function salvarPessoa(event) {
 async function salvarSetor(event) {
   event.preventDefault();
   const payload = {
-    nome: document.getElementById('setorNome').value.trim().toUpperCase(),
-    responsavel: document.getElementById('setorResponsavel').value.trim() || null,
-    ramal: document.getElementById('setorRamal').value.trim() || null
+    nome: textoMaiusculo(document.getElementById('setorNome').value),
+    responsavel: textoMaiusculo(document.getElementById('setorResponsavel').value) || null,
+    ramal: textoMaiusculo(document.getElementById('setorRamal').value) || null
   };
   const existente = setores.find(item => normalizarBusca(item.nome) === normalizarBusca(payload.nome));
   if (existente) {
@@ -565,7 +607,7 @@ function renderizarTabela() {
 
   document.getElementById('totalRegistros').textContent = dados.length;
   if (!dados.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px;">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:20px;">Nenhum registro encontrado.</td></tr>';
     return;
   }
 
@@ -576,6 +618,7 @@ function renderizarTabela() {
       <td>${escapeHtml(item.empresa_documento || '-')}</td>
       <td>${escapeHtml(item.pessoa_nome || '-')}</td>
       <td>${escapeHtml(item.placa_veiculo || '-')}</td>
+      <td>${escapeHtml(item.carreta_cacamba || '-')}</td>
       <td>${escapeHtml(item.setor_nome || '-')}</td>
       <td>${escapeHtml(item.produto_servico || '-')}</td>
       <td>${escapeHtml(formatarDataHoraCompleta(item.entrada_em))}</td>
@@ -599,6 +642,7 @@ function obterAcessosFiltrados() {
     item.pessoa_nome,
     item.pessoa_documento,
     item.placa_veiculo,
+    item.carreta_cacamba,
     item.setor_nome,
     item.produto_servico,
     item.observacoes,
@@ -613,7 +657,8 @@ function montarLinhasExportacao() {
     Documento: item.empresa_documento || '',
     Pessoa: item.pessoa_nome || '',
     'Documento Pessoa': item.pessoa_documento || '',
-    Placa: item.placa_veiculo || '',
+    'Placa/Cavalo': item.placa_veiculo || '',
+    'Carreta/Caçamba': item.carreta_cacamba || '',
     Setor: item.setor_nome || '',
     'Produto/Servico': item.produto_servico || '',
     Entrada: formatarDataHoraCompleta(item.entrada_em),
@@ -631,8 +676,8 @@ function exportarXLSX() {
   const ws = XLSX.utils.json_to_sheet(linhas);
   ws['!cols'] = [
     { wch: 20 }, { wch: 28 }, { wch: 18 }, { wch: 24 }, { wch: 18 },
-    { wch: 12 }, { wch: 20 }, { wch: 24 }, { wch: 20 }, { wch: 20 },
-    { wch: 16 }, { wch: 35 }, { wch: 20 }
+    { wch: 12 }, { wch: 16 }, { wch: 20 }, { wch: 24 }, { wch: 20 },
+    { wch: 20 }, { wch: 16 }, { wch: 35 }, { wch: 20 }
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Controle de Acesso');
@@ -677,7 +722,8 @@ async function exportarPDF() {
       'Empresa',
       'Documento',
       'Pessoa',
-      'Placa',
+      'Placa/Cavalo',
+      'Carreta/Caçamba',
       'Setor',
       'Produto/Servico',
       'Entrada',
@@ -689,7 +735,8 @@ async function exportarPDF() {
       item.Empresa,
       item.Documento,
       item.Pessoa,
-      item.Placa,
+      item['Placa/Cavalo'],
+      item['Carreta/Caçamba'],
       item.Setor,
       item['Produto/Servico'],
       item.Entrada,

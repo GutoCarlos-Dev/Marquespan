@@ -40,6 +40,7 @@ create table if not exists public.portaria_acessos (
   pessoa_nome text not null,
   pessoa_documento text,
   placa_veiculo text,
+  carreta_cacamba text,
   setor_nome text not null,
   produto_servico text,
   observacoes text,
@@ -55,6 +56,9 @@ create table if not exists public.portaria_acessos (
 alter table public.portaria_acessos
   add column if not exists placa_veiculo text;
 
+alter table public.portaria_acessos
+  add column if not exists carreta_cacamba text;
+
 create index if not exists idx_portaria_empresas_nome on public.portaria_empresas (nome);
 create index if not exists idx_portaria_empresas_documento on public.portaria_empresas (documento);
 create index if not exists idx_portaria_pessoas_nome on public.portaria_pessoas (nome);
@@ -64,6 +68,7 @@ create index if not exists idx_portaria_acessos_status on public.portaria_acesso
 create index if not exists idx_portaria_acessos_empresa on public.portaria_acessos (empresa_nome);
 create index if not exists idx_portaria_acessos_setor on public.portaria_acessos (setor_nome);
 create index if not exists idx_portaria_acessos_placa on public.portaria_acessos (placa_veiculo);
+create index if not exists idx_portaria_acessos_carreta_cacamba on public.portaria_acessos (carreta_cacamba);
 
 create or replace function public.update_portaria_updated_at()
 returns trigger as $$
