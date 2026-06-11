@@ -66,16 +66,28 @@ async function carregarDados() {
 
   try {
     const intervalo = getIntervaloDiaSaoPaulo(dataPortaria);
-    const { data, error } = await supabaseClient
-      .from('portaria_acessos')
-      .select('*')
-      .gte('created_at', intervalo.inicio)
-      .lte('created_at', intervalo.fim)
-      .order('created_at', { ascending: false });
+    const [registrosDoDia, registrosAguardando] = await Promise.all([
+      supabaseClient
+        .from('portaria_acessos')
+        .select('*')
+        .gte('created_at', intervalo.inicio)
+        .lte('created_at', intervalo.fim)
+        .order('created_at', { ascending: false }),
+      supabaseClient
+        .from('portaria_acessos')
+        .select('*')
+        .eq('status', 'aguardando')
+        .lte('created_at', intervalo.fim)
+        .order('created_at', { ascending: true })
+    ]);
 
-    if (error) throw error;
+    if (registrosDoDia.error) throw registrosDoDia.error;
+    if (registrosAguardando.error) throw registrosAguardando.error;
 
-    acessos = data || [];
+    const registrosUnicos = new Map();
+    [...(registrosDoDia.data || []), ...(registrosAguardando.data || [])]
+      .forEach(item => registrosUnicos.set(item.id, item));
+    acessos = [...registrosUnicos.values()];
     renderDashboard();
     atualizarTimestamp();
   } catch (error) {
@@ -104,7 +116,9 @@ function configurarRealtime() {
 
 function renderDashboard() {
   const dados = filtrarRegistros(acessos);
-  const aguardando = dados.filter(item => item.status === 'aguardando');
+  const aguardando = dados
+    .filter(item => item.status === 'aguardando')
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   const dentro = dados.filter(item => item.status === 'entrada');
   const saiu = dados.filter(item => item.status === 'saida');
 
@@ -147,18 +161,22 @@ function renderLista(containerId, itens, tipo) {
     return;
   }
 
-  container.innerHTML = itens.map(item => `
+  container.innerHTML = itens.map(item => {
+    const corSetor = getCorSetor(item.setor_nome);
+    const tempoAguardando = tipo === 'aguardando' ? getTempoAguardando(item.created_at) : '';
+    return `
     <article class="portaria-access-card ${tipo}">
       <div class="portaria-access-icon"><i class="${getIconeStatus(tipo)}"></i></div>
       <div class="portaria-access-main">
         <div class="portaria-access-title">
           <span class="portaria-access-name">${escapeHtml(item.pessoa_nome || '-')}</span>
           <span class="portaria-access-plate">${escapeHtml(item.placa_veiculo || 'SEM PLACA')}</span>
+          ${tempoAguardando ? `<span class="portaria-waiting-time"><i class="fas fa-clock"></i> ${escapeHtml(tempoAguardando)}</span>` : ''}
         </div>
         <div class="portaria-access-details">
           <span><i class="fas fa-building"></i> ${escapeHtml(item.empresa_nome || '-')}</span>
           <span><i class="fas fa-id-card"></i> ${escapeHtml(item.empresa_documento || item.pessoa_documento || '-')}</span>
-          <span><i class="fas fa-location-dot"></i> ${escapeHtml(item.setor_nome || '-')}</span>
+          <span class="portaria-sector-label" style="--setor-cor: ${corSetor.cor}; --setor-fundo: ${corSetor.fundo};"><i class="fas fa-location-dot"></i> ${escapeHtml(item.setor_nome || 'SEM SETOR')}</span>
           <span><i class="fas fa-box-open"></i> ${escapeHtml(item.produto_servico || '-')}</span>
           <span><i class="fas fa-clock"></i> Registro ${escapeHtml(formatarDataHoraCompleta(item.created_at))}</span>
           <span><i class="fas fa-sign-in-alt"></i> Entrada ${escapeHtml(formatarDataHoraCompleta(item.entrada_em))}</span>
@@ -167,7 +185,8 @@ function renderLista(containerId, itens, tipo) {
         ${item.observacoes ? `<div class="portaria-access-observacao">${escapeHtml(item.observacoes)}</div>` : ''}
       </div>
     </article>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function getMensagemVazia(tipo) {
@@ -184,6 +203,38 @@ function getIconeStatus(tipo) {
     dentro: 'fas fa-building-circle-check',
     saiu: 'fas fa-person-walking-arrow-right'
   }[tipo] || 'fas fa-door-open';
+}
+
+function getCorSetor(setor) {
+  const nome = normalizarBusca(setor) || 'SEM SETOR';
+  const paleta = [
+    { cor: '#1d4ed8', fundo: '#dbeafe' },
+    { cor: '#047857', fundo: '#d1fae5' },
+    { cor: '#b45309', fundo: '#fef3c7' },
+    { cor: '#b91c1c', fundo: '#fee2e2' },
+    { cor: '#6d28d9', fundo: '#ede9fe' },
+    { cor: '#0e7490', fundo: '#cffafe' },
+    { cor: '#be185d', fundo: '#fce7f3' },
+    { cor: '#3f6212', fundo: '#ecfccb' },
+    { cor: '#9a3412', fundo: '#ffedd5' },
+    { cor: '#4338ca', fundo: '#e0e7ff' }
+  ];
+  let hash = 0;
+  for (let indice = 0; indice < nome.length; indice += 1) {
+    hash = ((hash << 5) - hash + nome.charCodeAt(indice)) | 0;
+  }
+  return paleta[Math.abs(hash) % paleta.length];
+}
+
+function getTempoAguardando(createdAt) {
+  const inicio = new Date(createdAt);
+  if (Number.isNaN(inicio.getTime())) return '';
+  const minutos = Math.max(0, Math.floor((Date.now() - inicio.getTime()) / 60000));
+  const dias = Math.floor(minutos / 1440);
+  const horas = Math.floor((minutos % 1440) / 60);
+  if (dias > 0) return `AGUARDANDO HA ${dias}D ${horas}H`;
+  if (horas > 0) return `AGUARDANDO HA ${horas}H`;
+  return `AGUARDANDO HA ${minutos} MIN`;
 }
 
 async function ativarBloqueioDescansoTela() {
