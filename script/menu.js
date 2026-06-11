@@ -66,17 +66,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const canalPresenca = supabaseClient.channel('presenca_usuarios', {
           config: { presence: { key: String(usuario.id) } }
         });
-        canalPresenca.subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await canalPresenca.track({
-              user_id: usuario.id,
-              nome:    usuario.nome || 'Usuário',
-              filial:  usuario.filial || '',
-              pagina:  window.location.pathname.split('/').pop() || 'dashboard.html',
-              entrou_em: new Date().toISOString()
+
+        canalPresenca
+          .on('broadcast', { event: 'force_logout' }, async ({ payload }) => {
+            if (String(payload?.user_id) !== String(usuario.id)) return;
+
+            // Confirma ao admin que o logout foi recebido
+            canalPresenca.send({
+              type: 'broadcast',
+              event: 'logout_confirmado',
+              payload: { nome: usuario.nome }
             });
-          }
-        });
+
+            await supabaseClient.auth.signOut();
+            localStorage.removeItem('usuarioLogado');
+            localStorage.removeItem('marquespan_auth_version');
+            window.location.href = 'index.html';
+          })
+          .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+              await canalPresenca.track({
+                user_id:   usuario.id,
+                nome:      usuario.nome || 'Usuário',
+                filial:    usuario.filial || '',
+                pagina:    window.location.pathname.split('/').pop() || 'dashboard.html',
+                entrou_em: new Date().toISOString()
+              });
+            }
+          });
       }
 
       // Adiciona funcionalidade de toggle para os submenus

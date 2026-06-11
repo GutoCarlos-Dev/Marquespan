@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const POR_PAGINA = 100;
 let paginaAtual = 1;
@@ -66,7 +67,11 @@ function renderOnlineUsers(state) {
         return;
     }
 
-    container.innerHTML = users.map(u => `
+    const meuId = String(usuarioLogado?.id ?? '');
+
+    container.innerHTML = users.map(u => {
+        const ehEuMesmo = String(u.user_id) === meuId;
+        return `
         <div class="online-card">
             <div class="online-avatar"><i class="fas fa-user-circle"></i></div>
             <div class="online-info">
@@ -74,9 +79,12 @@ function renderOnlineUsers(state) {
                 <span><i class="fas fa-building" style="font-size:0.6rem;margin-right:3px;"></i>${escapeHtml(u.filial || 'Global')}</span>
                 <span><i class="fas fa-window-maximize" style="font-size:0.6rem;margin-right:3px;"></i>${escapeHtml(nomePagina(u.pagina))}</span>
             </div>
-            <div class="online-badge"><i class="fas fa-circle"></i>&nbsp;Online</div>
-        </div>
-    `).join('');
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                <div class="online-badge"><i class="fas fa-circle"></i>&nbsp;Online</div>
+                ${ehEuMesmo ? '' : `<button onclick="forcarDeslogar(${u.user_id}, '${escapeHtml(u.nome)}')" title="Forçar logout" style="background:#dc3545;color:#fff;border:none;border-radius:6px;padding:3px 8px;font-size:0.68rem;cursor:pointer;font-weight:600;"><i class="fas fa-sign-out-alt"></i> Deslogar</button>`}
+            </div>
+        </div>`;
+    }).join('');
 }
 
 function iniciarPresenca() {
@@ -85,8 +93,34 @@ function iniciarPresenca() {
         .on('presence', { event: 'sync' }, () => {
             renderOnlineUsers(canalPresenca.presenceState());
         })
+        .on('broadcast', { event: 'logout_confirmado' }, ({ payload }) => {
+            // Feedback visual quando o usuário confirma que foi deslogado
+            const nome = payload?.nome || 'Usuário';
+            const toast = document.createElement('div');
+            toast.textContent = `✅ ${nome} foi desconectado com sucesso.`;
+            Object.assign(toast.style, {
+                position:'fixed', bottom:'24px', right:'24px', background:'#28a745',
+                color:'#fff', padding:'12px 20px', borderRadius:'8px',
+                fontWeight:'600', fontSize:'0.85rem', zIndex:'9999',
+                boxShadow:'0 4px 12px rgba(0,0,0,0.2)'
+            });
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        })
         .subscribe();
 }
+
+window.forcarDeslogar = function(userId, nome) {
+    if (!confirm(`Deseja forçar o logout de "${nome}"?\n\nO usuário será redirecionado para a tela de login imediatamente.`)) return;
+
+    canalPresenca.send({
+        type: 'broadcast',
+        event: 'force_logout',
+        payload: { user_id: String(userId), nome }
+    });
+
+    registrarAuditoria('EXCLUIR', 'Sistema', `Logout forçado do usuário: ${nome} (ID ${userId})`);
+};
 
 // ---------------------------------------------------------------------------
 // Log de auditoria
