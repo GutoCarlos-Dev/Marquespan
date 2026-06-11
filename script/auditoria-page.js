@@ -8,6 +8,7 @@ let totalRegistros = 0;
 let canalPresenca = null;
 let canalSinais = null;
 let filtrosAtivos = null; // null = nenhuma busca feita ainda
+let ordenacao = { campo: 'timestamp', ascendente: false };
 
 // Verificação de acesso — somente administrador
 const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -166,6 +167,40 @@ function buildQuery(base, f) {
     return base;
 }
 
+function aplicarOrdenacao(base) {
+    return base.order(ordenacao.campo, {
+        ascending: ordenacao.ascendente,
+        nullsFirst: false
+    });
+}
+
+function atualizarCabecalhoOrdenacao() {
+    document.querySelectorAll('.audit-sortable').forEach(th => {
+        const ativo = th.dataset.sort === ordenacao.campo;
+        th.classList.toggle('active', ativo);
+        const icone = th.querySelector('i');
+        if (!icone) return;
+        icone.className = ativo
+            ? `fas ${ordenacao.ascendente ? 'fa-sort-up' : 'fa-sort-down'}`
+            : 'fas fa-sort';
+    });
+}
+
+function configurarOrdenacaoGrid() {
+    document.querySelectorAll('.audit-sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            const campo = th.dataset.sort;
+            if (!campo) return;
+            ordenacao.ascendente = ordenacao.campo === campo ? !ordenacao.ascendente : true;
+            ordenacao.campo = campo;
+            paginaAtual = 1;
+            atualizarCabecalhoOrdenacao();
+            if (filtrosAtivos) carregarLog();
+        });
+    });
+    atualizarCabecalhoOrdenacao();
+}
+
 function mostrarEstadoInicial() {
     const tbody = document.getElementById('tbodyAuditoria');
     tbody.innerHTML = `
@@ -189,10 +224,10 @@ async function carregarLog() {
     const fim    = paginaAtual * POR_PAGINA - 1;
 
     const { data, error, count } = await buildQuery(
-        supabaseClient.from('auditoria_sistema')
-            .select('*', { count: 'exact' })
-            .order('timestamp', { ascending: false })
-            .range(inicio, fim),
+        aplicarOrdenacao(
+            supabaseClient.from('auditoria_sistema')
+                .select('*', { count: 'exact' })
+        ).range(inicio, fim),
         f
     );
 
@@ -263,10 +298,10 @@ async function buscarTodosEmLote(f) {
     try {
         while (true) {
             const { data, error } = await buildQuery(
-                supabaseClient.from('auditoria_sistema')
-                    .select('timestamp, usuario_nome, filial, acao, modulo, descricao')
-                    .order('timestamp', { ascending: false })
-                    .range(offset, offset + LOTE_EXPORT - 1),
+                aplicarOrdenacao(
+                    supabaseClient.from('auditoria_sistema')
+                        .select('timestamp, usuario_nome, filial, acao, modulo, descricao')
+                ).range(offset, offset + LOTE_EXPORT - 1),
                 f
             );
 
@@ -348,6 +383,7 @@ window.exportarXLSX = async function () {
 // ---------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     iniciarPresenca();
+    configurarOrdenacaoGrid();
     carregarStatsHoje();
     carregarContadorTotal();
     mostrarEstadoInicial();

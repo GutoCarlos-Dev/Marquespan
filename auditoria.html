@@ -102,6 +102,14 @@
 
     #tbodyAuditoria td { vertical-align: middle; }
     .descricao-cell { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .audit-sortable {
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .audit-sortable:hover { background: #eef8f2; }
+    .audit-sortable i { margin-left: 5px; color: #9ca3af; }
+    .audit-sortable.active i { color: var(--primary-color); }
   </style>
 </head>
 <body>
@@ -219,12 +227,12 @@
         <table class="glass-table data-grid">
           <thead>
             <tr>
-              <th style="white-space:nowrap;">Data / Hora</th>
-              <th>Usuário</th>
-              <th>Filial</th>
-              <th>Ação</th>
-              <th>Módulo</th>
-              <th>Descrição</th>
+              <th class="audit-sortable active" data-sort="timestamp">Data / Hora <i class="fas fa-sort-down"></i></th>
+              <th class="audit-sortable" data-sort="usuario_nome">Usuário <i class="fas fa-sort"></i></th>
+              <th class="audit-sortable" data-sort="filial">Filial <i class="fas fa-sort"></i></th>
+              <th class="audit-sortable" data-sort="acao">Ação <i class="fas fa-sort"></i></th>
+              <th class="audit-sortable" data-sort="modulo">Módulo <i class="fas fa-sort"></i></th>
+              <th class="audit-sortable" data-sort="descricao">Descrição <i class="fas fa-sort"></i></th>
             </tr>
           </thead>
           <tbody id="tbodyAuditoria">
