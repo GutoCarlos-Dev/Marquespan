@@ -87,7 +87,9 @@ body.portaria-menu-oculto .portaria-menu-toggle i {
 #formPessoa input[type="text"],
 #formPessoa textarea,
 #formSetor input[type="text"],
-#formSetor textarea {
+#formSetor textarea,
+#acessoProdutoServico,
+#acessoObservacoes {
   text-transform: uppercase;
 }
 

@@ -71,7 +71,7 @@ function bindEvents() {
 }
 
 function configurarCamposMaiusculos() {
-  document.querySelectorAll('#formEmpresa input[type="text"], #formEmpresa textarea, #formPessoa input[type="text"], #formPessoa textarea, #formSetor input[type="text"], #formSetor textarea')
+  document.querySelectorAll('#acessoProdutoServico, #acessoObservacoes, #formEmpresa input[type="text"], #formEmpresa textarea, #formPessoa input[type="text"], #formPessoa textarea, #formSetor input[type="text"], #formSetor textarea')
     .forEach(campo => {
       campo.addEventListener('input', () => {
         const inicioSelecao = campo.selectionStart;
@@ -478,8 +478,8 @@ async function salvarAcesso(event) {
       placa_veiculo: document.getElementById('acessoPlacaVeiculo').value.trim().toUpperCase() || null,
       carreta_cacamba: document.getElementById('acessoCarretaCacamba').value.trim().toUpperCase() || null,
       setor_nome: setor?.nome || document.getElementById('acessoSetor').value.trim(),
-      produto_servico: document.getElementById('acessoProdutoServico').value.trim() || null,
-      observacoes: document.getElementById('acessoObservacoes').value.trim() || null
+      produto_servico: textoMaiusculo(document.getElementById('acessoProdutoServico').value) || null,
+      observacoes: textoMaiusculo(document.getElementById('acessoObservacoes').value) || null
     };
 
     if (!acessoEditandoId) {
