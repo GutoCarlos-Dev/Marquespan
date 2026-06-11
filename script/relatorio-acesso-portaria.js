@@ -252,16 +252,18 @@ async function exportarPDF() {
   if (!window.jspdf?.jsPDF) return alert('Biblioteca PDF nao carregada.');
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+  const logo = await carregarLogoComFundoBranco();
+  if (logo) doc.addImage(logo, 'JPEG', 14, 8, 38, 15);
   doc.setTextColor(0, 106, 45);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text('MARQUESPAN - Auditoria de Entradas e Saidas', 14, 14);
+  doc.text('MARQUESPAN - Auditoria de Entradas e Saidas', 58, 14);
   doc.setTextColor(80);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} | Registros: ${linhas.length}`, 14, 20);
+  doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} | Registros: ${linhas.length}`, 58, 20);
   doc.autoTable({
-    startY: 25,
+    startY: 29,
     head: [[
       'Entrada', 'Saida', 'Tempo', 'Pessoa', 'Documento', 'Empresa',
       'Cavalo Ent.', 'Cavalo Sai.', 'Carreta Ent.', 'Carreta Sai.',
@@ -279,6 +281,25 @@ async function exportarPDF() {
     margin: { left: 8, right: 8 }
   });
   doc.save(`Auditoria_Acessos_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+function carregarLogoComFundoBranco() {
+  return new Promise(resolve => {
+    const imagem = new Image();
+    imagem.crossOrigin = 'anonymous';
+    imagem.src = 'logo.png';
+    imagem.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = imagem.naturalWidth || imagem.width;
+      canvas.height = imagem.naturalHeight || imagem.height;
+      const contexto = canvas.getContext('2d');
+      contexto.fillStyle = '#FFFFFF';
+      contexto.fillRect(0, 0, canvas.width, canvas.height);
+      contexto.drawImage(imagem, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    };
+    imagem.onerror = () => resolve(null);
+  });
 }
 
 function textoConferencia(auditoria) {
