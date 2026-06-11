@@ -7,6 +7,11 @@ import { exportarRelatorioPDF } from './coletar-manutencao/export-pdf.js';
 import { renderizarGraficosManutencao } from './coletar-manutencao/graficos.js';
 import { renderizarTabelaRelatorio } from './coletar-manutencao/relatorio-tabela.js';
 import { buscarDadosRelatorio } from './coletar-manutencao/relatorio-service.js';
+
+const MODULO_AUDITORIA = window.location.pathname.toLowerCase().endsWith('/mobile-coletar.html')
+    ? 'Coleta Manutenção Mobile'
+    : 'Coleta Manutenção';
+
 import {
     calcularValorTotalChecklist,
     resetarChecklistModal,
@@ -1102,7 +1107,7 @@ const ColetarManutencaoUI = {
                 console.error('Erro ao atualizar situação do veículo:', errVeiculo);
             }
 
-            registrarAuditoria(this.editingId ? 'ALTERAR' : 'INCLUIR', 'Coleta Manutenção', `${this.editingId ? 'Atualização' : 'Registro'} de coleta - Placa: ${placa}`);
+            registrarAuditoria(this.editingId ? 'ALTERAR' : 'INCLUIR', MODULO_AUDITORIA, `${this.editingId ? 'Atualização' : 'Registro'} de coleta - Placa: ${placa}`);
             alert(`✅ Coleta ${this.editingId ? 'atualizada' : 'registrada'} com sucesso!`);
             this.fecharModal();
             this.limparRascunho(); // Limpa rascunho após sucesso
@@ -1364,7 +1369,7 @@ const ColetarManutencaoUI = {
             
             const { error } = await supabaseClient.from('coletas_manutencao').delete().eq('id', id);
             if (error) throw error;
-            registrarAuditoria('EXCLUIR', 'Coleta Manutenção', `Exclusão de coleta ID ${id}`);
+            registrarAuditoria('EXCLUIR', MODULO_AUDITORIA, `Exclusão de coleta ID ${id}`);
             this.carregarLancamentos();
 
             // Se a aba de relatório estiver visível, atualiza ela também
