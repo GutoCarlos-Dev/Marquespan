@@ -1,7 +1,7 @@
 import { supabaseClient } from './supabase.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 import { registrarAuditoria } from './auditoria-utils.js';
-// 📦 Importação do Supabase
+// 📦 Importação do Supabase ok
 
 // Estado dos arquivos
 let veiculosCache = []; // Cache para busca rápida de modelo
