@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const FUNCIONARIO_PAGE_ID = 'funcionario.html';
 const FUNCOES_FALLBACK = [
@@ -604,6 +605,11 @@ const FuncionarioUI = {
 
             if (this.editingIdInput.value) await this.carregarHistoricoFuncao(rh);
             await this.renderSummary();
+            registrarAuditoria(
+                this.editingIdInput.value ? 'ALTERAR' : 'INCLUIR',
+                'Funcionário',
+                `${this.editingIdInput.value ? 'Alteração' : 'Inclusão'} do colaborador ${payload.nome} (RH: ${payload.rh_registro})`
+            );
             alert('✅ Colaborador salvo com sucesso!');
             this.clearForm();
             this.closeFuncionarioModal();
@@ -944,7 +950,10 @@ const FuncionarioUI = {
 
     async deleteFuncionario(id) {
         if (confirm('Deseja realmente excluir este colaborador?')) {
+            const func = this.listData.find(f => String(f.id) === String(id));
+            const nomeFuncionario = func ? `${func.nome} (RH: ${func.rh_registro})` : `ID ${id}`;
             await supabaseClient.from('funcionario').delete().eq('id', id);
+            registrarAuditoria('EXCLUIR', 'Funcionário', `Exclusão do colaborador ${nomeFuncionario}`);
             await this.renderGrid();
         }
     },

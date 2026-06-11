@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
+import { registrarAuditoria } from './auditoria-utils.js';
 // 📦 Importação do Supabase
 
 // Estado dos arquivos
@@ -334,6 +335,11 @@ async function salvarManutencao() {
   // Atualiza o log de registros recentes abaixo do formulário
   await carregarUltimosLancamentos();
 
+  registrarAuditoria(
+    idManutencao ? 'ALTERAR' : 'INCLUIR',
+    'Manutenção',
+    `${idManutencao ? 'Atualização' : 'Inclusão'} de manutenção - Veículo: ${dados.veiculo}, OS: ${dados.numeroOS}, Fornecedor: ${dados.fornecedor}`
+  );
   alert(`✅ Manutenção ${idManutencao ? 'atualizada' : 'salva'} com sucesso!`);
   // Recarrega a página ou limpa o form
   prepararNovaManutencao();

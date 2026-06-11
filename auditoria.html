@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auditoria do Sistema - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    :root { --primary-color: #006937; }
+
+    .audit-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 22px 20px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      border-left: 5px solid var(--primary-color);
+    }
+    .stat-card .stat-value { font-size: 2.2rem; font-weight: 800; color: var(--primary-color); line-height: 1; }
+    .stat-card .stat-label { font-size: 0.75rem; color: #777; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+
+    .online-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 12px;
+      margin-top: 15px;
+      min-height: 60px;
+    }
+    .online-card {
+      background: white;
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border-left: 4px solid #28a745;
+    }
+    .online-avatar { font-size: 2rem; color: #28a745; line-height: 1; }
+    .online-info { flex: 1; min-width: 0; }
+    .online-info strong { display: block; font-size: 0.88rem; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .online-info span { display: block; font-size: 0.72rem; color: #666; margin-top: 2px; }
+    .online-badge { font-size: 0.65rem; color: #28a745; font-weight: 700; white-space: nowrap; }
+    .online-badge i { animation: blink-dot 1.5s infinite; }
+    @keyframes blink-dot { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+    .filters-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      border: 1px solid #e9ecef;
+    }
+    .filters-row .fg { min-width: 140px; flex: 1; }
+    .filters-row label { font-size: 0.72rem; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.4px; display: block; margin-bottom: 4px; }
+    .filters-row input, .filters-row select {
+      padding: 7px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.83rem;
+      width: 100%;
+      background: white;
+    }
+    .filters-row input:focus, .filters-row select:focus { outline: none; border-color: var(--primary-color); }
+
+    .badge-acao {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: white;
+      white-space: nowrap;
+    }
+    .acao-INCLUIR { background: #28a745; }
+    .acao-ALTERAR { background: #fd7e14; }
+    .acao-EXCLUIR { background: #dc3545; }
+    .acao-LOGIN   { background: #007bff; }
+    .acao-LOGOUT  { background: #6c757d; }
+
+    .paginacao {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .paginacao-info { font-size: 0.8rem; color: #666; }
+
+    #tbodyAuditoria td { vertical-align: middle; }
+    .descricao-cell { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+  <div id="menu-container"></div>
+
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-shield-alt"></i> Auditoria do Sistema</h1>
+    </header>
+
+    <!-- Cards de Resumo -->
+    <div class="audit-stats">
+      <div class="stat-card">
+        <div class="stat-value" id="countOnline">0</div>
+        <div class="stat-label"><i class="fas fa-circle" style="color:#28a745;font-size:0.6rem;"></i> Usuários Online</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="countHoje">--</div>
+        <div class="stat-label"><i class="fas fa-calendar-day"></i> Ações Hoje</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="countTotal">--</div>
+        <div class="stat-label"><i class="fas fa-database"></i> Total de Registros</div>
+      </div>
+    </div>
+
+    <!-- Usuários Online -->
+    <section class="glass-panel" style="margin-bottom: 25px;">
+      <h3 style="margin-bottom: 5px;">
+        <i class="fas fa-users"></i> Usuários Online
+        <span style="font-size:0.78rem;font-weight:400;color:#888;margin-left:8px;">atualizado em tempo real</span>
+      </h3>
+      <div id="onlineUsersGrid" class="online-grid">
+        <p style="color:#aaa;font-style:italic;padding:10px 0;">Conectando ao canal de presença...</p>
+      </div>
+    </section>
+
+    <!-- Log de Auditoria -->
+    <section class="glass-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
+        <h3 style="margin:0;"><i class="fas fa-list-alt"></i> Log de Auditoria</h3>
+        <button class="btn-glass btn-blue" onclick="exportarXLSX()">
+          <i class="fas fa-file-excel"></i> Exportar XLSX
+        </button>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filters-row">
+        <div class="fg">
+          <label>Data Início</label>
+          <input type="date" id="filtroDataInicio">
+        </div>
+        <div class="fg">
+          <label>Data Fim</label>
+          <input type="date" id="filtroDataFim">
+        </div>
+        <div class="fg">
+          <label>Usuário</label>
+          <input type="text" id="filtroUsuario" placeholder="Digite o nome...">
+        </div>
+        <div class="fg">
+          <label>Módulo</label>
+          <select id="filtroModulo">
+            <option value="">Todos</option>
+            <option value="Funcionário">Funcionário</option>
+            <option value="Manutenção">Manutenção</option>
+            <option value="Abastecimento">Abastecimento</option>
+            <option value="Sistema">Sistema</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Ação</label>
+          <select id="filtroAcao">
+            <option value="">Todas</option>
+            <option value="INCLUIR">INCLUIR</option>
+            <option value="ALTERAR">ALTERAR</option>
+            <option value="EXCLUIR">EXCLUIR</option>
+            <option value="LOGIN">LOGIN</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;flex:none;">
+          <button class="btn-glass btn-green" onclick="aplicarFiltros()"><i class="fas fa-search"></i> Filtrar</button>
+          <button class="btn-glass btn-red" onclick="limparFiltros()" title="Limpar filtros"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="table-responsive">
+        <table class="glass-table data-grid">
+          <thead>
+            <tr>
+              <th style="white-space:nowrap;">Data / Hora</th>
+              <th>Usuário</th>
+              <th>Filial</th>
+              <th>Ação</th>
+              <th>Módulo</th>
+              <th>Descrição</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyAuditoria">
+            <tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginação -->
+      <div class="paginacao">
+        <span id="paginacaoInfo" class="paginacao-info"></span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-glass btn-blue" id="btnPrev" onclick="mudarPagina(-1)" disabled>
+            <i class="fas fa-chevron-left"></i> Anterior
+          </button>
+          <button class="btn-glass btn-blue" id="btnNext" onclick="mudarPagina(1)">
+            Próximo <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/auditoria-page.js" defer></script>
+</body>
+</html>

@@ -61,6 +61,24 @@ document.addEventListener('DOMContentLoaded', function() {
       // A verificação de `usuario` já acontece dentro da função
       controlarMenuPorNivel();
 
+      // Presença online — anuncia o usuário no canal compartilhado
+      if (usuario?.id) {
+        const canalPresenca = supabaseClient.channel('presenca_usuarios', {
+          config: { presence: { key: String(usuario.id) } }
+        });
+        canalPresenca.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await canalPresenca.track({
+              user_id: usuario.id,
+              nome:    usuario.nome || 'Usuário',
+              filial:  usuario.filial || '',
+              pagina:  window.location.pathname.split('/').pop() || 'dashboard.html',
+              entrou_em: new Date().toISOString()
+            });
+          }
+        });
+      }
+
       // Adiciona funcionalidade de toggle para os submenus
 
       document.querySelectorAll('.menu-toggle').forEach(btn => {
