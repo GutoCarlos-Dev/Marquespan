@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 import XLSX from 'https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs';
 
 let empresas = [];
@@ -270,6 +271,7 @@ async function confirmarSaidaAcesso(event) {
   };
   const { error } = await supabaseClient.from('portaria_acessos').update(payload).eq('id', item.id);
   if (error) return alert(`Erro ao registrar saida: ${error.message}`);
+  registrarAuditoria('ALTERAR', 'Portaria', `Saída registrada: ${item.pessoa_nome || '-'} / ${item.empresa_nome || '-'}`);
   fecharModalSaidaAcesso();
   await buscarAcessos();
 }
@@ -483,6 +485,8 @@ async function excluirCadastro(tipo, id) {
   const { error } = await supabaseClient.from(config.tabela).delete().eq('id', id);
   if (error) return alert(`Erro ao excluir ${config.label}: ${error.message}`);
 
+  const labelCapitalizado = config.label.charAt(0).toUpperCase() + config.label.slice(1);
+  registrarAuditoria('EXCLUIR', `Portaria ${labelCapitalizado}`, `${labelCapitalizado} excluído: ${item.nome || '-'}`);
   await carregarCadastros();
   renderGridCadastro(tipo);
 }
@@ -548,6 +552,11 @@ async function salvarAcesso(event) {
       : await supabaseClient.from('portaria_acessos').insert([payload]);
 
     if (error) throw error;
+    registrarAuditoria(
+      estavaEditando ? 'ALTERAR' : 'INCLUIR',
+      'Portaria',
+      `${estavaEditando ? 'Acesso editado' : 'Novo acesso'}: ${payload.pessoa_nome || '-'} / ${payload.empresa_nome || '-'}`
+    );
     fecharModalAcesso();
     await buscarAcessos();
     alert(estavaEditando ? 'Acesso atualizado com sucesso!' : 'Acesso registrado com sucesso!');
@@ -585,6 +594,7 @@ async function salvarEmpresa(event) {
   }
   const { error } = await supabaseClient.from('portaria_empresas').insert([payload]);
   if (error) return alert(`Erro ao salvar empresa: ${error.message}`);
+  registrarAuditoria('INCLUIR', 'Portaria Empresa', `Empresa cadastrada: ${payload.nome}`);
   fecharModalCadastro('modalEmpresa');
   await carregarCadastros();
   document.getElementById('acessoEmpresa').value = formatarEmpresaOpcao(payload);
@@ -613,6 +623,7 @@ async function salvarPessoa(event) {
   }
   const { error } = await supabaseClient.from('portaria_pessoas').insert([payload]);
   if (error) return alert(`Erro ao salvar pessoa: ${error.message}`);
+  registrarAuditoria('INCLUIR', 'Portaria Pessoa', `Pessoa cadastrada: ${payload.nome}`);
   fecharModalCadastro('modalPessoa');
   await carregarCadastros();
   document.getElementById('acessoPessoa').value = formatarPessoaOpcao(payload);
@@ -635,6 +646,7 @@ async function salvarSetor(event) {
   }
   const { error } = await supabaseClient.from('portaria_setores').insert([payload]);
   if (error) return alert(`Erro ao salvar setor: ${error.message}`);
+  registrarAuditoria('INCLUIR', 'Portaria Setor', `Setor cadastrado: ${payload.nome}`);
   fecharModalCadastro('modalSetor');
   await carregarCadastros();
   document.getElementById('acessoSetor').value = payload.nome;
@@ -869,12 +881,13 @@ async function handleTabelaClick(event) {
   }
 
   if (button.dataset.action === 'entrada') {
-    await atualizarStatusAcesso(item.id, {
+    const ok = await atualizarStatusAcesso(item.id, {
       status: 'entrada',
       entrada_em: new Date().toISOString(),
       placa_entrada: item.placa_veiculo || null,
       carreta_cacamba_entrada: item.carreta_cacamba || null
     });
+    if (ok) registrarAuditoria('ALTERAR', 'Portaria', `Entrada registrada: ${item.pessoa_nome || '-'} / ${item.empresa_nome || '-'}`);
   }
 
   if (button.dataset.action === 'saida') {
@@ -888,8 +901,9 @@ async function handleTabelaClick(event) {
 
 async function atualizarStatusAcesso(id, payload) {
   const { error } = await supabaseClient.from('portaria_acessos').update(payload).eq('id', id);
-  if (error) return alert(`Erro ao atualizar acesso: ${error.message}`);
+  if (error) { alert(`Erro ao atualizar acesso: ${error.message}`); return false; }
   await buscarAcessos();
+  return true;
 }
 
 async function excluirAcesso(item) {
@@ -901,6 +915,7 @@ async function excluirAcesso(item) {
 
   const { error } = await supabaseClient.from('portaria_acessos').delete().eq('id', item.id);
   if (error) return alert(`Erro ao excluir acesso: ${error.message}`);
+  registrarAuditoria('EXCLUIR', 'Portaria', `Acesso excluído: ${item.pessoa_nome || '-'} / ${item.empresa_nome || '-'}`);
   await buscarAcessos();
 }
 
