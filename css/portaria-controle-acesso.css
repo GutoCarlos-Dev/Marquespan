@@ -70,6 +70,18 @@ body.portaria-menu-oculto .portaria-menu-toggle i {
   overflow: auto;
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.55);
+  overflow-y: auto;
+}
+
+.modal-overlay .modal-content {
+  z-index: 1;
+}
+
 .portaria-modal {
   max-width: 920px;
 }
