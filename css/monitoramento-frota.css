@@ -233,12 +233,56 @@ body.frota-fullscreen-active .frota-layout {
   grid-template-columns: 340px minmax(0, 1fr);
   height: calc(100vh - 350px);
   min-height: 520px;
+  position: relative;
+  transition: grid-template-columns 0.25s ease;
+}
+
+.btn-alternar-painel-frota {
+  align-items: center;
+  background: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  color: #333;
+  cursor: pointer;
+  display: none;
+  font-size: 0.9rem;
+  height: 32px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  left: 10px;
+  top: 82px;
+  width: 32px;
+  z-index: 1000;
+}
+
+.btn-alternar-painel-frota:hover {
+  background: #f4f4f4;
+}
+
+body.frota-fullscreen-active .btn-alternar-painel-frota {
+  display: flex;
+}
+
+.frota-layout.painel-veiculos-oculto {
+  gap: 0;
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.frota-layout.painel-veiculos-oculto .painel-frota {
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .painel-frota,
 .mapa-frota-card {
   overflow: hidden;
   padding: 0;
+}
+
+.mapa-frota-card {
+  position: relative;
 }
 
 .painel-frota {

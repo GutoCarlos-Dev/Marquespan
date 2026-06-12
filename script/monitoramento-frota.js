@@ -16,6 +16,8 @@ const listaContainer = document.getElementById('lista-veiculos-frota');
 const painelCores = document.getElementById('painel-cores-tipos');
 const listaCores = document.getElementById('lista-cores-tipos');
 const botaoTelaCheia = document.getElementById('btn-fullscreen-frota');
+const botaoAlternarPainel = document.getElementById('btn-alternar-painel-frota');
+const frotaLayout = document.querySelector('.frota-layout');
 
 let mapa;
 let camadaMarcadores;
@@ -287,6 +289,24 @@ function alternarTelaCheia() {
   document.exitFullscreen?.();
 }
 
+function definirPainelVeiculosOculto(oculto) {
+  frotaLayout?.classList.toggle('painel-veiculos-oculto', oculto);
+
+  if (botaoAlternarPainel) {
+    botaoAlternarPainel.innerHTML = oculto
+      ? '<i class="fas fa-angles-right"></i>'
+      : '<i class="fas fa-angles-left"></i>';
+    botaoAlternarPainel.title = oculto ? 'Mostrar veículos' : 'Ocultar veículos';
+    botaoAlternarPainel.setAttribute(
+      'aria-label',
+      oculto ? 'Mostrar lista de veículos' : 'Ocultar lista de veículos'
+    );
+    botaoAlternarPainel.setAttribute('aria-expanded', String(!oculto));
+  }
+
+  setTimeout(() => mapa?.invalidateSize(), 300);
+}
+
 function atualizarEstadoTelaCheia() {
   const telaCheiaAtiva = Boolean(document.fullscreenElement);
   const menuContainer = document.getElementById('menu-container');
@@ -297,6 +317,8 @@ function atualizarEstadoTelaCheia() {
   menuContainer?.classList.toggle('hidden', telaCheiaAtiva);
   sidebar?.classList.toggle('hidden', telaCheiaAtiva);
   header?.classList.toggle('hidden', telaCheiaAtiva);
+
+  if (!telaCheiaAtiva) definirPainelVeiculosOculto(false);
 
   if (botaoTelaCheia) {
     botaoTelaCheia.innerHTML = telaCheiaAtiva
@@ -317,6 +339,11 @@ function atualizarEstadoTelaCheia() {
 
 botaoAtualizar.addEventListener('click', consultarFrota);
 botaoTelaCheia?.addEventListener('click', alternarTelaCheia);
+botaoAlternarPainel?.addEventListener('click', () => {
+  definirPainelVeiculosOculto(
+    !frotaLayout?.classList.contains('painel-veiculos-oculto')
+  );
+});
 filialSelect.addEventListener('change', consultarFrota);
 tipoSelect.addEventListener('change', renderizarFrota);
 buscaInput.addEventListener('input', renderizarFrota);
