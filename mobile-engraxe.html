@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Engraxe Mobile - Marquespan</title>
-    <link rel="stylesheet" href="css/mobile-engraxe.css">
+    <link rel="stylesheet" href="css/mobile-engraxe.css?v=20260612-3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" href="img/logonavegador.png" type="image/png">
 </head>
@@ -42,6 +42,9 @@
                 <button class="tab" data-filter="OK">Feitos <small id="countRealizados">(0)</small></button>
                 <button class="tab" data-filter="ROTA">Rota <small id="countRota">(0)</small></button>
                 <button class="tab" data-filter="INTERNADO">Internado <small id="countInternados">(0)</small></button>
+                <span class="tab plaqueta-summary-tab" aria-live="polite">
+                    Placas <small id="resumoPlaquetas">(0/0)</small>
+                </span>
             </div>
 
             <div id="listaVeiculosContainer">
@@ -90,9 +93,8 @@
                     <div class="form-group">
                         <label>Plaqueta (S/N)</label>
                         <select id="editPlaqueta">
-                            <option value="">-</option>
                             <option value="SIM">SIM</option>
-                            <option value="NAO">NÃO</option>
+                            <option value="NAO" selected>NÃO</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -112,6 +114,6 @@
 
     <script type="module" src="./script/auth-guard.js"></script>
     <script type="module" src="./script/presenca-online.js"></script>
-    <script type="module" src="script/mobile-engraxe.js"></script>
+    <script type="module" src="script/mobile-engraxe.js?v=20260612-4"></script>
 </body>
 </html>

@@ -40,7 +40,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Delegação de eventos para clique nos cards de itens (Performance e UX)
     const containerItens = document.getElementById('listaVeiculosContainer');
     if (containerItens) {
-        containerItens.addEventListener('click', (e) => {
+        containerItens.addEventListener('click', async (e) => {
+            const togglePlaqueta = e.target.closest('.plaqueta-toggle');
+            if (togglePlaqueta) {
+                e.preventDefault();
+                e.stopPropagation();
+                await alternarPlaquetaMobile(togglePlaqueta);
+                return;
+            }
+
             const card = e.target.closest('.card[data-item-id]');
             if (card) {
                 const id = card.dataset.itemId;
@@ -136,6 +144,7 @@ window.abrirLista = async function(id, nome) {
 
         currentItems = itens || [];
         atualizarContadores();
+        atualizarResumoPlaquetas();
         renderizarItensMobile();
     } catch (error) {
         console.error('Erro ao carregar itens:', error);
@@ -181,6 +190,7 @@ function renderizarItensMobile() {
         else if (status === 'INTERNADO') statusClass = 'status-internado';
         
         const isDone = status === 'OK' || status === 'REALIZADO';
+        const possuiPlaqueta = String(item.plaquinha || '').trim().toUpperCase() === 'SIM';
 
         return `
             <div class="card ${statusClass}" data-item-id="${item.id}">
@@ -194,11 +204,70 @@ function renderizarItensMobile() {
                         ${isDone ? '<br><i class="fas fa-check-circle" style="color: #28a745; margin-top: 5px; font-size: 1.2rem;"></i>' : ''}
                     </div>
                 </div>
+                <div class="plaqueta-control">
+                    <span>Placa</span>
+                    <button
+                        type="button"
+                        class="plaqueta-toggle ${possuiPlaqueta ? 'active' : ''}"
+                        data-item-id="${item.id}"
+                        role="switch"
+                        aria-checked="${possuiPlaqueta}"
+                        aria-label="Plaqueta da placa ${item.placa}: ${possuiPlaqueta ? 'Sim' : 'Nao'}"
+                    >
+                        <span class="plaqueta-toggle-label">${possuiPlaqueta ? 'Sim' : 'Nao'}</span>
+                        <span class="plaqueta-toggle-knob"></span>
+                    </button>
+                </div>
             </div>
         `;
     }).join('');
 
     container.innerHTML = cardsHtml;
+}
+
+async function alternarPlaquetaMobile(botao) {
+    if (botao.disabled) return;
+
+    const id = botao.dataset.itemId;
+    const item = currentItems.find(i => String(i.id) === String(id));
+    if (!item) return;
+
+    const valorAtual = String(item.plaquinha || '').trim().toUpperCase() === 'SIM' ? 'SIM' : 'NAO';
+    const novoValor = valorAtual === 'SIM' ? 'NAO' : 'SIM';
+    botao.disabled = true;
+
+    try {
+        const { error } = await supabaseClient
+            .from('engraxe_itens')
+            .update({ plaquinha: novoValor })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        item.plaquinha = novoValor;
+        const ativo = novoValor === 'SIM';
+        botao.classList.toggle('active', ativo);
+        botao.setAttribute('aria-checked', String(ativo));
+        botao.setAttribute('aria-label', `Plaqueta da placa ${item.placa}: ${ativo ? 'Sim' : 'Nao'}`);
+        botao.querySelector('.plaqueta-toggle-label').textContent = ativo ? 'Sim' : 'Nao';
+        atualizarResumoPlaquetas();
+    } catch (error) {
+        console.error('Erro ao atualizar plaqueta:', error);
+        alert('Nao foi possivel atualizar a plaqueta.');
+    } finally {
+        botao.disabled = false;
+    }
+}
+
+function atualizarResumoPlaquetas() {
+    const resumo = document.getElementById('resumoPlaquetas');
+    if (!resumo) return;
+
+    const totalComPlaqueta = currentItems.filter(item =>
+        String(item.plaquinha || '').trim().toUpperCase() === 'SIM'
+    ).length;
+
+    resumo.textContent = `(${totalComPlaqueta}/${currentItems.length})`;
 }
 
 function atualizarContadores() {
@@ -250,7 +319,8 @@ window.prepararEdicaoMobile = function(id) {
     }
     document.getElementById('editProximo').value = dataProximo || '';
     
-    document.getElementById('editPlaqueta').value = item.plaquinha || '';
+    document.getElementById('editPlaqueta').value =
+        String(item.plaquinha || '').trim().toUpperCase() === 'SIM' ? 'SIM' : 'NAO';
     document.getElementById('editSeg').value = item.seg || '';
     
     // Normaliza status para o select
