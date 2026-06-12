@@ -1,6 +1,32 @@
+.header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
 .header p {
   color: #66746d;
   margin: 6px 0 0;
+}
+
+.btn-modo-app {
+  align-items: center;
+  background: #0d6efd;
+  border: 0;
+  border-radius: 12px;
+  color: #fff !important;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 7px;
+  padding: 10px 20px;
+  text-decoration: none;
+  transition: filter 0.2s, transform 0.2s;
+  margin-left: auto;
+}
+
+.btn-modo-app:hover {
+  background: #0b5ed7;
+  transform: translateY(-2px);
 }
 
 .localizacao-consulta {
@@ -293,6 +319,12 @@
 }
 
 @media (max-width: 600px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
   .localizacao-form {
     grid-template-columns: 1fr;
   }

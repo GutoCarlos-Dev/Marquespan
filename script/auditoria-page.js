@@ -55,6 +55,7 @@ const NOMES_PAGINA = {
     'mobile-engraxe.html': 'Engraxe Mobile',
     'mobile-lavagem.html': 'Lavagem Mobile',
     'mobile-coletar-km.html': 'Coleta KM Mobile',
+    'mobile-localizacao-veiculo.html': 'Localização de Veículos Mobile',
     'compras.html': 'Compras',
     'estoque_geral.html': 'Estoque',
 };

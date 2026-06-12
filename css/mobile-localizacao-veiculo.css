@@ -1,0 +1,343 @@
+:root {
+  --verde: #006937;
+  --verde-claro: #00a765;
+  --fundo: #f1f5f3;
+  --texto: #24352e;
+  --texto-suave: #68766f;
+  --borda: #dfe7e3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: "Segoe UI", Arial, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.app-header {
+  align-items: center;
+  background: linear-gradient(135deg, #006937, #008f57);
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  padding: calc(14px + env(safe-area-inset-top)) 16px 15px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-header-subtitle {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.78;
+  text-transform: uppercase;
+}
+
+.app-header h1 {
+  font-size: 1.15rem;
+  margin: 2px 0 0;
+}
+
+.btn-desktop {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  color: #fff;
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  text-decoration: none;
+  width: 42px;
+}
+
+.app-container {
+  margin: 0 auto;
+  max-width: 720px;
+  padding: 14px;
+}
+
+.app-card {
+  background: #fff;
+  border: 1px solid rgba(0, 105, 55, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 5px 18px rgba(20, 52, 39, 0.08);
+  overflow: hidden;
+}
+
+.consulta-card {
+  padding: 17px;
+}
+
+.consulta-card label,
+.rotulo {
+  color: var(--texto-suave);
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.placa-input-group {
+  position: relative;
+}
+
+.placa-input-group > i {
+  color: var(--verde);
+  left: 14px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.placa-input-group input {
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  color: var(--texto);
+  font-size: 1.1rem;
+  font-weight: 800;
+  height: 52px;
+  outline: none;
+  padding: 0 45px 0 42px;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.placa-input-group input:focus {
+  border-color: var(--verde-claro);
+  box-shadow: 0 0 0 3px rgba(0, 167, 101, 0.12);
+}
+
+.placa-input-group button {
+  background: transparent;
+  border: 0;
+  color: #8b9892;
+  font-size: 1rem;
+  height: 44px;
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 40px;
+}
+
+.btn-principal {
+  align-items: center;
+  background: linear-gradient(135deg, var(--verde), var(--verde-claro));
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  display: flex;
+  font-size: 0.98rem;
+  font-weight: 800;
+  gap: 9px;
+  justify-content: center;
+  margin-top: 12px;
+  min-height: 50px;
+  width: 100%;
+}
+
+.btn-principal:disabled {
+  opacity: 0.65;
+}
+
+.mensagem-app {
+  color: var(--texto-suave);
+  font-size: 0.79rem;
+  margin: 11px 0 0;
+  text-align: center;
+}
+
+.mensagem-app.erro {
+  color: #c62828;
+  font-weight: 700;
+}
+
+.resultado-mobile {
+  display: grid;
+  gap: 13px;
+  margin-top: 13px;
+}
+
+.resultado-mobile[hidden] {
+  display: none;
+}
+
+.veiculo-card {
+  border-left: 4px solid var(--verde-claro);
+  padding: 17px;
+}
+
+.veiculo-card-topo {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.veiculo-card h2 {
+  font-size: 1.55rem;
+  margin: 0;
+}
+
+.veiculo-card p {
+  color: var(--texto-suave);
+  font-size: 0.82rem;
+  margin: 3px 0 0;
+}
+
+.status-sinal {
+  background: #e8f7ef;
+  border-radius: 999px;
+  color: #00844e;
+  flex: 0 0 auto;
+  font-size: 0.67rem;
+  font-weight: 800;
+  padding: 6px 9px;
+}
+
+.status-sinal.desatualizado {
+  background: #fff0e5;
+  color: #bd5b13;
+}
+
+.endereco-mobile {
+  align-items: flex-start;
+  background: #f3f8f5;
+  border-radius: 12px;
+  display: flex;
+  gap: 11px;
+  margin-top: 15px;
+  padding: 13px;
+}
+
+.endereco-mobile > i {
+  color: var(--verde-claro);
+  margin-top: 3px;
+}
+
+.endereco-mobile strong {
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.endereco-mobile small {
+  color: var(--texto-suave);
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 5px;
+}
+
+.telemetria-mobile {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  margin-top: 14px;
+}
+
+.telemetria-mobile > div {
+  background: #fafcfb;
+  border: 1px solid #edf1ef;
+  border-radius: 10px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.telemetria-mobile i {
+  color: var(--verde-claro);
+  font-size: 0.9rem;
+}
+
+.telemetria-mobile span {
+  color: var(--texto-suave);
+  display: block;
+  font-size: 0.64rem;
+  margin: 6px 0 2px;
+}
+
+.telemetria-mobile strong {
+  display: block;
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.mapa-mobile-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 13px 15px;
+}
+
+.mapa-mobile-header h3 {
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.mapa-mobile-header button {
+  align-items: center;
+  background: #e8f7ef;
+  border: 0;
+  border-radius: 50%;
+  color: var(--verde);
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.mapa-mobile-card iframe {
+  border: 0;
+  display: block;
+  height: 55vh;
+  min-height: 390px;
+  width: 100%;
+}
+
+.acoes-mobile {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.btn-acao {
+  align-items: center;
+  border: 0;
+  border-radius: 12px;
+  display: flex;
+  font-size: 0.84rem;
+  font-weight: 800;
+  gap: 7px;
+  justify-content: center;
+  min-height: 48px;
+  padding: 8px;
+  text-decoration: none;
+}
+
+.btn-google {
+  background: var(--verde);
+  color: #fff;
+}
+
+.btn-compartilhar {
+  background: #fff;
+  border: 1px solid var(--borda);
+  color: var(--verde);
+}
+
+@media (max-width: 390px) {
+  .telemetria-mobile {
+    grid-template-columns: 1fr;
+  }
+
+  .acoes-mobile {
+    grid-template-columns: 1fr;
+  }
+}

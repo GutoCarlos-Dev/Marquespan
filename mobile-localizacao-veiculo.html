@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#006937">
+  <title>Localização de Veículos - App</title>
+  <link rel="stylesheet" href="css/mobile-localizacao-veiculo.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <span class="app-header-subtitle">Marquespan</span>
+      <h1><i class="fas fa-location-dot"></i> Localizar veículo</h1>
+    </div>
+    <a href="localizacao-veiculo.html" class="btn-desktop" title="Abrir versão desktop">
+      <i class="fas fa-desktop"></i>
+    </a>
+  </header>
+
+  <main class="app-container">
+    <section class="app-card consulta-card">
+      <form id="form-localizacao-mobile">
+        <label for="placa-localizacao-mobile">Placa do veículo</label>
+        <div class="placa-input-group">
+          <i class="fas fa-truck"></i>
+          <input
+            id="placa-localizacao-mobile"
+            type="text"
+            list="veiculos-localizacao-mobile"
+            maxlength="8"
+            inputmode="text"
+            autocomplete="off"
+            placeholder="GIH8F22"
+            required
+          >
+          <button id="btn-limpar-placa-mobile" type="button" aria-label="Limpar placa">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <datalist id="veiculos-localizacao-mobile"></datalist>
+
+        <button id="btn-localizar-mobile" class="btn-principal" type="submit">
+          <i class="fas fa-satellite-dish"></i>
+          <span>Localizar agora</span>
+        </button>
+      </form>
+      <p id="mensagem-localizacao-mobile" class="mensagem-app" role="status" aria-live="polite">
+        Informe a placa para consultar a última posição.
+      </p>
+    </section>
+
+    <section id="resultado-localizacao-mobile" class="resultado-mobile" hidden>
+      <article class="app-card veiculo-card">
+        <div class="veiculo-card-topo">
+          <div>
+            <span class="rotulo">Veículo</span>
+            <h2 id="mobile-resultado-placa">---</h2>
+            <p id="mobile-resultado-unidade">---</p>
+          </div>
+          <span id="mobile-resultado-status" class="status-sinal">---</span>
+        </div>
+
+        <div class="endereco-mobile">
+          <i class="fas fa-map-marker-alt"></i>
+          <div>
+            <span class="rotulo">Endereço atual</span>
+            <strong id="mobile-resultado-endereco">---</strong>
+            <small id="mobile-resultado-referencia"></small>
+          </div>
+        </div>
+
+        <div class="telemetria-mobile">
+          <div>
+            <i class="fas fa-clock"></i>
+            <span>Atualização</span>
+            <strong id="mobile-resultado-data">---</strong>
+          </div>
+          <div>
+            <i class="fas fa-gauge-high"></i>
+            <span>Velocidade</span>
+            <strong id="mobile-resultado-velocidade">---</strong>
+          </div>
+          <div>
+            <i class="fas fa-key"></i>
+            <span>Ignição</span>
+            <strong id="mobile-resultado-ignicao">---</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="app-card mapa-mobile-card">
+        <div class="mapa-mobile-header">
+          <div>
+            <span class="rotulo">Mapa</span>
+            <h3>Posição do veículo</h3>
+          </div>
+          <button id="btn-atualizar-mobile" type="button" title="Atualizar localização">
+            <i class="fas fa-rotate"></i>
+          </button>
+        </div>
+        <iframe
+          id="iframe-mapa-mobile"
+          title="Localização do veículo no Google Maps"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          allowfullscreen
+        ></iframe>
+      </article>
+
+      <div class="acoes-mobile">
+        <a id="btn-abrir-google-mobile" class="btn-acao btn-google" href="#" target="_blank" rel="noopener noreferrer">
+          <i class="fas fa-diamond-turn-right"></i>
+          <span>Abrir no Maps</span>
+        </a>
+        <button id="btn-compartilhar-mobile" class="btn-acao btn-compartilhar" type="button">
+          <i class="fas fa-share-nodes"></i>
+          <span>Compartilhar</span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/presenca-online.js"></script>
+  <script type="module" src="./script/mobile-localizacao-veiculo.js"></script>
+</body>
+</html>
