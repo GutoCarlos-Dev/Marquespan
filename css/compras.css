@@ -351,6 +351,32 @@
 .btn-edit { background: #ffc107; color: #333; }
 .btn-delete { background: #dc3545; }
 .btn-receive { background: #28a745; }
+
+#sectionCotacoesSalvas .saved-quotation-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 64px);
+    gap: 5px;
+    align-items: center;
+    justify-content: start;
+    min-width: 133px;
+}
+
+#sectionCotacoesSalvas .saved-quotation-actions .btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 30px;
+    margin: 0;
+    padding: 0 6px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+#sectionCotacoesSalvas .saved-quotation-actions .btn-action i {
+    margin: 0;
+    font-size: 0.85rem;
+}
 .btn-pdf { background: #dc3545; }
 
 /* Status Badges */

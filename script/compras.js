@@ -897,7 +897,7 @@ const UI = {
         const btnReceberHtml = podeReceber ? ` <button class="btn-action btn-receive" data-id="${c.id}">Receber</button>` : '';
         const btnEditarHtml = ((!isRecebido || nivelUsuario === 'administrador' || nivelUsuario === 'gerencia') && nivelUsuario !== 'estoque') ? ` <button class="btn-action btn-edit" data-id="${c.id}">Editar</button>` : '';
         
-        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerDisplay}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${dataRecebimento}</td><td>${usuarioRecebimento}</td><td>${statusSelect}</td><td><button class="btn-action btn-view" data-id="${c.id}">Ver</button> ${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</td>`;
+        tr.innerHTML = `<td>${c.codigo_cotacao}</td><td>${formattedDate}</td><td>${usuarioCell}</td><td>${winnerDisplay}</td><td>${totalValue}</td><td>${notaFiscal}</td><td>${dataRecebimento}</td><td>${usuarioRecebimento}</td><td>${statusSelect}</td><td><div class="saved-quotation-actions"><button class="btn-action btn-view" data-id="${c.id}">Ver</button>${btnPdfHtml}${btnEditarHtml}${btnReceberHtml}${btnExcluirHtml}</div></td>`;
 
         this.savedQuotationsTableBody.appendChild(tr);
         
