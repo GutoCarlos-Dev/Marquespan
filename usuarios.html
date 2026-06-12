@@ -6,7 +6,7 @@
   <link rel="icon" href="img/logonavegador.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/index.css">
-  <link rel="stylesheet" href="css/usuarios.css">
+  <link rel="stylesheet" href="css/usuarios.css?v=20260612-1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     .badge-status { padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; color: white; display: inline-block; min-width: 85px; text-align: center; }
@@ -27,6 +27,26 @@
     </header>
 
     <!-- Seção de Cadastro (Oculta por padrão) -->
+    <section id="configuracaoSessao" class="glass-panel">
+      <div class="panel-header-actions">
+        <div>
+          <h3><i class="fas fa-clock"></i> Seguranca da Sessao</h3>
+          <p class="config-description">Defina o tempo padrao. Na lista abaixo, cada usuario pode herdar esse tempo, ficar isento ou usar um tempo proprio.</p>
+        </div>
+      </div>
+      <form id="formConfiguracaoSessao" class="session-config-form">
+        <div class="form-group">
+          <label for="tempoInatividade">Tempo maximo sem atividade</label>
+          <input id="tempoInatividade" type="number" min="0" max="1440" step="1" value="30" class="glass-input" required>
+          <small class="config-hint">Informe os minutos. Use 0 para desativar.</small>
+        </div>
+        <button type="submit" id="btnSalvarConfiguracaoSessao" class="btn-glass btn-green">
+          <i class="fas fa-save"></i> Salvar tempo
+        </button>
+        <span id="statusConfiguracaoSessao" class="session-config-status" aria-live="polite"></span>
+      </form>
+    </section>
+
     <section id="cadastro" class="glass-panel hidden">
       <h3><i class="fas fa-user-plus"></i> Dados do Usuário</h3>
         <form id="formUsuario">
@@ -111,6 +131,7 @@
                 <th data-sort="nivel" style="cursor: pointer;">NÍVEL <i class="fas fa-sort"></i></th>
                 <th data-sort="filial" style="cursor: pointer;">FILIAL <i class="fas fa-sort"></i></th>
                 <th style="text-align: center; cursor: pointer;" data-sort="status">STATUS <i class="fas fa-sort"></i></th>
+                <th style="text-align: center;">INATIVIDADE</th>
                 <th>AÇÕES</th>
               </tr>
             </thead>

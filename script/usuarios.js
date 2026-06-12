@@ -4,9 +4,12 @@ import { registrarAuditoria } from './auditoria-utils.js';
 const USUARIOS_PAGE_ID = 'usuarios.html';
 const ADMIN_USUARIOS_FUNCTION_URL = 'https://hlzcycvlcuhgnnjkmslt.supabase.co/functions/v1/admin-usuarios';
 const NIVEIS_GERENCIAMENTO_USUARIOS = new Set(['administrador']);
+const CONFIGURACAO_SESSAO_ID = 'global';
+const TEMPO_INATIVIDADE_PADRAO_MINUTOS = 30;
 
 let usuariosCache = [];
 let sortConfig = { column: 'nome', direction: 'asc' };
+let configuracaoInatividadeDisponivel = true;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const acessoPermitido = await verificarPermissaoPaginaUsuarios();
@@ -19,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     carregarNiveis();
     carregarFiliais();
     setupEventListeners();
+    carregarConfiguracaoSessao();
 });
 
 function getUsuarioAtual() {
@@ -83,6 +87,8 @@ async function getAdminUsuariosHeaders() {
 }
 
 function setupEventListeners() {
+    document.getElementById('formConfiguracaoSessao')?.addEventListener('submit', salvarConfiguracaoSessao);
+
     // Botão Novo Usuário
     document.getElementById('btnAdicionarNovo').addEventListener('click', () => {
         document.getElementById('cadastro').classList.remove('hidden');
@@ -127,6 +133,81 @@ function setupEventListeners() {
             renderTable(usuariosCache);
         });
     });
+}
+
+function atualizarStatusConfiguracao(mensagem, tipo = '') {
+    const status = document.getElementById('statusConfiguracaoSessao');
+    if (!status) return;
+
+    status.textContent = mensagem;
+    status.className = `session-config-status ${tipo}`.trim();
+}
+
+async function carregarConfiguracaoSessao() {
+    const select = document.getElementById('tempoInatividade');
+    if (!select) return;
+
+    atualizarStatusConfiguracao('Carregando configuracao...');
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('configuracoes_sistema')
+            .select('tempo_inatividade_minutos')
+            .eq('id', CONFIGURACAO_SESSAO_ID)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        const minutos = Number(data?.tempo_inatividade_minutos);
+        select.value = String(Number.isFinite(minutos) && minutos >= 0
+            ? minutos
+            : TEMPO_INATIVIDADE_PADRAO_MINUTOS);
+        atualizarStatusConfiguracao('');
+    } catch (error) {
+        configuracaoInatividadeDisponivel = false;
+        console.warn('Configuracao de inatividade ainda nao foi criada no Supabase.');
+        select.value = String(TEMPO_INATIVIDADE_PADRAO_MINUTOS);
+        select.disabled = true;
+        document.getElementById('btnSalvarConfiguracaoSessao').disabled = true;
+        atualizarStatusConfiguracao('Execute o script SQL de configuracao no Supabase.', 'error');
+    }
+}
+
+async function salvarConfiguracaoSessao(event) {
+    event.preventDefault();
+
+    const select = document.getElementById('tempoInatividade');
+    const botao = document.getElementById('btnSalvarConfiguracaoSessao');
+    const minutos = Number(select?.value);
+    if (!Number.isInteger(minutos) || minutos < 0 || minutos > 1440) {
+        atualizarStatusConfiguracao('Informe um valor entre 0 e 1440 minutos.', 'error');
+        return;
+    }
+
+    botao.disabled = true;
+    atualizarStatusConfiguracao('Salvando...');
+
+    try {
+        const { error } = await supabaseClient
+            .from('configuracoes_sistema')
+            .upsert({
+                id: CONFIGURACAO_SESSAO_ID,
+                tempo_inatividade_minutos: minutos,
+                atualizado_em: new Date().toISOString()
+            }, { onConflict: 'id' });
+
+        if (error) throw error;
+
+        const descricao = minutos === 0
+            ? 'Logout por inatividade desativado.'
+            : `Tempo definido para ${minutos} minutos.`;
+        atualizarStatusConfiguracao(descricao, 'success');
+    } catch (error) {
+        console.error('Erro ao salvar configuracao da sessao:', error);
+        atualizarStatusConfiguracao('Nao foi possivel salvar a configuracao.', 'error');
+    } finally {
+        botao.disabled = false;
+    }
 }
 
 async function carregarNiveis() {
@@ -198,21 +279,34 @@ async function carregarFiliais() {
 
 async function carregarUsuarios() {
     const tbody = document.getElementById('corpoTabelaUsuarios');
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
 
     try {
-        const { data, error } = await supabaseClient
+        let { data, error } = await supabaseClient
             .from('usuarios')
-            .select('id, auth_user_id, nome, nomecompleto, email, nivel, filial, status, status_updated_at')
+            .select('id, auth_user_id, nome, nomecompleto, email, nivel, filial, status, status_updated_at, tempo_inatividade_minutos')
             .order('nome', { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+            const fallback = await supabaseClient
+                .from('usuarios')
+                .select('id, auth_user_id, nome, nomecompleto, email, nivel, filial, status, status_updated_at')
+                .order('nome', { ascending: true });
+
+            if (fallback.error) throw fallback.error;
+
+            configuracaoInatividadeDisponivel = false;
+            data = (fallback.data || []).map(usuario => ({
+                ...usuario,
+                tempo_inatividade_minutos: null
+            }));
+        }
 
         usuariosCache = data;
         renderTable(usuariosCache);
     } catch (err) {
         console.error('Erro ao carregar usuários:', err);
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
     }
 }
 
@@ -221,7 +315,7 @@ function renderTable(usuarios) {
     tbody.innerHTML = '';
 
     if (usuarios.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum usuário encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum usuário encontrado.</td></tr>';
         return;
     }
 
@@ -254,6 +348,9 @@ function renderTable(usuarios) {
     sorted.forEach(u => {
         const statusExibicao = getExibicaoStatus(u);
         const statusClass = `status-${String(statusExibicao).toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`;
+        const possuiTempoIndividual = u.tempo_inatividade_minutos !== null
+            && u.tempo_inatividade_minutos !== undefined;
+        const tempoIndividual = possuiTempoIndividual ? Number(u.tempo_inatividade_minutos) : null;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -264,6 +361,24 @@ function renderTable(usuarios) {
             <td>${escapeHtml(u.nivel || '-')}</td>
             <td>${escapeHtml(u.filial || 'Todas')}</td>
             <td style="text-align:center;"><span class="badge-status ${statusClass}">${escapeHtml(statusExibicao)}</span></td>
+            <td style="text-align:center;">
+                <select
+                    class="user-idle-select ${tempoIndividual === 0 ? 'isento' : ''}"
+                    title="${configuracaoInatividadeDisponivel ? 'Regra de inatividade' : 'Execute a migracao SQL para habilitar'}"
+                    ${configuracaoInatividadeDisponivel ? '' : 'disabled'}
+                >
+                    <option value="" ${!possuiTempoIndividual ? 'selected' : ''}>Padrao global</option>
+                    <option value="0" ${tempoIndividual === 0 ? 'selected' : ''}>Isento</option>
+                    <option value="5" ${tempoIndividual === 5 ? 'selected' : ''}>5 minutos</option>
+                    <option value="10" ${tempoIndividual === 10 ? 'selected' : ''}>10 minutos</option>
+                    <option value="15" ${tempoIndividual === 15 ? 'selected' : ''}>15 minutos</option>
+                    <option value="30" ${tempoIndividual === 30 ? 'selected' : ''}>30 minutos</option>
+                    <option value="60" ${tempoIndividual === 60 ? 'selected' : ''}>1 hora</option>
+                    <option value="120" ${tempoIndividual === 120 ? 'selected' : ''}>2 horas</option>
+                    <option value="240" ${tempoIndividual === 240 ? 'selected' : ''}>4 horas</option>
+                    <option value="480" ${tempoIndividual === 480 ? 'selected' : ''}>8 horas</option>
+                </select>
+            </td>
             <td>
                 <button class="btn-icon edit" title="Editar"><i class="fas fa-edit"></i></button>
                 <button class="btn-icon delete" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -273,11 +388,49 @@ function renderTable(usuarios) {
         // Eventos dos botões
         tr.querySelector('.edit').addEventListener('click', () => editarUsuario(u));
         tr.querySelector('.delete').addEventListener('click', () => excluirUsuario(u.id));
+        tr.querySelector('.user-idle-select').addEventListener('change', event => {
+            salvarRegraInatividadeUsuario(u, event.target);
+        });
 
         tbody.appendChild(tr);
     });
 
     updateSortIcons();
+}
+
+async function salvarRegraInatividadeUsuario(usuario, select) {
+    const valorAnterior = usuario.tempo_inatividade_minutos;
+    const novoValor = select.value === '' ? null : Number(select.value);
+    select.disabled = true;
+
+    try {
+        const { error } = await supabaseClient
+            .from('usuarios')
+            .update({ tempo_inatividade_minutos: novoValor })
+            .eq('id', usuario.id);
+
+        if (error) throw error;
+
+        usuario.tempo_inatividade_minutos = novoValor;
+        select.classList.toggle('isento', novoValor === 0);
+        registrarAuditoria(
+            'ALTERAR',
+            'Usuarios',
+            `Regra de inatividade de ${usuario.nome}: ${descreverRegraInatividade(novoValor)}`
+        );
+    } catch (error) {
+        console.error('Erro ao salvar regra individual de inatividade:', error);
+        select.value = valorAnterior === null || valorAnterior === undefined ? '' : String(valorAnterior);
+        alert('Nao foi possivel salvar a regra de inatividade deste usuario.');
+    } finally {
+        select.disabled = false;
+    }
+}
+
+function descreverRegraInatividade(minutos) {
+    if (minutos === null || minutos === undefined) return 'padrao global';
+    if (minutos === 0) return 'isento';
+    return `${minutos} minutos`;
 }
 
 function getExibicaoStatus(u) {

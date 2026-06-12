@@ -65,6 +65,62 @@
 }
 
 /* Formulário */
+.config-description {
+    margin: 8px 0 0;
+    color: #667085;
+    font-size: 0.9rem;
+}
+
+.session-config-form {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.session-config-form .form-group {
+    width: min(320px, 100%);
+}
+
+.config-hint {
+    margin-top: 6px;
+    color: #667085;
+    font-size: 0.78rem;
+}
+
+.session-config-status {
+    align-self: center;
+    min-height: 20px;
+    color: #667085;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.session-config-status.success {
+    color: #1e7e34;
+}
+
+.session-config-status.error {
+    color: #bd2130;
+}
+
+.user-idle-select {
+    width: auto;
+    min-width: 155px;
+    padding: 7px 9px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 0.82rem;
+}
+
+.user-idle-select.isento {
+    border-color: #28a745;
+    background: #eefaf1;
+    color: #176b2c;
+    font-weight: 700;
+}
+
 .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));

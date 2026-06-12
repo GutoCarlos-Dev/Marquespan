@@ -16,6 +16,12 @@ function gerarEmailInterno(nomeUsuario) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const parametros = new URLSearchParams(window.location.search);
+  if (parametros.get('motivo') === 'inatividade') {
+    alert('Sua sessao foi encerrada por inatividade. Faca login novamente.');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   const formLogin = document.getElementById('login-form');
 
   if (formLogin) {
@@ -92,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         localStorage.setItem('usuarioLogado', JSON.stringify(perfilUsuario));
         localStorage.setItem(AUTH_VERSION_KEY, AUTH_VERSION);
+        localStorage.setItem('marquespan_ultima_atividade', String(Date.now()));
 
         alert(`✅ Bem-vindo, ${userData.nome}!`);
         window.location.href = 'dashboard.html';

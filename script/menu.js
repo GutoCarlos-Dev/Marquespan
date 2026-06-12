@@ -101,6 +101,15 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       // Adiciona funcionalidade de toggle para os submenus
+      const linkSair = document.querySelector('#sidebar a[href="index.html"]');
+      linkSair?.addEventListener('click', async event => {
+        event.preventDefault();
+        await supabaseClient.auth.signOut();
+        localStorage.removeItem('usuarioLogado');
+        localStorage.removeItem('marquespan_auth_version');
+        localStorage.removeItem('marquespan_ultima_atividade');
+        window.location.href = 'index.html';
+      });
 
       document.querySelectorAll('.menu-toggle').forEach(btn => {
         btn.addEventListener('click', () => {
