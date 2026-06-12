@@ -185,6 +185,33 @@
   padding: 7px 11px;
 }
 
+.posicoes-acoes {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.btn-limpar-filtros {
+  align-items: center;
+  background: #f1f5f3;
+  border: 1px solid #dce6e1;
+  border-radius: 8px;
+  color: #496158;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.74rem;
+  font-weight: 700;
+  gap: 6px;
+  min-height: 31px;
+  padding: 0 10px;
+}
+
+.btn-limpar-filtros:hover {
+  background: #e6f1ec;
+  color: #087747;
+}
+
 .tabela-posicoes-wrap {
   max-height: 430px;
   overflow: auto;
@@ -209,7 +236,61 @@
   color: #315044;
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 2;
+}
+
+.tabela-posicoes .cabecalho-ordenacao th {
+  height: 42px;
+  padding-bottom: 6px;
+}
+
+.tabela-posicoes .cabecalho-filtros th {
+  padding: 4px 7px 8px;
+  top: 42px;
+  z-index: 2;
+}
+
+.btn-ordenar {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 800;
+  gap: 7px;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.btn-ordenar i {
+  color: #9ba8a2;
+  font-size: 0.7rem;
+}
+
+.btn-ordenar.ativo i {
+  color: #008f57;
+}
+
+.cabecalho-filtros input,
+.cabecalho-filtros select {
+  background: #fff;
+  border: 1px solid #d8e2dd;
+  border-radius: 7px;
+  color: #35453e;
+  font-size: 0.72rem;
+  height: 31px;
+  min-width: 90px;
+  outline: none;
+  padding: 4px 7px;
+  width: 100%;
+}
+
+.cabecalho-filtros input:focus,
+.cabecalho-filtros select:focus {
+  border-color: #00a765;
+  box-shadow: 0 0 0 2px rgba(0, 167, 101, 0.12);
 }
 
 .tabela-posicoes tbody tr {
@@ -219,6 +300,13 @@
 .tabela-posicoes tbody tr:hover,
 .tabela-posicoes tbody tr.ativo {
   background: #edf8f2;
+}
+
+.tabela-posicoes .tabela-sem-resultados {
+  color: #718078;
+  cursor: default;
+  padding: 28px;
+  text-align: center;
 }
 
 .status-posicao {

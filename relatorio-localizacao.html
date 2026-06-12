@@ -102,18 +102,37 @@
             <h2><i class="fas fa-list-ol"></i> Histórico de posições</h2>
             <p>Clique em uma linha para destacar o ponto no mapa.</p>
           </div>
-          <span id="contador-posicoes" class="contador-posicoes">0 registros</span>
+          <div class="posicoes-acoes">
+            <button id="btn-limpar-filtros-posicoes" class="btn-limpar-filtros" type="button">
+              <i class="fas fa-filter-circle-xmark"></i> Limpar filtros
+            </button>
+            <span id="contador-posicoes" class="contador-posicoes">0 registros</span>
+          </div>
         </div>
         <div class="table-responsive tabela-posicoes-wrap">
           <table class="tabela-posicoes">
             <thead>
-              <tr>
-                <th>#</th>
-                <th>Data/Hora</th>
-                <th>Velocidade</th>
-                <th>Situação</th>
-                <th>Coordenadas</th>
-                <th>Quantidade</th>
+              <tr class="cabecalho-ordenacao">
+                <th><button type="button" class="btn-ordenar" data-ordenar="indice"># <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="btn-ordenar" data-ordenar="dataInicial">Data/Hora <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="btn-ordenar" data-ordenar="velocidade">Velocidade <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="btn-ordenar" data-ordenar="tipo">Situação <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="btn-ordenar" data-ordenar="coordenadas">Coordenadas <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="btn-ordenar" data-ordenar="quantidadePosicoes">Quantidade <i class="fas fa-sort"></i></button></th>
+              </tr>
+              <tr class="cabecalho-filtros">
+                <th><input id="filtro-posicao-indice" type="number" min="1" placeholder="#"></th>
+                <th><input id="filtro-posicao-data" type="text" placeholder="dd/mm/aaaa ou hora"></th>
+                <th><input id="filtro-posicao-velocidade" type="number" min="0" placeholder="km/h"></th>
+                <th>
+                  <select id="filtro-posicao-situacao">
+                    <option value="">Todas</option>
+                    <option value="deslocamento">Deslocamento</option>
+                    <option value="parado">Parado</option>
+                  </select>
+                </th>
+                <th><input id="filtro-posicao-coordenadas" type="text" placeholder="Latitude ou longitude"></th>
+                <th><input id="filtro-posicao-quantidade" type="number" min="1" placeholder="Quantidade"></th>
               </tr>
             </thead>
             <tbody id="tabela-posicoes-body"></tbody>

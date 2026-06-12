@@ -9,11 +9,23 @@ const botaoConsultar = document.getElementById('btn-consultar-historico');
 const mensagem = document.getElementById('mensagem-relatorio-localizacao');
 const resultado = document.getElementById('resultado-relatorio-localizacao');
 const tabelaBody = document.getElementById('tabela-posicoes-body');
+const contadorPosicoes = document.getElementById('contador-posicoes');
+const botaoLimparFiltros = document.getElementById('btn-limpar-filtros-posicoes');
 
 let mapa;
 let camadaPercurso;
 let marcadorSelecionado;
 let pontosAtuais = [];
+let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
+
+const filtrosTabela = {
+  indice: document.getElementById('filtro-posicao-indice'),
+  data: document.getElementById('filtro-posicao-data'),
+  velocidade: document.getElementById('filtro-posicao-velocidade'),
+  situacao: document.getElementById('filtro-posicao-situacao'),
+  coordenadas: document.getElementById('filtro-posicao-coordenadas'),
+  quantidade: document.getElementById('filtro-posicao-quantidade')
+};
 
 function normalizarPlaca(valor) {
   return String(valor || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -59,9 +71,26 @@ function iniciarMapa() {
     preferCanvas: true
   }).setView([-23.5505, -46.6333], 8);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  const camadaMapa = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap'
+  });
+
+  const camadaSatelite = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri'
+    }
+  );
+
+  camadaMapa.addTo(mapa);
+  L.control.layers({
+    'Mapa': camadaMapa,
+    'Satélite': camadaSatelite
+  }, null, {
+    collapsed: true,
+    position: 'topright'
   }).addTo(mapa);
 
   camadaPercurso = L.layerGroup().addTo(mapa);
@@ -171,29 +200,90 @@ function destacarPonto(indice) {
   mapa.setView([ponto.latitude, ponto.longitude], Math.max(mapa.getZoom(), 15));
 }
 
-function renderizarTabela(pontos) {
+function valorOrdenacao(ponto, campo) {
+  if (campo === 'indice') return ponto.indiceOriginal;
+  if (campo === 'dataInicial') return new Date(ponto.dataInicial || 0).getTime();
+  if (campo === 'velocidade') return Number(ponto.velocidade) || 0;
+  if (campo === 'tipo') return ponto.tipo || '';
+  if (campo === 'coordenadas') return `${ponto.latitude},${ponto.longitude}`;
+  if (campo === 'quantidadePosicoes') return Number(ponto.quantidadePosicoes) || 0;
+  return '';
+}
+
+function obterPontosFiltradosOrdenados() {
+  const filtroIndice = filtrosTabela.indice.value.trim();
+  const filtroData = filtrosTabela.data.value.trim().toLocaleLowerCase('pt-BR');
+  const filtroVelocidade = filtrosTabela.velocidade.value.trim();
+  const filtroSituacao = filtrosTabela.situacao.value;
+  const filtroCoordenadas = filtrosTabela.coordenadas.value.trim().toLowerCase();
+  const filtroQuantidade = filtrosTabela.quantidade.value.trim();
+
+  const filtrados = pontosAtuais.filter((ponto) => {
+    const indiceExibido = ponto.indiceOriginal + 1;
+    const dataFormatada = formatarData(ponto.dataInicial).toLocaleLowerCase('pt-BR');
+    const coordenadas = `${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}`.toLowerCase();
+
+    return (!filtroIndice || indiceExibido === Number(filtroIndice))
+      && (!filtroData || dataFormatada.includes(filtroData))
+      && (!filtroVelocidade || Math.round(ponto.velocidade || 0) === Number(filtroVelocidade))
+      && (!filtroSituacao || ponto.tipo === filtroSituacao)
+      && (!filtroCoordenadas || coordenadas.includes(filtroCoordenadas))
+      && (!filtroQuantidade || Number(ponto.quantidadePosicoes || 1) === Number(filtroQuantidade));
+  });
+
+  const multiplicador = ordenacaoTabela.direcao === 'asc' ? 1 : -1;
+  return filtrados.sort((a, b) => {
+    const valorA = valorOrdenacao(a, ordenacaoTabela.campo);
+    const valorB = valorOrdenacao(b, ordenacaoTabela.campo);
+    if (typeof valorA === 'string' || typeof valorB === 'string') {
+      return String(valorA).localeCompare(String(valorB), 'pt-BR') * multiplicador;
+    }
+    return (valorA - valorB) * multiplicador;
+  });
+}
+
+function atualizarIconesOrdenacao() {
+  document.querySelectorAll('.btn-ordenar').forEach((botao) => {
+    const ativo = botao.dataset.ordenar === ordenacaoTabela.campo;
+    const icone = botao.querySelector('i');
+    botao.classList.toggle('ativo', ativo);
+    icone.className = ativo
+      ? `fas fa-sort-${ordenacaoTabela.direcao === 'asc' ? 'up' : 'down'}`
+      : 'fas fa-sort';
+  });
+}
+
+function renderizarTabela() {
+  const pontos = obterPontosFiltradosOrdenados();
   tabelaBody.innerHTML = '';
   const fragmento = document.createDocumentFragment();
 
-  pontos.slice(0, 2000).forEach((ponto, indice) => {
+  pontos.slice(0, 2000).forEach((ponto) => {
     const linha = document.createElement('tr');
-    linha.dataset.indice = String(indice);
+    linha.dataset.indice = String(ponto.indiceOriginal);
     linha.innerHTML = `
-      <td>${indice + 1}</td>
+      <td>${ponto.indiceOriginal + 1}</td>
       <td>${formatarData(ponto.dataInicial)}</td>
       <td>${Math.round(ponto.velocidade || 0)} km/h</td>
       <td><span class="status-posicao ${ponto.tipo}">${ponto.tipo === 'parado' ? 'Parado' : 'Deslocamento'}</span></td>
       <td>${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}</td>
       <td>${ponto.quantidadePosicoes || 1}</td>
     `;
-    linha.addEventListener('click', () => destacarPonto(indice));
+    linha.addEventListener('click', () => destacarPonto(ponto.indiceOriginal));
     fragmento.appendChild(linha);
   });
 
+  if (pontos.length === 0) {
+    const linha = document.createElement('tr');
+    linha.innerHTML = '<td colspan="6" class="tabela-sem-resultados">Nenhuma posição encontrada com os filtros informados.</td>';
+    fragmento.appendChild(linha);
+  }
+
   tabelaBody.appendChild(fragmento);
-  document.getElementById('contador-posicoes').textContent = pontos.length > 2000
+  contadorPosicoes.textContent = pontos.length > 2000
     ? `Exibindo 2.000 de ${pontos.length}`
-    : `${pontos.length} registros`;
+    : `${pontos.length} de ${pontosAtuais.length} registros`;
+  atualizarIconesOrdenacao();
 }
 
 function preencherResumo(dados) {
@@ -293,10 +383,13 @@ async function consultarHistorico() {
       return;
     }
 
-    pontosAtuais = data.data.pontos;
+    pontosAtuais = data.data.pontos.map((ponto, indice) => ({
+      ...ponto,
+      indiceOriginal: indice
+    }));
     preencherResumo(data.data);
     desenharMapa(pontosAtuais);
-    renderizarTabela(pontosAtuais);
+    renderizarTabela();
     resultado.hidden = false;
     setTimeout(() => mapa.invalidateSize(), 50);
     mostrarMensagem(data.data.truncado
@@ -318,6 +411,30 @@ form.addEventListener('submit', (event) => {
 
 placaInput.addEventListener('input', () => {
   placaInput.value = normalizarPlaca(placaInput.value);
+});
+
+Object.values(filtrosTabela).forEach((campo) => {
+  campo.addEventListener(campo.tagName === 'SELECT' ? 'change' : 'input', renderizarTabela);
+});
+
+document.querySelectorAll('.btn-ordenar').forEach((botao) => {
+  botao.addEventListener('click', () => {
+    const campo = botao.dataset.ordenar;
+    ordenacaoTabela = {
+      campo,
+      direcao: ordenacaoTabela.campo === campo && ordenacaoTabela.direcao === 'asc'
+        ? 'desc'
+        : 'asc'
+    };
+    renderizarTabela();
+  });
+});
+
+botaoLimparFiltros.addEventListener('click', () => {
+  Object.values(filtrosTabela).forEach((campo) => {
+    campo.value = '';
+  });
+  renderizarTabela();
 });
 
 definirPeriodoPadrao();
