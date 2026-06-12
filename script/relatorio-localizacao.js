@@ -46,6 +46,15 @@ function formatarData(valor) {
 }
 
 function iniciarMapa() {
+  if (typeof window.L === 'undefined') {
+    mostrarMensagem(
+      'Não foi possível carregar o mapa. Atualize a página e verifique a conexão com a internet.',
+      true
+    );
+    botaoConsultar.disabled = true;
+    return false;
+  }
+
   mapa = L.map('mapa-relatorio-localizacao', {
     preferCanvas: true
   }).setView([-23.5505, -46.6333], 8);
@@ -56,6 +65,7 @@ function iniciarMapa() {
   }).addTo(mapa);
 
   camadaPercurso = L.layerGroup().addTo(mapa);
+  return true;
 }
 
 function distanciaKm(a, b) {
@@ -89,6 +99,10 @@ function popupPonto(ponto, titulo) {
 }
 
 function desenharMapa(pontos) {
+  if (!mapa || !camadaPercurso) {
+    throw new Error('O mapa não foi carregado. Atualize a página e tente novamente.');
+  }
+
   camadaPercurso.clearLayers();
   if (marcadorSelecionado) {
     mapa.removeLayer(marcadorSelecionado);
