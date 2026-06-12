@@ -6,6 +6,18 @@ const CORES_PADRAO = [
   '#00838f', '#f9a825', '#5d4037', '#3949ab', '#7cb342'
 ];
 const CHAVE_CORES = 'marquespan_cores_tipos_frota';
+const CHAVE_VERSAO_CORES = 'marquespan_cores_tipos_frota_versao';
+const VERSAO_CORES = '2';
+const CORES_FIXAS_POR_TIPO = {
+  BITREM: '#000000',
+  BITRUCK: '#e4b51b',
+  'CAMINHAO 3/4': '#f20d22',
+  'HR/VAN': '#4d8ee8',
+  LS: '#000000',
+  MUNCK: '#ff7138',
+  'SEMI-REBOQUE': '#000000',
+  TRUCK: '#08ad5d'
+};
 
 const filialSelect = document.getElementById('filtro-filial-frota');
 const tipoSelect = document.getElementById('filtro-tipo-frota');
@@ -36,12 +48,33 @@ function escapeHtml(valor) {
     .replaceAll("'", '&#039;');
 }
 
+function normalizarTipo(tipo) {
+  return String(tipo || 'Sem tipo')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+}
+
 function carregarCores() {
+  let coresSalvas = {};
   try {
-    return JSON.parse(localStorage.getItem(CHAVE_CORES) || '{}');
+    coresSalvas = JSON.parse(localStorage.getItem(CHAVE_CORES) || '{}');
   } catch {
-    return {};
+    coresSalvas = {};
   }
+
+  if (localStorage.getItem(CHAVE_VERSAO_CORES) !== VERSAO_CORES) {
+    Object.keys(coresSalvas).forEach((tipo) => {
+      const corPadrao = CORES_FIXAS_POR_TIPO[normalizarTipo(tipo)];
+      if (corPadrao) coresSalvas[tipo] = corPadrao;
+    });
+
+    localStorage.setItem(CHAVE_CORES, JSON.stringify(coresSalvas));
+    localStorage.setItem(CHAVE_VERSAO_CORES, VERSAO_CORES);
+  }
+
+  return coresSalvas;
 }
 
 function salvarCores() {
@@ -51,6 +84,14 @@ function salvarCores() {
 function corDoTipo(tipo) {
   const nome = String(tipo || 'Sem tipo');
   if (coresTipos[nome]) return coresTipos[nome];
+
+  const corFixa = CORES_FIXAS_POR_TIPO[normalizarTipo(nome)];
+  if (corFixa) {
+    coresTipos[nome] = corFixa;
+    salvarCores();
+    return corFixa;
+  }
+
   let hash = 0;
   for (let indice = 0; indice < nome.length; indice += 1) {
     hash = ((hash << 5) - hash) + nome.charCodeAt(indice);
