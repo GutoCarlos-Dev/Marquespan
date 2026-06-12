@@ -7,6 +7,10 @@ const corsHeaders = {
 };
 
 type CookieJar = Map<string, string>;
+type UnidadeSystemsat = {
+  Id?: string;
+  Nome?: string;
+};
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -31,6 +35,39 @@ function extrairPlacaUnidadeRastreada(nome: unknown) {
   const texto = String(nome || '').toUpperCase();
   const placaComMascara = texto.match(/\b[A-Z]{3}-?[A-Z0-9]{4}\b/)?.[0];
   return normalizarPlaca(placaComMascara || texto.split(/\s+/)[0]);
+}
+
+function distanciaEntrePlacas(placaA: unknown, placaB: unknown) {
+  const a = normalizarPlaca(placaA);
+  const b = normalizarPlaca(placaB);
+  if (a.length !== 7 || b.length !== 7) return Number.POSITIVE_INFINITY;
+
+  let diferencas = 0;
+  for (let indice = 0; indice < a.length; indice += 1) {
+    if (a[indice] !== b[indice]) diferencas += 1;
+  }
+  return diferencas;
+}
+
+function encontrarUnidadePorPlaca(
+  unidades: UnidadeSystemsat[],
+  placaInformada: unknown
+) {
+  const placa = normalizarPlaca(placaInformada);
+  const exata = unidades.find((unidade) => (
+    extrairPlacaUnidadeRastreada(unidade?.Nome) === placa
+  ));
+  if (exata) return exata;
+
+  // Conversões para o padrão Mercosul alteram um caractere da placa antiga.
+  // Só usamos essa aproximação quando existe um único candidato com o mesmo prefixo.
+  const candidatas = unidades.filter((unidade) => {
+    const placaRastreador = extrairPlacaUnidadeRastreada(unidade?.Nome);
+    return placaRastreador.slice(0, 3) === placa.slice(0, 3)
+      && distanciaEntrePlacas(placaRastreador, placa) === 1;
+  });
+
+  return candidatas.length === 1 ? candidatas[0] : undefined;
 }
 
 function extrairToken(html: string) {
@@ -95,6 +132,38 @@ async function systemsatFetch(
   }
 
   return response;
+}
+
+async function buscarUnidadesRastreadas(
+  token: string,
+  idCliente: string,
+  cookies: CookieJar,
+  valorBusca: string,
+  tamanhoPagina = 200
+) {
+  const response = await systemsatFetch(
+    '/UnidadeRastreada/GetSearchPageRastreadorUnidadeRastreadaForDxSelectBox',
+    cookies,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        __RequestVerificationToken: token,
+        paramIdCliente: idCliente,
+        paramPageSize: String(tamanhoPagina),
+        paramStartRowIndex: '0',
+        paramSearchExpr: 'Nome',
+        paramPropertyName: 'Nome',
+        paramSearchOperation: 'contains',
+        paramSearchValue: valorBusca,
+        paramOrderBy: 'Nome'
+      })
+    }
+  );
+  if (!response.ok) throw new Error('O rastreador não respondeu à busca de veículos.');
+
+  const result = await response.json();
+  return (Array.isArray(result?.Data) ? result.Data : []) as UnidadeSystemsat[];
 }
 
 async function validarUsuario(authorization: string) {
@@ -198,32 +267,19 @@ async function consultarSystemsat(placaInformada: string) {
   const idCentral = ids[1];
   const idCliente = ids[2];
   const placa = formatarPlaca(placaInformada);
-  const searchForm = new URLSearchParams({
-    __RequestVerificationToken: token,
-    paramIdCliente: idCliente,
-    paramPageSize: '20',
-    paramStartRowIndex: '0',
-    paramSearchExpr: 'Nome',
-    paramPropertyName: 'Nome',
-    paramSearchOperation: 'contains',
-    paramSearchValue: placa,
-    paramOrderBy: 'Nome'
-  });
+  let unidades = await buscarUnidadesRastreadas(token, idCliente, cookies, placa, 20);
+  let unidade = encontrarUnidadePorPlaca(unidades, placa);
 
-  const searchResponse = await systemsatFetch(
-    '/UnidadeRastreada/GetSearchPageRastreadorUnidadeRastreadaForDxSelectBox',
-    cookies,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: searchForm
-    }
-  );
-  const searchResult = await searchResponse.json();
-  const unidades = Array.isArray(searchResult?.Data) ? searchResult.Data : [];
-  const unidade = unidades.find((item: { Nome?: string }) => (
-    normalizarPlaca(String(item?.Nome || '').split(' ')[0]) === normalizarPlaca(placa)
-  )) || unidades[0];
+  if (!unidade) {
+    unidades = await buscarUnidadesRastreadas(
+      token,
+      idCliente,
+      cookies,
+      normalizarPlaca(placa).slice(0, 3),
+      200
+    );
+    unidade = encontrarUnidadePorPlaca(unidades, placa);
+  }
 
   if (!unidade?.Id) throw new Error(`A placa ${placa} não foi encontrada no rastreador.`);
 
@@ -270,7 +326,8 @@ async function consultarSystemsat(placaInformada: string) {
   }
 
   return {
-    placa: unidadeRastreada.PlacaVeiculo || placa,
+    placa,
+    placaRastreador: unidadeRastreada.PlacaVeiculo || extrairPlacaUnidadeRastreada(unidade.Nome),
     unidade: unidadeRastreada.UnidadeRastreada || unidade.Nome,
     grupo: unidadeRastreada.GrupoUnidadeRastreada || null,
     filial: unidadeRastreada.UnidadeOrganizacional || null,
@@ -328,38 +385,36 @@ async function consultarFrotaSystemsat(
     throw new Error('A sessão do rastreador não foi iniciada corretamente.');
   }
 
-  const searchResponse = await systemsatFetch(
-    '/UnidadeRastreada/GetSearchPageRastreadorUnidadeRastreadaForDxSelectBox',
-    cookies,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        __RequestVerificationToken: token,
-        paramIdCliente: ids[2],
-        paramPageSize: '20000',
-        paramStartRowIndex: '0',
-        paramSearchExpr: 'Nome',
-        paramPropertyName: 'Nome',
-        paramSearchOperation: 'contains',
-        paramSearchValue: '',
-        paramOrderBy: 'Nome'
-      })
-    }
-  );
-  const searchResult = await searchResponse.json();
-  const unidades = Array.isArray(searchResult?.Data) ? searchResult.Data : [];
-  const unidadesPorPlaca = new Map<string, { Id: string; Nome?: string }>();
-  unidades.forEach((unidade: { Id?: string; Nome?: string }) => {
+  const unidades = await buscarUnidadesRastreadas(token, ids[2], cookies, '', 20000);
+  const unidadesPorPlaca = new Map<string, UnidadeSystemsat>();
+  unidades.forEach((unidade) => {
     const placa = extrairPlacaUnidadeRastreada(unidade?.Nome);
-    if (placa.length === 7 && unidade?.Id) unidadesPorPlaca.set(placa, unidade as { Id: string; Nome?: string });
+    if (placa.length === 7 && unidade?.Id) unidadesPorPlaca.set(placa, unidade);
   });
 
-  const correspondencias = veiculos
-    .map((veiculo) => ({
-      veiculo,
-      unidade: unidadesPorPlaca.get(veiculo.placa)
-    }))
+  const correspondenciasExatas = veiculos.map((veiculo) => ({
+    veiculo,
+    unidade: unidadesPorPlaca.get(veiculo.placa)
+  }));
+  const unidadesUsadas = new Set(
+    correspondenciasExatas
+      .map((item) => item.unidade?.Id)
+      .filter(Boolean)
+      .map(String)
+  );
+
+  const correspondencias = correspondenciasExatas
+    .map((item) => {
+      let unidade = item.unidade;
+      if (!unidade) {
+        const disponiveis = unidades.filter((item) => (
+          item.Id && !unidadesUsadas.has(String(item.Id))
+        ));
+        unidade = encontrarUnidadePorPlaca(disponiveis, item.veiculo.placa);
+      }
+      if (unidade?.Id) unidadesUsadas.add(String(unidade.Id));
+      return { veiculo: item.veiculo, unidade };
+    })
     .filter((item) => item.unidade?.Id);
 
   const posicoes = await mapearEmLotes(correspondencias, 10, async (item) => {
@@ -385,7 +440,8 @@ async function consultarFrotaSystemsat(
       const unidade = registro.UnidadeRastreada || {};
       return {
         placa: normalizarPlaca(item.veiculo.placa),
-        placaFormatada: unidade.PlacaVeiculo || formatarPlaca(item.veiculo.placa),
+        placaFormatada: formatarPlaca(item.veiculo.placa),
+        placaRastreador: unidade.PlacaVeiculo || extrairPlacaUnidadeRastreada(item.unidade?.Nome),
         modelo: item.veiculo.modelo || unidade.ModeloVeiculo || 'Sem modelo',
         tipo: item.veiculo.tipo || 'Sem tipo',
         filial: item.veiculo.filial || unidade.UnidadeOrganizacional || 'Sem filial',
@@ -452,31 +508,20 @@ async function consultarHistoricoSystemsat(
 
   const idCliente = ids[2];
   const placa = formatarPlaca(placaInformada);
-  const searchForm = new URLSearchParams({
-    __RequestVerificationToken: token,
-    paramIdCliente: idCliente,
-    paramPageSize: '20',
-    paramStartRowIndex: '0',
-    paramSearchExpr: 'Nome',
-    paramPropertyName: 'Nome',
-    paramSearchOperation: 'contains',
-    paramSearchValue: placa,
-    paramOrderBy: 'Nome'
-  });
-  const searchResponse = await systemsatFetch(
-    '/UnidadeRastreada/GetSearchPageRastreadorUnidadeRastreadaForDxSelectBox',
-    cookies,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: searchForm
-    }
-  );
-  const searchResult = await searchResponse.json();
-  const unidades = Array.isArray(searchResult?.Data) ? searchResult.Data : [];
-  const unidade = unidades.find((item: { Nome?: string }) => (
-    normalizarPlaca(String(item?.Nome || '').split(' ')[0]) === normalizarPlaca(placa)
-  )) || unidades[0];
+  let unidades = await buscarUnidadesRastreadas(token, idCliente, cookies, placa, 20);
+  let unidade = encontrarUnidadePorPlaca(unidades, placa);
+
+  if (!unidade) {
+    unidades = await buscarUnidadesRastreadas(
+      token,
+      idCliente,
+      cookies,
+      normalizarPlaca(placa).slice(0, 3),
+      200
+    );
+    unidade = encontrarUnidadePorPlaca(unidades, placa);
+  }
+
   if (!unidade?.Id) throw new Error(`A placa ${placa} não foi encontrada no rastreador.`);
 
   const partesId = String(unidade.Id).split('|');

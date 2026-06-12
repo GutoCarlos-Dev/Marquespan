@@ -74,6 +74,19 @@ function mostrarMensagem(texto, erro = false) {
   mensagem.classList.toggle('erro', erro);
 }
 
+async function obterMensagemErroFuncao(error) {
+  const response = error?.context;
+  if (response && typeof response.clone === 'function') {
+    try {
+      const payload = await response.clone().json();
+      if (payload?.message) return payload.message;
+    } catch {
+      // Mantém a mensagem padrão quando a resposta não contém JSON.
+    }
+  }
+  return error?.message || 'Não foi possível consultar o rastreador. Tente novamente.';
+}
+
 function exibirMapa() {
   if (!urlMapaEmbed) return;
   painelMapa.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -164,7 +177,7 @@ async function consultarLocalizacao() {
       body: { placa }
     });
 
-    if (error) throw error;
+    if (error) throw new Error(await obterMensagemErroFuncao(error));
     if (!data?.success) throw new Error(data?.message || 'Não foi possível localizar o veículo.');
 
     preencherResultado(data.data);
