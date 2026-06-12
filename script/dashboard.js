@@ -141,6 +141,7 @@ const MODULOS = [
     grupo: 'Desenvolvimento', cor: 'dark',
     itens: [
       { label: 'Mapa de Rotas',       desc: 'Visualização de rotas', pagina: 'mapa.html',                icon: 'fa-map' },
+      { label: 'Localização de Veículos', desc: 'Posição atual da frota', pagina: 'localizacao-veiculo.html', icon: 'fa-location-dot' },
       { label: 'Controle de Jornada', desc: 'Gestão de jornada',     pagina: 'controle-de-jornada.html', icon: 'fa-user-clock' },
     ]
   },
