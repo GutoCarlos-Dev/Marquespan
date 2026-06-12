@@ -397,7 +397,10 @@ async function carregarListas() {
             }
 
             const totalProgress = statusCounts.total;
-            const percent = totalProgress > 0 ? Math.round((statusCounts.realizados / totalProgress) * 100) : 0;
+            const calculatedPercent = totalProgress > 0
+                ? Math.round((statusCounts.realizados / totalProgress) * 100)
+                : 0;
+            const percent = Math.min(100, Math.max(0, calculatedPercent));
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -406,8 +409,13 @@ async function carregarListas() {
                 <td>${new Date(lista.data_lista + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td><span class="badge badge-${lista.status.toLowerCase()}">${lista.status}</span></td>
                 <td class="progress-cell" data-status-counts='${JSON.stringify(statusCounts)}'>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar" style="width: ${percent}%"></div>
+                    <div class="lavagem-progress-track"
+                         role="progressbar"
+                         aria-valuemin="0"
+                         aria-valuemax="100"
+                         aria-valuenow="${percent}"
+                         aria-label="Progresso da lista: ${percent}%">
+                        <div class="lavagem-progress-fill" style="width: ${percent}%"></div>
                     </div>
                     <small>${percent}% (${statusCounts.realizados}/${totalProgress})</small>
                 </td>

@@ -25,7 +25,7 @@
     background-color: #fff;
 }
 
-.progress-bar-container {
+.lavagem-progress-track {
     width: 100%;
     background-color: #e9ecef;
     border-radius: 10px;
@@ -33,9 +33,11 @@
     overflow: hidden;
 }
 
-.progress-bar {
+.lavagem-progress-fill {
     height: 100%;
+    min-width: 0;
     background-color: #006937;
+    border-radius: inherit;
     transition: width 0.3s ease;
 }
 
