@@ -188,6 +188,11 @@
     background: rgba(0, 105, 55, 0.05);
 }
 
+#tabelaEngraxe .progress-bar {
+    min-width: 0;
+    background-image: none;
+}
+
 /* Modal */
 .modal-backdrop {
     position: fixed;
