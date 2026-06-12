@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('searchResultadosLocal').addEventListener('input', filtrarLocal);
     document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
     document.getElementById('btnExportarXLS').addEventListener('click', exportarExcel);
+    document.getElementById('btnToggleMenuLateralPedagio')?.addEventListener('click', alternarMenuLateral);
     configurarFiltroCategoria();
 
     // Ordenação
@@ -33,6 +34,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         th.querySelector('i').style.marginLeft = '5px'; // Adiciona um pequeno espaçamento ao ícone
     });
 });
+
+function alternarMenuLateral() {
+    document.body.classList.toggle('relatorio-pedagio-menu-oculto');
+    const oculto = document.body.classList.contains('relatorio-pedagio-menu-oculto');
+    const botao = document.getElementById('btnToggleMenuLateralPedagio');
+    if (!botao) return;
+
+    botao.title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+    botao.setAttribute('aria-label', botao.title);
+}
 
 function formatarDataInput(date) {
     return [

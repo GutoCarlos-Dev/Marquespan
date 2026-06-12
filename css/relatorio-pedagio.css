@@ -1,0 +1,54 @@
+.menu-floating-toggle {
+  align-items: center;
+  background: #006937;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  left: 278px;
+  position: fixed;
+  top: 92px;
+  transition: left 0.25s ease, background 0.2s ease, transform 0.2s ease;
+  width: 38px;
+  z-index: 2100;
+}
+
+.menu-floating-toggle:hover {
+  background: #004d29;
+  transform: scale(1.05);
+}
+
+.menu-floating-toggle i {
+  transition: transform 0.25s ease;
+}
+
+body.relatorio-pedagio-menu-oculto #sidebar {
+  transform: translateX(-110%);
+}
+
+body.relatorio-pedagio-menu-oculto .main-content {
+  margin-left: 30px !important;
+}
+
+body.relatorio-pedagio-menu-oculto .menu-floating-toggle {
+  left: 14px;
+}
+
+body.relatorio-pedagio-menu-oculto .menu-floating-toggle i {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 768px) {
+  .menu-floating-toggle {
+    left: 14px;
+    top: 58px;
+  }
+
+  body.relatorio-pedagio-menu-oculto .main-content {
+    margin-left: 0 !important;
+  }
+}
