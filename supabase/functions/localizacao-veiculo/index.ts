@@ -235,6 +235,139 @@ async function consultarSystemsat(placaInformada: string) {
   };
 }
 
+async function consultarHistoricoSystemsat(
+  placaInformada: string,
+  dataInicial: string,
+  dataFinal: string
+) {
+  const login = Deno.env.get('SYSTEMSAT_LOGIN');
+  const senha = Deno.env.get('SYSTEMSAT_PASSWORD');
+  if (!login || !senha) {
+    throw new Error('Credenciais do rastreador não configuradas no servidor.');
+  }
+
+  const cookies: CookieJar = new Map();
+  const loginPage = await systemsatFetch('/', cookies);
+  const loginHtml = await loginPage.text();
+  const loginToken = extrairToken(loginHtml);
+  if (!loginToken) throw new Error('O portal do rastreador não forneceu o token de acesso.');
+
+  const loginForm = new URLSearchParams({
+    __RequestVerificationToken: loginToken,
+    login,
+    senha,
+    hashCode: ''
+  });
+  const loginResponse = await systemsatFetch('/Login/Login', cookies, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: loginForm
+  });
+  if (!loginResponse.ok) throw new Error('Falha ao autenticar no rastreador.');
+
+  const operacionalResponse = await systemsatFetch('/Operacional', cookies);
+  const operacionalHtml = await operacionalResponse.text();
+  const token = extrairToken(operacionalHtml);
+  const ids = operacionalHtml.match(/operacional\.Init\(\s*(\d+)\s*,\s*(\d+)/i);
+  if (!token || !ids) {
+    throw new Error('A sessão do rastreador não foi iniciada corretamente.');
+  }
+
+  const idCliente = ids[2];
+  const placa = formatarPlaca(placaInformada);
+  const searchForm = new URLSearchParams({
+    __RequestVerificationToken: token,
+    paramIdCliente: idCliente,
+    paramPageSize: '20',
+    paramStartRowIndex: '0',
+    paramSearchExpr: 'Nome',
+    paramPropertyName: 'Nome',
+    paramSearchOperation: 'contains',
+    paramSearchValue: placa,
+    paramOrderBy: 'Nome'
+  });
+  const searchResponse = await systemsatFetch(
+    '/UnidadeRastreada/GetSearchPageRastreadorUnidadeRastreadaForDxSelectBox',
+    cookies,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: searchForm
+    }
+  );
+  const searchResult = await searchResponse.json();
+  const unidades = Array.isArray(searchResult?.Data) ? searchResult.Data : [];
+  const unidade = unidades.find((item: { Nome?: string }) => (
+    normalizarPlaca(String(item?.Nome || '').split(' ')[0]) === normalizarPlaca(placa)
+  )) || unidades[0];
+  if (!unidade?.Id) throw new Error(`A placa ${placa} não foi encontrada no rastreador.`);
+
+  const partesId = String(unidade.Id).split('|');
+  const ordem = partesId.length > 1 ? partesId[0] : '0';
+  const idUnidade = partesId.at(-1);
+  const historyForm = new URLSearchParams({
+    __RequestVerificationToken: token,
+    paramDataInicial: dataInicial,
+    paramDataFinal: dataFinal,
+    paramTempoMinutos: '',
+    paramIsExibirHistoricoLBS: 'false',
+    paramIsExibirHistoricoGPS: 'true',
+    paramListRastreadorUnidadeRastreada: JSON.stringify([`${ordem}|${idUnidade}`]),
+    paramDistanciaAgrupamentoPosicao: '10'
+  });
+  const historyResponse = await systemsatFetch(
+    '/Operacional/ListHistoricoPosicaoMapa',
+    cookies,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: historyForm
+    }
+  );
+  if (!historyResponse.ok) {
+    throw new Error('O rastreador não respondeu à consulta do histórico.');
+  }
+
+  const historyResult = await historyResponse.json();
+  const historicos = Array.isArray(historyResult?.Data) ? historyResult.Data : [];
+  const pontos = historicos
+    .flatMap((historico: { HistoricoGrupoMapa?: unknown[] }) => (
+      Array.isArray(historico?.HistoricoGrupoMapa) ? historico.HistoricoGrupoMapa : []
+    ))
+    .map((ponto: Record<string, unknown>) => ({
+      id: ponto.IdPosicao,
+      latitude: Number(ponto.Latitude),
+      longitude: Number(ponto.Longitude),
+      dataInicial: ponto.DataPosicaoInicial || null,
+      dataFinal: ponto.DataPosicaoFinal || null,
+      velocidade: Number(ponto.Velocidade) || 0,
+      quantidadePosicoes: Number(ponto.QuantidadePosicoes) || 1,
+      motorista: ponto.Motorista || null,
+      tipo: String(ponto.IconeGrupo || '').toLowerCase().includes('ignicao')
+        ? 'parado'
+        : 'deslocamento'
+    }))
+    .filter((ponto: { latitude: number; longitude: number }) => (
+      Number.isFinite(ponto.latitude)
+      && Number.isFinite(ponto.longitude)
+      && ponto.latitude !== 0
+      && ponto.longitude !== 0
+    ))
+    .sort((a: { dataInicial: unknown }, b: { dataInicial: unknown }) => (
+      new Date(String(a.dataInicial || 0)).getTime()
+      - new Date(String(b.dataInicial || 0)).getTime()
+    ));
+
+  return {
+    placa,
+    unidade: historicos[0]?.UnidadeRastreada || unidade.Nome,
+    dataInicial,
+    dataFinal,
+    pontos: pontos.slice(0, 10000),
+    truncado: pontos.length > 10000
+  };
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -254,6 +387,35 @@ Deno.serve(async (request) => {
     const placa = normalizarPlaca(body?.placa);
     if (placa.length !== 7) {
       return jsonResponse({ success: false, message: 'Informe uma placa válida.' }, 400);
+    }
+
+    if (body?.acao === 'historico') {
+      const inicio = new Date(body?.dataInicial);
+      const termino = new Date(body?.dataFinal);
+      if (Number.isNaN(inicio.getTime()) || Number.isNaN(termino.getTime())) {
+        return jsonResponse({ success: false, message: 'Informe um período válido.' }, 400);
+      }
+      if (termino <= inicio) {
+        return jsonResponse({
+          success: false,
+          message: 'A data final deve ser posterior à data inicial.'
+        }, 400);
+      }
+
+      const limitePeriodoMs = 30 * 24 * 60 * 60 * 1000;
+      if (termino.getTime() - inicio.getTime() > limitePeriodoMs) {
+        return jsonResponse({
+          success: false,
+          message: 'O período máximo por consulta é de 30 dias.'
+        }, 400);
+      }
+
+      const data = await consultarHistoricoSystemsat(
+        placa,
+        inicio.toISOString(),
+        termino.toISOString()
+      );
+      return jsonResponse({ success: true, data });
     }
 
     const data = await consultarSystemsat(placa);

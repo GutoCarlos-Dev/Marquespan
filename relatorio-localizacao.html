@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Localização - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/menu.css">
+  <link rel="stylesheet" href="css/relatorio-localizacao.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+</head>
+<body>
+  <div id="menu-container"></div>
+
+  <main class="main-content">
+    <header class="header glass-header">
+      <div>
+        <h1><i class="fas fa-route"></i> Relatório de Localização</h1>
+        <p>Consulte e visualize o percurso histórico de um veículo.</p>
+      </div>
+    </header>
+
+    <section class="glass-panel relatorio-filtros">
+      <form id="form-relatorio-localizacao">
+        <div class="form-group campo-placa">
+          <label for="relatorio-placa">Veículo</label>
+          <input
+            id="relatorio-placa"
+            class="glass-input"
+            type="text"
+            list="relatorio-lista-veiculos"
+            maxlength="8"
+            autocomplete="off"
+            placeholder="GIH8F22"
+            required
+          >
+          <datalist id="relatorio-lista-veiculos"></datalist>
+        </div>
+        <div class="form-group">
+          <label for="relatorio-inicio">Data e hora inicial</label>
+          <input id="relatorio-inicio" class="glass-input" type="datetime-local" required>
+        </div>
+        <div class="form-group">
+          <label for="relatorio-termino">Data e hora final</label>
+          <input id="relatorio-termino" class="glass-input" type="datetime-local" required>
+        </div>
+        <button id="btn-consultar-historico" class="btn-consultar" type="submit">
+          <i class="fas fa-magnifying-glass-location"></i>
+          <span>Consultar percurso</span>
+        </button>
+      </form>
+      <p id="mensagem-relatorio-localizacao" class="mensagem-relatorio" role="status" aria-live="polite">
+        O período máximo por consulta é de 30 dias.
+      </p>
+    </section>
+
+    <section id="resultado-relatorio-localizacao" class="resultado-relatorio" hidden>
+      <div class="resumo-grid">
+        <article class="glass-panel resumo-card">
+          <i class="fas fa-location-dot"></i>
+          <span>Posições</span>
+          <strong id="resumo-posicoes">0</strong>
+        </article>
+        <article class="glass-panel resumo-card">
+          <i class="fas fa-road"></i>
+          <span>Distância estimada</span>
+          <strong id="resumo-distancia">0 km</strong>
+        </article>
+        <article class="glass-panel resumo-card">
+          <i class="fas fa-gauge-high"></i>
+          <span>Maior velocidade</span>
+          <strong id="resumo-velocidade">0 km/h</strong>
+        </article>
+        <article class="glass-panel resumo-card">
+          <i class="fas fa-clock"></i>
+          <span>Período consultado</span>
+          <strong id="resumo-periodo">---</strong>
+        </article>
+      </div>
+
+      <section class="glass-panel mapa-card">
+        <div class="mapa-header">
+          <div>
+            <span class="mapa-subtitulo">Percurso do veículo</span>
+            <h2 id="titulo-percurso">---</h2>
+          </div>
+          <div class="mapa-legenda">
+            <span><i class="legenda-ponto inicio"></i> Início</span>
+            <span><i class="legenda-ponto parada"></i> Parada</span>
+            <span><i class="legenda-ponto fim"></i> Fim</span>
+          </div>
+        </div>
+        <div id="mapa-relatorio-localizacao"></div>
+      </section>
+
+      <section class="glass-panel posicoes-card">
+        <div class="posicoes-header">
+          <div>
+            <h2><i class="fas fa-list-ol"></i> Histórico de posições</h2>
+            <p>Clique em uma linha para destacar o ponto no mapa.</p>
+          </div>
+          <span id="contador-posicoes" class="contador-posicoes">0 registros</span>
+        </div>
+        <div class="table-responsive tabela-posicoes-wrap">
+          <table class="tabela-posicoes">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Data/Hora</th>
+                <th>Velocidade</th>
+                <th>Situação</th>
+                <th>Coordenadas</th>
+                <th>Quantidade</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-posicoes-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9coqIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js"></script>
+  <script type="module" src="./script/relatorio-localizacao.js"></script>
+</body>
+</html>

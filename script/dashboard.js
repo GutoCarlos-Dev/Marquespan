@@ -149,6 +149,7 @@ const MODULOS = [
     grupo: 'Relatórios', cor: 'green',
     itens: [
       { label: 'Estatística', desc: 'Relatórios gerenciais', pagina: 'relatorio-estatistica.html', icon: 'fa-chart-line' },
+      { label: 'Relatório de Localização', desc: 'Histórico de posições da frota', pagina: 'relatorio-localizacao.html', icon: 'fa-route' },
     ]
   },
 ];
