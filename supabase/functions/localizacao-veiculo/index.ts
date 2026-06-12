@@ -27,6 +27,12 @@ function formatarPlaca(valor: unknown) {
   return placa.length === 7 ? `${placa.slice(0, 3)}-${placa.slice(3)}` : placa;
 }
 
+function extrairPlacaUnidadeRastreada(nome: unknown) {
+  const texto = String(nome || '').toUpperCase();
+  const placaComMascara = texto.match(/\b[A-Z]{3}-?[A-Z0-9]{4}\b/)?.[0];
+  return normalizarPlaca(placaComMascara || texto.split(/\s+/)[0]);
+}
+
 function extrairToken(html: string) {
   const match = html.match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/i);
   return match?.[1] || '';
@@ -104,6 +110,52 @@ async function validarUsuario(authorization: string) {
   });
 
   return response.ok;
+}
+
+async function buscarVeiculosPermitidos(authorization: string, filialInformada: unknown) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Configuração do Supabase indisponível.');
+  }
+
+  const url = new URL('/rest/v1/veiculos', supabaseUrl);
+  url.searchParams.set('select', 'placa,filial,modelo,tipo,situacao');
+  url.searchParams.set('order', 'placa.asc');
+  const response = await fetch(url, {
+    headers: {
+      Authorization: authorization,
+      apikey: supabaseAnonKey
+    }
+  });
+  if (!response.ok) throw new Error('Não foi possível carregar a frota autorizada.');
+
+  const filial = String(filialInformada || '').trim().toUpperCase();
+  const veiculos = await response.json();
+  return (Array.isArray(veiculos) ? veiculos : []).map((veiculo) => ({
+    ...veiculo,
+    placa: normalizarPlaca(veiculo?.placa)
+  })).filter((veiculo) => {
+    const placa = veiculo.placa;
+    const situacao = String(veiculo?.situacao || '').trim().toLowerCase();
+    const filialVeiculo = String(veiculo?.filial || '').trim().toUpperCase();
+    return placa.length === 7
+      && situacao !== 'inativo'
+      && (!filial || filialVeiculo === filial);
+  });
+}
+
+async function mapearEmLotes<T, R>(
+  itens: T[],
+  tamanhoLote: number,
+  callback: (item: T) => Promise<R>
+) {
+  const resultados: R[] = [];
+  for (let indice = 0; indice < itens.length; indice += tamanhoLote) {
+    const lote = itens.slice(indice, indice + tamanhoLote);
+    resultados.push(...await Promise.all(lote.map(callback)));
+  }
+  return resultados;
 }
 
 async function consultarSystemsat(placaInformada: string) {
@@ -232,6 +284,131 @@ async function consultarSystemsat(placaInformada: string) {
     ignicao: posicao.Ignicao,
     odometro: posicao.Odometro,
     desatualizado: Boolean(registro.IsRastreadorDesatualizado)
+  };
+}
+
+async function consultarFrotaSystemsat(
+  authorization: string,
+  filialInformada: unknown
+) {
+  const login = Deno.env.get('SYSTEMSAT_LOGIN');
+  const senha = Deno.env.get('SYSTEMSAT_PASSWORD');
+  if (!login || !senha) {
+    throw new Error('Credenciais do rastreador não configuradas no servidor.');
+  }
+
+  const veiculos = await buscarVeiculosPermitidos(authorization, filialInformada);
+  if (veiculos.length === 0) {
+    return { veiculos: [], totalCadastrados: 0, semRastreador: 0 };
+  }
+
+  const cookies: CookieJar = new Map();
+  const loginPage = await systemsatFetch('/', cookies);
+  const loginHtml = await loginPage.text();
+  const loginToken = extrairToken(loginHtml);
+  if (!loginToken) throw new Error('O portal do rastreador não forneceu o token de acesso.');
+
+  const loginResponse = await systemsatFetch('/Login/Login', cookies, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      __RequestVerificationToken: loginToken,
+      login,
+      senha,
+      hashCode: ''
+    })
+  });
+  if (!loginResponse.ok) throw new Error('Falha ao autenticar no rastreador.');
+
+  const operacionalResponse = await systemsatFetch('/Operacional', cookies);
+  const operacionalHtml = await operacionalResponse.text();
+  const token = extrairToken(operacionalHtml);
+  const ids = operacionalHtml.match(/operacional\.Init\(\s*(\d+)\s*,\s*(\d+)/i);
+  if (!token || !ids) {
+    throw new Error('A sessão do rastreador não foi iniciada corretamente.');
+  }
+
+  const searchResponse = await systemsatFetch(
+    '/UnidadeRastreada/GetSearchPageRastreadorUnidadeRastreadaForDxSelectBox',
+    cookies,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        __RequestVerificationToken: token,
+        paramIdCliente: ids[2],
+        paramPageSize: '20000',
+        paramStartRowIndex: '0',
+        paramSearchExpr: 'Nome',
+        paramPropertyName: 'Nome',
+        paramSearchOperation: 'contains',
+        paramSearchValue: '',
+        paramOrderBy: 'Nome'
+      })
+    }
+  );
+  const searchResult = await searchResponse.json();
+  const unidades = Array.isArray(searchResult?.Data) ? searchResult.Data : [];
+  const unidadesPorPlaca = new Map<string, { Id: string; Nome?: string }>();
+  unidades.forEach((unidade: { Id?: string; Nome?: string }) => {
+    const placa = extrairPlacaUnidadeRastreada(unidade?.Nome);
+    if (placa.length === 7 && unidade?.Id) unidadesPorPlaca.set(placa, unidade as { Id: string; Nome?: string });
+  });
+
+  const correspondencias = veiculos
+    .map((veiculo) => ({
+      veiculo,
+      unidade: unidadesPorPlaca.get(veiculo.placa)
+    }))
+    .filter((item) => item.unidade?.Id);
+
+  const posicoes = await mapearEmLotes(correspondencias, 10, async (item) => {
+    try {
+      const idUnidade = String(item.unidade?.Id).split('|').at(-1);
+      const response = await systemsatFetch(
+        '/api/LastPositions/GetLastPositionUnidadeRastreada',
+        cookies,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            __RequestVerificationToken: token,
+            paramIdUnidadeRastreada: String(idUnidade)
+          })
+        }
+      );
+      const result = await response.json();
+      const registro = Array.isArray(result?.Data) ? result.Data[0] : null;
+      if (!registro?.Posicao) return null;
+
+      const posicao = registro.Posicao;
+      const unidade = registro.UnidadeRastreada || {};
+      return {
+        placa: normalizarPlaca(item.veiculo.placa),
+        placaFormatada: unidade.PlacaVeiculo || formatarPlaca(item.veiculo.placa),
+        modelo: item.veiculo.modelo || unidade.ModeloVeiculo || 'Sem modelo',
+        tipo: item.veiculo.tipo || 'Sem tipo',
+        filial: item.veiculo.filial || unidade.UnidadeOrganizacional || 'Sem filial',
+        unidade: unidade.UnidadeRastreada || item.unidade?.Nome || null,
+        latitude: posicao?.Geocode?.Coordinates?.Latitude,
+        longitude: posicao?.Geocode?.Coordinates?.Longitude,
+        dataAtualizacao: posicao.DataAtualizacao || posicao.DataEvento || null,
+        velocidade: posicao.Velocidade,
+        ignicao: posicao.Ignicao,
+        referencia: posicao.DistanciaGeo || posicao?.CheckPoint?.Geography || null,
+        desatualizado: Boolean(registro.IsRastreadorDesatualizado)
+      };
+    } catch (error) {
+      console.error('Falha ao consultar posição da frota:', item.veiculo?.placa, error);
+      return null;
+    }
+  });
+
+  return {
+    veiculos: posicoes.filter(Boolean),
+    totalCadastrados: veiculos.length,
+    semRastreador: veiculos.length - correspondencias.length,
+    consultadoEm: new Date().toISOString()
   };
 }
 
@@ -384,6 +561,12 @@ Deno.serve(async (request) => {
 
   try {
     const body = await request.json();
+
+    if (body?.acao === 'frota') {
+      const data = await consultarFrotaSystemsat(authorization, body?.filial);
+      return jsonResponse({ success: true, data });
+    }
+
     const placa = normalizarPlaca(body?.placa);
     if (placa.length !== 7) {
       return jsonResponse({ success: false, message: 'Informe uma placa válida.' }, 400);

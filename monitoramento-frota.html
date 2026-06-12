@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Localização da Frota - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/menu.css">
+  <link rel="stylesheet" href="css/monitoramento-frota.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+</head>
+<body>
+  <div id="menu-container"></div>
+
+  <main class="main-content">
+    <header class="header glass-header frota-header">
+      <div>
+        <h1><i class="fas fa-satellite-dish"></i> Localização da Frota</h1>
+        <p>Monitoramento das últimas posições recebidas dos rastreadores.</p>
+      </div>
+      <div class="frota-header-acoes">
+        <div class="status-atualizacao">
+          <span id="status-atualizacao-frota"><i class="fas fa-circle"></i> Aguardando consulta</span>
+          <small id="hora-atualizacao-frota">---</small>
+        </div>
+        <button id="btn-fullscreen-frota" class="btn-fullscreen-frota" type="button" title="Tela Cheia"
+          aria-label="Abrir monitoramento em tela cheia">
+          <i class="fas fa-expand"></i>
+        </button>
+      </div>
+    </header>
+
+    <section class="glass-panel filtros-frota">
+      <div class="filtro-item">
+        <label for="filtro-filial-frota">Filial</label>
+        <select id="filtro-filial-frota" class="glass-input">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="filtro-item">
+        <label for="filtro-tipo-frota">Tipo</label>
+        <select id="filtro-tipo-frota" class="glass-input">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="filtro-item filtro-busca">
+        <label for="filtro-busca-frota">Buscar veículo</label>
+        <div>
+          <i class="fas fa-search"></i>
+          <input id="filtro-busca-frota" class="glass-input" type="text" placeholder="Placa, tipo ou modelo">
+        </div>
+      </div>
+      <button id="btn-atualizar-frota" class="btn-atualizar-frota" type="button">
+        <i class="fas fa-rotate"></i> Atualizar agora
+      </button>
+      <label class="auto-refresh">
+        <input id="auto-refresh-frota" type="checkbox" checked>
+        <span>Atualizar a cada 60s</span>
+      </label>
+    </section>
+
+    <section class="resumo-frota">
+      <article class="glass-panel resumo-frota-card">
+        <i class="fas fa-truck"></i>
+        <div><span>Cadastrados</span><strong id="total-frota-cadastrada">0</strong></div>
+      </article>
+      <article class="glass-panel resumo-frota-card atualizado">
+        <i class="fas fa-signal"></i>
+        <div><span>No mapa</span><strong id="total-frota-mapa">0</strong></div>
+      </article>
+      <article class="glass-panel resumo-frota-card rodando">
+        <i class="fas fa-road"></i>
+        <div><span>Em movimento</span><strong id="total-frota-movimento">0</strong></div>
+      </article>
+      <article class="glass-panel resumo-frota-card alerta">
+        <i class="fas fa-triangle-exclamation"></i>
+        <div><span>Sinal desatualizado</span><strong id="total-frota-desatualizada">0</strong></div>
+      </article>
+    </section>
+
+    <section class="frota-layout">
+      <aside class="glass-panel painel-frota">
+        <div class="painel-frota-header">
+          <div>
+            <h2>Veículos</h2>
+            <small id="contador-lista-frota">0 veículos</small>
+          </div>
+          <button id="btn-configurar-cores" type="button" title="Configurar cores por tipo">
+            <i class="fas fa-palette"></i>
+          </button>
+        </div>
+
+        <div id="painel-cores-tipos" class="painel-cores-tipos" hidden>
+          <div class="cores-header">
+            <strong>Cores por tipo</strong>
+            <button id="btn-fechar-cores" type="button"><i class="fas fa-times"></i></button>
+          </div>
+          <div id="lista-cores-tipos"></div>
+        </div>
+
+        <div id="lista-veiculos-frota" class="lista-veiculos-frota">
+          <div class="frota-vazia"><i class="fas fa-map-location-dot"></i> Selecione uma filial para consultar.</div>
+        </div>
+      </aside>
+
+      <section class="glass-panel mapa-frota-card">
+        <div id="mapa-monitoramento-frota"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js"></script>
+  <script type="module" src="./script/monitoramento-frota.js"></script>
+</body>
+</html>

@@ -17,4 +17,4 @@ Após alterações nesta função, publique novamente pelo painel do Supabase ou
 supabase functions deploy localizacao-veiculo
 ```
 
-A mesma função atende à localização atual e ao relatório histórico.
+A mesma função atende à localização atual, ao relatório histórico e ao monitoramento da frota.

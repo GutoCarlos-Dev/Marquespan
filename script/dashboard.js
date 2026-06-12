@@ -122,6 +122,7 @@ const MODULOS = [
     grupo: 'Fiscalização', cor: 'red',
     itens: [
       { label: 'Acompanhamento', desc: 'Acompanhamento de rota', pagina: 'fiscalizacao-acompanhamento.html', icon: 'fa-clipboard-check' },
+      { label: 'Localização da Frota', desc: 'Monitoramento da frota em tempo real', pagina: 'monitoramento-frota.html', icon: 'fa-satellite-dish' },
     ]
   },
   {
