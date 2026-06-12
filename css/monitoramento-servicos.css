@@ -278,6 +278,10 @@
     background: #fd7e14;
 }
 
+.status-chip.placa {
+    background: #17a2b8;
+}
+
 .status-chip.internado {
     background: #007bff;
 }

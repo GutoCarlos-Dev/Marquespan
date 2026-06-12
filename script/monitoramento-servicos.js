@@ -278,8 +278,9 @@ function resumirItens(itens, tipo = 'lavagem') {
 
         if (status === 'INTERNADO') acc.internados++;
         if (status === 'AGENDADO') acc.agendados++;
+        if (String(item.plaquinha || '').trim().toUpperCase() === 'SIM') acc.plaquetas++;
         return acc;
-    }, { total: 0, concluidos: 0, pendentes: 0, internados: 0, agendados: 0, outros: 0 });
+    }, { total: 0, concluidos: 0, pendentes: 0, internados: 0, agendados: 0, outros: 0, plaquetas: 0 });
 }
 
 function renderLista(containerId, listas, tipo) {
@@ -328,6 +329,7 @@ function montarCard(lista, tipo) {
                 <div class="status-chips">
                     <span class="status-chip realizado">${resumo.concluidos} concluidos</span>
                     <span class="status-chip pendente">${resumo.pendentes} pendentes</span>
+                    ${tipo === 'engraxe' ? `<span class="status-chip placa">Placa (${resumo.plaquetas}/${resumo.total})</span>` : ''}
                     ${resumo.internados ? `<span class="status-chip internado">${resumo.internados} internados</span>` : ''}
                     ${resumo.agendados ? `<span class="status-chip agendado">${resumo.agendados} agendados</span>` : ''}
                     ${resumo.outros ? `<span class="status-chip">${resumo.outros} outros</span>` : ''}
