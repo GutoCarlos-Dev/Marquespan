@@ -7,6 +7,12 @@ const botaoLocalizar = document.getElementById('btn-localizar');
 const botaoAtualizar = document.getElementById('btn-atualizar-localizacao');
 const mensagem = document.getElementById('mensagem-localizacao');
 const resultado = document.getElementById('resultado-localizacao');
+const painelMapa = document.getElementById('painel-mapa-localizacao');
+const iframeMapa = document.getElementById('iframe-mapa-localizacao');
+const linkMapaExterno = document.getElementById('link-mapa-externo');
+const painelMapaEndereco = document.getElementById('painel-mapa-endereco');
+
+let urlMapaEmbed = '';
 
 const campos = {
   placa: document.getElementById('resultado-placa'),
@@ -68,6 +74,11 @@ function mostrarMensagem(texto, erro = false) {
   mensagem.classList.toggle('erro', erro);
 }
 
+function exibirMapa() {
+  if (!urlMapaEmbed) return;
+  painelMapa.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function carregarVeiculos() {
   const { data, error } = await supabaseClient
     .from('veiculos')
@@ -116,11 +127,21 @@ function preencherResultado(dados) {
   campos.filial.textContent = dados.filial || 'Não informada';
 
   if (Number.isFinite(Number(dados.latitude)) && Number.isFinite(Number(dados.longitude))) {
-    campos.mapa.href = `https://www.google.com/maps?q=${encodeURIComponent(`${dados.latitude},${dados.longitude}`)}`;
-    campos.mapa.removeAttribute('aria-disabled');
+    const coordenadas = `${dados.latitude},${dados.longitude}`;
+    const urlMapaExterno = `https://www.google.com/maps?q=${encodeURIComponent(coordenadas)}`;
+    urlMapaEmbed = `https://www.google.com/maps?q=${encodeURIComponent(coordenadas)}&output=embed`;
+    campos.mapa.disabled = false;
+    linkMapaExterno.href = urlMapaExterno;
+    painelMapaEndereco.textContent = dados.endereco || coordenadas;
+    document.getElementById('painel-mapa-titulo').textContent = `Mapa do veículo ${dados.placa || formatarPlaca(inputPlaca.value)}`;
+    iframeMapa.src = urlMapaEmbed;
+    painelMapa.hidden = false;
   } else {
-    campos.mapa.href = '#';
-    campos.mapa.setAttribute('aria-disabled', 'true');
+    urlMapaEmbed = '';
+    campos.mapa.disabled = true;
+    linkMapaExterno.href = '#';
+    iframeMapa.src = 'about:blank';
+    painelMapa.hidden = true;
   }
 
   resultado.hidden = false;
@@ -166,6 +187,7 @@ form.addEventListener('submit', (event) => {
 });
 
 botaoAtualizar.addEventListener('click', consultarLocalizacao);
+campos.mapa.addEventListener('click', exibirMapa);
 
 inputPlaca.addEventListener('input', () => {
   inputPlaca.value = placaSemMascara(inputPlaca.value);

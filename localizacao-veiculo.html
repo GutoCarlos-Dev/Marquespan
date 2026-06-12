@@ -66,9 +66,9 @@
         </div>
 
         <div class="localizacao-acoes">
-          <a id="link-mapa" class="btn-mapa" href="#" target="_blank" rel="noopener noreferrer">
+          <button id="link-mapa" class="btn-mapa" type="button" disabled>
             <i class="fas fa-map-location-dot"></i> Abrir no mapa
-          </a>
+          </button>
           <button id="btn-atualizar-localizacao" class="btn-atualizar" type="button">
             <i class="fas fa-rotate"></i> Atualizar
           </button>
@@ -111,6 +111,31 @@
           <span class="localizacao-label">Filial do rastreador</span>
           <strong id="resultado-filial">---</strong>
         </div>
+      </article>
+
+      <article id="painel-mapa-localizacao" class="glass-panel painel-mapa-localizacao" hidden>
+        <header class="painel-mapa-header">
+        <div>
+          <span class="localizacao-label">Posição atual</span>
+            <h2 id="painel-mapa-titulo">Mapa do veículo</h2>
+        </div>
+          <a id="link-mapa-externo" href="#" target="_blank" rel="noopener noreferrer">
+            <i class="fas fa-arrow-up-right-from-square"></i> Abrir em nova aba
+          </a>
+        </header>
+        <div class="painel-mapa-corpo">
+          <iframe
+            id="iframe-mapa-localizacao"
+            title="Localização do veículo no Google Maps"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            allowfullscreen
+          ></iframe>
+        </div>
+        <footer class="painel-mapa-footer">
+          <i class="fas fa-location-dot"></i>
+          <span id="painel-mapa-endereco">---</span>
+        </footer>
       </article>
     </section>
   </main>

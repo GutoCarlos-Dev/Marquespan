@@ -91,6 +91,12 @@
   transform: none;
 }
 
+.btn-mapa:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
 .mensagem-localizacao {
   color: #66746d;
   font-size: 0.88rem;
@@ -218,6 +224,64 @@
   overflow-wrap: anywhere;
 }
 
+.painel-mapa-localizacao {
+  overflow: hidden;
+  padding: 0;
+}
+
+.painel-mapa-localizacao[hidden] {
+  display: none;
+}
+
+.painel-mapa-header,
+.painel-mapa-footer {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.painel-mapa-header {
+  border-bottom: 1px solid #e5ebe8;
+}
+
+.painel-mapa-header h2 {
+  color: #20372f;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.painel-mapa-header a {
+  color: #008f57;
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.painel-mapa-corpo {
+  background: #e8ecea;
+  height: 560px;
+}
+
+.painel-mapa-corpo iframe {
+  border: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.painel-mapa-footer {
+  border-top: 1px solid #e5ebe8;
+  color: #5d6963;
+  font-size: 0.82rem;
+  justify-content: flex-start;
+}
+
+.painel-mapa-footer i {
+  color: #008f57;
+}
+
 @media (max-width: 900px) {
   .telemetria-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -243,5 +307,14 @@
 
   .telemetria-grid {
     grid-template-columns: 1fr;
+  }
+
+  .painel-mapa-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .painel-mapa-corpo {
+    height: 440px;
   }
 }
