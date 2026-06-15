@@ -2,9 +2,12 @@ import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
 const STORAGE_KEY_RASCUNHO = 'marquespan_coleta_km_rascunho';
+const IS_MOBILE_COLETA_KM = Boolean(document.getElementById('listaVisualColetaKm'));
 
 let itensColeta = [];
 let veiculosCache = [];
+let filtroMobileColetaKm = 'TODOS';
+let salvandoColeta = false;
 let originalDataColeta = null; // Armazena a data original do lote em edição
 let currentSort = { key: null, asc: true }; // Estado da ordenação
 
@@ -34,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }); // Salvar e atualizar histórico ao mudar data
     document.getElementById('formItemColeta').addEventListener('submit', handleItemSubmit);
     document.getElementById('btnSalvarColeta').addEventListener('click', salvarColetaCompleta);
+    document.getElementById('btnSalvarColetaFlutuante')?.addEventListener('click', salvarColetaCompleta);
     document.getElementById('btnCancelarColeta')?.addEventListener('click', cancelarColeta);
     document.getElementById('tableBodyItens').addEventListener('click', handleTableActions);
     document.getElementById('tableBodyItens').addEventListener('dblclick', (e) => {
@@ -47,6 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Listener para busca na lista de itens coletados
     document.getElementById('searchItemColetado')?.addEventListener('input', renderizarTabela);
+    configurarListaVisualMobile();
 
     // Novos Listeners para Importar/Exportar
     document.getElementById('btnImportar')?.addEventListener('click', () => document.getElementById('importFile').click());
@@ -82,23 +87,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function carregarVeiculos() {
     try {
-        const { data, error } = await supabaseClient
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+        let query = supabaseClient
             .from('veiculos')
-            .select('placa, modelo, id')
+            .select('placa, modelo, id, filial')
             .eq('situacao', 'ativo') // Apenas veículos ativos
             .order('placa');
 
+        if (IS_MOBILE_COLETA_KM && usuario?.filial) query = query.eq('filial', usuario.filial);
+
+        const { data, error } = await query;
         if (error) throw error;
 
-        veiculosCache = data;
+        veiculosCache = data || [];
         const datalist = document.getElementById('listaVeiculos');
         datalist.innerHTML = '';
         
-        data.forEach(v => {
+        veiculosCache.forEach(v => {
             const option = document.createElement('option');
             option.value = v.placa;
             datalist.appendChild(option);
         });
+
+        const filialLabel = document.getElementById('coletaKmFilial');
+        if (filialLabel) filialLabel.textContent = usuario?.filial || 'Todas';
+        renderizarListaVisualMobile();
     } catch (error) {
         console.error('Erro ao carregar veículos:', error);
         alert('Erro ao carregar lista de veículos.');
@@ -251,6 +264,124 @@ function clearItemForm() {
     document.getElementById('itemPlaca').focus();
 }
 
+function escapeHtmlColetaKm(valor) {
+    return String(valor ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function configurarListaVisualMobile() {
+    if (!IS_MOBILE_COLETA_KM) return;
+
+    document.getElementById('searchPlacaColetaKm')?.addEventListener('input', renderizarListaVisualMobile);
+
+    document.querySelectorAll('[data-km-filter]').forEach(botao => {
+        botao.addEventListener('click', () => {
+            document.querySelectorAll('[data-km-filter]').forEach(item => item.classList.remove('active'));
+            botao.classList.add('active');
+            filtroMobileColetaKm = botao.dataset.kmFilter || 'TODOS';
+            renderizarListaVisualMobile();
+        });
+    });
+
+    document.getElementById('listaVisualColetaKm')?.addEventListener('click', event => {
+        const card = event.target.closest('[data-veiculo-placa]');
+        if (card) abrirVeiculoColetaKm(card.dataset.veiculoPlaca);
+    });
+}
+
+async function abrirVeiculoColetaKm(placa) {
+    const index = itensColeta.findIndex(item => item.placa === placa);
+    if (index >= 0) {
+        prepararEdicaoItem(index);
+        setTimeout(() => document.getElementById('itemKmAtual')?.focus(), 100);
+        return;
+    }
+
+    const veiculo = veiculosCache.find(item => item.placa === placa);
+    if (!veiculo) return;
+
+    clearItemForm();
+    const form = document.getElementById('formItemColeta');
+    delete form.dataset.editingIndex;
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-check"></i> CONFIRMAR KM';
+    submitBtn.classList.remove('btn-update', 'btn-blue');
+    submitBtn.classList.add('btn-primary');
+
+    document.getElementById('itemPlaca').value = veiculo.placa;
+    document.getElementById('itemModelo').value = veiculo.modelo || '';
+    await buscarUltimoKm(veiculo.placa);
+
+    document.getElementById('modalLancamento')?.classList.remove('hidden');
+    setTimeout(() => document.getElementById('itemKmAtual')?.focus(), 100);
+}
+
+function renderizarListaVisualMobile() {
+    if (!IS_MOBILE_COLETA_KM) return;
+
+    const container = document.getElementById('listaVisualColetaKm');
+    if (!container) return;
+
+    const termo = document.getElementById('searchPlacaColetaKm')?.value.trim().toUpperCase() || '';
+    const itensPorPlaca = new Map(itensColeta.map(item => [item.placa, item]));
+    const total = veiculosCache.length;
+    const feitos = veiculosCache.filter(veiculo => itensPorPlaca.has(veiculo.placa)).length;
+    const pendentes = total - feitos;
+
+    document.getElementById('countKmTodos').textContent = `(${total})`;
+    document.getElementById('countKmPendentes').textContent = `(${pendentes})`;
+    document.getElementById('countKmFeitos').textContent = `(${feitos})`;
+    const contadorFlutuante = document.getElementById('fabSalvarContador');
+    if (contadorFlutuante) contadorFlutuante.textContent = String(feitos);
+
+    const veiculos = veiculosCache.filter(veiculo => {
+        const feito = itensPorPlaca.has(veiculo.placa);
+        const atendeStatus = filtroMobileColetaKm === 'TODOS'
+            || (filtroMobileColetaKm === 'FEITO' && feito)
+            || (filtroMobileColetaKm === 'PENDENTE' && !feito);
+        const atendeBusca = !termo
+            || String(veiculo.placa).toUpperCase().includes(termo)
+            || String(veiculo.modelo || '').toUpperCase().includes(termo);
+        return atendeStatus && atendeBusca;
+    });
+
+    if (!veiculos.length) {
+        container.innerHTML = '<div class="coleta-km-vazio">Nenhum veiculo encontrado.</div>';
+        return;
+    }
+
+    container.innerHTML = veiculos.map(veiculo => {
+        const item = itensPorPlaca.get(veiculo.placa);
+        const feito = Boolean(item);
+        return `
+            <button type="button"
+                class="coleta-km-card ${feito ? 'feito' : 'pendente'}"
+                data-veiculo-placa="${escapeHtmlColetaKm(veiculo.placa)}">
+                <div class="coleta-km-card-topo">
+                    <strong>${escapeHtmlColetaKm(veiculo.placa)}</strong>
+                    <span class="coleta-km-status">
+                        <i class="fas ${feito ? 'fa-check-circle' : 'fa-clock'}"></i>
+                        ${feito ? 'FEITO' : 'PENDENTE'}
+                    </span>
+                </div>
+                <div class="coleta-km-modelo">${escapeHtmlColetaKm(veiculo.modelo || 'Modelo nao informado')}</div>
+                <div class="coleta-km-card-rodape">
+                    ${feito
+                        ? `<span>KM anterior: <b>${item.km_anterior ?? '-'}</b></span>
+                           <span>KM atual: <b>${item.km_atual}</b></span>`
+                        : '<span>Toque para coletar</span>'}
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </button>
+        `;
+    }).join('');
+}
+
 function renderizarTabela() {
     const tbody = document.getElementById('tableBodyItens');
     tbody.innerHTML = '';
@@ -281,6 +412,8 @@ function renderizarTabela() {
         `;
         tbody.appendChild(tr);
     });
+
+    renderizarListaVisualMobile();
 }
 
 function handleTableActions(e) {
@@ -298,7 +431,10 @@ function handleTableActions(e) {
     }
 }
 
-async function salvarColetaCompleta() {
+async function salvarColetaCompleta(event) {
+    if (salvandoColeta) return;
+    const salvarParcial = event?.currentTarget?.id === 'btnSalvarColetaFlutuante';
+
     if (itensColeta.length === 0) {
         alert('Adicione pelo menos um veículo à coleta.');
         return;
@@ -309,6 +445,23 @@ async function salvarColetaCompleta() {
     
     // Usa o valor do input diretamente (Hora Local) pois o banco é TIMESTAMP WITHOUT TIME ZONE
     // Isso evita a conversão automática para UTC que estava adicionando 3 horas
+    salvandoColeta = true;
+    const botoesSalvar = [
+        document.getElementById('btnSalvarColeta'),
+        document.getElementById('btnSalvarColetaFlutuante')
+    ].filter(Boolean);
+    botoesSalvar.forEach(botao => {
+        botao.disabled = true;
+        botao.classList.add('salvando');
+    });
+    const liberarBotoesSalvar = () => {
+        salvandoColeta = false;
+        botoesSalvar.forEach(botao => {
+            botao.disabled = false;
+            botao.classList.remove('salvando');
+        });
+    };
+
     let dataColetaISO = dataColetaInput;
     if (dataColetaISO.length === 16) dataColetaISO += ':00';
 
@@ -330,7 +483,10 @@ async function salvarColetaCompleta() {
     if (deleteError) {
         console.error('Erro ao limpar registros antigos para atualização:', deleteError);
         // Continua mesmo com erro? Depende da regra de negócio. Por segurança, alertamos.
-        if(!confirm('Houve um erro ao preparar a atualização. Deseja tentar salvar como novos registros?')) return;
+        if(!confirm('Houve um erro ao preparar a atualização. Deseja tentar salvar como novos registros?')) {
+            liberarBotoesSalvar();
+            return;
+        }
     }
 
     // Prepara os dados para inserção (remove ID temporário)
@@ -348,16 +504,26 @@ async function salvarColetaCompleta() {
         if (error) throw error;
         
         registrarAuditoria('INCLUIR', 'Coleta KM', `Inclusão de coleta de KM com ${dadosParaInserir.length} registros`);
+        if (salvarParcial) {
+            originalDataColeta = dataColetaISO;
+            salvarRascunho();
+            renderizarTabela();
+            carregarHistorico();
+            alert(`${dadosParaInserir.length} veiculos salvos. Continue a coleta.`);
+        } else {
         alert('Coleta de KM salva com sucesso!');
         itensColeta = []; // Limpa a lista de itens em memória
         originalDataColeta = null; // Reseta a referência de edição para um novo lote
         renderizarTabela(); // Limpa a tabela na tela
         carregarHistorico(); // Atualiza o histórico após salvar
         limparRascunho(); // Remove o rascunho do localStorage, já que a coleta foi salva
+        }
 
     } catch (error) {
         console.error('Erro ao salvar coleta:', error);
         alert('Erro ao salvar dados: ' + error.message);
+    } finally {
+        liberarBotoesSalvar();
     }
 }
 
@@ -413,6 +579,11 @@ async function carregarHistorico(dataIni = null, dataFim = null) {
         // Verifica se é a versão Mobile pela existência da classe específica no HTML
         const isMobile = document.querySelector('.mobile-container');
         const dataSelecionada = document.getElementById('coletaData').value;
+
+        if (IS_MOBILE_COLETA_KM) {
+            const placasFilial = veiculosCache.map(veiculo => veiculo.placa);
+            query = query.in('placa', placasFilial.length ? placasFilial : ['__SEM_PLACAS__']);
+        }
         
         // Aplica filtro de data APENAS se for Mobile (App)
         if (isMobile && dataSelecionada && !dataIni && !dataFim) {
@@ -474,8 +645,10 @@ async function carregarHistorico(dataIni = null, dataFim = null) {
                 <td data-label="Responsável">${grupo.usuario || '-'}</td>
                 <td data-label="Qtd. Veículos" style="text-align: center;">${grupo.qtd}</td>
                     <td data-label="Ações" class="actions-cell">
-                        <button type="button" class="btn-glass btn-blue" style="padding: 6px 10px; margin-right: 5px;" onclick="carregarBatchParaEdicao('${grupo.data_coleta}')" title="Editar Lote"><i class="fas fa-edit"></i></button>
-                        ${btnDelete ? btnDelete.replace('btn-danger', 'btn-glass btn-red') : ''}
+                        <div class="coleta-km-historico-acoes">
+                            <button type="button" class="btn-glass btn-blue" onclick="carregarBatchParaEdicao('${grupo.data_coleta}')" title="Editar Lote" aria-label="Editar lote"><i class="fas fa-edit"></i></button>
+                            ${btnDelete ? btnDelete.replace('btn-danger', 'btn-glass btn-red') : ''}
+                        </div>
                     </td>
             `;
             tbody.appendChild(tr);
@@ -829,6 +1002,15 @@ function ordenarItens(key) {
 
 // --- Funções de Persistência Local (Rascunho Automático) ---
 
+function getStorageKeyRascunho() {
+    if (!IS_MOBILE_COLETA_KM) return STORAGE_KEY_RASCUNHO;
+
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+    const identificador = usuario?.id || usuario?.auth_user_id || usuario?.nome || 'usuario';
+    const filial = usuario?.filial || 'todas';
+    return `${STORAGE_KEY_RASCUNHO}_${identificador}_${filial}`;
+}
+
 function salvarRascunho() {
     const data = {
         dataColeta: document.getElementById('coletaData').value,
@@ -836,13 +1018,13 @@ function salvarRascunho() {
         itens: itensColeta,
         originalDataColeta: originalDataColeta
     };
-    localStorage.setItem(STORAGE_KEY_RASCUNHO, JSON.stringify(data));
+    localStorage.setItem(getStorageKeyRascunho(), JSON.stringify(data));
     // Opcional: Feedback visual discreto
     // console.log('Rascunho salvo automaticamente.');
 }
 
 function carregarRascunho() {
-    const saved = localStorage.getItem(STORAGE_KEY_RASCUNHO);
+    const saved = localStorage.getItem(getStorageKeyRascunho());
     if (saved) {
         try {
             const data = JSON.parse(saved);
@@ -852,7 +1034,9 @@ function carregarRascunho() {
             
             // Restaura itens
             if (data.itens && Array.isArray(data.itens) && data.itens.length > 0) {
-                itensColeta = data.itens;
+                itensColeta = IS_MOBILE_COLETA_KM
+                    ? data.itens.filter(item => veiculosCache.some(veiculo => veiculo.placa === item.placa))
+                    : data.itens;
                 if (data.originalDataColeta) originalDataColeta = data.originalDataColeta;
                 renderizarTabela();
                 console.log('Rascunho restaurado com sucesso.');
@@ -864,7 +1048,7 @@ function carregarRascunho() {
 }
 
 function limparRascunho() {
-    localStorage.removeItem(STORAGE_KEY_RASCUNHO);
+    localStorage.removeItem(getStorageKeyRascunho());
 }
 
 /**

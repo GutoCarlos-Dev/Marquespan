@@ -137,6 +137,51 @@ body {
     transform: scale(0.95);
 }
 
+.fab-salvar-coleta {
+    background: linear-gradient(135deg, #008f50, #00b968) !important;
+    bottom: 22px;
+    box-shadow: 0 7px 20px rgba(0, 105, 55, 0.38);
+    height: 62px !important;
+    right: 20px;
+    width: 62px !important;
+}
+
+.fab-salvar-coleta:hover {
+    box-shadow: 0 9px 24px rgba(0, 105, 55, 0.48);
+    transform: translateY(-2px);
+}
+
+.fab-salvar-coleta.salvando i {
+    animation: fabSalvarGirar 0.8s linear infinite;
+}
+
+.fab-salvar-coleta:disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
+.fab-salvar-contador {
+    align-items: center;
+    background: #fff;
+    border: 2px solid #008f50;
+    border-radius: 999px;
+    color: #007443;
+    display: flex;
+    font-size: 0.67rem;
+    font-weight: 900;
+    height: 21px;
+    justify-content: center;
+    min-width: 21px;
+    padding: 0 3px;
+    position: absolute;
+    right: -3px;
+    top: -4px;
+}
+
+@keyframes fabSalvarGirar {
+    to { transform: rotate(360deg); }
+}
+
 /* Modal (Bottom Sheet Style) */
 .panel-backdrop {
     position: fixed;
@@ -241,3 +286,441 @@ body {
     transition: transform 0.2s, box-shadow 0.2s;
 }
 .btn-update:active { transform: scale(0.98); }
+
+.mobile-container {
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.info-card input {
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.coleta-km-info-card {
+    background: linear-gradient(145deg, #ffffff, #f5fbf8);
+    border: 1px solid #dcebe3;
+    border-radius: 14px;
+    box-shadow: 0 5px 18px rgba(0, 76, 40, 0.09);
+    padding: 16px;
+}
+
+.coleta-km-info-titulo {
+    align-items: center;
+    border-bottom: 1px solid #e2ece7;
+    display: flex;
+    gap: 11px;
+    margin-bottom: 14px;
+    padding-bottom: 13px;
+}
+
+.coleta-km-info-titulo h3 {
+    border: 0;
+    color: #244136;
+    font-size: 1rem;
+    margin: 0 0 3px;
+    padding: 0;
+}
+
+.coleta-km-info-titulo small {
+    color: #73817a;
+    font-size: 0.72rem;
+}
+
+.coleta-km-info-icone {
+    align-items: center;
+    background: linear-gradient(135deg, #006937, #00a65d);
+    border-radius: 11px;
+    color: #fff;
+    display: flex;
+    flex: 0 0 42px;
+    font-size: 1.05rem;
+    height: 42px;
+    justify-content: center;
+}
+
+.coleta-km-info-campo {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #dce5e0;
+    border-radius: 11px;
+    display: grid;
+    gap: 11px;
+    grid-template-columns: 38px minmax(0, 1fr);
+    margin-bottom: 10px;
+    padding: 9px 11px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.coleta-km-info-campo:focus-within {
+    border-color: #12a35d;
+    box-shadow: 0 0 0 3px rgba(18, 163, 93, 0.12);
+}
+
+.coleta-km-info-campo > div {
+    min-width: 0;
+}
+
+.coleta-km-campo-icone {
+    align-items: center;
+    background: #e8f6ee;
+    border-radius: 9px;
+    color: #087747;
+    display: flex;
+    font-size: 0.95rem;
+    height: 36px;
+    justify-content: center;
+    width: 36px;
+}
+
+.coleta-km-info-campo label {
+    color: #6a7771;
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+}
+
+.coleta-km-info-campo input {
+    background: transparent;
+    border: 0;
+    color: #253b31;
+    font-family: inherit;
+    font-size: 0.96rem;
+    font-weight: 700;
+    min-height: 30px;
+    outline: 0;
+    padding: 0;
+}
+
+.coleta-km-info-campo input[readonly] {
+    color: #526159;
+}
+
+.coleta-km-info-campo input[type="datetime-local"] {
+    cursor: pointer;
+}
+
+.coleta-km-info-campo input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    background-color: #e8f6ee;
+    border-radius: 7px;
+    cursor: pointer;
+    padding: 6px;
+}
+
+.coleta-km-lista {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 15px;
+}
+
+.coleta-km-lista-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.coleta-km-lista-header h3 {
+    color: #263a31;
+    margin: 0 0 4px;
+}
+
+.coleta-km-lista-header small {
+    color: #718078;
+}
+
+.coleta-km-filial {
+    background: #e8f5ee;
+    border-radius: 999px;
+    color: #006937;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 6px 10px;
+}
+
+.coleta-km-search {
+    margin-bottom: 12px;
+    position: relative;
+}
+
+.coleta-km-search input {
+    border: 1px solid #d7dfdb;
+    border-radius: 24px;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 12px 14px 12px 40px;
+    width: 100%;
+}
+
+.coleta-km-search i {
+    color: #75827c;
+    left: 15px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.coleta-km-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.coleta-km-tabs .tab {
+    background: #e8ecea;
+    border: 0;
+    border-radius: 999px;
+    color: #53615a;
+    cursor: pointer;
+    font-weight: 800;
+    padding: 9px 13px;
+    white-space: nowrap;
+}
+
+.coleta-km-tabs .tab.active {
+    background: #006937;
+    color: #fff;
+}
+
+.coleta-km-tabs .tab-pendente.active {
+    background: #c6283b;
+}
+
+.coleta-km-tabs .tab-feito.active {
+    background: #138a4b;
+}
+
+.coleta-km-cards {
+    display: grid;
+    gap: 10px;
+}
+
+.coleta-km-card {
+    background: #fff;
+    border: 1px solid transparent;
+    border-left-width: 7px;
+    border-radius: 11px;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.08);
+    color: #26352e;
+    cursor: pointer;
+    padding: 14px;
+    text-align: left;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    width: 100%;
+}
+
+.coleta-km-card:active {
+    transform: scale(0.985);
+}
+
+.coleta-km-card.pendente {
+    background: #fff1f2;
+    border-color: #f0b3bc;
+    border-left-color: #d72f45;
+}
+
+.coleta-km-card.feito {
+    background: #edfff4;
+    border-color: #a9dfbf;
+    border-left-color: #149653;
+}
+
+.coleta-km-card-topo,
+.coleta-km-card-rodape {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.coleta-km-card-topo strong {
+    font-size: 1.12rem;
+    letter-spacing: 0.04em;
+}
+
+.coleta-km-status {
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 900;
+    padding: 5px 8px;
+}
+
+.pendente .coleta-km-status {
+    background: #d72f45;
+    color: #fff;
+}
+
+.feito .coleta-km-status {
+    background: #149653;
+    color: #fff;
+}
+
+.coleta-km-modelo {
+    color: #66746d;
+    font-size: 0.82rem;
+    margin: 7px 0 11px;
+}
+
+.coleta-km-card-rodape {
+    border-top: 1px solid rgba(65, 85, 75, 0.12);
+    color: #58665f;
+    font-size: 0.75rem;
+    padding-top: 9px;
+}
+
+.coleta-km-card-rodape span {
+    flex: 1;
+}
+
+.coleta-km-card-rodape i {
+    color: #7a8781;
+}
+
+.coleta-km-loading,
+.coleta-km-vazio {
+    color: #718078;
+    padding: 28px 10px;
+    text-align: center;
+}
+
+.coleta-km-historico {
+    border-top: 1px solid #dfe5e2;
+    margin-top: 24px;
+    padding-top: 18px;
+}
+
+.coleta-km-historico > h3 {
+    align-items: center;
+    color: #006937;
+    display: flex;
+    justify-content: space-between;
+}
+
+.coleta-km-historico > h3 button {
+    background: none;
+    border: 0;
+    color: #006937;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+.coleta-km-historico .mobile-cards-table {
+    border-spacing: 0 12px;
+    table-layout: fixed;
+}
+
+.coleta-km-historico .mobile-cards-table tr {
+    border-left: 5px solid #178a50;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 12px 14px 10px;
+    width: 100%;
+}
+
+.coleta-km-historico .mobile-cards-table td {
+    align-items: center;
+    box-sizing: border-box;
+    gap: 12px;
+    min-width: 0;
+    width: 100%;
+}
+
+.coleta-km-historico .mobile-cards-table td::before {
+    flex: 0 0 auto;
+}
+
+.coleta-km-historico .mobile-cards-table td:not(.actions-cell) {
+    overflow-wrap: anywhere;
+    text-align: right;
+}
+
+.coleta-km-historico .mobile-cards-table .actions-cell {
+    align-items: center;
+    border-top: 1px solid #e7ece9;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    padding: 10px 0 0;
+}
+
+.coleta-km-historico-acoes {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+}
+
+.coleta-km-historico-acoes .btn-glass {
+    align-items: center;
+    border: 0;
+    border-radius: 9px;
+    display: inline-flex;
+    height: 36px;
+    justify-content: center;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 36px;
+}
+
+.coleta-km-campos {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 1fr 1fr;
+}
+
+.mobile-panel .form-group {
+    margin-bottom: 14px;
+}
+
+.mobile-panel label {
+    color: #44534b;
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+
+.mobile-panel input {
+    border: 1px solid #ccd6d1;
+    border-radius: 9px;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 12px;
+    width: 100%;
+}
+
+.mobile-panel input[readonly] {
+    background: #f1f4f2;
+    color: #526159;
+}
+
+.mobile-panel #itemPlaca {
+    color: #006937;
+    font-size: 1.2rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+}
+
+.mobile-panel .form-actions button {
+    background: #006937;
+    border: 0;
+    border-radius: 9px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 900;
+    padding: 14px;
+    width: 100%;
+}
+
+@media (min-width: 560px) {
+    .coleta-km-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
