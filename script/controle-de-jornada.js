@@ -3369,7 +3369,12 @@ async function renderS4Table(){
       <td style="font-size:11.5px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(row.cidade||'')}">${esc(row.cidade||'—')}</td>
       <td class="mono">${esc(row.rota||'')}</td>
       <td>${statBadge(row.stat ?? row.tipo)}</td>
-      <td>${esc(row.nome||'')} <span class="role-tag">${row.role}</span></td>
+      <td>
+        <div class="colaborador-cell">
+          <div class="colaborador-nome">${esc(row.nome||'—')}</div>
+          ${row.role ? `<div class="colaborador-funcao">${esc(row.role)}</div>` : ''}
+        </div>
+      </td>
       ${timeCell(row.saida, sC, 'saida')}
       ${timeCell(row.entrada, eC, 'entrada')}
       <td class="${iC}" style="white-space:nowrap">
@@ -9227,35 +9232,109 @@ async function importFromXLSX(type){
 }
 
 // ── PHONES DIRECTORY ──────────────────────────────────────
-async function renderPhonesTable(){
-  const phones=await dbGetAllPhones();
+let funcionarioPhonesCache = null;
+let funcionarioPhonesPromise = null;
+
+async function fetchFuncionarioPhones(force=false){
+  if(force) funcionarioPhonesCache = null;
+  if(funcionarioPhonesCache) return funcionarioPhonesCache;
+  if(funcionarioPhonesPromise) return funcionarioPhonesPromise;
+
+  funcionarioPhonesPromise = (async()=>{
+    try{
+      let funcionarios = [];
+      if(typeof sbFetch === 'function'){
+        const resp = await sbFetch(
+          '/rest/v1/funcionario?select=id,nome,nome_completo,funcao,contato_corp,contato_pessoal,status&order=nome.asc&limit=5000'
+        );
+        if(!resp.ok) throw new Error(await resp.text());
+        funcionarios = await resp.json();
+      }else if(window._supa){
+        const {data,error} = await window._supa
+          .from('funcionario')
+          .select('id,nome,nome_completo,funcao,contato_corp,contato_pessoal,status')
+          .order('nome');
+        if(error) throw error;
+        funcionarios = data || [];
+      }
+
+      const contacts = [];
+      for(const f of funcionarios || []){
+        const nome = String(f.nome_completo || f.nome || '').trim();
+        if(!nome) continue;
+        const status = String(f.status || '').trim();
+        const baseObs = ['Funcionários', f.funcao, status].filter(Boolean).join(' · ');
+        const corp = String(f.contato_corp || '').trim();
+        const pessoal = String(f.contato_pessoal || '').trim();
+        if(formatPhone(corp)){
+          contacts.push({
+            nome,
+            tel: corp,
+            obs: `${baseObs} · Corporativo`,
+            source: 'funcionario',
+            funcionarioId: f.id
+          });
+        }
+        if(formatPhone(pessoal) && formatPhone(pessoal) !== formatPhone(corp)){
+          contacts.push({
+            nome,
+            tel: pessoal,
+            obs: `${baseObs} · Pessoal`,
+            source: 'funcionario',
+            funcionarioId: f.id
+          });
+        }
+      }
+      funcionarioPhonesCache = contacts;
+      return contacts;
+    }catch(e){
+      console.warn('[fetchFuncionarioPhones]', e);
+      funcionarioPhonesCache = [];
+      return [];
+    }finally{
+      funcionarioPhonesPromise = null;
+    }
+  })();
+
+  return funcionarioPhonesPromise;
+}
+
+async function refreshPhonesFromFuncionarios(){
+  funcionarioPhonesCache = null;
+  await renderPhonesTable(true);
+}
+
+async function renderPhonesTable(force=false){
+  const tbody=document.getElementById('phones-tbody');
+  if(tbody && force){
+    tbody.innerHTML='<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3)">Atualizando contatos...</td></tr>';
+  }
+  const [funcionarioPhones, localPhones] = await Promise.all([
+    fetchFuncionarioPhones(force),
+    dbGetAllPhones()
+  ]);
+  const cloudKeys = new Set(funcionarioPhones.map(p=>`${norm(p.nome)}|${formatPhone(p.tel)}`));
+  const localComplement = localPhones
+    .filter(p=>!cloudKeys.has(`${norm(p.nome)}|${formatPhone(p.tel)}`))
+    .map(p=>({...p, source:'local', obs:p.obs || 'Cadastro local'}));
+  const phones=[...funcionarioPhones,...localComplement];
   const q=(document.getElementById('phones-search')?.value||'').toLowerCase();
   const filtered=q?phones.filter(p=>p.nome.toLowerCase().includes(q)||p.tel.includes(q)):phones;
-  // Deduplicate: if same tel exists under multiple names, keep the longer (complete) name
-  const telSeen = {};
-  const deduped = [];
-  filtered.forEach(p=>{
-    const t = p.tel||'';
-    if(!t){deduped.push(p);return;}
-    if(!telSeen[t]||p.nome.length>telSeen[t].nome.length){
-      telSeen[t]={...p, idx:deduped.length};
-      deduped.push(p);
-    } else {
-      // Replace the shorter name entry
-      const old=deduped.findIndex(x=>x.tel===t&&x.nome.length<p.nome.length);
-      if(old>=0) deduped[old]=p;
-    }
-  });
-  const filteredDedup = deduped;
-  filtered.sort((a,b)=>a.nome.localeCompare(b.nome));
-  // Use deduped for display
-  const displayList = filteredDedup.sort((a,b)=>a.nome.localeCompare(b.nome));
+  const byPhone = new Map();
+  for(const p of filtered){
+    const key = formatPhone(p.tel) || `${norm(p.nome)}|${p.tel || ''}`;
+    const current = byPhone.get(key);
+    const shouldReplace = !current
+      || (p.source === 'funcionario' && current.source !== 'funcionario')
+      || (p.source === current.source && p.nome.length > current.nome.length);
+    if(shouldReplace) byPhone.set(key, p);
+  }
+  const displayList = [...byPhone.values()].sort((a,b)=>a.nome.localeCompare(b.nome));
   const cnt=document.getElementById('phones-count');
   const uniqueTels = new Set(phones.map(p=>p.tel).filter(Boolean)).size;
-  if(cnt)cnt.textContent=`${phones.length} cadastrado(s) · ${uniqueTels} números únicos`;
-  const tbody=document.getElementById('phones-tbody');
+  if(cnt)cnt.textContent=`${funcionarioPhones.length} de Funcionários · ${localComplement.length} local(is) · ${uniqueTels} números`;
   if(!tbody)return;
-  if(!filtered.length){
+  if(!displayList.length){
     tbody.innerHTML='<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3)">Nenhum resultado</td></tr>';
     return;
   }
@@ -9266,12 +9345,26 @@ async function renderPhonesTable(){
       <td style="padding:8px 12px;font-size:12px;color:var(--text3)">${esc(p.obs||'')}</td>
       <td style="padding:8px 10px">
         <div style="display:flex;gap:5px">
-          <button onclick="openWaDirect('${esc(p.nome)}','${esc(p.tel)}')" style="padding:4px 8px;border-radius:6px;border:none;background:#25D366;color:#fff;font-size:11px;font-weight:600;cursor:pointer">WA</button>
-          <button onclick="editPhone('${esc(p.nome)}')" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;cursor:pointer">✎</button>
-          <button onclick="deletePhone('${esc(p.nome)}')" style="padding:4px 8px;border-radius:6px;border:1px solid var(--red-b);background:var(--red-l);color:var(--red);font-size:11px;cursor:pointer">✕</button>
+          <button onclick="openWaDirectory('${encodeURIComponent(p.nome)}','${encodeURIComponent(p.tel)}')" style="padding:4px 8px;border-radius:6px;border:none;background:#25D366;color:#fff;font-size:11px;font-weight:600;cursor:pointer">WA</button>
+          ${p.source==='local'
+            ? `<button onclick="editPhoneDirectory('${encodeURIComponent(p.nome)}')" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;cursor:pointer">✎</button>
+               <button onclick="deletePhoneDirectory('${encodeURIComponent(p.nome)}')" style="padding:4px 8px;border-radius:6px;border:1px solid var(--red-b);background:var(--red-l);color:var(--red);font-size:11px;cursor:pointer">✕</button>`
+            : `<button onclick="window.open('funcionario.html','_blank')" title="Editar no cadastro de Funcionários" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;cursor:pointer">Editar</button>`}
         </div>
       </td>
     </tr>`).join('');
+}
+
+function openWaDirectory(nome,tel){
+  openWaDirect(decodeURIComponent(nome), decodeURIComponent(tel));
+}
+
+function editPhoneDirectory(nome){
+  editPhone(decodeURIComponent(nome));
+}
+
+function deletePhoneDirectory(nome){
+  deletePhone(decodeURIComponent(nome));
 }
 
 function openAddPhoneModal(){

@@ -7,7 +7,7 @@
   <link rel="icon" href="img/logonavegador.png" type="image/png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/index.css">
-  <link rel="stylesheet" href="css/controle-de-jornada.css?v=20260604-4">
+  <link rel="stylesheet" href="css/controle-de-jornada.css?v=20260615-1">
 </head>
 <body>
   <div id="menu-container"></div>
@@ -831,12 +831,14 @@
           <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:8px" id="phones-count"></span>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-ghost btn-sm" onclick="exportPhonesJSON()">↓ Exportar</button>
-          <button class="btn btn-ghost btn-sm" onclick="importPhonesJSON()">↑ Importar JSON</button>
-          <button class="btn btn-brand btn-sm" onclick="importPhonesXLSX()" title="Importar planilha com colunas Nome + Telefone">↑ Importar XLSX / CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.open('funcionario.html','_blank')" title="Abrir o cadastro de funcionários">Funcionários</button>
+          <button class="btn btn-brand btn-sm" onclick="refreshPhonesFromFuncionarios()" title="Buscar novamente os contatos cadastrados na página de Funcionários">Atualizar</button>
         </div>
       </div>
       <div style="padding:14px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">
+          Contatos carregados automaticamente do cadastro de Funcionários. Não é necessário importar planilhas.
+        </div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <input type="text" placeholder="Buscar colaborador..." id="phones-search" class="form-control" style="max-width:280px;padding:7px 12px;font-size:13px" oninput="renderPhonesTable()">
           <button class="btn btn-green btn-sm" onclick="openAddPhoneModal()">
@@ -1370,7 +1372,7 @@
 <!-- Bibliotecas Externas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
-<script src="./script/controle-de-jornada.js?v=20260604-5"></script>
+<script src="./script/controle-de-jornada.js?v=20260615-2"></script>
 <!-- Expõe o supabaseClient do sistema para os scripts regulares -->
 <script type="module">
   import { supabaseClient } from './script/supabase.js';
