@@ -137,6 +137,10 @@ body {
     transform: scale(0.95);
 }
 
+.hidden {
+    display: none !important;
+}
+
 .fab-salvar-coleta {
     background: linear-gradient(135deg, #008f50, #00b968) !important;
     bottom: 22px;
@@ -144,6 +148,21 @@ body {
     height: 62px !important;
     right: 20px;
     width: 62px !important;
+}
+
+.fab-nova-lista {
+    background: linear-gradient(135deg, #008f50, #00b968) !important;
+    bottom: 22px;
+    box-shadow: 0 7px 20px rgba(0, 105, 55, 0.38);
+    font-size: 1.55rem;
+    height: 62px !important;
+    right: 20px;
+    width: 62px !important;
+}
+
+.fab-nova-lista:hover {
+    box-shadow: 0 9px 24px rgba(0, 105, 55, 0.48);
+    transform: translateY(-2px);
 }
 
 .fab-salvar-coleta:hover {
@@ -415,6 +434,34 @@ body {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     padding: 15px;
+}
+
+.coleta-km-lista-fechada {
+    align-items: center;
+    background: #f7faf8;
+    border: 1px dashed #afc8bb;
+    border-radius: 12px;
+    color: #66766e;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 15px;
+    padding: 24px 16px;
+    text-align: center;
+}
+
+.coleta-km-lista-fechada i {
+    color: #168653;
+    font-size: 1.7rem;
+    margin-bottom: 3px;
+}
+
+.coleta-km-lista-fechada strong {
+    color: #30473c;
+}
+
+.coleta-km-lista-fechada span {
+    font-size: 0.78rem;
 }
 
 .coleta-km-lista-header {

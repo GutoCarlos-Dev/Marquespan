@@ -62,7 +62,13 @@
       </table>
     </section>
 
-    <section class="mobile-list-container coleta-km-lista">
+    <div id="estadoListaColetaKm" class="coleta-km-lista-fechada">
+      <i class="fas fa-list-check"></i>
+      <strong>Nenhuma lista aberta</strong>
+      <span>Escolha uma nova data ou abra uma lista no Historico salvo.</span>
+    </div>
+
+    <section id="secaoListaColetaKm" class="mobile-list-container coleta-km-lista hidden">
       <div class="coleta-km-lista-header">
         <div>
           <h3>Veiculos da filial</h3>
@@ -100,15 +106,20 @@
       </div>
     </section>
 
-    <button type="button" id="btnSalvarColeta" class="btn-success btn-save-all">
+    <button type="button" id="btnSalvarColeta" class="btn-success btn-save-all hidden">
       <i class="fas fa-save"></i> FINALIZAR COLETA
     </button>
   </main>
 
-  <button type="button" id="btnSalvarColetaFlutuante" class="fab-button fab-salvar-coleta"
+  <button type="button" id="btnSalvarColetaFlutuante" class="fab-button fab-salvar-coleta hidden"
     title="Salvar veiculos coletados" aria-label="Salvar veiculos coletados">
     <i class="fas fa-save"></i>
     <span id="fabSalvarContador" class="fab-salvar-contador">0</span>
+  </button>
+
+  <button type="button" id="btnNovaListaColetaKm" class="fab-button fab-nova-lista"
+    title="Criar nova lista" aria-label="Criar nova lista">
+    <i class="fas fa-plus"></i>
   </button>
 
   <div id="modalLancamento" class="panel-backdrop hidden">

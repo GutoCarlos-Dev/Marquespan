@@ -32,12 +32,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 4. Event Listeners
     document.getElementById('itemPlaca').addEventListener('change', aoSelecionarPlaca);
     document.getElementById('coletaData').addEventListener('change', () => {
-        salvarRascunho();
+        if (IS_MOBILE_COLETA_KM) {
+            iniciarNovaListaMobile();
+        } else {
+            salvarRascunho();
+        }
         carregarHistorico();
     }); // Salvar e atualizar histórico ao mudar data
     document.getElementById('formItemColeta').addEventListener('submit', handleItemSubmit);
     document.getElementById('btnSalvarColeta').addEventListener('click', salvarColetaCompleta);
     document.getElementById('btnSalvarColetaFlutuante')?.addEventListener('click', salvarColetaCompleta);
+    document.getElementById('btnNovaListaColetaKm')?.addEventListener('click', iniciarNovaListaMobile);
     document.getElementById('btnCancelarColeta')?.addEventListener('click', cancelarColeta);
     document.getElementById('tableBodyItens').addEventListener('click', handleTableActions);
     document.getElementById('tableBodyItens').addEventListener('dblclick', (e) => {
@@ -296,6 +301,31 @@ function configurarListaVisualMobile() {
     });
 }
 
+function definirListaMobileAberta(aberta) {
+    if (!IS_MOBILE_COLETA_KM) return;
+
+    document.getElementById('secaoListaColetaKm')?.classList.toggle('hidden', !aberta);
+    document.getElementById('btnSalvarColeta')?.classList.toggle('hidden', !aberta);
+    document.getElementById('btnSalvarColetaFlutuante')?.classList.toggle('hidden', !aberta);
+    document.getElementById('btnNovaListaColetaKm')?.classList.toggle('hidden', aberta);
+    document.getElementById('estadoListaColetaKm')?.classList.toggle('hidden', aberta);
+}
+
+function iniciarNovaListaMobile() {
+    itensColeta = [];
+    originalDataColeta = null;
+    filtroMobileColetaKm = 'TODOS';
+    document.querySelectorAll('[data-km-filter]').forEach(botao => {
+        botao.classList.toggle('active', botao.dataset.kmFilter === 'TODOS');
+    });
+    const busca = document.getElementById('searchPlacaColetaKm');
+    if (busca) busca.value = '';
+    limparRascunho();
+    renderizarTabela();
+    definirListaMobileAberta(true);
+    document.getElementById('secaoListaColetaKm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function abrirVeiculoColetaKm(placa) {
     const index = itensColeta.findIndex(item => item.placa === placa);
     if (index >= 0) {
@@ -508,8 +538,9 @@ async function salvarColetaCompleta(event) {
         
         registrarAuditoria('INCLUIR', 'Coleta KM', `Inclusão de coleta de KM com ${dadosParaInserir.length} registros`);
         if (salvarParcial) {
-            originalDataColeta = dataColetaISO;
-            salvarRascunho();
+            itensColeta = [];
+            originalDataColeta = null;
+            limparRascunho();
             renderizarTabela();
             carregarHistorico();
             alert(`${dadosParaInserir.length} veiculos salvos. Continue a coleta.`);
@@ -521,6 +552,8 @@ async function salvarColetaCompleta(event) {
         carregarHistorico(); // Atualiza o histórico após salvar
         limparRascunho(); // Remove o rascunho do localStorage, já que a coleta foi salva
         }
+        definirListaMobileAberta(false);
+        document.querySelector('.coleta-km-historico')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     } catch (error) {
         console.error('Erro ao salvar coleta:', error);
@@ -649,7 +682,7 @@ async function carregarHistorico(dataIni = null, dataFim = null) {
                 <td data-label="Qtd. Veículos" style="text-align: center;">${grupo.qtd}</td>
                     <td data-label="Ações" class="actions-cell">
                         <div class="coleta-km-historico-acoes">
-                            <button type="button" class="btn-glass btn-blue" onclick="carregarBatchParaEdicao('${grupo.data_coleta}')" title="Editar Lote" aria-label="Editar lote"><i class="fas fa-edit"></i></button>
+                            <button type="button" class="btn-glass btn-blue" onclick="carregarBatchParaEdicao('${grupo.data_coleta}')" title="Abrir lista" aria-label="Abrir lista"><i class="fas fa-folder-open"></i></button>
                             ${btnDelete ? btnDelete.replace('btn-danger', 'btn-glass btn-red') : ''}
                         </div>
                     </td>
@@ -718,11 +751,13 @@ window.carregarBatchParaEdicao = async function(dataColeta) {
         originalDataColeta = dataColeta;
 
         // Preenche o cabeçalho com a DATA ATUAL para garantir que a edição salve com o horário do momento
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        const currentDataISO = now.toISOString().slice(0, 16);
-        
-        document.getElementById('coletaData').value = currentDataISO;
+        if (IS_MOBILE_COLETA_KM) {
+            document.getElementById('coletaData').value = String(dataColeta).slice(0, 16);
+        } else {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('coletaData').value = now.toISOString().slice(0, 16);
+        }
         // Não sobrescreve o responsável com o do lote antigo, mantém o usuário logado atual para indicar quem está editando
         // document.getElementById('coletaResponsavel').value = data[0].usuario;
 
@@ -739,9 +774,13 @@ window.carregarBatchParaEdicao = async function(dataColeta) {
 
         renderizarTabela();
         salvarRascunho(); // Salva o lote carregado como rascunho atual
+        definirListaMobileAberta(true);
         
-        // Scroll para o topo para ver os itens carregados
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (IS_MOBILE_COLETA_KM) {
+            document.getElementById('secaoListaColetaKm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
         
         alert(`Lote carregado com ${itensColeta.length} itens. Faça as alterações e clique em "Salvar Coleta Completa" para atualizar.`);
 
@@ -1042,6 +1081,7 @@ function carregarRascunho() {
                     : data.itens;
                 if (data.originalDataColeta) originalDataColeta = data.originalDataColeta;
                 renderizarTabela();
+                definirListaMobileAberta(true);
                 console.log('Rascunho restaurado com sucesso.');
             }
         } catch (e) {
