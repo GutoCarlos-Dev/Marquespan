@@ -95,7 +95,7 @@ async function carregarVeiculos() {
             .order('placa');
 
         if (IS_MOBILE_COLETA_KM) {
-            query = query.not('tipo', 'in', '("EMPILHADEIRA","GERADOR")');
+            query = query.not('tipo', 'in', '("EMPILHADEIRA","GERADOR","SEMI-REBOQUE","HR/VAN")');
             if (usuario?.filial) query = query.eq('filial', usuario.filial);
         }
 
