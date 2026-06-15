@@ -90,11 +90,14 @@ async function carregarVeiculos() {
         const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
         let query = supabaseClient
             .from('veiculos')
-            .select('placa, modelo, id, filial')
+            .select('placa, modelo, id, filial, tipo')
             .eq('situacao', 'ativo') // Apenas veículos ativos
             .order('placa');
 
-        if (IS_MOBILE_COLETA_KM && usuario?.filial) query = query.eq('filial', usuario.filial);
+        if (IS_MOBILE_COLETA_KM) {
+            query = query.not('tipo', 'in', '("EMPILHADEIRA","GERADOR")');
+            if (usuario?.filial) query = query.eq('filial', usuario.filial);
+        }
 
         const { data, error } = await query;
         if (error) throw error;
