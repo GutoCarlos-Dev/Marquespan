@@ -36,7 +36,7 @@
                             <input type="week" id="filtroSemanaAno" class="glass-input">
                         </div>
                         <div class="form-group-filter">
-                            <label for="filtroSemana">Dia da Semana</label>
+                            <label for="filtroSemana">Dia de Saída</label>
                             <select id="filtroSemana" class="glass-input">
                                 <option value="">Todos</option>
                                 <option value="SEGUNDA">SEGUNDA</option>
@@ -48,6 +48,21 @@
                                 <option value="DOMINGO">DOMINGO</option>
                             </select>
                         </div>
+                        <div class="form-group-filter">
+                            <label for="filtroDiaRetorno">Dia de Retorno</label>
+                            <select id="filtroDiaRetorno" class="glass-input">
+                                <option value="">Todos</option>
+                                <option value="SEGUNDA">SEGUNDA</option>
+                                <option value="TERÇA">TERÇA</option>
+                                <option value="QUARTA">QUARTA</option>
+                                <option value="QUINTA">QUINTA</option>
+                                <option value="SEXTA">SEXTA</option>
+                                <option value="SABADO">SABADO</option>
+                                <option value="DOMINGO">DOMINGO</option>
+                                <option value="EXTRA">EXTRA</option>
+                                <option value="AVULSA">AVULSA</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -56,8 +71,8 @@
                     <div class="actions-container">
                         <button id="btnCarregarRotas" class="btn-glass btn-blue"><i class="fas fa-route"></i> Carregar Rotas</button>
                         <button id="btnAdicionarLinha" class="btn-glass btn-blue"><i class="fas fa-plus"></i> Adicionar Linha</button>
-                        <button id="btnImportarRoteiro" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar Roteiro</button>
-                        <button id="btnImportarRetornoRota" class="btn-glass btn-blue"><i class="fas fa-clock"></i> Importar Retorno</button>
+                        <button id="btnImportarRoteiro" class="btn-glass btn-blue" title="Usa o filtro Dia de Saída e importa placa, motorista e auxiliar do arquivo XLSX"><i class="fas fa-file-import"></i> Importar Roteiro</button>
+                        <button id="btnImportarRetornoRota" class="btn-glass btn-blue" title="Usa os filtros Dia de Saída e Dia de Retorno para buscar os retornos registrados"><i class="fas fa-clock"></i> Importar Retorno</button>
                         <input type="file" id="inputImportarRoteiro" accept=".xlsx,.xls" hidden>
                         <button id="btnExportarBackupXlsx" class="btn-glass btn-green"><i class="fas fa-file-arrow-down"></i> Exportar XLSX</button>
                         <button id="btnSalvarTudo" class="btn-glass btn-green" title="Salvar tudo (Ctrl+S)"><i class="fas fa-save"></i> Salvar Tudo</button>
@@ -86,7 +101,7 @@
                 </div>
 
                 <div class="info-paste">
-                    <p><i class="fas fa-info-circle"></i> Copie e cole dados de uma planilha diretamente na tabela. Ao informar a Placa é preenchido automaticamente os demais campos, quando houver cadastro.</p>
+                    <p><i class="fas fa-info-circle"></i> <strong>Importar Roteiro</strong> usa o Dia de Saída e preenche placa, motorista e auxiliar. <strong>Importar Retorno</strong> usa o Dia de Retorno e preenche a data e o horário de chegada. Deixe o filtro correspondente em Todos para processar a semana completa.</p>
                 </div>
 
                 <div class="table-responsive">

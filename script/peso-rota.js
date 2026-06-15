@@ -145,6 +145,7 @@ function bindEvents() {
     document.getElementById('btnSalvarTudo')?.addEventListener('click', salvarTudo);
     document.getElementById('btnExcluirSelecionados')?.addEventListener('click', excluirSelecionados);
     document.getElementById('filtroSemana')?.addEventListener('change', renderGrid);
+    document.getElementById('filtroDiaRetorno')?.addEventListener('change', renderGrid);
     document.getElementById('filtroFilial')?.addEventListener('change', carregarDados);
     document.getElementById('filtroSemanaAno')?.addEventListener('change', carregarDados);
     document.getElementById('searchInput')?.addEventListener('input', renderGrid);
@@ -473,9 +474,14 @@ function normalizarUpper(value) {
 }
 
 function normalizarSemana(value) {
-    return normalizarUpper(value)
+    const semana = normalizarUpper(value)
         .replace('TERCA', 'TERÇA')
-        .replace('TERÃ‡A', 'TERÇA');
+        .replace('TERÃ‡A', 'TERÇA')
+        .replace('SÃBADO', 'SABADO');
+
+    return semana.normalize('NFD').replace(/[\u0300-\u036f]/g, '') === 'SABADO'
+        ? 'SABADO'
+        : semana;
 }
 
 function normalizarBusca(value) {
@@ -639,7 +645,7 @@ async function carregarDados() {
                 .from('peso_rota')
                 .select('*')
                 .gte('dia_retorno', periodo.inicio)
-                .lte('dia_retorno', periodo.fim)
+                .lte('dia_retorno', somarDiasIso(periodo.fim, 6))
                 .order('rota', { ascending: true });
 
         if (filial) {
@@ -683,7 +689,7 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
 
         const semana = normalizarSemana(rota.semana);
         const diaRetornoPrevisto = calcularDataRetornoPrevista(semanaAno, semana, rota.dias);
-        const salvo = pesosPorRota.get(chaveRota);
+        const salvo = escolherPesoSalvo(pesosPorRota.get(chaveRota), diaRetornoPrevisto);
         const manterRetornoSalvo = temRetornoImportado(salvo);
         const diaRetorno = manterRetornoSalvo ? salvo.dia_retorno : diaRetornoPrevisto;
 
@@ -726,13 +732,34 @@ function criarMapaPesosPorRota(pesos) {
         const chaveRota = getChavePesoRota(item.rota, item.filial, item.semana);
         if (!chaveRota) return;
 
-        const atual = mapa.get(chaveRota);
-        if (!atual || deveSubstituirPesoSalvo(atual, item)) {
-            mapa.set(chaveRota, item);
-        }
+        const registros = mapa.get(chaveRota) || [];
+        registros.push(item);
+        mapa.set(chaveRota, registros);
     });
 
     return mapa;
+}
+
+function escolherPesoSalvo(registros, diaRetornoPrevisto) {
+    if (!Array.isArray(registros) || registros.length === 0) return null;
+
+    return registros.reduce((melhor, candidato) => {
+        if (!melhor) return candidato;
+
+        const distanciaMelhor = getDistanciaDias(melhor.dia_retorno, diaRetornoPrevisto);
+        const distanciaCandidato = getDistanciaDias(candidato.dia_retorno, diaRetornoPrevisto);
+
+        if (distanciaCandidato < distanciaMelhor) return candidato;
+        if (distanciaCandidato > distanciaMelhor) return melhor;
+        return deveSubstituirPesoSalvo(melhor, candidato) ? candidato : melhor;
+    }, null);
+}
+
+function getDistanciaDias(dataA, dataB) {
+    const timestampA = Date.parse(dataA || '');
+    const timestampB = Date.parse(dataB || '');
+    if (!Number.isFinite(timestampA) || !Number.isFinite(timestampB)) return Number.POSITIVE_INFINITY;
+    return Math.abs(Math.round((timestampA - timestampB) / 86400000));
 }
 
 function getChaveRotaFilial(rota, filial) {
@@ -867,14 +894,17 @@ function aplicarLargurasSalvas() {
 
 function getLinhasVisiveis() {
     const filtroSemana = normalizarSemana(document.getElementById('filtroSemana')?.value);
+    const filtroDiaRetorno = normalizarSemana(document.getElementById('filtroDiaRetorno')?.value);
     const busca = normalizarUpper(document.getElementById('searchInput')?.value);
 
     const linhas = gridData
         .map((row, index) => ({ row, index }))
         .filter(({ row }) => {
             const semanaOk = !filtroSemana || normalizarSemana(row.semana) === filtroSemana;
+            const retornoOk = !filtroDiaRetorno
+                || normalizarSemana(row.dia_semana_retorno || getDiaSemanaPorData(row.dia_retorno)) === filtroDiaRetorno;
             const buscaOk = !busca || CAMPOS_GRID.some(campo => normalizarUpper(row[campo]).includes(busca));
-            return semanaOk && buscaOk;
+            return semanaOk && retornoOk && buscaOk;
         });
 
     return ordenarLinhas(linhas);
@@ -2142,9 +2172,10 @@ async function importarRetornoRota() {
 
     try {
         const semanaAno = getSemanaAnoSelecionada();
-        const semanaSelecionada = normalizarSemana(document.getElementById('filtroSemana')?.value);
+        const diaSaidaSelecionado = normalizarSemana(document.getElementById('filtroSemana')?.value);
+        const diaRetornoSelecionado = normalizarSemana(document.getElementById('filtroDiaRetorno')?.value);
         const periodo = getPeriodoSemanaAno(semanaAno);
-        const dataSaidaSelecionada = semanaSelecionada ? getDataDaSemana(semanaAno, semanaSelecionada) : null;
+        const dataSaidaSelecionada = diaSaidaSelecionado ? getDataDaSemana(semanaAno, diaSaidaSelecionado) : null;
 
         let query = supabaseClient
             .from('retorno_rota')
@@ -2168,7 +2199,9 @@ async function importarRetornoRota() {
         const indicesRetorno = indexarRetornosRota(data || []);
 
         if ((data || []).length === 0) {
-            const periodoTexto = dataSaidaSelecionada ? `${semanaSelecionada} a partir de ${dataSaidaSelecionada}` : `semana ${semanaAno}`;
+            const periodoTexto = dataSaidaSelecionada
+                ? `saídas de ${diaSaidaSelecionado} a partir de ${dataSaidaSelecionada}`
+                : `semana operacional ${semanaAno}`;
             alert(`Nenhum retorno de rota encontrado para ${periodoTexto}.`);
             return;
         }
@@ -2181,15 +2214,25 @@ async function importarRetornoRota() {
         gridData.forEach((row, rowIndex) => {
             if (!normalizarRota(row.rota)) return;
 
-            const semanaLinha = normalizarSemana(row.semana || row.dia_semana_retorno);
-            if (semanaSelecionada && semanaLinha !== semanaSelecionada) {
+            const diaSaidaLinha = normalizarSemana(row.semana);
+            const diaRetornoLinha = normalizarSemana(row.dia_semana_retorno || getDiaSemanaPorData(row.dia_retorno));
+            if (diaSaidaSelecionado && diaSaidaLinha !== diaSaidaSelecionado) {
+                ignoradasPorSemana += 1;
+                return;
+            }
+            if (diaRetornoSelecionado && diaRetornoLinha !== diaRetornoSelecionado) {
                 ignoradasPorSemana += 1;
                 return;
             }
 
             const dataEsperada = row.dia_retorno ||
                 calcularDataRetornoPrevista(row.semana_ano || semanaAno, row.semana, row.dias_rota);
-            const retorno = escolherRetornoParaLinha(row, indicesRetorno, dataEsperada, !semanaSelecionada);
+            const retorno = escolherRetornoParaLinha(
+                row,
+                indicesRetorno,
+                dataEsperada,
+                !diaSaidaSelecionado && !diaRetornoSelecionado
+            );
             if (!retorno) {
                 semRetorno += 1;
                 return;
@@ -2205,7 +2248,7 @@ async function importarRetornoRota() {
         });
 
         renderGrid();
-        alert(`Importacao de retorno concluida.\nRotas atualizadas: ${aplicadas}\nCom horario preenchido: ${aplicadasComHorario}\nSem retorno encontrado: ${semRetorno}\nIgnoradas por outro dia da semana: ${ignoradasPorSemana}`);
+        alert(`Importacao de retorno concluida.\nRotas atualizadas: ${aplicadas}\nCom horario preenchido: ${aplicadasComHorario}\nSem retorno encontrado: ${semRetorno}\nIgnoradas pelos filtros de saída/retorno: ${ignoradasPorSemana}`);
     } catch (error) {
         console.error('Erro ao importar retorno de rota:', error);
         alert(`Erro ao importar retorno de rota: ${error.message || 'verifique o console.'}`);
