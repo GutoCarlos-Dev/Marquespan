@@ -227,6 +227,95 @@ body.frota-fullscreen-active .frota-layout {
   color: #e62f47;
 }
 
+.resumo-frota-card-detalhes {
+  cursor: help;
+  position: relative;
+}
+
+.resumo-frota-card-detalhes:hover,
+.resumo-frota-card-detalhes:focus-within {
+  z-index: 1300;
+}
+
+.resumo-frota-tooltip {
+  background: #fff;
+  border: 1px solid #f2c9cf;
+  border-radius: 12px;
+  bottom: -10px;
+  box-shadow: 0 10px 30px rgba(45, 25, 29, 0.2);
+  left: 50%;
+  min-width: 250px;
+  opacity: 0;
+  padding: 12px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, 100%) translateY(-4px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  visibility: hidden;
+  z-index: 1200;
+}
+
+.resumo-frota-tooltip::before {
+  background: #fff;
+  border-left: 1px solid #f2c9cf;
+  border-top: 1px solid #f2c9cf;
+  content: '';
+  height: 10px;
+  left: 50%;
+  position: absolute;
+  top: -6px;
+  transform: translateX(-50%) rotate(45deg);
+  width: 10px;
+}
+
+.resumo-frota-tooltip > strong {
+  color: #992638;
+  display: block;
+  font-size: 0.76rem;
+  margin-bottom: 9px;
+}
+
+.resumo-frota-card-detalhes:hover .resumo-frota-tooltip,
+.resumo-frota-card-detalhes:focus-within .resumo-frota-tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 100%);
+  visibility: visible;
+}
+
+.resumo-frota-placas {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+.resumo-frota-placa {
+  background: #fff0f2;
+  border: 1px solid #f1bbc3;
+  border-radius: 7px;
+  color: #a32437;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 6px 8px;
+}
+
+.resumo-frota-placa:hover,
+.resumo-frota-placa:focus {
+  background: #e62f47;
+  color: #fff;
+  outline: none;
+}
+
+.resumo-frota-sem-placas {
+  color: #77847e;
+  font-size: 0.72rem;
+  font-style: italic;
+  grid-column: 1 / -1;
+}
+
 .frota-layout {
   display: grid;
   gap: 15px;

@@ -303,7 +303,21 @@ function renderizarFrota() {
   document.getElementById('contador-lista-frota').textContent = `${frota.length} veículos`;
   document.getElementById('total-frota-mapa').textContent = frota.length;
   document.getElementById('total-frota-movimento').textContent = frota.filter(v => Number(v.velocidade) > 3 && !v.desatualizado).length;
-  document.getElementById('total-frota-desatualizada').textContent = frota.filter(v => v.desatualizado).length;
+  const frotaDesatualizada = frota
+    .filter(v => v.desatualizado)
+    .sort((a, b) => String(a.placaFormatada).localeCompare(String(b.placaFormatada), 'pt-BR'));
+  document.getElementById('total-frota-desatualizada').textContent = frotaDesatualizada.length;
+
+  const listaPlacasDesatualizadas = document.getElementById('lista-placas-frota-desatualizada');
+  if (listaPlacasDesatualizadas) {
+    listaPlacasDesatualizadas.innerHTML = frotaDesatualizada.length
+      ? frotaDesatualizada.map(veiculo => `
+          <button type="button" class="resumo-frota-placa" data-placa="${escapeHtml(veiculo.placa)}">
+            ${escapeHtml(veiculo.placaFormatada)}
+          </button>
+        `).join('')
+      : '<span class="resumo-frota-sem-placas">Nenhuma placa.</span>';
+  }
 
   if (limites.length > 0) {
     mapa.fitBounds(L.latLngBounds(limites), { padding: [35, 35], maxZoom: 14 });
@@ -499,6 +513,12 @@ document.getElementById('btn-configurar-cores').addEventListener('click', () => 
 });
 document.getElementById('btn-fechar-cores').addEventListener('click', () => {
   painelCores.hidden = true;
+});
+document.getElementById('lista-placas-frota-desatualizada')?.addEventListener('click', (event) => {
+  const botao = event.target.closest('[data-placa]');
+  if (!botao) return;
+  focarVeiculo(botao.dataset.placa);
+  botao.blur();
 });
 
 iniciarMapa();

@@ -75,9 +75,16 @@
         <i class="fas fa-road"></i>
         <div><span>Em movimento</span><strong id="total-frota-movimento">0</strong></div>
       </article>
-      <article class="glass-panel resumo-frota-card alerta">
+      <article class="glass-panel resumo-frota-card alerta resumo-frota-card-detalhes"
+        tabindex="0" aria-describedby="placas-frota-desatualizada">
         <i class="fas fa-triangle-exclamation"></i>
         <div><span>Sinal desatualizado</span><strong id="total-frota-desatualizada">0</strong></div>
+        <div id="placas-frota-desatualizada" class="resumo-frota-tooltip" role="tooltip">
+          <strong>Placas com sinal desatualizado</strong>
+          <div id="lista-placas-frota-desatualizada" class="resumo-frota-placas">
+            <span class="resumo-frota-sem-placas">Nenhuma placa.</span>
+          </div>
+        </div>
       </article>
     </section>
 
@@ -120,6 +127,6 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="./script/monitoramento-frota.js?v=20260615-1"></script>
+  <script type="module" src="./script/monitoramento-frota.js?v=20260615-2"></script>
 </body>
 </html>
