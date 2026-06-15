@@ -644,7 +644,11 @@ function getSemanaAnoOperacional(item) {
 }
 
 function temRetornoImportado(row) {
-    return Boolean(normalizarTexto(row?.horario_chegada));
+    return Boolean(
+        row?.id
+        || row?._retorno_manual
+        || normalizarTexto(row?.horario_chegada)
+    );
 }
 
 function aplicarRetornoPrevisto(row) {
@@ -725,7 +729,7 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
         const semana = normalizarSemana(rota.semana);
         const diaRetornoPrevisto = calcularDataRetornoPrevista(semanaAno, semana, rota.dias);
         const salvo = escolherPesoSalvo(pesosPorRota.get(chaveRota), diaRetornoPrevisto);
-        const manterRetornoSalvo = temRetornoImportado(salvo);
+        const manterRetornoSalvo = Boolean(salvo?.dia_retorno);
         const diaRetorno = manterRetornoSalvo ? salvo.dia_retorno : diaRetornoPrevisto;
 
         linhas.push(criarLinha({
@@ -853,7 +857,9 @@ function criarLinha(data = {}) {
         horario_chegada: normalizarTexto(data.horario_chegada).slice(0, 5),
         descricao: normalizarTexto(data.descricao),
         ultima_alteracao_por: data.ultima_alteracao_por || null,
-        ultima_alteracao_em: data.ultima_alteracao_em || null
+        ultima_alteracao_em: data.ultima_alteracao_em || null,
+        _original_dia_retorno: data.dia_retorno || null,
+        _retorno_manual: false
     };
 
     row.status_percentual = calcularPercentual(row);
@@ -1293,6 +1299,7 @@ function handleGridInput(event) {
             row.semana,
             value
         ) || row.dia_retorno;
+        row._retorno_manual = true;
         atualizarCorDiaRetorno(rowIndex);
         atualizarStatusPrazoRetorno(rowIndex);
     }
@@ -1514,29 +1521,85 @@ async function salvarTudo() {
     try {
         await preencherVeiculosDasLinhas();
 
-        let payload = gridData
+        const linhasParaSalvar = gridData
             .filter(row => row._dirty && normalizarTexto(row.rota))
-            .filter(row => row.id || temDadosPreenchidos(row))
-            .map(row => prepararPayload(row));
+            .filter(row => row.id || temDadosPreenchidos(row));
 
-        payload = deduplicarPayloadPorRota(payload);
+        const atualizacoesData = linhasParaSalvar.filter(row =>
+            row.id
+            && row._original_dia_retorno
+            && row.dia_retorno !== row._original_dia_retorno
+        );
+        const idsAtualizados = new Set(atualizacoesData.map(row => row.id));
+        let payload = deduplicarPayloadPorRota(
+            linhasParaSalvar
+                .filter(row => !idsAtualizados.has(row.id))
+                .map(row => prepararPayload(row))
+        );
 
-        if (payload.length === 0) {
+        if (payload.length === 0 && atualizacoesData.length === 0) {
             alert('Nenhuma alteração para salvar.');
             return;
         }
 
-        const semFilial = payload.filter(item => !item.filial).map(item => item.rota).filter(Boolean);
+        const payloadAtualizacoes = atualizacoesData.map(row => prepararPayload(row));
+        const semFilial = [...payload, ...payloadAtualizacoes]
+            .filter(item => !item.filial)
+            .map(item => item.rota)
+            .filter(Boolean);
         if (semFilial.length > 0) {
             alert(`Selecione uma filial antes de salvar estas rotas: ${semFilial.slice(0, 8).join(', ')}${semFilial.length > 8 ? '...' : ''}`);
             return;
         }
 
         marcarLinhas('saving');
-        let { data, error } = await supabaseClient
-            .from('peso_rota')
-            .upsert(payload, { onConflict: PESO_ROTA_ON_CONFLICT })
-            .select();
+        const dadosAtualizados = [];
+        for (let index = 0; index < atualizacoesData.length; index += 1) {
+            const row = atualizacoesData[index];
+            const payloadAtualizacao = payloadAtualizacoes[index];
+            const { data: conflito, error: erroConflito } = await supabaseClient
+                .from('peso_rota')
+                .select('id')
+                .eq('dia_retorno', payloadAtualizacao.dia_retorno)
+                .eq('rota', payloadAtualizacao.rota)
+                .eq('filial', payloadAtualizacao.filial)
+                .neq('id', row.id)
+                .limit(1)
+                .maybeSingle();
+
+            if (erroConflito) throw erroConflito;
+
+            const idDestino = conflito?.id || row.id;
+            const { data: atualizado, error: erroAtualizacao } = await supabaseClient
+                .from('peso_rota')
+                .update(payloadAtualizacao)
+                .eq('id', idDestino)
+                .select()
+                .single();
+
+            if (erroAtualizacao) throw erroAtualizacao;
+
+            if (conflito?.id) {
+                const { error: erroExclusaoAntigo } = await supabaseClient
+                    .from('peso_rota')
+                    .delete()
+                    .eq('id', row.id);
+                if (erroExclusaoAntigo) throw erroExclusaoAntigo;
+            }
+
+            dadosAtualizados.push(atualizado);
+        }
+
+        let data = [];
+        let error = null;
+        if (payload.length > 0) {
+            const resultadoUpsert = await supabaseClient
+                .from('peso_rota')
+                .upsert(payload, { onConflict: PESO_ROTA_ON_CONFLICT })
+                .select();
+            data = resultadoUpsert.data || [];
+            error = resultadoUpsert.error;
+        }
 
         if (error && isErroColunaOpcional(error)) {
             console.warn('Coluna opcional ausente no Supabase. Salvando sem campos opcionais.', error);
@@ -1552,8 +1615,10 @@ async function salvarTudo() {
 
         if (error) throw error;
 
-        if ((data || []).length !== payload.length) {
-            throw new Error(`O banco confirmou ${(data || []).length} de ${payload.length} linha(s) enviadas.`);
+        data = [...dadosAtualizados, ...(data || [])];
+        const totalEnviado = payload.length + payloadAtualizacoes.length;
+        if (data.length !== totalEnviado) {
+            throw new Error(`O banco confirmou ${data.length} de ${totalEnviado} linha(s) enviadas.`);
         }
 
         atualizarIdsSalvos(data || []);
@@ -2541,6 +2606,7 @@ function aplicarValorNaLinha(row, campo, valor) {
             row.semana,
             row[campo]
         ) || row.dia_retorno;
+        row._retorno_manual = true;
     } else if (campo === 'dia_retorno') {
         row[campo] = normalizarTexto(valor);
         row.dia_semana_retorno = getDiaSemanaPorData(row[campo]);
