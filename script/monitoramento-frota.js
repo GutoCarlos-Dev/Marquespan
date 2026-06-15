@@ -38,6 +38,7 @@ let marcadoresPorPlaca = new Map();
 let timerAtualizacao = null;
 let coresTipos = carregarCores();
 let consultaEmAndamento = false;
+let escalasHojePorVeiculo = new Map();
 
 function escapeHtml(valor) {
   return String(valor ?? '')
@@ -54,6 +55,28 @@ function normalizarTipo(tipo) {
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
     .toUpperCase();
+}
+
+function normalizarTexto(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+}
+
+function normalizarPlaca(placa) {
+  return normalizarTexto(placa).replace(/[^A-Z0-9]/g, '');
+}
+
+function chaveVeiculo(filial, placa) {
+  return `${normalizarTexto(filial)}|${normalizarPlaca(placa)}`;
+}
+
+function dataHojeSaoPaulo() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo'
+  }).format(new Date());
 }
 
 function carregarCores() {
@@ -139,6 +162,42 @@ function marcadorIcone(cor) {
   });
 }
 
+function obterEscalasVeiculo(veiculo) {
+  return escalasHojePorVeiculo.get(chaveVeiculo(veiculo.filial, veiculo.placa)) || [];
+}
+
+function valorEscala(valor) {
+  const texto = String(valor || '').trim();
+  return texto || 'Nao informado';
+}
+
+function detalhesEscalaHtml(veiculo, { tooltip = false } = {}) {
+  const escalas = obterEscalasVeiculo(veiculo);
+  if (!escalas.length) {
+    return '<div class="frota-escala-vazia">Sem escala para hoje.</div>';
+  }
+
+  return escalas.map((escala, indice) => `
+    <div class="frota-escala${indice > 0 ? ' frota-escala-separada' : ''}">
+      ${tooltip && escalas.length > 1 ? `<strong>Escala ${indice + 1}</strong>` : ''}
+      <div><strong>Rota:</strong> ${escapeHtml(valorEscala(escala.rota))}</div>
+      <div><strong>Motorista:</strong> ${escapeHtml(valorEscala(escala.motorista))}</div>
+      <div><strong>Auxiliar:</strong> ${escapeHtml(valorEscala(escala.auxiliar))}</div>
+      ${escala.terceiro ? `<div><strong>Terceiro:</strong> ${escapeHtml(escala.terceiro)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function tooltipVeiculo(veiculo) {
+  return `
+    <div class="tooltip-frota">
+      <h3>${escapeHtml(veiculo.placaFormatada)}</h3>
+      <div class="tooltip-frota-filial">${escapeHtml(veiculo.filial)}</div>
+      ${detalhesEscalaHtml(veiculo, { tooltip: true })}
+    </div>
+  `;
+}
+
 function popupVeiculo(veiculo) {
   const coordenadas = `${veiculo.latitude},${veiculo.longitude}`;
   const maps = `https://www.google.com/maps?q=${encodeURIComponent(coordenadas)}`;
@@ -152,6 +211,10 @@ function popupVeiculo(veiculo) {
       <p><strong>Ignição:</strong> ${veiculo.ignicao ? 'Ligada' : 'Desligada'}</p>
       <p><strong>Atualização:</strong> ${formatarData(veiculo.dataAtualizacao)}</p>
       ${veiculo.referencia ? `<p>${escapeHtml(veiculo.referencia)}</p>` : ''}
+      <div class="popup-frota-escala">
+        <h4>Escala de hoje</h4>
+        ${detalhesEscalaHtml(veiculo)}
+      </div>
       <a href="${maps}" target="_blank" rel="noopener noreferrer">
         <i class="fas fa-arrow-up-right-from-square"></i> Abrir no Google Maps
       </a>
@@ -201,9 +264,15 @@ function renderizarFrota() {
 
     const cor = corDoTipo(veiculo.tipo);
     const marcador = L.marker([latitude, longitude], {
-      icon: marcadorIcone(cor),
-      title: veiculo.placaFormatada
-    }).bindPopup(popupVeiculo(veiculo));
+      icon: marcadorIcone(cor)
+    })
+      .bindTooltip(tooltipVeiculo(veiculo), {
+        className: 'tooltip-frota-container',
+        direction: 'top',
+        offset: [0, -32],
+        opacity: 0.98
+      })
+      .bindPopup(popupVeiculo(veiculo));
     marcador.addTo(camadaMarcadores);
     marcadoresPorPlaca.set(veiculo.placa, marcador);
     limites.push([latitude, longitude]);
@@ -278,6 +347,37 @@ function definirCarregando(carregando) {
     : 'fas fa-rotate';
 }
 
+async function carregarEscalasHoje() {
+  const filial = filialSelect.value;
+  let query = supabaseClient
+    .from('escala')
+    .select('filial, placa, rota, motorista, auxiliar, terceiro, tipo_escala')
+    .eq('data_escala', dataHojeSaoPaulo());
+
+  if (filial) query = query.eq('filial', filial);
+
+  const { data, error } = await query;
+  if (error) {
+    console.warn('Nao foi possivel carregar a escala de hoje:', error);
+    escalasHojePorVeiculo = new Map();
+    return;
+  }
+
+  const mapaEscalas = new Map();
+  (data || []).forEach((escala) => {
+    if (normalizarTexto(escala.tipo_escala) === 'RESERVA') return;
+
+    const placa = normalizarPlaca(escala.placa);
+    if (!placa) return;
+
+    const chave = chaveVeiculo(escala.filial, placa);
+    const registros = mapaEscalas.get(chave) || [];
+    registros.push(escala);
+    mapaEscalas.set(chave, registros);
+  });
+  escalasHojePorVeiculo = mapaEscalas;
+}
+
 async function consultarFrota() {
   if (consultaEmAndamento) return;
   consultaEmAndamento = true;
@@ -287,9 +387,13 @@ async function consultarFrota() {
   status.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Consultando rastreadores';
 
   try {
-    const { data, error } = await supabaseClient.functions.invoke('localizacao-veiculo', {
-      body: { acao: 'frota', filial: filialSelect.value }
-    });
+    const [resultadoFrota] = await Promise.all([
+      supabaseClient.functions.invoke('localizacao-veiculo', {
+        body: { acao: 'frota', filial: filialSelect.value }
+      }),
+      carregarEscalasHoje()
+    ]);
+    const { data, error } = resultadoFrota;
     if (error) throw error;
     if (!data?.success) throw new Error(data?.message || 'Não foi possível carregar a frota.');
 

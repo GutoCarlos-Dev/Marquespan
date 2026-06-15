@@ -482,6 +482,61 @@ body.frota-fullscreen-active .btn-alternar-painel-frota {
   margin-top: 7px;
 }
 
+.popup-frota-escala {
+  border-top: 1px solid #dfe8e3;
+  margin-top: 9px;
+  padding-top: 8px;
+}
+
+.popup-frota-escala h4 {
+  color: #087747;
+  margin: 0 0 5px;
+}
+
+.frota-escala {
+  line-height: 1.45;
+}
+
+.frota-escala-separada {
+  border-top: 1px solid #dfe8e3;
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
+.frota-escala-vazia {
+  color: #77847e;
+  font-style: italic;
+}
+
+.leaflet-tooltip.tooltip-frota-container {
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(20, 45, 34, 0.25);
+  padding: 0;
+}
+
+.tooltip-frota {
+  min-width: 220px;
+  padding: 10px 12px;
+}
+
+.tooltip-frota h3 {
+  color: #20362c;
+  margin: 0;
+}
+
+.tooltip-frota-filial {
+  border-bottom: 1px solid #dfe8e3;
+  color: #6c7973;
+  font-size: 0.72rem;
+  margin: 2px 0 7px;
+  padding-bottom: 6px;
+}
+
+.tooltip-frota .frota-escala {
+  font-size: 0.76rem;
+}
+
 @media (max-width: 1100px) {
   .filtros-frota {
     grid-template-columns: repeat(2, 1fr);
