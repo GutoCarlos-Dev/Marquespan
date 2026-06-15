@@ -1,5 +1,6 @@
 
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const DOMINIO_LOGIN = '@marquespan.local';
 const AUTH_VERSION = '2026-05-16-auth-v1';
@@ -99,6 +100,12 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('usuarioLogado', JSON.stringify(perfilUsuario));
         localStorage.setItem(AUTH_VERSION_KEY, AUTH_VERSION);
         localStorage.setItem('marquespan_ultima_atividade', String(Date.now()));
+
+        await registrarAuditoria(
+          'LOGIN',
+          'Sistema',
+          'Login realizado com sucesso'
+        );
 
         alert(`✅ Bem-vindo, ${userData.nome}!`);
         window.location.href = 'dashboard.html';
