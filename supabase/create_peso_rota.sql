@@ -28,7 +28,19 @@ alter table public.peso_rota add column if not exists semana_ano text;
 alter table public.peso_rota add column if not exists dia_semana_retorno text;
 
 update public.peso_rota
-set semana_ano = to_char(dia_retorno, 'IYYY-"W"IW')
+set semana_ano = case
+    when case
+        when upper(translate(coalesce(semana, ''), 'ÁÀÃÂÉÊÍÓÔÕÚÇ', 'AAAAEEIOOOUC')) = 'SEGUNDA' then 1
+        when upper(translate(coalesce(semana, ''), 'ÁÀÃÂÉÊÍÓÔÕÚÇ', 'AAAAEEIOOOUC')) = 'TERCA' then 2
+        when upper(translate(coalesce(semana, ''), 'ÁÀÃÂÉÊÍÓÔÕÚÇ', 'AAAAEEIOOOUC')) = 'QUARTA' then 3
+        when upper(translate(coalesce(semana, ''), 'ÁÀÃÂÉÊÍÓÔÕÚÇ', 'AAAAEEIOOOUC')) = 'QUINTA' then 4
+        when upper(translate(coalesce(semana, ''), 'ÁÀÃÂÉÊÍÓÔÕÚÇ', 'AAAAEEIOOOUC')) = 'SEXTA' then 5
+        when upper(translate(coalesce(semana, ''), 'ÁÀÃÂÉÊÍÓÔÕÚÇ', 'AAAAEEIOOOUC')) = 'SABADO' then 6
+        when upper(translate(coalesce(semana, ''), 'ÁÀÃÂÉÊÍÓÔÕÚÇ', 'AAAAEEIOOOUC')) = 'DOMINGO' then 7
+    end > extract(isodow from dia_retorno)::integer
+    then to_char(dia_retorno - interval '7 days', 'IYYY-"W"IW')
+    else to_char(dia_retorno, 'IYYY-"W"IW')
+end
 where semana_ano is null and dia_retorno is not null;
 
 update public.peso_rota

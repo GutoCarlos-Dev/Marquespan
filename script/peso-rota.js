@@ -611,6 +611,38 @@ function calcularDataRetornoPrevista(semanaAno, semana, diasRota) {
     return somarDiasIso(dataSaida, dias - 1);
 }
 
+function getDataRetornoPorDia(semanaAno, diaSaida, diaRetorno) {
+    const dataSaida = getDataDaSemana(semanaAno, diaSaida);
+    const offsetSaida = SEMANA_DIA_OFFSET[normalizarSemana(diaSaida)];
+    const offsetRetorno = SEMANA_DIA_OFFSET[normalizarSemana(diaRetorno)];
+    if (!dataSaida || offsetSaida === undefined || offsetRetorno === undefined) return '';
+
+    const diasAteRetorno = (offsetRetorno - offsetSaida + 7) % 7;
+    return somarDiasIso(dataSaida, diasAteRetorno);
+}
+
+function getSemanaAnoOperacional(item) {
+    const semanaSalva = normalizarTexto(item?.semana_ano);
+    const diaRetorno = normalizarTexto(item?.dia_retorno);
+    const offsetSaida = SEMANA_DIA_OFFSET[normalizarSemana(item?.semana)];
+    const offsetRetorno = SEMANA_DIA_OFFSET[getDiaSemanaPorData(diaRetorno)];
+
+    if (!diaRetorno || offsetSaida === undefined || offsetRetorno === undefined) {
+        return semanaSalva || getSemanaAnoDaData(diaRetorno);
+    }
+
+    const semanaRetorno = getSemanaAnoDaData(diaRetorno);
+    if (semanaSalva && semanaSalva !== semanaRetorno) return semanaSalva;
+
+    // Registros antigos gravavam a semana do retorno. Quando o retorno
+    // cruza o domingo, a semana operacional pertence à saída anterior.
+    if (offsetSaida > offsetRetorno) {
+        return getSemanaAnoDaData(somarDiasIso(diaRetorno, -7));
+    }
+
+    return semanaSalva || semanaRetorno;
+}
+
 function temRetornoImportado(row) {
     return Boolean(normalizarTexto(row?.horario_chegada));
 }
@@ -661,7 +693,10 @@ async function carregarDados() {
         if (pesosResult.error) throw pesosResult.error;
 
         rotasBase = rotasResult.data || [];
-        gridData = mesclarRotasComPesos(rotasBase, pesosResult.data || [], semanaAno, !filial);
+        const pesosDaSemana = (pesosResult.data || []).filter(item =>
+            getSemanaAnoOperacional(item) === semanaAno
+        );
+        gridData = mesclarRotasComPesos(rotasBase, pesosDaSemana, semanaAno, !filial);
 
         await preencherVeiculosDasLinhas();
         renderGrid();
@@ -702,7 +737,7 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
             supervisor: salvo?.supervisor || rota.supervisor || '',
             dia_retorno: diaRetorno,
             dia_semana_retorno: manterRetornoSalvo ? (salvo?.dia_semana_retorno || getDiaSemanaPorData(diaRetorno)) : getDiaSemanaPorData(diaRetorno),
-            semana_ano: salvo?.semana_ano || semanaAno
+            semana_ano: semanaAno
         }));
         rotasIncluidas.add(chaveRota);
     });
@@ -714,7 +749,7 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
                 const rotaBase = rotasPorNumero.get(chaveRota);
                 linhas.push(criarLinha({
                     ...item,
-                    semana_ano: item.semana_ano || semanaAno,
+                    semana_ano: semanaAno,
                     dias_rota: item.dias_rota ?? rotaBase?.dias
                 }));
                 rotasIncluidas.add(chaveRota);
@@ -1253,7 +1288,11 @@ function handleGridInput(event) {
     }
 
     if (field === 'dia_semana_retorno') {
-        row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), value);
+        row.dia_retorno = getDataRetornoPorDia(
+            row.semana_ano || getSemanaAnoSelecionada(),
+            row.semana,
+            value
+        ) || row.dia_retorno;
         atualizarCorDiaRetorno(rowIndex);
         atualizarStatusPrazoRetorno(rowIndex);
     }
@@ -1633,7 +1672,7 @@ function prepararPayload(row) {
         rota: normalizarTexto(row.rota),
         filial: getFilialRegistro(row) || null,
         semana: normalizarSemana(row.semana) || null,
-        semana_ano: getSemanaAnoDaData(row.dia_retorno),
+        semana_ano: row.semana_ano || getSemanaAnoSelecionada(),
         dia_semana_retorno: normalizarSemana(row.dia_semana_retorno || row.semana || getDiaSemanaPorData(row.dia_retorno)) || null,
         supervisor: normalizarUpper(row.supervisor) || null,
         motorista: normalizarUpper(row.motorista) || null,
@@ -2239,7 +2278,6 @@ async function importarRetornoRota() {
             }
 
             row.dia_retorno = retorno.data_retorno;
-            row.semana_ano = getSemanaAnoDaData(retorno.data_retorno);
             row.dia_semana_retorno = getDiaSemanaPorData(retorno.data_retorno);
             row.horario_chegada = normalizarHoraRetorno(retorno);
             aplicadas += 1;
@@ -2498,10 +2536,13 @@ function aplicarValorNaLinha(row, campo, valor) {
         if (!temRetornoImportado(row)) aplicarRetornoPrevisto(row);
     } else if (campo === 'dia_semana_retorno') {
         row[campo] = normalizarSemana(valor);
-        row.dia_retorno = getDataDaSemana(row.semana_ano || getSemanaAnoSelecionada(), row[campo]);
+        row.dia_retorno = getDataRetornoPorDia(
+            row.semana_ano || getSemanaAnoSelecionada(),
+            row.semana,
+            row[campo]
+        ) || row.dia_retorno;
     } else if (campo === 'dia_retorno') {
         row[campo] = normalizarTexto(valor);
-        row.semana_ano = getSemanaAnoDaData(row[campo]);
         row.dia_semana_retorno = getDiaSemanaPorData(row[campo]);
     } else if (['supervisor', 'motorista', 'auxiliar', 'tipo_veiculo'].includes(campo)) {
         row[campo] = normalizarUpper(valor);
