@@ -107,6 +107,40 @@
             </form>
         </section>
 
+        <section class="glass-panel resumo-diesel-panel">
+            <div class="resumo-diesel-toolbar">
+                <div>
+                    <h3><i class="fas fa-calendar-week"></i> Resumo Semanal Diesel Interno</h3>
+                    <p>Modelo semanal de domingo a sábado, agrupado por tanque.</p>
+                </div>
+                <div class="resumo-diesel-actions">
+                    <div class="form-group">
+                        <label for="semanaResumoDiesel">Semana</label>
+                        <input type="week" id="semanaResumoDiesel" class="glass-input">
+                    </div>
+                    <button type="button" id="btnGerarResumoDiesel" class="btn-glass btn-primary">
+                        <i class="fas fa-table"></i> Gerar Resumo
+                    </button>
+                    <button type="button" id="btnExportarResumoDieselPDF" class="btn-glass btn-danger" disabled>
+                        <i class="fas fa-file-pdf"></i> PDF Semanal
+                    </button>
+                </div>
+            </div>
+
+            <div id="resumoDieselResultado" class="resumo-diesel-resultado hidden">
+                <div class="resumo-diesel-cabecalho">
+                    <strong id="resumoDieselTitulo">Resumo Diesel Interno</strong>
+                    <span id="resumoDieselPeriodo"></span>
+                </div>
+                <div class="table-responsive resumo-diesel-table-wrap">
+                    <table id="tabelaResumoDiesel" class="resumo-diesel-table">
+                        <thead id="theadResumoDiesel"></thead>
+                        <tbody id="tbodyResumoDiesel"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <!-- Resultados -->
         <section id="cardResultados" class="glass-panel hidden">
             <div class="resumo-container">

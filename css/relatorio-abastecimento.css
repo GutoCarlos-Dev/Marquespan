@@ -149,6 +149,98 @@ body {
 .kpi-card h3 { margin: 0 0 5px 0; font-size: 0.9rem; color: #666; text-transform: uppercase; }
 .kpi-card .valor { font-size: 1.5rem; font-weight: 800; color: #333 !important; }
 
+.resumo-diesel-toolbar,
+.resumo-diesel-actions,
+.resumo-diesel-cabecalho {
+    display: flex;
+    align-items: end;
+    gap: 14px;
+}
+
+.resumo-diesel-toolbar {
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.resumo-diesel-toolbar h3,
+.resumo-diesel-toolbar p {
+    margin: 0;
+}
+
+.resumo-diesel-toolbar p {
+    margin-top: 5px;
+    color: #667085;
+}
+
+.resumo-diesel-actions {
+    flex-wrap: wrap;
+}
+
+.resumo-diesel-actions .form-group {
+    min-width: 180px;
+}
+
+.resumo-diesel-resultado {
+    margin-top: 22px;
+}
+
+.resumo-diesel-cabecalho {
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    color: #7a0912;
+    background: #c6dfb5;
+    border-radius: 10px 10px 0 0;
+}
+
+.resumo-diesel-table-wrap {
+    max-height: none;
+    border-radius: 0 0 10px 10px;
+}
+
+.resumo-diesel-table th {
+    position: static;
+    cursor: default;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.resumo-diesel-table thead tr:first-child th {
+    background: #dcefd0;
+}
+
+.resumo-diesel-table td {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.resumo-diesel-table td:first-child,
+.resumo-diesel-table td:nth-child(2) {
+    text-align: left;
+    font-weight: 600;
+}
+
+.resumo-diesel-table tbody tr:nth-child(even) {
+    background: #edf7e7;
+}
+
+.resumo-diesel-table .resumo-total-row td {
+    font-weight: 800;
+    background: #dcefd0;
+    border-top: 2px solid #8cb477;
+}
+
+@media (max-width: 760px) {
+    .resumo-diesel-actions {
+        width: 100%;
+        align-items: stretch;
+    }
+
+    .resumo-diesel-actions > * {
+        flex: 1 1 180px;
+    }
+}
+
 /* Tabela */
 .table-responsive {
     overflow-x: auto;

@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const RelatorioUI = {
         dadosRelatorio: [],
+        dadosResumoSemanal: null,
         sortConfig: {
             column: null,
             direction: 'asc'
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
             this.dataInicial.valueAsDate = primeiroDia;
             this.dataFinal.valueAsDate = hoje;
+            this.semanaResumoDiesel.value = this.getISOWeekValue(hoje);
 
             await Promise.all([
                 this.loadTanques(),
@@ -70,6 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnExportarXLS = document.getElementById('btnExportarXLS');
             this.btnExportarPDF = document.getElementById('btnExportarPDF');
             this.btnFullscreenGrid = document.getElementById('btnFullscreenGrid');
+            this.semanaResumoDiesel = document.getElementById('semanaResumoDiesel');
+            this.btnGerarResumoDiesel = document.getElementById('btnGerarResumoDiesel');
+            this.btnExportarResumoDieselPDF = document.getElementById('btnExportarResumoDieselPDF');
+            this.resumoDieselResultado = document.getElementById('resumoDieselResultado');
+            this.resumoDieselTitulo = document.getElementById('resumoDieselTitulo');
+            this.resumoDieselPeriodo = document.getElementById('resumoDieselPeriodo');
+            this.theadResumoDiesel = document.getElementById('theadResumoDiesel');
+            this.tbodyResumoDiesel = document.getElementById('tbodyResumoDiesel');
             this.modalLancamento = document.getElementById('modalVisualizarLancamento');
             this.detalhesLancamentoGrid = document.getElementById('detalhesLancamentoGrid');
             this.btnFecharModalLancamento = document.getElementById('btnFecharModalLancamento');
@@ -90,6 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnExportarXLS.addEventListener('click', this.exportXLS.bind(this));
             this.btnExportarPDF.addEventListener('click', this.exportPDF.bind(this));
             this.btnFullscreenGrid?.addEventListener('click', this.toggleFullscreenGrid.bind(this));
+            this.btnGerarResumoDiesel?.addEventListener('click', this.gerarResumoSemanalDiesel.bind(this));
+            this.btnExportarResumoDieselPDF?.addEventListener('click', this.exportarResumoSemanalPDF.bind(this));
             document.addEventListener('fullscreenchange', this.handleFullscreenChange.bind(this));
             document.addEventListener('keydown', this.handleFullscreenKeydown.bind(this));
 
@@ -182,6 +194,335 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnFullscreenGrid.innerHTML = fullscreen
                 ? '<i class="fas fa-compress"></i> Sair FullScreen'
                 : '<i class="fas fa-expand"></i> FullScreen';
+        },
+
+        getISOWeekValue(date) {
+            const base = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dia = base.getUTCDay() || 7;
+            base.setUTCDate(base.getUTCDate() + 4 - dia);
+            const ano = base.getUTCFullYear();
+            const inicioAno = new Date(Date.UTC(ano, 0, 1));
+            const semana = Math.ceil((((base - inicioAno) / 86400000) + 1) / 7);
+            return `${ano}-W${String(semana).padStart(2, '0')}`;
+        },
+
+        getPeriodoSemanaOperacional(semanaAno) {
+            const [anoTexto, semanaTexto] = String(semanaAno || '').split('-W');
+            const ano = Number(anoTexto);
+            const semana = Number(semanaTexto);
+            if (!ano || !semana) return null;
+
+            const quatroJaneiro = new Date(Date.UTC(ano, 0, 4));
+            const diaSemana = quatroJaneiro.getUTCDay() || 7;
+            const segunda = new Date(quatroJaneiro);
+            segunda.setUTCDate(quatroJaneiro.getUTCDate() - diaSemana + 1 + ((semana - 1) * 7));
+
+            const inicio = new Date(segunda);
+            inicio.setUTCDate(segunda.getUTCDate() - 1);
+            const fim = new Date(inicio);
+            fim.setUTCDate(inicio.getUTCDate() + 6);
+
+            return {
+                inicio,
+                fim,
+                inicioIso: inicio.toISOString().slice(0, 10),
+                fimIso: fim.toISOString().slice(0, 10),
+                numero: semana,
+                ano
+            };
+        },
+
+        getFilialUsuario() {
+            try {
+                return JSON.parse(localStorage.getItem('usuarioLogado'))?.filial || '';
+            } catch {
+                return '';
+            }
+        },
+
+        normalizarChaveTexto(value) {
+            return String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim()
+                .toUpperCase();
+        },
+
+        formatarLitrosResumo(value) {
+            return Number(value || 0).toLocaleString('pt-BR', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            });
+        },
+
+        async gerarResumoSemanalDiesel() {
+            const periodo = this.getPeriodoSemanaOperacional(this.semanaResumoDiesel?.value);
+            if (!periodo) {
+                alert('Selecione uma semana válida.');
+                return;
+            }
+
+            const btn = this.btnGerarResumoDiesel;
+            const textoOriginal = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+            try {
+                let queryTanques = supabaseClient
+                    .from('tanques')
+                    .select('id, nome, tipo_combustivel, filial')
+                    .order('nome');
+
+                const filial = this.getFilialUsuario();
+                if (filial) queryTanques = queryTanques.eq('filial', filial);
+
+                const { data: tanquesData, error: tanquesError } = await queryTanques;
+                if (tanquesError) throw tanquesError;
+
+                const tanques = (tanquesData || []).filter(tanque =>
+                    this.normalizarChaveTexto(tanque.tipo_combustivel).includes('DIESEL')
+                );
+                const tanqueIds = tanques.map(tanque => tanque.id);
+                if (tanqueIds.length === 0) {
+                    throw new Error('Nenhum tanque Diesel encontrado para a filial.');
+                }
+
+                const [entradasResult, saidasResult] = await Promise.all([
+                    supabaseClient
+                        .from('abastecimentos')
+                        .select('tanque_id, qtd_litros, data, numero_nota')
+                        .in('tanque_id', tanqueIds)
+                        .neq('numero_nota', 'AJUSTE DE ESTOQUE')
+                        .gte('data', `${periodo.inicioIso}T00:00:00-03:00`)
+                        .lte('data', `${periodo.fimIso}T23:59:59-03:00`),
+                    supabaseClient
+                        .from('saidas_combustivel')
+                        .select('qtd_litros, data_hora, bicos!inner(bombas!inner(tanque_id))')
+                        .gte('data_hora', `${periodo.inicioIso}T00:00:00-03:00`)
+                        .lte('data_hora', `${periodo.fimIso}T23:59:59-03:00`)
+                ]);
+
+                if (entradasResult.error) throw entradasResult.error;
+                if (saidasResult.error) throw saidasResult.error;
+
+                const tanqueIdSet = new Set(tanqueIds.map(String));
+                const movimentos = new Map();
+                const chave = (dataIso, tanqueId) => `${String(dataIso).slice(0, 10)}|${tanqueId}`;
+                const obter = (dataIso, tanqueId) => {
+                    const movimentoChave = chave(dataIso, tanqueId);
+                    if (!movimentos.has(movimentoChave)) {
+                        movimentos.set(movimentoChave, { consumido: 0, compra: 0 });
+                    }
+                    return movimentos.get(movimentoChave);
+                };
+
+                (entradasResult.data || []).forEach(entrada => {
+                    obter(entrada.data, entrada.tanque_id).compra += Number(entrada.qtd_litros || 0);
+                });
+
+                (saidasResult.data || []).forEach(saida => {
+                    const tanqueId = saida.bicos?.bombas?.tanque_id;
+                    if (!tanqueIdSet.has(String(tanqueId))) return;
+                    obter(saida.data_hora, tanqueId).consumido += Number(saida.qtd_litros || 0);
+                });
+
+                const nomesDias = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+                const dias = Array.from({ length: 7 }, (_, index) => {
+                    const data = new Date(periodo.inicio);
+                    data.setUTCDate(periodo.inicio.getUTCDate() + index);
+                    const dataIso = data.toISOString().slice(0, 10);
+                    return {
+                        dataIso,
+                        dia: data.getUTCDate(),
+                        nome: nomesDias[index],
+                        porTanque: tanques.map(tanque => ({
+                            tanqueId: tanque.id,
+                            ...(movimentos.get(chave(dataIso, tanque.id)) || { consumido: 0, compra: 0 })
+                        }))
+                    };
+                });
+
+                this.dadosResumoSemanal = { periodo, filial, tanques, dias };
+                this.renderizarResumoSemanalDiesel();
+                this.btnExportarResumoDieselPDF.disabled = false;
+            } catch (error) {
+                console.error('Erro ao gerar resumo semanal Diesel:', error);
+                alert(`Erro ao gerar resumo semanal: ${error.message || 'verifique o console.'}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = textoOriginal;
+            }
+        },
+
+        renderizarResumoSemanalDiesel() {
+            const resumo = this.dadosResumoSemanal;
+            if (!resumo) return;
+
+            this.resumoDieselTitulo.textContent = `RESUMO DIESEL INTERNO${resumo.filial ? ` - ${resumo.filial}` : ''}`;
+            this.resumoDieselPeriodo.textContent = `SEMANA ${resumo.periodo.numero} | ${resumo.periodo.inicio.toLocaleDateString('pt-BR', { timeZone: 'UTC' })} a ${resumo.periodo.fim.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`;
+            this.theadResumoDiesel.innerHTML = `
+                <tr>
+                    <th rowspan="2">Data</th>
+                    <th rowspan="2">Dia</th>
+                    ${resumo.tanques.map(tanque => `<th colspan="2">${tanque.nome}</th>`).join('')}
+                    <th colspan="2">Total</th>
+                </tr>
+                <tr>
+                    ${resumo.tanques.map(() => '<th>Consumido</th><th>Compra</th>').join('')}
+                    <th>Consumido</th>
+                    <th>Compra</th>
+                </tr>
+            `;
+
+            const totaisTanques = resumo.tanques.map(() => ({ consumido: 0, compra: 0 }));
+            let totalConsumido = 0;
+            let totalCompra = 0;
+            const linhas = resumo.dias.map(dia => {
+                let consumidoDia = 0;
+                let compraDia = 0;
+                const colunasTanques = dia.porTanque.map((movimento, index) => {
+                    totaisTanques[index].consumido += movimento.consumido;
+                    totaisTanques[index].compra += movimento.compra;
+                    consumidoDia += movimento.consumido;
+                    compraDia += movimento.compra;
+                    return `<td>${this.formatarLitrosResumo(movimento.consumido)}</td><td>${this.formatarLitrosResumo(movimento.compra)}</td>`;
+                }).join('');
+                totalConsumido += consumidoDia;
+                totalCompra += compraDia;
+                return `<tr><td>${dia.dia}</td><td>${dia.nome}</td>${colunasTanques}<td>${this.formatarLitrosResumo(consumidoDia)}</td><td>${this.formatarLitrosResumo(compraDia)}</td></tr>`;
+            });
+
+            linhas.push(`
+                <tr class="resumo-total-row">
+                    <td colspan="2">TOTAL</td>
+                    ${totaisTanques.map(total => `<td>${this.formatarLitrosResumo(total.consumido)}</td><td>${this.formatarLitrosResumo(total.compra)}</td>`).join('')}
+                    <td>${this.formatarLitrosResumo(totalConsumido)}</td>
+                    <td>${this.formatarLitrosResumo(totalCompra)}</td>
+                </tr>
+            `);
+
+            this.tbodyResumoDiesel.innerHTML = linhas.join('');
+            this.resumoDieselResultado.classList.remove('hidden');
+        },
+
+        getLogoBase64PDF() {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.src = 'logo.png';
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => {
+                    console.warn('Logo não encontrado para o PDF semanal.');
+                    resolve(null);
+                };
+            });
+        },
+
+        async exportarResumoSemanalPDF() {
+            const resumo = this.dadosResumoSemanal;
+            if (!resumo) return alert('Gere o resumo semanal antes de exportar.');
+
+            const btn = this.btnExportarResumoDieselPDF;
+            const textoOriginal = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const orientacao = resumo.tanques.length > 3 ? 'landscape' : 'portrait';
+                const doc = new jsPDF({ orientation: orientacao, unit: 'mm', format: 'a4' });
+                const titulo = `RESUMO DIESEL INTERNO${resumo.filial ? ` - ${resumo.filial}` : ''}`;
+                const colunas = ['Data', 'Dia'];
+                resumo.tanques.forEach(tanque => colunas.push(`${tanque.nome}\nConsumido`, `${tanque.nome}\nCompra`));
+                colunas.push('TOTAL\nConsumido', 'TOTAL\nCompra');
+
+                const totais = resumo.tanques.map(() => ({ consumido: 0, compra: 0 }));
+                let totalConsumido = 0;
+                let totalCompra = 0;
+                const linhas = resumo.dias.map(dia => {
+                    const row = [String(dia.dia), dia.nome];
+                    let consumidoDia = 0;
+                    let compraDia = 0;
+                    dia.porTanque.forEach((movimento, index) => {
+                        totais[index].consumido += movimento.consumido;
+                        totais[index].compra += movimento.compra;
+                        consumidoDia += movimento.consumido;
+                        compraDia += movimento.compra;
+                        row.push(this.formatarLitrosResumo(movimento.consumido), this.formatarLitrosResumo(movimento.compra));
+                    });
+                    totalConsumido += consumidoDia;
+                    totalCompra += compraDia;
+                    row.push(this.formatarLitrosResumo(consumidoDia), this.formatarLitrosResumo(compraDia));
+                    return row;
+                });
+
+                const totalRow = ['', 'TOTAL'];
+                totais.forEach(total => totalRow.push(this.formatarLitrosResumo(total.consumido), this.formatarLitrosResumo(total.compra)));
+                totalRow.push(this.formatarLitrosResumo(totalConsumido), this.formatarLitrosResumo(totalCompra));
+                linhas.push(totalRow);
+
+                const logoBase64 = await this.getLogoBase64PDF();
+                if (logoBase64) {
+                    doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+                }
+
+                const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
+                const nomeUsuario = usuarioLogado?.nome || usuarioLogado?.usuario_login || 'Sistema';
+                const pageWidth = doc.internal.pageSize.getWidth();
+
+                doc.setFontSize(16);
+                doc.setTextColor(0, 105, 55);
+                doc.text(titulo, 14, 28);
+                doc.setFontSize(10);
+                doc.setTextColor(40);
+                doc.text(`Semana ${resumo.periodo.numero}: ${resumo.periodo.inicio.toLocaleDateString('pt-BR', { timeZone: 'UTC' })} a ${resumo.periodo.fim.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`, 14, 34);
+                doc.text(`Gerado por: ${nomeUsuario}`, 14, 39);
+
+                doc.autoTable({
+                    head: [colunas],
+                    body: linhas,
+                    startY: 45,
+                    theme: 'grid',
+                    headStyles: { fillColor: [0, 105, 55], textColor: [255, 255, 255], halign: 'center', fontSize: 7 },
+                    styles: { fontSize: 7, halign: 'right', cellPadding: 1.6 },
+                    columnStyles: { 0: { halign: 'center' }, 1: { halign: 'left' } },
+                    didParseCell: data => {
+                        if (data.section === 'body' && data.row.index === linhas.length - 1) {
+                            data.cell.styles.fontStyle = 'bold';
+                            data.cell.styles.fillColor = [220, 239, 208];
+                        } else if (data.section === 'body' && data.row.index % 2 === 1) {
+                            data.cell.styles.fillColor = [237, 247, 231];
+                        }
+                    }
+                });
+
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let pagina = 1; pagina <= pageCount; pagina += 1) {
+                    doc.setPage(pagina);
+                    const pageHeight = doc.internal.pageSize.getHeight();
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 10);
+                    doc.text(`Página ${pagina} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+                }
+
+                doc.save(`Resumo_Diesel_Semana_${resumo.periodo.numero}_${resumo.periodo.ano}.pdf`);
+            } catch (error) {
+                console.error('Erro ao exportar o resumo semanal em PDF:', error);
+                alert(`Erro ao gerar PDF semanal: ${error.message || 'verifique o console.'}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = textoOriginal;
+            }
         },
 
         async loadTanques() {
