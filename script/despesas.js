@@ -616,7 +616,7 @@ const DespesasUI = {
             const { data: motoristas, error: motoristasError } = await supabaseClient
                 .from('funcionario')
                 .select('nome_completo')
-                .ilike('funcao', '%Motorista%')
+                .or('funcao.ilike.%Motorista%,funcao.ilike.%Líder%,funcao.ilike.%Lider%')
                 .order('nome_completo', { ascending: true });
             if (motoristasError) throw motoristasError;
             this.funcionarios1List.innerHTML = motoristas.map(f => `<option value="${f.nome_completo}"></option>`).join('');
