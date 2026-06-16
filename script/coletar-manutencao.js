@@ -27,6 +27,8 @@ import { buscarLancamentosManutencao } from './coletar-manutencao/lancamentos-se
 import { renderizarTabelaLancamentos } from './coletar-manutencao/lancamentos-tabela.js';
 
 const COLETAR_MANUTENCAO_PAGE_ID = 'coletar-manutencao.html';
+const FILIAL_MANUTENCAO_PADRAO_VALOR = 'SP';
+const FILIAL_MANUTENCAO_PADRAO_TEXTO = 'Matriz SP (SP)';
 
 const ColetarManutencaoUI = {
     async init() {
@@ -652,6 +654,15 @@ const ColetarManutencaoUI = {
                 select.add(new Option(filialUsuario, filialUsuario));
             }
             select.value = filialUsuario;
+            return;
+        }
+
+        select.disabled = false;
+        if (!select.value) {
+            if (!Array.from(select.options).some(option => option.value === FILIAL_MANUTENCAO_PADRAO_VALOR)) {
+                select.add(new Option(FILIAL_MANUTENCAO_PADRAO_TEXTO, FILIAL_MANUTENCAO_PADRAO_VALOR));
+            }
+            select.value = FILIAL_MANUTENCAO_PADRAO_VALOR;
         }
     },
 
