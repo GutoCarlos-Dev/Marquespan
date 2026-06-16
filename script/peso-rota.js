@@ -139,6 +139,7 @@ function bindEvents() {
     document.getElementById('btnImportarRoteiro')?.addEventListener('click', () => {
         document.getElementById('inputImportarRoteiro')?.click();
     });
+    document.getElementById('btnImportarEscalaOnline')?.addEventListener('click', importarEscalaOnlinePeso);
     document.getElementById('btnImportarRetornoRota')?.addEventListener('click', importarRetornoRota);
     document.getElementById('inputImportarRoteiro')?.addEventListener('change', importarRoteiroPeso);
     document.getElementById('btnExportarBackupXlsx')?.addEventListener('click', exportarBackupPesoRotaXlsx);
@@ -343,6 +344,14 @@ function getSemanaAnoDaData(dataIso) {
 
 function getSemanaAnoSelecionada() {
     return document.getElementById('filtroSemanaAno')?.value || getSemanaAnoAtual();
+}
+
+function getSemanaNomeEscala(semanaAno = getSemanaAnoSelecionada()) {
+    const [anoTexto, semanaTexto] = String(semanaAno || '').split('-W');
+    const semana = Number(semanaTexto);
+    const ano = Number(anoTexto);
+    if (!semana || !ano) return '';
+    return `SEMANA ${String(semana).padStart(2, '0')} - ${ano}`;
 }
 
 function getFilialSelecionada() {
@@ -2132,6 +2141,109 @@ function aplicarImportacaoRoteiro(importados) {
     }
 
     return { aplicadas, rotasNaoEncontradas };
+}
+
+async function importarEscalaOnlinePeso() {
+    const btn = document.getElementById('btnImportarEscalaOnline');
+    const textoOriginal = btn?.innerHTML;
+    const filial = getFilialSelecionada();
+    const semanaAno = getSemanaAnoSelecionada();
+    const diaSaida = normalizarSemana(document.getElementById('filtroSemana')?.value);
+    const semanaEscala = getSemanaNomeEscala(semanaAno);
+
+    if (!filial) {
+        alert('Selecione uma filial especifica antes de importar a escala online.');
+        return;
+    }
+
+    if (!semanaAno || !semanaEscala) {
+        alert('Selecione a Semana Ano antes de importar a escala online.');
+        return;
+    }
+
+    if (!diaSaida) {
+        alert('Selecione um Dia de Saida especifico antes de importar a escala online.');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('escala')
+            .select('data_escala, semana_nome, filial, rota, placa, motorista, auxiliar')
+            .eq('filial', filial)
+            .eq('semana_nome', semanaEscala)
+            .order('rota', { ascending: true });
+
+        if (error) throw error;
+
+        const linhasEscala = (data || []).filter(item =>
+            normalizarRota(item.rota)
+            && normalizarSemana(getDiaSemanaPorData(item.data_escala)) === diaSaida
+        );
+        if (linhasEscala.length === 0) {
+            alert(`Nenhum registro encontrado na escala online para ${filial}, ${semanaEscala}, ${diaSaida}.`);
+            return;
+        }
+
+        const escalaPorRota = new Map();
+        linhasEscala.forEach(item => {
+            const chave = normalizarRota(item.rota);
+            const atual = escalaPorRota.get(chave);
+            const scoreAtual = contarCamposPreenchidos(atual);
+            const scoreNovo = contarCamposPreenchidos(item);
+            if (!atual || scoreNovo >= scoreAtual) escalaPorRota.set(chave, item);
+        });
+
+        let aplicadas = 0;
+        let semCorrespondencia = 0;
+        const rotasNaoEncontradas = [];
+
+        gridData.forEach(row => {
+            if (normalizarBusca(getFilialRegistro(row)) !== normalizarBusca(filial)) return;
+            if (normalizarSemana(row.semana) !== diaSaida) return;
+
+            const chave = normalizarRota(row.rota);
+            if (!chave) return;
+
+            const item = escalaPorRota.get(chave);
+            if (!item) {
+                semCorrespondencia += 1;
+                if (rotasNaoEncontradas.length < 8) rotasNaoEncontradas.push(row.rota);
+                return;
+            }
+
+            const placa = normalizarPlaca(item.placa);
+            const motorista = normalizarUpper(item.motorista);
+            const auxiliar = normalizarUpper(item.auxiliar);
+            const alterou = row.placa !== placa || row.motorista !== motorista || row.auxiliar !== auxiliar;
+
+            row.placa = placa;
+            row.motorista = motorista;
+            row.auxiliar = auxiliar;
+            if (alterou) row._dirty = true;
+            aplicadas += 1;
+        });
+
+        renderGrid();
+
+        const detalheNaoEncontradas = semCorrespondencia > 0
+            ? `\nRotas da grade sem correspondencia na escala: ${semCorrespondencia}${rotasNaoEncontradas.length ? `\nExemplos: ${rotasNaoEncontradas.join(', ')}` : ''}`
+            : '';
+        alert(`Importacao da escala online concluida.\n${aplicadas} linha(s) preenchida(s) com placa, motorista e auxiliar.${detalheNaoEncontradas}`);
+    } catch (error) {
+        console.error('Erro ao importar escala online:', error);
+        alert(`Erro ao importar escala online: ${error.message || 'verifique o console.'}`);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = textoOriginal;
+        }
+    }
 }
 
 function normalizarHoraRetorno(item) {
