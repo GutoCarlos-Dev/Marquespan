@@ -197,7 +197,21 @@ async function iniciarControleInatividade(authUserId) {
     localStorage.setItem(ULTIMA_ATIVIDADE_KEY, String(Date.now()));
   }
 
-  ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'scroll'].forEach(evento => {
+  [
+    'click',
+    'pointerdown',
+    'pointermove',
+    'keydown',
+    'input',
+    'change',
+    'paste',
+    'compositionend',
+    'focusin',
+    'touchstart',
+    'touchmove',
+    'scroll',
+    'wheel'
+  ].forEach(evento => {
     window.addEventListener(evento, registrarAtividade, { passive: true });
   });
 
