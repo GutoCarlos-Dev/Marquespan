@@ -34,6 +34,7 @@ function bindEvents() {
   document.getElementById('filtroLocal').addEventListener('input', renderizarTabela);
   document.getElementById('filtroFilial').addEventListener('change', buscarOcorrencias);
   document.getElementById('ocorrenciaPlaca').addEventListener('change', preencherFilialPorPlaca);
+  document.getElementById('ocorrenciaRelatorio').addEventListener('input', aplicarMaiusculasRelatorio);
   document.getElementById('formOcorrencia').addEventListener('submit', salvarOcorrencia);
   document.getElementById('btnFecharModal').addEventListener('click', fecharModal);
   document.getElementById('btnCancelarOcorrencia').addEventListener('click', fecharModal);
@@ -56,6 +57,24 @@ function bindEvents() {
       renderizarTabela();
     });
   });
+}
+
+function textoMaiusculo(valor) {
+  return String(valor || '').toLocaleUpperCase('pt-BR');
+}
+
+function aplicarMaiusculasRelatorio(event) {
+  const campo = event.target;
+  const inicioSelecao = campo.selectionStart;
+  const fimSelecao = campo.selectionEnd;
+  const valorMaiusculo = textoMaiusculo(campo.value);
+
+  if (campo.value === valorMaiusculo) return;
+
+  campo.value = valorMaiusculo;
+  if (typeof inicioSelecao === 'number' && typeof fimSelecao === 'number') {
+    campo.setSelectionRange(inicioSelecao, fimSelecao);
+  }
 }
 
 async function carregarListas() {
@@ -239,7 +258,7 @@ async function abrirModal(item = null, modo = 'editar') {
   document.getElementById('ocorrenciaMotorista').value = item?.motorista || '';
   document.getElementById('ocorrenciaAuxiliar').value = item?.auxiliar || '';
   document.getElementById('ocorrenciaLocal').value = item?.local_ocorrencia || '';
-  document.getElementById('ocorrenciaRelatorio').value = item?.relatorio || '';
+  document.getElementById('ocorrenciaRelatorio').value = textoMaiusculo(item?.relatorio);
   if (usuarioRestritoPorFilial()) definirValorSelect('ocorrenciaFilial', getFilialUsuario());
   preencherEnvolvimento(item?.envolvimento);
   atualizarGruposEnvolvimento();
@@ -332,7 +351,7 @@ async function salvarOcorrencia(event) {
       auxiliar: document.getElementById('ocorrenciaAuxiliar').value.trim() || null,
       local_ocorrencia: document.getElementById('ocorrenciaLocal').value.trim() || null,
       envolvimento: coletarEnvolvimento(),
-      relatorio: document.getElementById('ocorrenciaRelatorio').value.trim()
+      relatorio: textoMaiusculo(document.getElementById('ocorrenciaRelatorio').value).trim()
     };
 
     if (usuarioRestritoPorFilial()) {
@@ -686,7 +705,7 @@ function obterOcorrenciaDoFormulario() {
     auxiliar: document.getElementById('ocorrenciaAuxiliar').value.trim() || null,
     local_ocorrencia: document.getElementById('ocorrenciaLocal').value.trim() || null,
     envolvimento: coletarEnvolvimento(),
-    relatorio: document.getElementById('ocorrenciaRelatorio').value.trim()
+    relatorio: textoMaiusculo(document.getElementById('ocorrenciaRelatorio').value).trim()
   };
 }
 
