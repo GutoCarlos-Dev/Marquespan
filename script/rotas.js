@@ -143,38 +143,37 @@ const RotasUI = {
     async handleFormSubmit(e) {
         e.preventDefault();
 
+        const editingId = this.editingIdInput.value;
         const payload = {
-            numero: document.getElementById('rotaNumero').value,
+            numero: document.getElementById('rotaNumero').value.trim(),
             semana: document.getElementById('rotaSemana').value,
             supervisor: document.getElementById('rotaSupervisor').value,
             responsavel: document.getElementById('rotaSupervisor').value || '',
-            cidades: document.getElementById('rotaCidades').value,
-            dias: parseInt(document.getElementById('rotaDias').value) || 0, // Garante que seja número
+            cidades: document.getElementById('rotaCidades').value.trim(),
+            dias: parseInt(document.getElementById('rotaDias').value, 10) || 0,
             status: document.getElementById('rotaStatus').value,
-            filial: document.getElementById('rotaFilial').value, // Novo campo Filial
-            // Incluímos o ID para o caso de estarmos editando, mas o upsert cuidará disso.
-            // Se o ID existir, ele atualiza. Se não, o upsert usará o 'numero' e 'filial' para o conflito.
-            id: this.editingIdInput.value || undefined
+            filial: document.getElementById('rotaFilial').value
         };
 
         if (!payload.numero || !payload.semana || !payload.status || !payload.cidades || !payload.dias) {
-            return alert('Todos os campos da rota são obrigatórios.');
+            return alert('Todos os campos da rota sao obrigatorios.');
         }
 
-        try { // Assumindo que 'numero' e 'filial' juntos formam uma chave única para o upsert
-            const { error } = await supabaseClient.from('rotas').upsert(payload, { onConflict: 'numero' });
+        try {
+            const { error } = editingId
+                ? await supabaseClient.from('rotas').update(payload).eq('id', editingId)
+                : await supabaseClient.from('rotas').upsert(payload, { onConflict: 'numero' });
             if (error) throw error;
 
-            registrarAuditoria(payload.id ? 'ALTERAR' : 'INCLUIR', 'Rotas', `${payload.id ? 'Alteração' : 'Inclusão'} da rota nº ${payload.numero}`);
-            alert('✅ Rota salva com sucesso!');
+            registrarAuditoria(editingId ? 'ALTERAR' : 'INCLUIR', 'Rotas', `${editingId ? 'Alteracao' : 'Inclusao'} da rota no ${payload.numero}`);
+            alert('Rota salva com sucesso!');
             this.clearForm();
             this.renderGrid();
         } catch (err) {
             console.error('Erro ao salvar rota:', err);
-            alert(`❌ Erro ao salvar rota: ${err.message}`);
+            alert(`Erro ao salvar rota: ${err.message}`);
         }
     },
-
     clearForm() {
         this.form?.reset();
         this.editingIdInput.value = '';
@@ -468,3 +467,4 @@ document.addEventListener('DOMContentLoaded', () => {
     RotasUI.init();
     RotasUI.renderGrid(); // Carrega os dados iniciais
 });
+
