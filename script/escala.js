@@ -735,7 +735,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 2. Transforma o planejamento em registros de escala diária
                 planData.forEach(row => {
                     dias.forEach(dia => {
-                        const rota = row[`${dia.toLowerCase()}_rota`];
+                        const rota = normalizarRotaImportada(row[`${dia.toLowerCase()}_rota`]);
                         const status = row[`${dia.toLowerCase()}_status`];
 
                         // Só cria registro se houver rota ou status definido para o dia
@@ -1813,7 +1813,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (!key) return;
 
-        const valor = target.value !== undefined ? target.value : target.innerText;
+        let valor = target.value !== undefined ? target.value : target.innerText;
+        if (key === 'rota' || key.endsWith('_rota')) {
+            valor = normalizarRotaImportada(valor);
+            if (target.value !== undefined) target.value = valor;
+            else target.innerText = valor;
+        }
         const statusIndicator = document.getElementById('status-indicator');
 
         if (statusIndicator) statusIndicator.innerHTML = '<span class="status-saving"><i class="fas fa-spinner fa-spin"></i> Salvando...</span>';
@@ -2035,7 +2040,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 tipo_escala: config.tipo,
                                 placa: row['PLACA'],
                                 modelo: row['MODELO'],
-                                rota: row['ROTA'],
+                                rota: normalizarRotaImportada(row['ROTA']),
                                 status: row['STATUS'],
                                 motorista: row['MOTORISTA'],
                                 auxiliar: row['AUXILIAR'],
@@ -2189,7 +2194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             const entry = consolidado.get(placa);
                             const prefix = diaEncontrado.toLowerCase();
-                            entry[`${prefix}_rota`] = String(r['ROTA'] || r[`${diaEncontrado} ROTA`] || '').trim();
+                            entry[`${prefix}_rota`] = normalizarRotaImportada(r['ROTA'] || r[`${diaEncontrado} ROTA`] || '');
                             entry[`${prefix}_status`] = String(r['STATUS'] || r['STAT'] || r[`${diaEncontrado} STATUS`] || '').trim();
                         });
                     }
@@ -2284,7 +2289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const motorista = motoristaIndex >= 0 ? cleanImportValue(rawRow[motoristaIndex]) : '';
                 const auxiliar = auxiliarIndex >= 0 ? cleanImportValue(rawRow[auxiliarIndex]) : '';
                 const terceiro = terceiroIndex >= 0 ? cleanImportValue(rawRow[terceiroIndex]) : '';
-                const rota = rotaIndex >= 0 ? cleanImportValue(rawRow[rotaIndex], { keepZero: true }) : '';
+                const rota = rotaIndex >= 0 ? normalizarRotaImportada(rawRow[rotaIndex]) : '';
                 const statusRaw = statusIndex >= 0 ? cleanImportValue(rawRow[statusIndex], { keepZero: true }) : '';
                 const status = statusRaw === '0' ? '' : statusRaw;
 
@@ -2360,6 +2365,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const text = String(value).replace(/\s+/g, ' ').trim();
         if (!keepZero && (text === '0' || normalizeString(text) === 'SYSTEM.XML.XMLELEMENT')) return '';
         return text;
+    }
+
+    function normalizarRotaImportada(value) {
+        return cleanImportValue(value, { keepZero: true }).replace(/\s+/g, '').toUpperCase();
     }
 
     function normalizeVehiclePlate(value) {
@@ -2477,7 +2486,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (!headerFound) continue;
 
-            const rota = cleanImportValue(row[3], { keepZero: true });
+            const rota = normalizarRotaImportada(row[3]);
             const status = cleanImportValue(row[4], { keepZero: true });
             const motorista = cleanImportValue(row[5]);
             const auxiliar = cleanImportValue(row[6]);
@@ -2862,7 +2871,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             motorista: row.motorista || '',
             auxiliar: row.auxiliar || '',
             terceiro: row.terceiro || '',
-            [`${diaKey}_rota`]: row.rota || '',
+            [`${diaKey}_rota`]: normalizarRotaImportada(row.rota),
             [`${diaKey}_status`]: row.status || ''
         });
     }
@@ -2940,7 +2949,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!diaKey) return;
             const rotaKey = `${diaKey}_rota`;
             const statusKey = `${diaKey}_status`;
-            if (row.rota || !item[rotaKey]) item[rotaKey] = row.rota || '';
+            const rotaNormalizada = normalizarRotaImportada(row.rota);
+            if (rotaNormalizada || !item[rotaKey]) item[rotaKey] = rotaNormalizada || '';
             if (row.status || !item[statusKey]) item[statusKey] = row.status || '';
         });
 
@@ -3032,7 +3042,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 IMPORT_DAYS.forEach(dia => {
                     const diaKey = DIA_KEY_MAP[dia];
-                    const rota = cleanImportValue(row[`${diaKey}_rota`], { keepZero: true });
+                    const rota = normalizarRotaImportada(row[`${diaKey}_rota`]);
                     const status = cleanImportValue(row[`${diaKey}_status`], { keepZero: true });
                     if (!rota && !status) return;
 
@@ -3162,7 +3172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dataISO = getDataSemanaDia(row.semana_nome, dia)?.toISOString().split('T')[0];
         if (!dataISO) return;
 
-        const rota = row[`${diaKey}_rota`] || '';
+        const rota = normalizarRotaImportada(row[`${diaKey}_rota`]);
         const status = row[`${diaKey}_status`] || '';
 
         const { data: existentes, error: selectError } = await aplicarFiltroSemanaModelo(
@@ -3562,7 +3572,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     tipo_escala: config.tipo,
                                     placa: row['PLACA'],
                                     modelo: row['MODELO'],
-                                    rota: row['ROTA'],
+                                    rota: normalizarRotaImportada(row['ROTA']),
                                     status: row['STATUS'],
                                     motorista: row['MOTORISTA'],
                                     auxiliar: row['AUXILIAR'],
