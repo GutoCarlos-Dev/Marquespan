@@ -24,6 +24,7 @@ const campos = {
   velocidade: document.getElementById('resultado-velocidade'),
   ignicao: document.getElementById('resultado-ignicao'),
   odometro: document.getElementById('resultado-odometro'),
+  temperatura: document.getElementById('resultado-temperatura'),
   coordenadas: document.getElementById('resultado-coordenadas'),
   grupo: document.getElementById('resultado-grupo'),
   filial: document.getElementById('resultado-filial'),
@@ -132,6 +133,8 @@ function preencherResultado(dados) {
       ? 'Desligada'
       : 'Não informada';
   campos.odometro.textContent = `${formatarNumero(dados.odometro, 1)} km`;
+  const temp = Number(dados.temperatura);
+  campos.temperatura.textContent = Number.isFinite(temp) ? `${formatarNumero(temp, 1)} °C` : 'Não informado';
   campos.coordenadas.textContent = Number.isFinite(Number(dados.latitude))
     && Number.isFinite(Number(dados.longitude))
     ? `${Number(dados.latitude).toFixed(6)}, ${Number(dados.longitude).toFixed(6)}`

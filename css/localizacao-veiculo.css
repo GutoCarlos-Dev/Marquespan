@@ -212,7 +212,7 @@
 .telemetria-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
 }
 
 .telemetria-card {

@@ -340,6 +340,7 @@ async function consultarSystemsat(placaInformada: string) {
     velocidade: posicao.Velocidade,
     ignicao: posicao.Ignicao,
     odometro: posicao.Odometro,
+    temperatura: posicao.SensorTemperatura1 ?? null,
     desatualizado: Boolean(registro.IsRastreadorDesatualizado)
   };
 }
