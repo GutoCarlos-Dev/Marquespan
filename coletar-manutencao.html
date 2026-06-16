@@ -56,6 +56,12 @@
                     <input type="text" id="searchPlaca" placeholder="Buscar Placa..." class="glass-input">
                 </div>
                 <div class="form-group-filter">
+                    <label for="searchFilialLancamento">Filial</label>
+                    <select id="searchFilialLancamento" class="glass-input">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="form-group-filter">
                     <label>Item</label>
                     <select id="searchItem" class="glass-input">
                         <option value="">Todos</option>
@@ -145,7 +151,13 @@
                         <input type="text" id="filtroPlaca" placeholder="Ex: ABC1234" class="glass-input">
                     </div>
                     <div class="form-group-filter">
-                        <label>Data Início</label>
+                        <label for="filtroFilialRelatorio">Filial</label>
+                        <select id="filtroFilialRelatorio" class="glass-input">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="form-group-filter">
+                        <label for="filtroDataIni">Data Inicio</label>
                         <input type="date" id="filtroDataIni" class="glass-input">
                     </div>
                     <div class="form-group-filter">

@@ -134,6 +134,7 @@ const ColetarManutencaoUI = {
         this.searchItemInput = document.getElementById('searchItem');
         this.searchOficinaInput = document.getElementById('searchOficina');
         this.searchStatusInput = document.getElementById('searchStatus');
+        this.searchFilialLancamentoInput = document.getElementById('searchFilialLancamento');
         this.btnFiltrarLancamentos = document.getElementById('btnFiltrarLancamentos');
         // Filtros de Data para Lançamentos
         this.filtroDataInicialLancamento = document.getElementById('filtroDataInicialLancamento');
@@ -149,6 +150,7 @@ const ColetarManutencaoUI = {
         this.formExportacao = document.getElementById('formExportacao');
         this.filtroSemana = document.getElementById('filtroSemana');
         this.filtroPlaca = document.getElementById('filtroPlaca');
+        this.filtroFilialRelatorio = document.getElementById('filtroFilialRelatorio');
         this.filtroDataIni = document.getElementById('filtroDataIni');
         this.filtroDataFim = document.getElementById('filtroDataFim');
         this.filtroItemDisplay = document.getElementById('filtroItemDisplay');
@@ -254,6 +256,50 @@ const ColetarManutencaoUI = {
             searchOficinaInput: this.searchOficinaInput,
             filtroOficinaOptions: this.filtroOficinaOptions
         });
+        this.carregarFiltrosFiliais();
+    },
+
+    async carregarFiltrosFiliais() {
+        const selects = [this.searchFilialLancamentoInput, this.filtroFilialRelatorio].filter(Boolean);
+        if (selects.length === 0) return;
+
+        const labelRelatorio = this.filtroFilialRelatorio?.closest('.form-group-filter')?.querySelector('label');
+        if (labelRelatorio) {
+            labelRelatorio.textContent = 'Filial';
+            labelRelatorio.setAttribute('for', 'filtroFilialRelatorio');
+        }
+
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const filialUsuario = String(usuarioLogado?.filial || '').trim().toUpperCase();
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('filiais')
+                .select('nome, sigla')
+                .order('nome');
+
+            if (error) throw error;
+
+            selects.forEach(select => {
+                select.innerHTML = '<option value="">Todas</option>';
+                (data || []).forEach(filial => {
+                    const valor = String(filial.sigla || filial.nome || '').trim().toUpperCase();
+                    if (!valor) return;
+                    const texto = filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome;
+                    select.add(new Option(texto, valor));
+                });
+
+                if (filialUsuario) {
+                    if (!Array.from(select.options).some(option => option.value === filialUsuario)) {
+                        select.add(new Option(filialUsuario, filialUsuario));
+                    }
+                    select.value = filialUsuario;
+                    select.disabled = true;
+                }
+            });
+        } catch (error) {
+            console.error('Erro ao carregar filiais para filtros:', error);
+        }
     },
     // Associa os eventos aos elementos DOM
     bindEvents() {
@@ -1150,6 +1196,7 @@ const ColetarManutencaoUI = {
                 dataInicial: this.filtroDataInicialLancamento?.value,
                 dataFinal: this.filtroDataFinalLancamento?.value,
                 searchPlaca: this.searchPlacaInput?.value.trim().toUpperCase(),
+                filial: this.searchFilialLancamentoInput?.value || '',
                 searchItem: this.searchItemInput?.value,
                 searchOficina: this.searchOficinaInput?.value,
                 searchStatus: this.searchStatusInput?.value
@@ -1400,6 +1447,7 @@ const ColetarManutencaoUI = {
             status: Array.from(this.filtroStatusOptions.querySelectorAll('.filtro-status-checkbox:checked')).map(cb => cb.value),
             semana: this.filtroSemana.value,
             placa: this.filtroPlaca?.value?.trim().toUpperCase() || '',
+            filial: this.filtroFilialRelatorio?.value || '',
             dataIni: this.filtroDataIni.value,
             dataFim: this.filtroDataFim.value
         };

@@ -48,6 +48,7 @@ function aplicarFiltros(query, filtros, { oficinasMap = {}, filtroOficinaPorDeta
 
     if (filtros.semana) query = query.eq('coletas_manutencao.semana', filtros.semana);
     if (filtros.placa) query = query.ilike('coletas_manutencao.placa', `%${filtros.placa}%`);
+    if (filtros.filial) query = query.eq('coletas_manutencao.filial', normalizarFilial(filtros.filial));
     if (filtros.dataIni) query = query.gte('coletas_manutencao.data_hora', filtros.dataIni + 'T00:00:00');
     if (filtros.dataFim) query = query.lte('coletas_manutencao.data_hora', filtros.dataFim + 'T23:59:59');
 

@@ -51,6 +51,8 @@ export async function buscarLancamentosManutencao({ filtros, sortConfig, oficina
 
     if (filialUsuario) {
         query = query.eq('filial', filialUsuario);
+    } else if (filtros.filial) {
+        query = query.eq('filial', filtros.filial);
     }
 
     if (usuarioRestritoPorNome(nomeUsuario, nivel)) {
