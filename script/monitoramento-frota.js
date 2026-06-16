@@ -20,8 +20,11 @@ const CORES_FIXAS_POR_TIPO = {
 };
 
 const filialSelect = document.getElementById('filtro-filial-frota');
-const tipoSelect = document.getElementById('filtro-tipo-frota');
 const buscaInput = document.getElementById('filtro-busca-frota');
+const filtroTipoBtn = document.getElementById('filtro-tipo-btn');
+const filtroTipoDropdown = document.getElementById('filtro-tipo-dropdown');
+const filtroTipoTodos = document.getElementById('filtro-tipo-todos');
+const filtroTipoLista = document.getElementById('filtro-tipo-lista');
 const botaoAtualizar = document.getElementById('btn-atualizar-frota');
 const autoRefresh = document.getElementById('auto-refresh-frota');
 const listaContainer = document.getElementById('lista-veiculos-frota');
@@ -39,6 +42,8 @@ let timerAtualizacao = null;
 let coresTipos = carregarCores();
 let consultaEmAndamento = false;
 let escalasHojePorVeiculo = new Map();
+let primeiraConsultaRealizada = false;
+let tiposSelecionados = new Set();
 
 function escapeHtml(valor) {
   return String(valor ?? '')
@@ -223,10 +228,9 @@ function popupVeiculo(veiculo) {
 }
 
 function obterFrotaFiltrada() {
-  const tipo = tipoSelect.value;
   const busca = buscaInput.value.trim().toUpperCase();
   return frotaCompleta.filter((veiculo) => (
-    (!tipo || veiculo.tipo === tipo)
+    (tiposSelecionados.size === 0 || tiposSelecionados.has(veiculo.tipo || 'Sem tipo'))
     && (!busca
       || String(veiculo.placaFormatada).toUpperCase().includes(busca)
       || String(veiculo.tipo).toUpperCase().includes(busca)
@@ -325,13 +329,45 @@ function renderizarFrota() {
   setTimeout(() => mapa.invalidateSize(), 50);
 }
 
+function atualizarLabelTipo() {
+  const label = document.getElementById('filtro-tipo-label');
+  if (tiposSelecionados.size === 0) {
+    label.textContent = 'Todos';
+  } else if (tiposSelecionados.size === 1) {
+    label.textContent = [...tiposSelecionados][0];
+  } else {
+    label.textContent = `${tiposSelecionados.size} tipos`;
+  }
+}
+
 function atualizarTipos() {
-  const valorAtual = tipoSelect.value;
   const tipos = [...new Set(frotaCompleta.map(v => v.tipo || 'Sem tipo'))]
     .sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  tipoSelect.innerHTML = '<option value="">Todos</option>';
-  tipos.forEach(tipo => tipoSelect.add(new Option(tipo, tipo)));
-  if (tipos.includes(valorAtual)) tipoSelect.value = valorAtual;
+
+  tiposSelecionados.forEach(t => { if (!tipos.includes(t)) tiposSelecionados.delete(t); });
+
+  filtroTipoLista.innerHTML = '';
+  tipos.forEach(tipo => {
+    const label = document.createElement('label');
+    label.className = 'filtro-tipo-opcao';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = tipo;
+    cb.checked = tiposSelecionados.has(tipo);
+    cb.addEventListener('change', () => {
+      if (cb.checked) tiposSelecionados.add(tipo); else tiposSelecionados.delete(tipo);
+      filtroTipoTodos.checked = tiposSelecionados.size === 0;
+      atualizarLabelTipo();
+      renderizarFrota();
+    });
+    const span = document.createElement('span');
+    span.textContent = tipo;
+    label.appendChild(cb);
+    label.appendChild(span);
+    filtroTipoLista.appendChild(label);
+  });
+
+  atualizarLabelTipo();
 
   listaCores.innerHTML = '';
   tipos.forEach(tipo => {
@@ -418,6 +454,8 @@ async function consultarFrota() {
     status.className = 'online';
     status.innerHTML = '<i class="fas fa-circle"></i> Monitoramento ativo';
     document.getElementById('hora-atualizacao-frota').textContent = `Atualizado em ${formatarData(data.data?.consultadoEm)}`;
+    primeiraConsultaRealizada = true;
+    configurarAtualizacaoAutomatica();
   } catch (error) {
     console.error('Erro no monitoramento da frota:', error);
     status.className = '';
@@ -432,7 +470,7 @@ async function consultarFrota() {
 function configurarAtualizacaoAutomatica() {
   clearInterval(timerAtualizacao);
   timerAtualizacao = null;
-  if (autoRefresh.checked) {
+  if (primeiraConsultaRealizada && autoRefresh.checked) {
     timerAtualizacao = setInterval(consultarFrota, 60000);
   }
 }
@@ -503,9 +541,32 @@ botaoAlternarPainel?.addEventListener('click', () => {
     !frotaLayout?.classList.contains('painel-veiculos-oculto')
   );
 });
-filialSelect.addEventListener('change', consultarFrota);
-tipoSelect.addEventListener('change', renderizarFrota);
+filialSelect.addEventListener('change', () => {
+  if (primeiraConsultaRealizada) consultarFrota();
+});
 buscaInput.addEventListener('input', renderizarFrota);
+
+filtroTipoBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const isOpen = !filtroTipoDropdown.hidden;
+  filtroTipoDropdown.hidden = isOpen;
+  filtroTipoBtn.setAttribute('aria-expanded', String(!isOpen));
+});
+
+filtroTipoTodos.addEventListener('change', () => {
+  tiposSelecionados.clear();
+  filtroTipoLista.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+  filtroTipoTodos.checked = true;
+  atualizarLabelTipo();
+  renderizarFrota();
+});
+
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('filtro-tipo-multi').contains(e.target)) {
+    filtroTipoDropdown.hidden = true;
+    filtroTipoBtn.setAttribute('aria-expanded', 'false');
+  }
+});
 autoRefresh.addEventListener('change', configurarAtualizacaoAutomatica);
 document.addEventListener('fullscreenchange', atualizarEstadoTelaCheia);
 document.getElementById('btn-configurar-cores').addEventListener('click', () => {
@@ -523,5 +584,3 @@ document.getElementById('lista-placas-frota-desatualizada')?.addEventListener('c
 
 iniciarMapa();
 await configurarFiltroFilialUsuario(filialSelect);
-configurarAtualizacaoAutomatica();
-consultarFrota();

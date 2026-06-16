@@ -41,10 +41,20 @@
         </select>
       </div>
       <div class="filtro-item">
-        <label for="filtro-tipo-frota">Tipo</label>
-        <select id="filtro-tipo-frota" class="glass-input">
-          <option value="">Todos</option>
-        </select>
+        <label>Tipo</label>
+        <div class="filtro-tipo-multi" id="filtro-tipo-multi">
+          <button type="button" class="filtro-tipo-btn glass-input" id="filtro-tipo-btn" aria-expanded="false" aria-haspopup="true">
+            <span id="filtro-tipo-label">Todos</span>
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="filtro-tipo-dropdown" id="filtro-tipo-dropdown" hidden>
+            <label class="filtro-tipo-opcao filtro-tipo-opcao-todos">
+              <input type="checkbox" id="filtro-tipo-todos" checked>
+              <span>Todos</span>
+            </label>
+            <div id="filtro-tipo-lista"></div>
+          </div>
+        </div>
       </div>
       <div class="filtro-item filtro-busca">
         <label for="filtro-busca-frota">Buscar veículo</label>
@@ -109,7 +119,7 @@
         </div>
 
         <div id="lista-veiculos-frota" class="lista-veiculos-frota">
-          <div class="frota-vazia"><i class="fas fa-map-location-dot"></i> Selecione uma filial para consultar.</div>
+          <div class="frota-vazia"><i class="fas fa-satellite-dish"></i> Aplique os filtros desejados e clique em <strong>Atualizar agora</strong>.</div>
         </div>
       </aside>
 
@@ -127,6 +137,6 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="./script/monitoramento-frota.js?v=20260615-2"></script>
+  <script type="module" src="./script/monitoramento-frota.js?v=20260616-1"></script>
 </body>
 </html>
