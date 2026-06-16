@@ -147,6 +147,7 @@ const RotasUI = {
             numero: document.getElementById('rotaNumero').value,
             semana: document.getElementById('rotaSemana').value,
             supervisor: document.getElementById('rotaSupervisor').value,
+            responsavel: document.getElementById('rotaSupervisor').value || '',
             cidades: document.getElementById('rotaCidades').value,
             dias: parseInt(document.getElementById('rotaDias').value) || 0, // Garante que seja número
             status: document.getElementById('rotaStatus').value,
@@ -279,6 +280,7 @@ const RotasUI = {
             numero: row.ROTA,
             semana: row.SEMANA,
             supervisor: row.SUPERVISOR,
+            responsavel: row.RESPONSAVEL || row.RESPONSÁVEL || row.SUPERVISOR || '',
             cidades: row.CIDADES,
             dias: row.DIAS,
             status: row.STATUS || 'ATIVA',
