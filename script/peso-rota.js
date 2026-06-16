@@ -902,6 +902,57 @@ async function preencherVeiculosDasLinhas() {
     gridData.forEach(preencherVeiculoNaLinha);
 }
 
+async function preencherDadosVeiculoDasLinhasPorPlaca(linhas) {
+    const placas = [...new Set((linhas || []).map(row => row.placa).filter(Boolean))];
+    if (placas.length === 0) return { modelosPreenchidos: 0, capacidadesPreenchidas: 0 };
+
+    const placasNaoCarregadas = placas.filter(placa => !veiculosPorPlaca.has(placa));
+    const placasConsulta = [...new Set(placasNaoCarregadas.flatMap(getVariantesPlaca))];
+    if (placasConsulta.length > 0) {
+        let queryVeiculos = supabaseClient
+            .from('veiculos')
+            .select('id, placa, modelo, tipo, capacidade_carga')
+            .in('placa', placasConsulta);
+
+        const filial = getFilialSelecionada();
+        if (filial) queryVeiculos = queryVeiculos.eq('filial', filial);
+
+        const { data, error } = await queryVeiculos;
+
+        if (error) {
+            console.warn('Erro ao buscar dados dos veiculos:', error);
+        } else {
+            (data || []).forEach(cacheVeiculo);
+        }
+    }
+
+    let modelosPreenchidos = 0;
+    let capacidadesPreenchidas = 0;
+    (linhas || []).forEach(row => {
+        if (!row.placa) return;
+        const veiculo = veiculosPorPlaca.get(row.placa);
+        if (!veiculo) return;
+
+        const modelo = normalizarUpper(veiculo.modelo || veiculo.tipo);
+        const capacidadeCarga = getCapacidadeCargaVeiculo(veiculo);
+
+        if (modelo && row.tipo_veiculo !== modelo) {
+            row.tipo_veiculo = modelo;
+            row._dirty = true;
+            modelosPreenchidos += 1;
+        }
+
+        if (capacidadeCarga !== null && row.pbt !== capacidadeCarga) {
+            row.pbt = capacidadeCarga;
+            row.status_percentual = calcularPercentual(row);
+            row._dirty = true;
+            capacidadesPreenchidas += 1;
+        }
+    });
+
+    return { modelosPreenchidos, capacidadesPreenchidas };
+}
+
 function preencherVeiculoNaLinha(row, substituirValores = false) {
     if (!row.placa) return;
     const veiculo = veiculosPorPlaca.get(row.placa);
@@ -2166,6 +2217,12 @@ async function importarEscalaOnlinePeso() {
         return;
     }
 
+    const dataEscala = getDataDaSemana(semanaAno, diaSaida);
+    if (!dataEscala) {
+        alert('Nao foi possivel identificar a data da escala para os filtros selecionados.');
+        return;
+    }
+
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
@@ -2176,17 +2233,16 @@ async function importarEscalaOnlinePeso() {
             .from('escala')
             .select('data_escala, semana_nome, filial, rota, placa, motorista, auxiliar')
             .eq('filial', filial)
-            .eq('semana_nome', semanaEscala)
+            .eq('data_escala', dataEscala)
             .order('rota', { ascending: true });
 
         if (error) throw error;
 
         const linhasEscala = (data || []).filter(item =>
             normalizarRota(item.rota)
-            && normalizarSemana(getDiaSemanaPorData(item.data_escala)) === diaSaida
         );
         if (linhasEscala.length === 0) {
-            alert(`Nenhum registro encontrado na escala online para ${filial}, ${semanaEscala}, ${diaSaida}.`);
+            alert(`Nenhum registro encontrado na escala online para ${filial}, ${semanaEscala}, ${diaSaida} (${dataEscala}).`);
             return;
         }
 
@@ -2202,6 +2258,7 @@ async function importarEscalaOnlinePeso() {
         let aplicadas = 0;
         let semCorrespondencia = 0;
         const rotasNaoEncontradas = [];
+        const linhasAplicadas = [];
 
         gridData.forEach(row => {
             if (normalizarBusca(getFilialRegistro(row)) !== normalizarBusca(filial)) return;
@@ -2227,14 +2284,16 @@ async function importarEscalaOnlinePeso() {
             row.auxiliar = auxiliar;
             if (alterou) row._dirty = true;
             aplicadas += 1;
+            linhasAplicadas.push(row);
         });
 
+        const { modelosPreenchidos, capacidadesPreenchidas } = await preencherDadosVeiculoDasLinhasPorPlaca(linhasAplicadas);
         renderGrid();
 
         const detalheNaoEncontradas = semCorrespondencia > 0
             ? `\nRotas da grade sem correspondencia na escala: ${semCorrespondencia}${rotasNaoEncontradas.length ? `\nExemplos: ${rotasNaoEncontradas.join(', ')}` : ''}`
             : '';
-        alert(`Importacao da escala online concluida.\n${aplicadas} linha(s) preenchida(s) com placa, motorista e auxiliar.${detalheNaoEncontradas}`);
+        alert(`Importacao da escala online concluida.\n${aplicadas} linha(s) preenchida(s) com placa, motorista e auxiliar.\n${modelosPreenchidos} modelo(s) preenchido(s) pela placa.\n${capacidadesPreenchidas} capacidade(s) de carga preenchida(s) pela placa.${detalheNaoEncontradas}`);
     } catch (error) {
         console.error('Erro ao importar escala online:', error);
         alert(`Erro ao importar escala online: ${error.message || 'verifique o console.'}`);
