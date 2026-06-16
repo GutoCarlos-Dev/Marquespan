@@ -607,6 +607,8 @@ body.retorno-rota-menu-oculto .menu-floating-toggle i {
 }
 
 .fab-remove { background: linear-gradient(135deg, #dc3545, #a71d2a); }
+.fab-add { background: linear-gradient(135deg, #0d6efd, #084298); }
+.fab-next-day { background: linear-gradient(135deg, #198754, #0f5132); }
 
 @media (max-width: 768px) {
     .panel-header {

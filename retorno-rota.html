@@ -54,6 +54,7 @@
                         <button id="btnExportarPao" class="btn-glass btn-red"><i class="fas fa-bread-slice"></i> Retorno Pão</button>
                         <button id="btnExportarPecas" class="btn-glass btn-red"><i class="fas fa-tools"></i> Retorno Peças</button>
                         <button id="btnExcluirSelecionados" class="btn-glass btn-red"><i class="fas fa-trash-alt"></i> Excluir Selecionados</button>
+                        <button id="btnIncluirSelecionadosDiaSeguinte" class="btn-glass btn-blue" title="Inclui as linhas selecionadas no dia seguinte"><i class="fas fa-calendar-plus"></i> Incluir Dia Seguinte</button>
                         <button id="btnImportarRoteiro" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar Roteiro</button>
                         <input type="file" id="inputImportarRoteiro" accept=".xlsx,.xls" hidden>
                         <button id="btnImportarEscalaOnline" class="btn-glass btn-blue"><i class="fas fa-cloud-download-alt"></i> Importar Escala Online</button>
@@ -230,6 +231,8 @@
 
     <!-- Botões Flutuantes (FAB) -->
     <div class="fab-container">
+        <button id="btnFabAdicionarLinha" class="fab-btn fab-add" title="Incluir linha"><i class="fas fa-plus"></i></button>
+        <button id="btnFabIncluirSelecionadosDiaSeguinte" class="fab-btn fab-next-day" title="Incluir selecionadas no dia seguinte"><i class="fas fa-calendar-plus"></i></button>
         <button id="btnFabExcluirSelecionados" class="fab-btn fab-remove" title="Excluir linhas selecionadas"><i class="fas fa-trash-alt"></i></button>
     </div>
 
@@ -239,6 +242,7 @@
     </footer>
     <script type="module" src="./script/auth-guard.js"></script>
     <script type="module" src="script/menu.js" defer></script>
-    <script type="module" src="script/retorno-rota.js?v=20260520-1"></script>
+    <script type="module" src="script/retorno-rota.js?v=20260616-1"></script>
 </body>
 </html>
+

@@ -24,6 +24,15 @@ function getDataLocalDate(date) {
     return `${ano}-${mes}-${dia}`;
 }
 
+function adicionarDiasDataIso(dataIso, dias) {
+    const [ano, mes, dia] = String(dataIso || '').split('-').map(Number);
+    if (!ano || !mes || !dia) return '';
+
+    const data = new Date(ano, mes - 1, dia);
+    data.setDate(data.getDate() + dias);
+    return getDataLocalDate(data);
+}
+
 function formatarDataHoraSaoPaulo(valor) {
     return new Date(valor).toLocaleString('pt-BR', { timeZone: TIMEZONE_SAO_PAULO });
 }
@@ -71,7 +80,7 @@ function canDelete() {
 function applyGridPermissionUI() {
     if (canManageGrid()) return;
 
-    ['btnAdicionarLinha', 'btnSalvarTudo', 'btnExcluirSelecionados', 'btnImportarRoteiro', 'btnImportarEscalaOnline'].forEach(id => {
+    ['btnAdicionarLinha', 'btnFabAdicionarLinha', 'btnSalvarTudo', 'btnExcluirSelecionados', 'btnFabExcluirSelecionados', 'btnIncluirSelecionadosDiaSeguinte', 'btnFabIncluirSelecionadosDiaSeguinte', 'btnImportarRoteiro', 'btnImportarEscalaOnline'].forEach(id => {
         const element = document.getElementById(id);
         if (element) element.style.display = 'none';
     });
@@ -431,6 +440,99 @@ async function importarEscalaOnline() {
     }
 }
 
+function incluirLinhaVazia() {
+    if (!canManageGrid()) return;
+
+    addEmptyRow();
+    renderGrid();
+
+    const ultimoIndice = gridData.length - 1;
+    document.querySelector(`tr[data-row-index='${ultimoIndice}'] input[data-field='placa']`)?.focus();
+}
+
+function getSelectedRowIndices() {
+    return Array.from(document.querySelectorAll('#tbodyRetornoRota .row-selector:checked'))
+        .map(cb => parseInt(cb.dataset.index, 10))
+        .filter(index => Number.isInteger(index) && gridData[index]);
+}
+
+function criarLinhaParaDiaSeguinte(rowData, dataDiaSeguinte, filialSelecionada) {
+    const novaLinha = {};
+    COLUMN_MAP.forEach(key => novaLinha[key] = null);
+
+    novaLinha.data_retorno = dataDiaSeguinte;
+    novaLinha.filial = rowData.filial || filialSelecionada || null;
+    novaLinha.placa = rowData.placa ? String(rowData.placa).trim().toUpperCase() : '';
+    novaLinha.rota = rowData.rota || '';
+    novaLinha.status_rota = rowData.status_rota || '';
+    novaLinha.nome_mot = rowData.nome_mot || '';
+    novaLinha.nome_aux = rowData.nome_aux || '';
+    novaLinha.nome_terceiro = rowData.nome_terceiro || '';
+
+    return novaLinha;
+}
+
+async function incluirSelecionadosNoDiaSeguinte() {
+    if (!canManageGrid()) {
+        alert('Voce nao tem permissao para alterar os lancamentos do grid.');
+        return;
+    }
+
+    const dataAtual = document.getElementById('dataRetorno')?.value;
+    const filialSelecionada = document.getElementById('filialRetorno')?.value;
+
+    if (!dataAtual) {
+        alert('Selecione a Data do Retorno antes de incluir no dia seguinte.');
+        return;
+    }
+
+    const indices = getSelectedRowIndices();
+    if (indices.length === 0) {
+        alert('Selecione pelo menos uma linha para incluir no dia seguinte.');
+        return;
+    }
+
+    const dataDiaSeguinte = adicionarDiasDataIso(dataAtual, 1);
+    if (!dataDiaSeguinte) {
+        alert('Nao foi possivel calcular o dia seguinte.');
+        return;
+    }
+
+    const linhasPorPlaca = new Map();
+    indices
+        .map(index => criarLinhaParaDiaSeguinte(gridData[index], dataDiaSeguinte, filialSelecionada))
+        .filter(row => row.placa)
+        .forEach(row => linhasPorPlaca.set(row.placa, row));
+    const linhas = [...linhasPorPlaca.values()];
+
+    if (linhas.length === 0) {
+        alert('As linhas selecionadas nao possuem placa para gravar no dia seguinte.');
+        return;
+    }
+
+    if (!confirm(`Incluir ${linhas.length} linha(s) selecionada(s) no dia ${dataDiaSeguinte}?`)) return;
+
+    const payload = linhas.map(row => mapRowToPayload(row, dataDiaSeguinte));
+
+    try {
+        const { error } = await supabaseClient
+            .from('retorno_rota')
+            .upsert(payload, { onConflict: 'data_retorno,placa' });
+
+        if (error) throw error;
+
+        registrarAuditoria('INCLUIR', 'Retorno de Rota', `Inclusao de ${linhas.length} linha(s) no dia seguinte: ${dataDiaSeguinte}`);
+        alert(`${linhas.length} linha(s) incluida(s) no dia ${dataDiaSeguinte}.`);
+
+        const dataInput = document.getElementById('dataRetorno');
+        if (dataInput) dataInput.value = dataDiaSeguinte;
+        await loadDataFromSupabase();
+    } catch (error) {
+        console.error('Erro ao incluir selecionados no dia seguinte:', error);
+        alert('Erro ao incluir no dia seguinte: ' + (error.message || JSON.stringify(error)));
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Inicializa a data com o dia de hoje
     const dataInput = document.getElementById('dataRetorno');
@@ -443,10 +545,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnToggleMenuLateralRetornoRota')?.addEventListener('click', toggleMenuLateralRetornoRota);
     dataInput.addEventListener('change', loadDataFromSupabase);
     document.getElementById('filialRetorno').addEventListener('change', loadDataFromSupabase);
-    document.getElementById('btnAdicionarLinha').addEventListener('click', () => {
-        addEmptyRow();
-        renderGrid();
-    });
+    document.getElementById('btnAdicionarLinha').addEventListener('click', incluirLinhaVazia);
+    document.getElementById('btnFabAdicionarLinha')?.addEventListener('click', incluirLinhaVazia);
     document.getElementById('tbodyRetornoRota').addEventListener('paste', handlePaste);
     document.getElementById('tbodyRetornoRota').addEventListener('click', handleRowSelectionClick);
     document.getElementById('btnSalvarTudo').addEventListener('click', saveAllData);
@@ -454,6 +554,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnExportarPecas').addEventListener('click', () => exportToPDF('pecas'));
     document.getElementById('btnExcluirSelecionados').addEventListener('click', deleteSelectedRows);
     document.getElementById('btnFabExcluirSelecionados')?.addEventListener('click', deleteSelectedRows);
+    document.getElementById('btnIncluirSelecionadosDiaSeguinte')?.addEventListener('click', incluirSelecionadosNoDiaSeguinte);
+    document.getElementById('btnFabIncluirSelecionadosDiaSeguinte')?.addEventListener('click', incluirSelecionadosNoDiaSeguinte);
 
 
     document.getElementById('btnImportarRoteiro').addEventListener('click', () => {
@@ -831,6 +933,8 @@ function addEmptyRow() {
 
     const newRow = {};
     COLUMN_MAP.forEach(key => newRow[key] = null);
+    newRow.data_retorno = document.getElementById('dataRetorno')?.value || null;
+    newRow.filial = document.getElementById('filialRetorno')?.value || null;
     gridData.push(newRow);
 }
 
