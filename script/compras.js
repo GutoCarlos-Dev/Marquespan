@@ -370,7 +370,11 @@ const UI = {
         <div class="form-group"><select id="empresa${i}Cot" class="glass-input compact-input"><option value="">-- Carregando --</option></select></div>
         <div class="form-group"><textarea id="obsEmpresa${i}" placeholder="Observações" class="glass-input" rows="2" oninput="this.value = this.value.toUpperCase()"></textarea></div>
         <div id="precosEmpresa${i}"></div>
-        <div class="form-group"><input type="number" step="0.01" id="freteEmpresa${i}" placeholder="Frete (R$)" class="glass-input compact-input" /></div>
+        <div class="company-adjustments-grid">
+          <div class="form-group"><input type="number" step="0.01" min="0" id="freteEmpresa${i}" placeholder="Frete (R$)" class="glass-input compact-input" /></div>
+          <div class="form-group"><input type="number" step="0.01" min="0" id="descontoEmpresa${i}" placeholder="Desc. (R$)" class="glass-input compact-input" /></div>
+          <div class="form-group"><input type="number" step="0.01" min="0" id="impostoEmpresa${i}" placeholder="Imp. (R$)" class="glass-input compact-input" /></div>
+        </div>
         <div class="form-group"><input type="text" id="totalEmpresa${i}" placeholder="Total (R$)" readonly class="glass-input compact-input" style="font-weight:bold; background-color: rgba(0,0,0,0.05);" /></div>
         <div class="winner-selector"><input type="radio" name="empresaVencedora" value="${i}" id="vencedor${i}" /><label for="vencedor${i}">Vencedor</label></div>
       `;
@@ -410,23 +414,58 @@ const UI = {
       });
     });
 
-    document.querySelectorAll('input[id^="freteEmpresa"]').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.id.replace('freteEmpresa',''))));
+    document.querySelectorAll('input[id^="freteEmpresa"], input[id^="descontoEmpresa"], input[id^="impostoEmpresa"]').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.id.replace(/\D/g, ''))));
     document.querySelectorAll('.price-entry input').forEach(inp=>inp.addEventListener('input', e=>this.updateCompanyTotal(e.target.dataset.empresa)));
 
     this.updateAllTotals();
   },
 
-  updateCompanyTotal(index){
-    let total = 0;
+  parseCurrencyInput(id){
+    const input = document.getElementById(id);
+    return input ? parseFloat(input.value) || 0 : 0;
+  },
+
+  formatCurrencyValue(value){
+    return `R$ ${Number(value || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  },
+
+  getCompanyValues(index){
+    let subtotal = 0;
     this.cart.items.forEach(item=>{
       const inp = document.getElementById(`price-${index}-${item.cod}`);
       const price = inp ? parseFloat(inp.value)||0 : 0;
-      total += price * item.qtd;
+      subtotal += price * item.qtd;
     });
-    const freteInput = document.getElementById(`freteEmpresa${index}`);
-    const frete = freteInput ? parseFloat(freteInput.value) || 0 : 0;
+
+    const frete = this.parseCurrencyInput(`freteEmpresa${index}`);
+    const desconto = this.parseCurrencyInput(`descontoEmpresa${index}`);
+    const imposto = this.parseCurrencyInput(`impostoEmpresa${index}`);
+    const total = Math.max(subtotal + frete - desconto + imposto, 0);
+    return { subtotal, frete, desconto, imposto, total };
+  },
+
+  getBudgetAdjustments(orcamento = {}){
+    return {
+      frete: parseFloat(orcamento?.valor_frete) || 0,
+      desconto: parseFloat(orcamento?.valor_desconto) || 0,
+      imposto: parseFloat(orcamento?.valor_imposto) || 0
+    };
+  },
+
+  appendBudgetTotalRows(rows, prefixCols, subtotal, ajustes){
+    const { frete, desconto, imposto } = ajustes;
+    const totalGeral = Math.max(subtotal + frete - desconto + imposto, 0);
+    rows.push([...prefixCols, 'Subtotal:', this.formatCurrencyValue(subtotal)]);
+    if (frete > 0) rows.push([...prefixCols, 'Frete:', this.formatCurrencyValue(frete)]);
+    if (desconto > 0) rows.push([...prefixCols, 'Desc.:', `- ${this.formatCurrencyValue(desconto)}`]);
+    if (imposto > 0) rows.push([...prefixCols, 'Imp.:', this.formatCurrencyValue(imposto)]);
+    rows.push([...prefixCols, 'TOTAL:', this.formatCurrencyValue(totalGeral)]);
+    return totalGeral;
+  },
+
+  updateCompanyTotal(index){
     const totalInput = document.getElementById(`totalEmpresa${index}`);
-    if(totalInput) totalInput.value = (total + frete).toFixed(2);
+    if(totalInput) totalInput.value = this.getCompanyValues(index).total.toFixed(2);
   },
 
   updateAllTotals(){ this.updateCompanyTotal(1); this.updateCompanyTotal(2); this.updateCompanyTotal(3); },
@@ -604,7 +643,7 @@ const UI = {
       if (cotacao.status === 'Recebido' || cotacao.status === 'Recebido Parcial') {
         if (cotacao.id_fornecedor_vencedor) {
              const { data: orcamento } = await supabaseClient.from('cotacao_orcamentos')
-                  .select('id, valor_frete')
+                  .select('id, valor_frete, valor_desconto, valor_imposto')
                   .eq('id_cotacao', id)
                   .eq('id_fornecedor', cotacao.id_fornecedor_vencedor)
                   .single();
@@ -647,14 +686,8 @@ const UI = {
                  }
              });
 
-             const frete = orcamento?.valor_frete || 0;
-             const totalGeral = subtotal + frete;
-
              const emptyCols = hasDivergence ? ['', '', '', ''] : ['', ''];
-             
-             rows.push([...emptyCols, 'Subtotal:', `R$ ${subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
-             if (frete > 0) rows.push([...emptyCols, 'Frete:', `R$ ${frete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
-             rows.push([...emptyCols, 'TOTAL:', `R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
+             this.appendBudgetTotalRows(rows, emptyCols, subtotal, this.getBudgetAdjustments(orcamento));
         } else {
              const { data: recebimentos, error: recErr } = await supabaseClient.from('recebimentos').select('qtd_pedida, qtd_recebida, produtos(nome)').eq('id_cotacao', id);
              if (recErr) throw recErr;
@@ -664,7 +697,7 @@ const UI = {
       } else if (cotacao.status === 'Aprovada' || cotacao.status === 'Pendente') {
         if (cotacao.id_fornecedor_vencedor) {
              const { data: orcamento } = await supabaseClient.from('cotacao_orcamentos')
-                  .select('id, valor_frete')
+                  .select('id, valor_frete, valor_desconto, valor_imposto')
                   .eq('id_cotacao', id)
                   .eq('id_fornecedor', cotacao.id_fornecedor_vencedor)
                   .single();
@@ -695,12 +728,7 @@ const UI = {
                  ];
              });
 
-             const frete = orcamento?.valor_frete || 0;
-             const totalGeral = subtotal + frete;
-
-             rows.push(['', '', 'Subtotal:', `R$ ${subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
-             if (frete > 0) rows.push(['', '', 'Frete:', `R$ ${frete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
-             rows.push(['', '', 'TOTAL:', `R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]);
+             this.appendBudgetTotalRows(rows, ['', ''], subtotal, this.getBudgetAdjustments(orcamento));
         } else {
              const { data: itens, error: itensErr } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(codigo_principal, nome, unidade_medida)').eq('id_cotacao', id);
              if (itensErr) throw itensErr;
@@ -739,7 +767,7 @@ const UI = {
     let idFornecedorVencedor=null, valorTotalVencedor=null;
     if(winner){
       idFornecedorVencedor = document.getElementById(`empresa${winner.value}Cot`).value; 
-      valorTotalVencedor = parseFloat(document.getElementById(`totalEmpresa${winner.value}`).value)||null
+      valorTotalVencedor = this.getCompanyValues(winner.value).total || null
     }
 
     try{
@@ -784,10 +812,13 @@ const UI = {
 
       for(let idx=1;idx<=3;idx++){
         const fornecedorId = document.getElementById(`empresa${idx}Cot`).value;
-        const valorTotal = parseFloat(document.getElementById(`totalEmpresa${idx}`).value)||null;
-        const valorFrete = parseFloat(document.getElementById(`freteEmpresa${idx}`).value)||null;
+        const valoresEmpresa = this.getCompanyValues(idx);
+        const valorTotal = valoresEmpresa.total || null;
+        const valorFrete = valoresEmpresa.frete || null;
+        const valorDesconto = valoresEmpresa.desconto || null;
+        const valorImposto = valoresEmpresa.imposto || null;
         if(fornecedorId && valorTotal){
-          const orc = await SupabaseService.insert('cotacao_orcamentos',{ id_cotacao:cotacaoId, id_fornecedor:fornecedorId, valor_total:valorTotal, valor_frete: valorFrete, observacao:(document.getElementById(`obsEmpresa${idx}`).value||'').toUpperCase() });
+          const orc = await SupabaseService.insert('cotacao_orcamentos',{ id_cotacao:cotacaoId, id_fornecedor:fornecedorId, valor_total:valorTotal, valor_frete: valorFrete, valor_desconto: valorDesconto, valor_imposto: valorImposto, observacao:(document.getElementById(`obsEmpresa${idx}`).value||'').toUpperCase() });
           const orcamentoId = orc[0].id;
           const precos = [];
           this.cart.items.forEach(it=>{
@@ -808,7 +839,11 @@ const UI = {
     this.cart.clear(); 
     this.renderCart(); 
     for(let i=1;i<=3;i++){ 
-      document.getElementById(`empresa${i}Cot`).value=''; document.getElementById(`obsEmpresa${i}`).value=''; document.getElementById(`freteEmpresa${i}`).value=''; 
+      document.getElementById(`empresa${i}Cot`).value='';
+      document.getElementById(`obsEmpresa${i}`).value='';
+      document.getElementById(`freteEmpresa${i}`).value='';
+      document.getElementById(`descontoEmpresa${i}`).value='';
+      document.getElementById(`impostoEmpresa${i}`).value='';
     } 
     document.querySelectorAll('input[name="empresaVencedora"]').forEach(r=>r.checked=false); 
     if (!this.editingQuotationId) {
@@ -920,7 +955,7 @@ const UI = {
     try{
       const { data:cotacao, error:cotErr } = await supabaseClient.from('cotacoes').select('*,fornecedores(nome)').eq('id',id).single(); if(cotErr) throw cotErr;
       const { data:itens } = await supabaseClient.from('cotacao_itens').select('quantidade, produtos(codigo_principal,nome,id)').eq('id_cotacao',id);
-      const { data:orcamentos } = await supabaseClient.from('cotacao_orcamentos').select('*,fornecedores(nome),valor_frete').eq('id_cotacao',id);
+      const { data:orcamentos } = await supabaseClient.from('cotacao_orcamentos').select('*,fornecedores(nome),valor_frete,valor_desconto,valor_imposto').eq('id_cotacao',id);
       for(const o of orcamentos){ const { data:precos } = await supabaseClient.from('orcamento_item_precos').select('preco_unitario,id_produto').eq('id_orcamento',o.id); o.precos=precos }
       const dataDisplay = cotacao.updated_at ? new Date(cotacao.updated_at).toLocaleString('pt-BR') : (cotacao.data_cotacao ? new Date(cotacao.data_cotacao).toLocaleString('pt-BR') : 'N/A');
       const usuarioDisplay = cotacao.usuario || cotacao.usuario_lancamento || cotacao.usuario_id || (cotacao.created_by ? String(cotacao.created_by) : null) || 'N/D';
@@ -931,8 +966,11 @@ const UI = {
       
       orcamentos.forEach(o=>{
         const isWinner = o.id_fornecedor===cotacao.id_fornecedor_vencedor; 
-        const freteDisplay = o.valor_frete ? `<p><strong>Frete:</strong> R$ ${parseFloat(o.valor_frete).toFixed(2)}</p>` : '';
-        html += `<div class="card ${isWinner?'winner':''}">${isWinner? '<span class="status status-Aprovada" style="float:right; margin-top:-5px;">VENCEDOR</span>':''}<h4>${o.fornecedores.nome}</h4><p><strong>Total+Frete:</strong> R$ ${parseFloat(o.valor_total).toFixed(2)}</p>${freteDisplay}<p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>QTD</th><th>Preço Unitário</th><th>Preço Total</th></tr></thead><tbody>${o.precos.map(p=>{
+        const ajustes = this.getBudgetAdjustments(o);
+        const freteDisplay = ajustes.frete ? `<p><strong>Frete:</strong> ${this.formatCurrencyValue(ajustes.frete)}</p>` : '';
+        const descontoDisplay = ajustes.desconto ? `<p><strong>Desc.:</strong> - ${this.formatCurrencyValue(ajustes.desconto)}</p>` : '';
+        const impostoDisplay = ajustes.imposto ? `<p><strong>Imp.:</strong> ${this.formatCurrencyValue(ajustes.imposto)}</p>` : '';
+        html += `<div class="card ${isWinner?'winner':''}">${isWinner? '<span class="status status-Aprovada" style="float:right; margin-top:-5px;">VENCEDOR</span>':''}<h4>${o.fornecedores.nome}</h4><p><strong>Total Final:</strong> ${this.formatCurrencyValue(o.valor_total)}</p>${freteDisplay}${descontoDisplay}${impostoDisplay}<p><strong>Obs:</strong> ${o.observacao||'Nenhuma'}</p><table class="data-grid"><thead><tr><th>Produto</th><th>QTD</th><th>Preço Unitário</th><th>Preço Total</th></tr></thead><tbody>${o.precos.map(p=>{
           const itemDaCotacao = itens.find(it=>it.produtos.id===p.id_produto);
           const nomeProduto = itemDaCotacao ? itemDaCotacao.produtos.nome : 'Produto não encontrado';
           const quantidade = itemDaCotacao ? itemDaCotacao.quantidade : 0;
@@ -1011,6 +1049,8 @@ const UI = {
         document.getElementById(`empresa${cardIndex}Cot`).value = orc.id_fornecedor;
         document.getElementById(`obsEmpresa${cardIndex}`).value = orc.observacao || '';
         document.getElementById(`freteEmpresa${cardIndex}`).value = orc.valor_frete || '';
+        document.getElementById(`descontoEmpresa${cardIndex}`).value = orc.valor_desconto || '';
+        document.getElementById(`impostoEmpresa${cardIndex}`).value = orc.valor_imposto || '';
 
         orc.precos.forEach(p => {
           const produtoNoCarrinho = itens.find(i => i.produtos.id === p.id_produto);
@@ -1068,16 +1108,16 @@ const UI = {
       }
 
       let priceMap = new Map();
-      let frete = 0;
+      let ajustesRecebimento = { frete: 0, desconto: 0, imposto: 0 };
       if (cotacao.id_fornecedor_vencedor) {
           const { data: orcamento } = await supabaseClient.from('cotacao_orcamentos')
-            .select('id, valor_frete')
+            .select('id, valor_frete, valor_desconto, valor_imposto')
             .eq('id_cotacao', id)
             .eq('id_fornecedor', cotacao.id_fornecedor_vencedor)
             .single();
           
           if (orcamento) {
-              frete = parseFloat(orcamento.valor_frete) || 0;
+              ajustesRecebimento = this.getBudgetAdjustments(orcamento);
               const { data: precos } = await supabaseClient.from('orcamento_item_precos')
                 .select('id_produto, preco_unitario')
                 .eq('id_orcamento', orcamento.id);
@@ -1089,7 +1129,7 @@ const UI = {
       }
 
       document.getElementById('recebimentoPanelTitle').textContent = `Recebimento - Cotação ${cotacao.codigo_cotacao}`;
-      this.renderRecebimentoItems(itens, id, priceMap, frete, recebidoMap);
+      this.renderRecebimentoItems(itens, id, priceMap, ajustesRecebimento, recebidoMap);
       this.recebimentoPanelBackdrop?.classList.remove('hidden');
     } catch (e) {
       console.error('Erro ao abrir painel de recebimento', e);
@@ -1100,6 +1140,8 @@ const UI = {
   updateRecebimentoCalculations() {
       let totalItens = 0;
       const frete = parseFloat(this.recebimentoItemsContainer.dataset.frete) || 0;
+      const desconto = parseFloat(this.recebimentoItemsContainer.dataset.desconto) || 0;
+      const imposto = parseFloat(this.recebimentoItemsContainer.dataset.imposto) || 0;
 
       this.recebimentoItemsContainer.querySelectorAll('.recebimento-item').forEach(div => {
           const input = div.querySelector('.qtd-recebida');
@@ -1127,16 +1169,22 @@ const UI = {
           totalItens += totalItem;
       });
 
-      const totalGeral = totalItens + frete;
+      const totalGeral = Math.max(totalItens + frete - desconto + imposto, 0);
       const totalDisplay = document.getElementById('recebimentoTotalValue');
       if(totalDisplay) totalDisplay.textContent = totalGeral.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
   },
 
-  renderRecebimentoItems(itens, cotacaoId, priceMap = new Map(), frete = 0, recebidoMap = {}) {
+  renderRecebimentoItems(itens, cotacaoId, priceMap = new Map(), ajustes = {}, recebidoMap = {}) {
     if (!this.recebimentoItemsContainer) return;
     this.recebimentoItemsContainer.innerHTML = '';
     this.recebimentoItemsContainer.dataset.cotacaoId = cotacaoId;
+    if (typeof ajustes === 'number') ajustes = { frete: ajustes, desconto: 0, imposto: 0 };
+    const frete = parseFloat(ajustes.frete) || 0;
+    const desconto = parseFloat(ajustes.desconto) || 0;
+    const imposto = parseFloat(ajustes.imposto) || 0;
     this.recebimentoItemsContainer.dataset.frete = frete;
+    this.recebimentoItemsContainer.dataset.desconto = desconto;
+    this.recebimentoItemsContainer.dataset.imposto = imposto;
 
     itens.forEach(item => {
       const qtdJaRecebida = recebidoMap[item.produtos.id] || 0;
@@ -1169,6 +1217,8 @@ const UI = {
     totalDiv.style.cssText = 'margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px; text-align: right; font-size: 1.1em; border: 1px solid #dee2e6;';
     totalDiv.innerHTML = `
         <div style="margin-bottom:5px; font-size:0.9em; color:#666;">Frete: R$ ${frete.toFixed(2)}</div>
+        ${desconto > 0 ? `<div style="margin-bottom:5px; font-size:0.9em; color:#666;">Desc.: - R$ ${desconto.toFixed(2)}</div>` : ''}
+        ${imposto > 0 ? `<div style="margin-bottom:5px; font-size:0.9em; color:#666;">Imp.: R$ ${imposto.toFixed(2)}</div>` : ''}
         <div style="font-weight:bold; color:#006937;">Total Recebimento: <span id="recebimentoTotalValue">R$ 0,00</span></div>
     `;
     this.recebimentoItemsContainer.appendChild(totalDiv);

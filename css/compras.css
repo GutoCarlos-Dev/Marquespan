@@ -307,6 +307,12 @@
     margin-bottom: 5px;
 }
 
+.company-adjustments-grid {
+    display: grid;
+    gap: 5px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .company-card textarea {
     width: 100%;
     padding: 5px;
