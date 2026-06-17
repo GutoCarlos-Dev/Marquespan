@@ -33,12 +33,14 @@ let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
 const filtrosTabela = {
   indice: document.getElementById('filtro-posicao-indice'),
   data: document.getElementById('filtro-posicao-data'),
+  dataFinal: document.getElementById('filtro-posicao-data-final'),
   rota: document.getElementById('filtro-posicao-rota'),
   motorista: document.getElementById('filtro-posicao-motorista'),
   auxiliar: document.getElementById('filtro-posicao-auxiliar'),
   velocidade: document.getElementById('filtro-posicao-velocidade'),
   situacao: document.getElementById('filtro-posicao-situacao'),
   tempoParado: document.getElementById('filtro-posicao-tempo-parado'),
+  cidade: document.getElementById('filtro-posicao-cidade'),
   coordenadas: document.getElementById('filtro-posicao-coordenadas'),
   quantidade: document.getElementById('filtro-posicao-quantidade')
 };
@@ -320,12 +322,14 @@ function destacarPonto(indice) {
 function valorOrdenacao(ponto, campo) {
   if (campo === 'indice') return ponto.indiceOriginal;
   if (campo === 'dataInicial') return new Date(ponto.dataInicial || 0).getTime();
+  if (campo === 'dataFinal') return new Date(ponto.dataFinal || ponto.dataInicial || 0).getTime();
   if (campo === 'rota') return obterCampoEscalaPonto(ponto, 'rota');
   if (campo === 'motorista') return obterCampoEscalaPonto(ponto, 'motorista');
   if (campo === 'auxiliar') return obterCampoEscalaPonto(ponto, 'auxiliar');
   if (campo === 'velocidade') return Number(ponto.velocidade) || 0;
   if (campo === 'tipo') return ponto.tipo || '';
   if (campo === 'tempoParado') return calcularTempoParadoMs(ponto);
+  if (campo === 'cidade') return ponto.cidade || '';
   if (campo === 'coordenadas') return `${ponto.latitude},${ponto.longitude}`;
   if (campo === 'quantidadePosicoes') return Number(ponto.quantidadePosicoes) || 0;
   return '';
@@ -334,32 +338,38 @@ function valorOrdenacao(ponto, campo) {
 function obterPontosFiltradosOrdenados() {
   const filtroIndice = filtrosTabela.indice.value.trim();
   const filtroData = filtrosTabela.data.value.trim().toLocaleLowerCase('pt-BR');
+  const filtroDataFinal = filtrosTabela.dataFinal.value.trim().toLocaleLowerCase('pt-BR');
   const filtroRota = filtrosTabela.rota.value.trim().toLocaleLowerCase('pt-BR');
   const filtroMotorista = filtrosTabela.motorista.value.trim().toLocaleLowerCase('pt-BR');
   const filtroAuxiliar = filtrosTabela.auxiliar.value.trim().toLocaleLowerCase('pt-BR');
   const filtroVelocidade = filtrosTabela.velocidade.value.trim();
   const filtroSituacao = filtrosTabela.situacao.value;
   const filtroTempoParado = filtrosTabela.tempoParado.value.trim().toLocaleLowerCase('pt-BR');
+  const filtroCidade = filtrosTabela.cidade.value.trim().toLocaleLowerCase('pt-BR');
   const filtroCoordenadas = filtrosTabela.coordenadas.value.trim().toLowerCase();
   const filtroQuantidade = filtrosTabela.quantidade.value.trim();
 
   const filtrados = pontosAtuais.filter((ponto) => {
     const indiceExibido = ponto.indiceOriginal + 1;
     const dataFormatada = formatarData(ponto.dataInicial).toLocaleLowerCase('pt-BR');
+    const dataFinalFormatada = formatarData(ponto.dataFinal || ponto.dataInicial).toLocaleLowerCase('pt-BR');
     const rota = obterCampoEscalaPonto(ponto, 'rota').toLocaleLowerCase('pt-BR');
     const motorista = obterCampoEscalaPonto(ponto, 'motorista').toLocaleLowerCase('pt-BR');
     const auxiliar = obterCampoEscalaPonto(ponto, 'auxiliar').toLocaleLowerCase('pt-BR');
     const tempoParado = formatarDuracao(calcularTempoParadoMs(ponto)).toLocaleLowerCase('pt-BR');
+    const cidade = String(ponto.cidade || '').toLocaleLowerCase('pt-BR');
     const coordenadas = `${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}`.toLowerCase();
 
     return (!filtroIndice || indiceExibido === Number(filtroIndice))
       && (!filtroData || dataFormatada.includes(filtroData))
+      && (!filtroDataFinal || dataFinalFormatada.includes(filtroDataFinal))
       && (!filtroRota || rota.includes(filtroRota))
       && (!filtroMotorista || motorista.includes(filtroMotorista))
       && (!filtroAuxiliar || auxiliar.includes(filtroAuxiliar))
       && (!filtroVelocidade || Math.round(ponto.velocidade || 0) === Number(filtroVelocidade))
       && (!filtroSituacao || ponto.tipo === filtroSituacao)
       && (!filtroTempoParado || tempoParado.includes(filtroTempoParado))
+      && (!filtroCidade || cidade.includes(filtroCidade))
       && (!filtroCoordenadas || coordenadas.includes(filtroCoordenadas))
       && (!filtroQuantidade || Number(ponto.quantidadePosicoes || 1) === Number(filtroQuantidade));
   });
@@ -397,12 +407,14 @@ function renderizarTabela() {
     linha.innerHTML = `
       <td>${ponto.indiceOriginal + 1}</td>
       <td>${formatarData(ponto.dataInicial)}</td>
+      <td>${formatarData(ponto.dataFinal || ponto.dataInicial)}</td>
       <td>${obterCampoEscalaPonto(ponto, 'rota')}</td>
       <td>${obterCampoEscalaPonto(ponto, 'motorista')}</td>
       <td>${obterCampoEscalaPonto(ponto, 'auxiliar')}</td>
       <td>${Math.round(ponto.velocidade || 0)} km/h</td>
       <td><span class="status-posicao ${ponto.tipo}">${ponto.tipo === 'parado' ? 'Parado' : 'Deslocamento'}</span></td>
       <td>${formatarDuracao(calcularTempoParadoMs(ponto))}</td>
+      <td>${escaparHTML(ponto.cidade || '-')}</td>
       <td class="celula-coordenadas" title="Clique com o botão direito para abrir no Google Maps">${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}</td>
       <td>${ponto.quantidadePosicoes || 1}</td>
     `;
@@ -412,7 +424,7 @@ function renderizarTabela() {
 
   if (pontos.length === 0) {
     const linha = document.createElement('tr');
-    linha.innerHTML = '<td colspan="10" class="tabela-sem-resultados">Nenhuma posição encontrada com os filtros informados.</td>';
+    linha.innerHTML = '<td colspan="12" class="tabela-sem-resultados">Nenhuma posição encontrada com os filtros informados.</td>';
     fragmento.appendChild(linha);
   }
 

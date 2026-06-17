@@ -37,6 +37,97 @@ function extrairPlacaUnidadeRastreada(nome: unknown) {
   return normalizarPlaca(placaComMascara || texto.split(/\s+/)[0]);
 }
 
+function textoNaoVazio(valor: unknown) {
+  const texto = String(valor || '').trim();
+  return texto || null;
+}
+
+function obterCidadePonto(ponto: Record<string, unknown>) {
+  const direta = textoNaoVazio(
+    ponto.Cidade
+      || ponto.Municipio
+      || ponto['Munic\u00edpio']
+      || ponto.CidadePosicao
+      || ponto['CidadePosi\u00e7\u00e3o']
+      || ponto.NomeCidade
+  );
+  if (direta) return direta;
+
+  const endereco = textoNaoVazio(
+    ponto.Endereco
+      || ponto['Endere\u00e7o']
+      || ponto.EnderecoFormatado
+      || ponto.Localizacao
+      || ponto['Localiza\u00e7\u00e3o']
+  );
+  return obterCidadeEndereco(endereco);
+}
+
+function obterCidadeEndereco(endereco: unknown) {
+  const texto = textoNaoVazio(endereco);
+  if (!texto) return null;
+
+  const partes = texto.split(',').map((parte) => parte.trim()).filter(Boolean);
+  const parteComUf = partes.find((parte) => /\s-\s[A-Z]{2}\b/.test(parte));
+  if (parteComUf) return textoNaoVazio(parteComUf.split(/\s-\s[A-Z]{2}\b/)[0]);
+
+  return partes.length >= 2 ? partes.at(-2) || null : null;
+}
+
+async function consultarCidadePorCoordenada(
+  idCentral: string,
+  idCliente: string,
+  cookies: CookieJar,
+  latitude: number,
+  longitude: number
+) {
+  const addressUrl = new URL('/api/PosicaoLocalizacao/GetAddressByLatLng', SYSTEMSAT_BASE_URL);
+  addressUrl.search = new URLSearchParams({
+    paramCultura: 'pt-BR',
+    paramIdCentral: idCentral,
+    paramIdCliente: idCliente,
+    paramLatitude: String(latitude),
+    paramLogitude: String(longitude)
+  }).toString();
+
+  const addressResponse = await systemsatFetch(addressUrl.toString(), cookies);
+  if (!addressResponse.ok) return null;
+
+  const addressResult = await addressResponse.json();
+  const dadosEndereco = addressResult?.Data || {};
+  return obterCidadePonto(dadosEndereco)
+    || obterCidadeEndereco(dadosEndereco?.EnderecoFormatado)
+    || null;
+}
+
+async function preencherCidadesHistorico(
+  pontos: Array<{ latitude: number; longitude: number; cidade?: string | null }>,
+  idCentral: string,
+  idCliente: string,
+  cookies: CookieJar
+) {
+  const cache = new Map<string, string | null>();
+  const pendentes = pontos.filter((ponto) => !ponto.cidade);
+
+  for (const ponto of pendentes) {
+    const chave = `${ponto.latitude.toFixed(4)},${ponto.longitude.toFixed(4)}`;
+    if (!cache.has(chave)) cache.set(chave, null);
+  }
+
+  const chaves = [...cache.keys()].slice(0, 500);
+  await mapearEmLotes(chaves, 8, async (chave) => {
+    const [latitude, longitude] = chave.split(',').map(Number);
+    const cidade = await consultarCidadePorCoordenada(idCentral, idCliente, cookies, latitude, longitude);
+    cache.set(chave, cidade);
+    return null;
+  });
+
+  pendentes.forEach((ponto) => {
+    const cidade = cache.get(`${ponto.latitude.toFixed(4)},${ponto.longitude.toFixed(4)}`);
+    if (cidade) ponto.cidade = cidade;
+  });
+}
+
 function distanciaEntrePlacas(placaA: unknown, placaB: unknown) {
   const a = normalizarPlaca(placaA);
   const b = normalizarPlaca(placaB);
@@ -507,6 +598,7 @@ async function consultarHistoricoSystemsat(
     throw new Error('A sessão do rastreador não foi iniciada corretamente.');
   }
 
+  const idCentral = ids[1];
   const idCliente = ids[2];
   const placa = formatarPlaca(placaInformada);
   let unidades = await buscarUnidadesRastreadas(token, idCliente, cookies, placa, 20);
@@ -563,6 +655,7 @@ async function consultarHistoricoSystemsat(
       longitude: Number(ponto.Longitude),
       dataInicial: ponto.DataPosicaoInicial || null,
       dataFinal: ponto.DataPosicaoFinal || null,
+      cidade: obterCidadePonto(ponto),
       velocidade: Number(ponto.Velocidade) || 0,
       quantidadePosicoes: Number(ponto.QuantidadePosicoes) || 1,
       motorista: ponto.Motorista || null,
@@ -580,13 +673,15 @@ async function consultarHistoricoSystemsat(
       new Date(String(a.dataInicial || 0)).getTime()
       - new Date(String(b.dataInicial || 0)).getTime()
     ));
+  const pontosLimitados = pontos.slice(0, 10000);
+  await preencherCidadesHistorico(pontosLimitados, idCentral, idCliente, cookies);
 
   return {
     placa,
     unidade: historicos[0]?.UnidadeRastreada || unidade.Nome,
     dataInicial,
     dataFinal,
-    pontos: pontos.slice(0, 10000),
+    pontos: pontosLimitados,
     truncado: pontos.length > 10000
   };
 }

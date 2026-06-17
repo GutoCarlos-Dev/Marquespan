@@ -164,19 +164,22 @@
             <thead>
               <tr class="cabecalho-ordenacao">
                 <th><button type="button" class="btn-ordenar" data-ordenar="indice"># <i class="fas fa-sort"></i></button></th>
-                <th><button type="button" class="btn-ordenar" data-ordenar="dataInicial">Data/Hora <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="btn-ordenar" data-ordenar="dataInicial">Data/Hora início <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="btn-ordenar" data-ordenar="dataFinal">Data/Hora parada <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="rota">Rota <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="motorista">Motorista <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="auxiliar">Auxiliar <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="velocidade">Velocidade <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="tipo">Situação <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="tempoParado">Tempo parado <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="btn-ordenar" data-ordenar="cidade">Cidade <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="coordenadas">Coordenadas <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="quantidadePosicoes">Pontos agrupados <i class="fas fa-sort"></i></button></th>
               </tr>
               <tr class="cabecalho-filtros">
                 <th><input id="filtro-posicao-indice" type="number" min="1" placeholder="#"></th>
-                <th><input id="filtro-posicao-data" type="text" placeholder="dd/mm/aaaa ou hora"></th>
+                <th><input id="filtro-posicao-data" type="text" placeholder="Início"></th>
+                <th><input id="filtro-posicao-data-final" type="text" placeholder="Parada"></th>
                 <th><input id="filtro-posicao-rota" type="text" placeholder="Rota"></th>
                 <th><input id="filtro-posicao-motorista" type="text" placeholder="Motorista"></th>
                 <th><input id="filtro-posicao-auxiliar" type="text" placeholder="Auxiliar"></th>
@@ -189,6 +192,7 @@
                   </select>
                 </th>
                 <th><input id="filtro-posicao-tempo-parado" type="text" placeholder="Tempo"></th>
+                <th><input id="filtro-posicao-cidade" type="text" placeholder="Cidade"></th>
                 <th><input id="filtro-posicao-coordenadas" type="text" placeholder="Latitude ou longitude"></th>
                 <th><input id="filtro-posicao-quantidade" type="number" min="1" placeholder="Pontos"></th>
               </tr>
