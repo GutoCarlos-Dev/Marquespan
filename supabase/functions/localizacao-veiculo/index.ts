@@ -686,6 +686,29 @@ async function consultarHistoricoSystemsat(
   };
 }
 
+async function geocodificarEndereco(consulta: Record<string, string>) {
+  const url = new URL('https://nominatim.openstreetmap.org/search');
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('limit', '1');
+  url.searchParams.set('countrycodes', 'br');
+  url.searchParams.set('email', 'devsp@marquespan.com.br');
+  Object.entries(consulta).forEach(([chave, valor]) => {
+    const texto = String(valor || '').trim();
+    if (texto) url.searchParams.set(chave, texto);
+  });
+
+  const response = await fetch(url.toString(), {
+    headers: { Accept: 'application/json', 'User-Agent': 'Marquespan-Localizacao/1.0' }
+  });
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  const item = Array.isArray(data) ? data[0] : null;
+  if (!item) return null;
+
+  return { lat: Number(item.lat), lng: Number(item.lon) };
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -702,6 +725,15 @@ Deno.serve(async (request) => {
 
   try {
     const body = await request.json();
+
+    if (body?.acao === 'geocodificar') {
+      const consulta = body?.consulta;
+      if (!consulta || typeof consulta !== 'object' || Array.isArray(consulta)) {
+        return jsonResponse({ success: false, message: 'Consulta inválida.' }, 400);
+      }
+      const posicao = await geocodificarEndereco(consulta as Record<string, string>);
+      return jsonResponse({ success: true, data: posicao });
+    }
 
     if (body?.acao === 'frota') {
       const data = await consultarFrotaSystemsat(authorization, body?.filial);

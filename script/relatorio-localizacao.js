@@ -25,10 +25,13 @@ const resumoEscalaAuxiliar = document.getElementById('resumo-escala-auxiliar');
 
 let mapa;
 let camadaPercurso;
+let camadaClientesRota;
 let marcadorSelecionado;
 let pontosAtuais = [];
 let escalasPorDataAtual = new Map();
 let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
+const GEOCODE_DELAY_MS = 1200;
+const MAX_CLIENTES_ROTA_MAPA = 120;
 
 const filtrosTabela = {
   indice: document.getElementById('filtro-posicao-indice'),
@@ -61,6 +64,20 @@ function escaparHTML(valor) {
     '"': '&quot;',
     "'": '&#39;'
   }[char]));
+}
+
+function limparTexto(valor) {
+  return String(valor ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizarRotaCliente(valor) {
+  const texto = limparTexto(valor);
+  const numero = texto.match(/\d+/)?.[0];
+  return numero ? numero.replace(/^0+(?=\d)/, '') : texto;
 }
 
 function formatarPlaca(valor) {
@@ -183,6 +200,14 @@ function iniciarMapa() {
       attribution: 'Tiles &copy; Esri'
     }
   );
+  const camadaRotulos = L.tileLayer(
+    'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    {
+      maxZoom: 19,
+      attribution: 'Labels &copy; Esri'
+    }
+  );
+  const camadaHibrida = L.layerGroup([camadaSatelite, camadaRotulos]);
 
   camadaMapa.addTo(mapa);
   L.control.layers({
@@ -194,6 +219,7 @@ function iniciarMapa() {
   }).addTo(mapa);
 
   camadaPercurso = L.layerGroup().addTo(mapa);
+  camadaClientesRota = L.layerGroup().addTo(mapa);
   return true;
 }
 
@@ -248,6 +274,7 @@ function desenharMapa(pontos) {
   }
 
   camadaPercurso.clearLayers();
+  camadaClientesRota?.clearLayers();
   if (marcadorSelecionado) {
     mapa.removeLayer(marcadorSelecionado);
     marcadorSelecionado = null;
@@ -294,6 +321,176 @@ function desenharMapa(pontos) {
     maxZoom: 16
   });
   setTimeout(() => mapa.invalidateSize(), 50);
+}
+
+function montarEnderecoCliente(cliente) {
+  return [
+    cliente.endereco,
+    cliente.bairro,
+    cliente.municipio,
+    cliente.uf,
+    cliente.cep,
+    'Brasil'
+  ].map(limparTexto).filter(Boolean).join(', ');
+}
+
+function normalizarLogradouroCliente(endereco) {
+  return limparTexto(endereco)
+    .replace(/^(R|RUA)\s*[:.-]?\s*/i, 'Rua ')
+    .replace(/^(AV|AVENIDA)\s*[:.-]?\s*/i, 'Avenida ')
+    .replace(/^(ROD|RODOVIA)\s*[:.-]?\s*/i, 'Rodovia ')
+    .replace(/^(EST|ESTRADA)\s*[:.-]?\s*/i, 'Estrada ');
+}
+
+function montarConsultasGeocodeCliente(cliente) {
+  const rua = normalizarLogradouroCliente(cliente.endereco);
+  const bairro = limparTexto(cliente.bairro);
+  const cidade = limparTexto(cliente.municipio);
+  const uf = limparTexto(cliente.uf);
+  const cep = limparTexto(cliente.cep);
+  const consultas = [];
+
+  if (rua && cidade && uf) {
+    consultas.push({ street: rua, city: cidade, state: uf, country: 'Brasil', postalcode: cep });
+    consultas.push({ q: [rua, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ') });
+    consultas.push({ q: [rua, cidade, uf, 'Brasil'].filter(Boolean).join(', ') });
+  }
+  if (cep && cidade && uf) consultas.push({ q: [cep, cidade, uf, 'Brasil'].join(', ') });
+  if (cidade && uf) consultas.push({ city: cidade, state: uf, country: 'Brasil' });
+
+  return consultas;
+}
+
+function obterCacheGeocodeClientes() {
+  try {
+    return JSON.parse(localStorage.getItem('roteirizar_rota_geocode_cache') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function salvarCacheGeocodeClientes(cache) {
+  localStorage.setItem('roteirizar_rota_geocode_cache', JSON.stringify(cache));
+}
+
+async function geocodificarConsultaCliente(consulta) {
+  try {
+    const { data, error } = await supabaseClient.functions.invoke('localizacao-veiculo', {
+      body: { acao: 'geocodificar', consulta }
+    });
+    if (error || !data?.success) return null;
+    return data.data;
+  } catch {
+    return null;
+  }
+}
+
+async function geocodificarClienteRota(cliente) {
+  const consultas = montarConsultasGeocodeCliente(cliente);
+  for (const consulta of consultas) {
+    const posicao = await geocodificarConsultaCliente(consulta);
+    if (posicao) return posicao;
+    await sleep(250);
+  }
+  return null;
+}
+
+function adicionarClienteRotaNoMapa(cliente) {
+  if (!camadaClientesRota || !Number.isFinite(cliente.lat) || !Number.isFinite(cliente.lng)) return;
+
+  const icone = L.divIcon({
+    className: '',
+    html: '<div class="cliente-rota-marker"><i class="fas fa-store"></i></div>',
+    iconSize: [26, 26],
+    iconAnchor: [13, 26],
+    popupAnchor: [0, -26]
+  });
+
+  L.marker([cliente.lat, cliente.lng], { icon: icone })
+    .bindPopup(`
+      <strong>${escaparHTML(cliente.fantasia || cliente.nome || cliente.codigo)}</strong><br>
+      Cliente: ${escaparHTML(cliente.codigo)}<br>
+      Rota: ${escaparHTML(cliente.rota)}<br>
+      ${escaparHTML(cliente.enderecoMapa || montarEnderecoCliente(cliente))}
+    `)
+    .addTo(camadaClientesRota);
+}
+
+async function buscarClientesDasRotas(rotas) {
+  const rotasNormalizadas = Array.from(new Set((rotas || []).map(normalizarRotaCliente).filter(Boolean)));
+  if (!rotasNormalizadas.length) return [];
+
+  const rotasClientes = [];
+  for (const rota of rotasNormalizadas) {
+    const { data, error } = await supabaseClient
+      .from('cliente_rotas')
+      .select('cliente_codigo, rota, ativo')
+      .eq('rota', rota)
+      .eq('ativo', 'A')
+      .limit(MAX_CLIENTES_ROTA_MAPA);
+    if (error) throw error;
+    rotasClientes.push(...(data || []));
+  }
+
+  const codigos = Array.from(new Set(rotasClientes.map((item) => item.cliente_codigo).filter(Boolean)));
+  if (!codigos.length) return [];
+
+  const { data, error } = await supabaseClient
+    .from('clientes')
+    .select('codigo, fantasia, nome, uf, municipio, endereco, bairro, cep, ativo')
+    .in('codigo', codigos);
+  if (error) throw error;
+
+  const rotaPorCodigo = new Map(rotasClientes.map((item) => [item.cliente_codigo, item.rota]));
+  return (data || []).map((cliente) => ({
+    ...cliente,
+    rota: rotaPorCodigo.get(cliente.codigo) || ''
+  })).slice(0, MAX_CLIENTES_ROTA_MAPA);
+}
+
+async function plotarClientesDasRotas(escalas) {
+  if (!camadaClientesRota) return;
+  camadaClientesRota.clearLayers();
+
+  const rotas = Array.from(new Set((escalas || []).map((escala) => escala.rota).filter(Boolean)));
+  if (!rotas.length) return;
+
+  const clientes = await buscarClientesDasRotas(rotas);
+  if (!clientes.length) return;
+
+  const cache = obterCacheGeocodeClientes();
+  let localizados = 0;
+  let processados = 0;
+  for (const cliente of clientes) {
+    const endereco = montarEnderecoCliente(cliente);
+    cliente.enderecoMapa = endereco;
+
+    if (cache[endereco]) {
+      cliente.lat = cache[endereco].lat;
+      cliente.lng = cache[endereco].lng;
+    } else {
+      const posicao = await geocodificarClienteRota(cliente);
+      if (posicao) {
+        cliente.lat = posicao.lat;
+        cliente.lng = posicao.lng;
+        cache[endereco] = posicao;
+        salvarCacheGeocodeClientes(cache);
+      }
+      await sleep(GEOCODE_DELAY_MS);
+    }
+
+    if (Number.isFinite(cliente.lat) && Number.isFinite(cliente.lng)) {
+      adicionarClienteRotaNoMapa(cliente);
+      localizados += 1;
+    }
+
+    processados += 1;
+    if (processados % 5 === 0 || processados === clientes.length) {
+      mostrarMensagem(`Geocodificando clientes da rota: ${processados} de ${clientes.length}...`);
+    }
+  }
+
+  mostrarMensagem(`Histórico carregado. Clientes da rota no mapa: ${localizados} de ${clientes.length}.`);
 }
 
 function destacarPonto(indice) {
@@ -740,8 +937,14 @@ async function consultarHistorico() {
     resultado.hidden = false;
     setTimeout(() => mapa.invalidateSize(), 50);
     mostrarMensagem(data.data.truncado
-      ? 'Consulta concluída. O resultado foi limitado às primeiras 10.000 posições.'
-      : 'Histórico carregado com sucesso.');
+      ? 'Consulta concluída. O resultado foi limitado às primeiras 10.000 posições. Buscando clientes da rota...'
+      : 'Histórico carregado com sucesso. Buscando clientes da rota...');
+    try {
+      await plotarClientesDasRotas(escalasDoPeriodo);
+    } catch (erroClientes) {
+      console.warn('Erro ao plotar clientes da rota:', erroClientes);
+      mostrarMensagem('Histórico carregado. Não foi possível geocodificar os clientes da rota (serviço temporariamente indisponível).');
+    }
   } catch (error) {
     console.error('Erro ao consultar histórico:', error);
     resultado.hidden = true;

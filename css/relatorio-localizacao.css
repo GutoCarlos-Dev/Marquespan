@@ -215,6 +215,26 @@
   background: #e62f47;
 }
 
+.legenda-ponto.cliente-rota {
+  background: #2563eb;
+  border-radius: 4px;
+}
+
+.cliente-rota-marker {
+  align-items: center;
+  background: #2563eb;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.32);
+  color: #fff;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
 #mapa-relatorio-localizacao {
   background: #e7ece9;
   height: 540px;
