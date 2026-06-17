@@ -6,7 +6,7 @@
     <title>Diaria - Marquespan</title>
   <link rel="icon" href="img/logonavegador.png" type="image/png">
     <link rel="stylesheet" href="css/index.css">
-    <link rel="stylesheet" href="css/escala.css?v=20260608-1">
+    <link rel="stylesheet" href="css/escala.css?v=20260617-1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -94,6 +94,10 @@
                                     <label for="diariaFiltroFuncao">Funcoes</label>
                                     <select id="diariaFiltroFuncao" class="glass-input diaria-multi-select" multiple size="4"></select>
                                 </div>
+                                <div class="form-group diaria-busca-grid">
+                                    <label for="diariaBuscaGrid">Buscar no grid</label>
+                                    <input type="search" id="diariaBuscaGrid" class="glass-input" placeholder="Nome completo, CPF ou funcao">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -142,7 +146,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="script/supabase.js"></script>
     <script type="module" src="script/menu.js?v=20260609-1" defer></script>
-    <script type="module" src="script/diaria.js?v=20260609-2"></script>
+    <script type="module" src="script/diaria.js?v=20260617-1"></script>
     <footer class="footer">
         &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>

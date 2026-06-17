@@ -65,6 +65,7 @@ function configurarEventos() {
     document.getElementById('diariaValorSemana')?.addEventListener('input', recalcularDiariaComValorAtual);
     document.getElementById('diariaFiltroStatus')?.addEventListener('change', renderDiariaTabela);
     document.getElementById('diariaFiltroFuncao')?.addEventListener('change', renderDiariaTabela);
+    document.getElementById('diariaBuscaGrid')?.addEventListener('input', renderDiariaTabela);
     document.getElementById('escalaSemana')?.addEventListener('change', atualizarContextoDiaria);
     document.getElementById('escalaFilial')?.addEventListener('change', atualizarContextoDiaria);
 
@@ -649,11 +650,17 @@ function getDiariaStatusSelecionados() {
 function getDiariaDadosExportacao() {
     const statusSelecionados = getDiariaStatusSelecionados();
     const funcoesSelecionadas = getDiariaFuncoesSelecionadas();
+    const termoBusca = normalizeString(document.getElementById('diariaBuscaGrid')?.value || '');
     const dadosFiltrados = diariaDadosAtual.filter(item => {
         const statusItem = normalizeString(item.status);
         const statusOk = statusSelecionados.length === 0 || statusSelecionados.some(status => statusItem.includes(status));
         const funcaoOk = funcoesSelecionadas.length === 0 || funcoesSelecionadas.includes(normalizeString(item.funcao));
-        return statusOk && funcaoOk;
+        const buscaOk = !termoBusca || [
+            item.nomeCompleto,
+            item.cpf,
+            item.funcao
+        ].some(valor => normalizeString(valor).includes(termoBusca));
+        return statusOk && funcaoOk && buscaOk;
     });
     return ordenarDiariaDados(dadosFiltrados);
 }
