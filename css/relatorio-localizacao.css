@@ -235,6 +235,36 @@
   width: 26px;
 }
 
+.filial-marquespan-marker {
+  align-items: center;
+  background: #16a34a;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.35), 0 3px 10px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: flex;
+  font-size: 0.92rem;
+  font-weight: 800;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.matriz-marquespan-marker {
+  align-items: center;
+  background: #dc2626;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.35), 0 3px 10px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: flex;
+  font-size: 0.92rem;
+  font-weight: 800;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
 #mapa-relatorio-localizacao {
   background: #e7ece9;
   height: 540px;

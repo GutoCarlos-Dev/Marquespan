@@ -26,6 +26,7 @@ const resumoEscalaAuxiliar = document.getElementById('resumo-escala-auxiliar');
 let mapa;
 let camadaPercurso;
 let camadaClientesRota;
+let camadaFiliaisMarquespan;
 let marcadorSelecionado;
 let pontosAtuais = [];
 let escalasPorDataAtual = new Map();
@@ -220,6 +221,7 @@ function iniciarMapa() {
 
   camadaPercurso = L.layerGroup().addTo(mapa);
   camadaClientesRota = L.layerGroup().addTo(mapa);
+  camadaFiliaisMarquespan = L.layerGroup().addTo(mapa);
   return true;
 }
 
@@ -279,6 +281,7 @@ function desenharMapa(pontos) {
 
   camadaPercurso.clearLayers();
   camadaClientesRota?.clearLayers();
+  camadaFiliaisMarquespan?.clearLayers();
   if (marcadorSelecionado) {
     mapa.removeLayer(marcadorSelecionado);
     marcadorSelecionado = null;
@@ -400,28 +403,49 @@ async function geocodificarClienteRota(cliente) {
 }
 
 function adicionarClienteRotaNoMapa(cliente) {
-  if (!camadaClientesRota || !Number.isFinite(cliente.lat) || !Number.isFinite(cliente.lng)) return;
+  if (!Number.isFinite(cliente.lat) || !Number.isFinite(cliente.lng)) return;
+
+  const isGrupoMarquespan = cliente.categoria === 'Grupo Marquespan';
+  const isMatriz = isGrupoMarquespan
+    && String(cliente.endereco || '').toUpperCase().includes('ANNA INGHES DEL FIOL');
+  const camada = isGrupoMarquespan ? camadaFiliaisMarquespan : camadaClientesRota;
+  if (!camada) return;
+
+  let htmlIcone, tamanho, labelTipo;
+  if (isMatriz) {
+    htmlIcone = '<div class="matriz-marquespan-marker"><i class="fas fa-building"></i></div>';
+    tamanho = 34;
+    labelTipo = '<br><em style="color:#ef4444;font-size:11px;font-weight:700;">Matriz Marquespan</em>';
+  } else if (isGrupoMarquespan) {
+    htmlIcone = '<div class="filial-marquespan-marker"><i class="fas fa-building"></i></div>';
+    tamanho = 34;
+    labelTipo = '<br><em style="color:#22c55e;font-size:11px;">Filial Marquespan</em>';
+  } else {
+    htmlIcone = '<div class="cliente-rota-marker"><i class="fas fa-store"></i></div>';
+    tamanho = 26;
+    labelTipo = '';
+  }
 
   const icone = L.divIcon({
     className: '',
-    html: '<div class="cliente-rota-marker"><i class="fas fa-store"></i></div>',
-    iconSize: [26, 26],
-    iconAnchor: [13, 26],
-    popupAnchor: [0, -26]
+    html: htmlIcone,
+    iconSize: [tamanho, tamanho],
+    iconAnchor: [tamanho / 2, tamanho],
+    popupAnchor: [0, -tamanho]
   });
 
   const streetViewUrl = `https://www.google.com/maps?q=&layer=c&cbll=${cliente.lat},${cliente.lng}`;
   L.marker([cliente.lat, cliente.lng], { icon: icone })
     .bindPopup(`
-      <strong>${escaparHTML(cliente.fantasia || cliente.nome || cliente.codigo)}</strong><br>
+      <strong>${escaparHTML(cliente.fantasia || cliente.nome || cliente.codigo)}</strong>${labelTipo}<br>
       Cliente: ${escaparHTML(cliente.codigo)}<br>
-      Rota: ${escaparHTML(cliente.rota)}<br>
+      Rota: ${escaparHTML(cliente.rota || '—')}<br>
       ${escaparHTML(cliente.enderecoMapa || montarEnderecoCliente(cliente))}<br><br>
       <a href="${streetViewUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;color:#1a73e8;font-size:13px;text-decoration:none;">
         <i class="fas fa-street-view"></i> Abrir no Street View
       </a>
     `)
-    .addTo(camadaClientesRota);
+    .addTo(camada);
 }
 
 async function buscarClientesDasRotas(rotas) {
@@ -445,7 +469,7 @@ async function buscarClientesDasRotas(rotas) {
 
   const { data, error } = await supabaseClient
     .from('clientes')
-    .select('codigo, fantasia, nome, uf, municipio, endereco, bairro, cep, ativo')
+    .select('codigo, fantasia, nome, uf, municipio, endereco, bairro, cep, categoria, ativo')
     .in('codigo', codigos);
   if (error) throw error;
 
@@ -499,6 +523,41 @@ async function plotarClientesDasRotas(escalas) {
   }
 
   mostrarMensagem(`Histórico carregado. Clientes da rota no mapa: ${localizados} de ${clientes.length}.`);
+}
+
+async function plotarFiliaisMarquespan() {
+  if (!camadaFiliaisMarquespan) return;
+  camadaFiliaisMarquespan.clearLayers();
+
+  const { data, error } = await supabaseClient
+    .from('clientes')
+    .select('codigo, fantasia, nome, uf, municipio, endereco, bairro, cep, categoria, ativo')
+    .eq('categoria', 'Grupo Marquespan');
+  if (error || !data?.length) return;
+
+  const cache = obterCacheGeocodeClientes();
+  for (const cliente of data) {
+    const endereco = montarEnderecoCliente(cliente);
+    cliente.enderecoMapa = endereco;
+
+    if (cache[endereco]) {
+      cliente.lat = cache[endereco].lat;
+      cliente.lng = cache[endereco].lng;
+    } else {
+      const posicao = await geocodificarClienteRota(cliente);
+      if (posicao) {
+        cliente.lat = posicao.lat;
+        cliente.lng = posicao.lng;
+        cache[endereco] = posicao;
+        salvarCacheGeocodeClientes(cache);
+      }
+      await sleep(GEOCODE_DELAY_MS);
+    }
+
+    if (Number.isFinite(cliente.lat) && Number.isFinite(cliente.lng)) {
+      adicionarClienteRotaNoMapa(cliente);
+    }
+  }
 }
 
 function destacarPonto(indice) {
@@ -947,6 +1006,7 @@ async function consultarHistorico() {
     mostrarMensagem(data.data.truncado
       ? 'Consulta concluída. O resultado foi limitado às primeiras 10.000 posições. Buscando clientes da rota...'
       : 'Histórico carregado com sucesso. Buscando clientes da rota...');
+    plotarFiliaisMarquespan().catch((e) => console.warn('Erro ao plotar filiais Marquespan:', e));
     try {
       await plotarClientesDasRotas(escalasDoPeriodo);
     } catch (erroClientes) {
