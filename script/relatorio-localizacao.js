@@ -259,12 +259,16 @@ function popupPonto(ponto, titulo) {
     Sem escala para esta placa no dia<br>
     `;
 
+  const streetViewUrl = `https://www.google.com/maps?q=&layer=c&cbll=${ponto.latitude},${ponto.longitude}`;
   return `
     <strong>${titulo}</strong><br>
     ${formatarData(ponto.dataInicial)}<br>
     ${linhasEscala}
     Velocidade: ${Math.round(ponto.velocidade || 0)} km/h<br>
-    ${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}
+    ${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}<br><br>
+    <a href="${streetViewUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;color:#1a73e8;font-size:13px;text-decoration:none;">
+      <i class="fas fa-street-view"></i> Abrir no Street View
+    </a>
   `;
 }
 
