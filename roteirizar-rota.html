@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roteirizar Rota - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/menu.css">
+  <link rel="stylesheet" href="css/funcionario.css?v=20260605-5">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/roteirizar-rota.css?v=20260617-1">
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+    <div class="main-content">
+      <header class="header glass-header">
+        <h1><i class="fas fa-route"></i> Roteirizar Rota</h1>
+      </header>
+
+      <section class="glass-panel roteirizar-page">
+        <div class="roteirizar-toolbar glass-panel-inner">
+          <div class="form-group">
+            <label for="rotaSelect">Rota</label>
+            <select id="rotaSelect" class="glass-input">
+              <option value="">Carregando rotas...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="statusSelect">Status</label>
+            <select id="statusSelect" class="glass-input">
+              <option value="A">Ativos</option>
+              <option value="">Todos</option>
+              <option value="I">Inativos</option>
+            </select>
+          </div>
+          <button type="button" id="btnPlotarRota" class="btn-glass btn-green">
+            <i class="fas fa-map-location-dot"></i> Plotar no mapa
+          </button>
+        </div>
+
+        <div id="roteirizarStatus" class="roteirizar-status">Selecione uma rota para visualizar os clientes no mapa.</div>
+
+        <div class="roteirizar-layout">
+          <div id="rotaMap" class="rota-map"></div>
+          <aside class="rota-clientes glass-panel-inner">
+            <h3><i class="fas fa-location-dot"></i> Clientes <span id="rotaClienteCount">(0)</span></h3>
+            <div class="rota-list" id="rotaClientesList">
+              <div class="rota-empty">Nenhuma rota selecionada.</div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="script/roteirizar-rota.js?v=20260617-4"></script>
+</body>
+</html>
