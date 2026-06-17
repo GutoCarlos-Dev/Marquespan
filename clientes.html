@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Clientes - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/menu.css" />
+  <link rel="stylesheet" href="css/funcionario.css?v=20260605-5" />
+  <link rel="stylesheet" href="css/clientes.css?v=20260617-3" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+    <div class="main-content">
+      <header class="header glass-header">
+        <h1><i class="fas fa-address-book"></i> Cadastro de Clientes</h1>
+      </header>
+
+      <section class="glass-panel clientes-page">
+        <div class="clientes-top-grid">
+          <div class="clientes-filter-card glass-panel-inner">
+            <h3><i class="fas fa-users"></i> Clientes <span id="countClientesGrid" class="clientes-count">(0)</span></h3>
+            <div class="filters-actions-grid clientes-filters-grid">
+              <div class="form-group">
+                <label for="searchClientesInput">Busca</label>
+                <input type="text" id="searchClientesInput" class="glass-input" placeholder="Codigo, fantasia, nome, CNPJ/CPF...">
+              </div>
+              <div class="form-group">
+                <label for="clienteRotaFilter">Rota</label>
+                <select id="clienteRotaFilter" class="glass-input">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="clienteUfFilter">UF</label>
+                <select id="clienteUfFilter" class="glass-input">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="clienteAtivoFilter">Status</label>
+                <select id="clienteAtivoFilter" class="glass-input">
+                  <option value="">Todos</option>
+                  <option value="A">Ativo</option>
+                  <option value="I">Inativo</option>
+                </select>
+              </div>
+            </div>
+            <div id="clientesFilterCount" class="func-filter-count">Quantidade listada: 0</div>
+          </div>
+
+          <div class="cliente-actions glass-panel-inner">
+            <h3><i class="fas fa-cogs"></i> Acoes</h3>
+            <div class="form-actions-inline cliente-actions-buttons">
+              <button type="button" id="btnOpenClienteModal" class="btn-glass btn-green">
+                <i class="fas fa-plus"></i> Incluir
+              </button>
+              <button type="button" id="btnImportarClientes" class="btn-glass btn-blue">
+                <i class="fas fa-file-import"></i> Importar Clientes
+              </button>
+              <input type="file" id="inputImportarClientes" accept=".xls,.xlsx" hidden>
+              <button type="button" id="btnExportarClientes" class="btn-glass btn-green">
+                <i class="fas fa-file-excel"></i> Exportar XLSX
+              </button>
+            </div>
+            <div id="clientesImportStatus" class="clientes-import-status">Nenhum arquivo importado nesta sessao.</div>
+          </div>
+        </div>
+
+        <div class="table-responsive cliente-table-container">
+          <table class="glass-table data-grid cliente-table">
+            <thead>
+              <tr>
+                <th class="cliente-select-col">
+                  <input type="checkbox" id="selectAllClientes" aria-label="Selecionar todos">
+                </th>
+                <th data-sort="codigo">COD <i class="fas fa-sort"></i></th>
+                <th data-sort="fantasia">FANTASIA <i class="fas fa-sort"></i></th>
+                <th data-sort="nome">NOME <i class="fas fa-sort"></i></th>
+                <th data-sort="uf">UF <i class="fas fa-sort"></i></th>
+                <th data-sort="municipio">MUNICIPIO <i class="fas fa-sort"></i></th>
+                <th data-sort="cnpj_cpf">CNPJ/CPF <i class="fas fa-sort"></i></th>
+                <th data-sort="ativo">ATIVO <i class="fas fa-sort"></i></th>
+                <th data-sort="supervisor">SUPERVISOR <i class="fas fa-sort"></i></th>
+                <th data-sort="rota">ROTA <i class="fas fa-sort"></i></th>
+                <th data-sort="consultor">CONSULTOR <i class="fas fa-sort"></i></th>
+                <th data-sort="categoria">CATEGORIA <i class="fas fa-sort"></i></th>
+                <th class="cliente-acoes-col">ACOES</th>
+              </tr>
+            </thead>
+            <tbody id="clientesTableBody">
+              <tr><td colspan="13" class="clientes-empty">Carregando clientes...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="modalCliente" class="funcionario-modal-backdrop hidden" aria-hidden="true">
+    <div class="funcionario-modal cliente-modal" role="dialog" aria-modal="true" aria-labelledby="clienteModalTitle">
+      <div class="funcionario-modal-header">
+        <h3 id="clienteModalTitle"><i class="fas fa-user-plus"></i> Incluir Cliente</h3>
+        <button type="button" id="btnCloseClienteModal" class="close-button" aria-label="Fechar">&times;</button>
+      </div>
+
+      <form id="formCliente">
+        <div class="form-grid cliente-form-grid">
+          <div class="form-group">
+            <label for="clienteCodigo">Codigo</label>
+            <input type="text" id="clienteCodigo" name="codigo" class="glass-input" required>
+          </div>
+          <div class="form-group">
+            <label for="clienteFantasia">Fantasia</label>
+            <input type="text" id="clienteFantasia" name="fantasia" class="glass-input">
+          </div>
+          <div class="form-group cliente-field-wide">
+            <label for="clienteNome">Nome</label>
+            <input type="text" id="clienteNome" name="nome" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteTipoPessoa">Fis/Jur</label>
+            <input type="text" id="clienteTipoPessoa" name="tipo_pessoa" class="glass-input" maxlength="1">
+          </div>
+          <div class="form-group">
+            <label for="clienteUf">UF</label>
+            <input type="text" id="clienteUf" name="uf" class="glass-input" maxlength="2">
+          </div>
+          <div class="form-group">
+            <label for="clienteMunicipio">Municipio</label>
+            <input type="text" id="clienteMunicipio" name="municipio" class="glass-input">
+          </div>
+          <div class="form-group cliente-field-wide">
+            <label for="clienteEndereco">Endereco</label>
+            <input type="text" id="clienteEndereco" name="endereco" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteBairro">Bairro</label>
+            <input type="text" id="clienteBairro" name="bairro" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteCep">CEP</label>
+            <input type="text" id="clienteCep" name="cep" class="glass-input">
+          </div>
+          <div class="form-group cliente-field-wide">
+            <label for="clienteEmail">Email</label>
+            <input type="email" id="clienteEmail" name="email" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteCnpjCpf">CNPJ/CPF</label>
+            <input type="text" id="clienteCnpjCpf" name="cnpj_cpf" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteIeRg">IE/RG</label>
+            <input type="text" id="clienteIeRg" name="ie_rg" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteCondPagto">Cond Pagto</label>
+            <input type="text" id="clienteCondPagto" name="cond_pagto" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteFormaCob">Forma Cob</label>
+            <input type="text" id="clienteFormaCob" name="forma_cob" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteAtivo">Ativo</label>
+            <select id="clienteAtivo" name="ativo" class="glass-input">
+              <option value="A">A - Ativo</option>
+              <option value="I">I - Inativo</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="clienteSupervisor">Supervisor</label>
+            <input type="text" id="clienteSupervisor" name="supervisor" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteRota">Rota</label>
+            <input type="text" id="clienteRota" name="rota" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteConsultor">Consultor</label>
+            <input type="text" id="clienteConsultor" name="consultor" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteTabelaPreco">Tab Prc</label>
+            <input type="text" id="clienteTabelaPreco" name="tabela_preco" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="clienteCategoria">Categoria</label>
+            <input type="text" id="clienteCategoria" name="categoria" class="glass-input">
+          </div>
+        </div>
+
+        <div class="form-actions-inline modal-actions">
+          <button type="button" id="btnClearClienteForm" class="btn-glass btn-secondary">
+            <i class="fas fa-eraser"></i> Limpar
+          </button>
+          <button type="submit" id="btnSubmitCliente" class="btn-glass btn-green">
+            <i class="fas fa-save"></i> Salvar Registro
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="script/clientes.js?v=20260617-3"></script>
+</body>
+</html>

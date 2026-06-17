@@ -26,6 +26,7 @@ const MODULOS = [
     itens: [
       { label: 'Veículos',     desc: 'Cadastro de frota',        pagina: 'veiculos.html',    icon: 'fa-truck' },
       { label: 'Rotas',        desc: 'Cadastro de rotas',        pagina: 'rotas.html',       icon: 'fa-map-marked-alt' },
+      { label: 'Clientes',     desc: 'Cadastro de clientes',     pagina: 'clientes.html',    icon: 'fa-address-book' },
       { label: 'Funcionários', desc: 'Cadastro de equipe',       pagina: 'funcionario.html', icon: 'fa-id-badge' },
       { label: 'Supervisores', desc: 'Cadastro de supervisores', pagina: 'supervisor.html',  icon: 'fa-user-tie' },
       { label: 'Oficinas',     desc: 'Cadastro de oficinas',     pagina: 'oficina.html',     icon: 'fa-hammer' },
