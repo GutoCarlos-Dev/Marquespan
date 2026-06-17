@@ -82,6 +82,14 @@
     transform: none;
 }
 
+.admin-only-action {
+    display: none;
+}
+
+body.peso-rota-admin .admin-only-action {
+    display: inline-flex;
+}
+
 .btn-blue {
     background: linear-gradient(135deg, #007bff, #0056b3);
 }

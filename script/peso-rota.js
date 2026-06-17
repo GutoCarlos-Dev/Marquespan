@@ -109,6 +109,19 @@ function getUsuarioLogadoNome() {
     }
 }
 
+function getUserLevel() {
+    try {
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+        return String(usuarioLogado?.nivel || '').trim().toLowerCase();
+    } catch {
+        return '';
+    }
+}
+
+function aplicarVisibilidadeAdmin() {
+    document.body.classList.toggle('peso-rota-admin', getUserLevel() === 'administrador');
+}
+
 const ORDEM_DIAS_ROTA = ['SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO'];
 const CLASSES_DIA_RETORNO = [
     'dia-retorno-segunda',
@@ -123,6 +136,8 @@ const CLASSES_DIA_RETORNO = [
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
+    aplicarVisibilidadeAdmin();
+
     const filtroSemanaAno = document.getElementById('filtroSemanaAno');
     if (filtroSemanaAno && !filtroSemanaAno.value) filtroSemanaAno.value = getSemanaAnoAtual();
 

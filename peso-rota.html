@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Peso de Rota - Logistica</title>
   <link rel="icon" href="img/logonavegador.png" type="image/png">
-    <link rel="stylesheet" href="css/peso-rota.css?v=20260609-1">
+    <link rel="stylesheet" href="css/peso-rota.css?v=20260617-1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
@@ -69,11 +69,11 @@
                 <div class="action-card">
                     <h3><i class="fas fa-cogs"></i> Acoes</h3>
                     <div class="actions-container">
-                        <button id="btnCarregarRotas" class="btn-glass btn-blue"><i class="fas fa-route"></i> Carregar Rotas</button>
-                        <button id="btnAdicionarLinha" class="btn-glass btn-blue"><i class="fas fa-plus"></i> Adicionar Linha</button>
-                        <button id="btnImportarRoteiro" class="btn-glass btn-blue" title="Usa o filtro Dia de Saída e importa placa, motorista e auxiliar do arquivo XLSX"><i class="fas fa-file-import"></i> Importar Roteiro</button>
+                        <button id="btnCarregarRotas" class="btn-glass btn-blue admin-only-action"><i class="fas fa-route"></i> Carregar Rotas</button>
+                        <button id="btnAdicionarLinha" class="btn-glass btn-blue admin-only-action"><i class="fas fa-plus"></i> Adicionar Linha</button>
+                        <button id="btnImportarRoteiro" class="btn-glass btn-blue admin-only-action" title="Usa o filtro Dia de Saída e importa placa, motorista e auxiliar do arquivo XLSX"><i class="fas fa-file-import"></i> Importar Roteiro</button>
                         <button id="btnImportarEscalaOnline" class="btn-glass btn-blue" title="Usa Filial, Semana Ano e Dia de Saida para importar placa, motorista e auxiliar da escala online"><i class="fas fa-cloud-arrow-down"></i> Importar Escala Online</button>
-                        <button id="btnImportarRetornoRota" class="btn-glass btn-blue" title="Usa os filtros Dia de Saída e Dia de Retorno para buscar os retornos registrados"><i class="fas fa-clock"></i> Importar Retorno</button>
+                        <button id="btnImportarRetornoRota" class="btn-glass btn-blue" title="Usa os filtros Dia de Saída e Dia de Retorno para buscar os retornos registrados"><i class="fas fa-clock"></i> Importar Horário Retorno Online</button>
                         <input type="file" id="inputImportarRoteiro" accept=".xlsx,.xls" hidden>
                         <button id="btnExportarBackupXlsx" class="btn-glass btn-green"><i class="fas fa-file-arrow-down"></i> Exportar XLSX</button>
                         <button id="btnSalvarTudo" class="btn-glass btn-green" title="Salvar tudo (Ctrl+S)"><i class="fas fa-save"></i> Salvar Tudo</button>
@@ -138,6 +138,8 @@
     <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
     <script type="module" src="./script/auth-guard.js"></script>
     <script type="module" src="script/menu.js" defer></script>
-    <script type="module" src="script/peso-rota.js?v=20260609-8"></script>
+    <script type="module" src="script/peso-rota.js?v=20260617-1"></script>
 </body>
 </html>
+
+
