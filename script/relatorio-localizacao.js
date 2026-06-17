@@ -11,16 +11,26 @@ const resultado = document.getElementById('resultado-relatorio-localizacao');
 const tabelaBody = document.getElementById('tabela-posicoes-body');
 const contadorPosicoes = document.getElementById('contador-posicoes');
 const botaoLimparFiltros = document.getElementById('btn-limpar-filtros-posicoes');
+const resumoEscalaRotaLabel = document.getElementById('resumo-escala-rota-label');
+const resumoEscalaRota = document.getElementById('resumo-escala-rota');
+const resumoEscalaMotoristaLabel = document.getElementById('resumo-escala-motorista-label');
+const resumoEscalaMotorista = document.getElementById('resumo-escala-motorista');
+const resumoEscalaAuxiliarLabel = document.getElementById('resumo-escala-auxiliar-label');
+const resumoEscalaAuxiliar = document.getElementById('resumo-escala-auxiliar');
 
 let mapa;
 let camadaPercurso;
 let marcadorSelecionado;
 let pontosAtuais = [];
+let escalasPorDataAtual = new Map();
 let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
 
 const filtrosTabela = {
   indice: document.getElementById('filtro-posicao-indice'),
   data: document.getElementById('filtro-posicao-data'),
+  rota: document.getElementById('filtro-posicao-rota'),
+  motorista: document.getElementById('filtro-posicao-motorista'),
+  auxiliar: document.getElementById('filtro-posicao-auxiliar'),
   velocidade: document.getElementById('filtro-posicao-velocidade'),
   situacao: document.getElementById('filtro-posicao-situacao'),
   coordenadas: document.getElementById('filtro-posicao-coordenadas'),
@@ -55,6 +65,43 @@ function formatarData(valor) {
     dateStyle: 'short',
     timeStyle: 'medium'
   }).format(data);
+}
+
+function formatarDataCurtaISO(dataISO) {
+  if (!dataISO) return '';
+  const [ano, mes, dia] = String(dataISO).slice(0, 10).split('-');
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : dataISO;
+}
+
+function obterDataISOInput(valor) {
+  return String(valor || '').slice(0, 10);
+}
+
+function obterDataISOLocal(valor) {
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return obterDataISOInput(valor);
+
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const dia = String(data.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+function valorResumoEscala(valor) {
+  const texto = String(valor || '').trim();
+  return texto || 'Não informado';
+}
+
+function obterEscalasDoPonto(ponto) {
+  const dataEscala = obterDataISOLocal(ponto?.dataInicial);
+  return escalasPorDataAtual.get(dataEscala) || [];
+}
+
+function obterCampoEscalaPonto(ponto, campo) {
+  const valores = obterEscalasDoPonto(ponto)
+    .map((escala) => String(escala[campo] || '').trim())
+    .filter(Boolean);
+  return valores.length ? Array.from(new Set(valores)).join(' / ') : '-';
 }
 
 function iniciarMapa() {
@@ -119,9 +166,24 @@ function calcularDistancia(pontos) {
 }
 
 function popupPonto(ponto, titulo) {
+  const dataEscala = obterDataISOLocal(ponto.dataInicial);
+  const escalasDoDia = obterEscalasDoPonto(ponto);
+  const linhasEscala = escalasDoDia.length > 0
+    ? escalasDoDia.map((escala) => `
+    <strong>Escala ${formatarDataCurtaISO(dataEscala)}</strong><br>
+    Rota: ${valorResumoEscala(escala.rota)}<br>
+    Motorista: ${valorResumoEscala(escala.motorista)}<br>
+    Auxiliar: ${valorResumoEscala(escala.auxiliar)}<br>
+    `).join('')
+    : `
+    <strong>Escala ${formatarDataCurtaISO(dataEscala)}</strong><br>
+    Sem escala para esta placa no dia<br>
+    `;
+
   return `
     <strong>${titulo}</strong><br>
     ${formatarData(ponto.dataInicial)}<br>
+    ${linhasEscala}
     Velocidade: ${Math.round(ponto.velocidade || 0)} km/h<br>
     ${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}
   `;
@@ -203,6 +265,9 @@ function destacarPonto(indice) {
 function valorOrdenacao(ponto, campo) {
   if (campo === 'indice') return ponto.indiceOriginal;
   if (campo === 'dataInicial') return new Date(ponto.dataInicial || 0).getTime();
+  if (campo === 'rota') return obterCampoEscalaPonto(ponto, 'rota');
+  if (campo === 'motorista') return obterCampoEscalaPonto(ponto, 'motorista');
+  if (campo === 'auxiliar') return obterCampoEscalaPonto(ponto, 'auxiliar');
   if (campo === 'velocidade') return Number(ponto.velocidade) || 0;
   if (campo === 'tipo') return ponto.tipo || '';
   if (campo === 'coordenadas') return `${ponto.latitude},${ponto.longitude}`;
@@ -213,6 +278,9 @@ function valorOrdenacao(ponto, campo) {
 function obterPontosFiltradosOrdenados() {
   const filtroIndice = filtrosTabela.indice.value.trim();
   const filtroData = filtrosTabela.data.value.trim().toLocaleLowerCase('pt-BR');
+  const filtroRota = filtrosTabela.rota.value.trim().toLocaleLowerCase('pt-BR');
+  const filtroMotorista = filtrosTabela.motorista.value.trim().toLocaleLowerCase('pt-BR');
+  const filtroAuxiliar = filtrosTabela.auxiliar.value.trim().toLocaleLowerCase('pt-BR');
   const filtroVelocidade = filtrosTabela.velocidade.value.trim();
   const filtroSituacao = filtrosTabela.situacao.value;
   const filtroCoordenadas = filtrosTabela.coordenadas.value.trim().toLowerCase();
@@ -221,10 +289,16 @@ function obterPontosFiltradosOrdenados() {
   const filtrados = pontosAtuais.filter((ponto) => {
     const indiceExibido = ponto.indiceOriginal + 1;
     const dataFormatada = formatarData(ponto.dataInicial).toLocaleLowerCase('pt-BR');
+    const rota = obterCampoEscalaPonto(ponto, 'rota').toLocaleLowerCase('pt-BR');
+    const motorista = obterCampoEscalaPonto(ponto, 'motorista').toLocaleLowerCase('pt-BR');
+    const auxiliar = obterCampoEscalaPonto(ponto, 'auxiliar').toLocaleLowerCase('pt-BR');
     const coordenadas = `${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}`.toLowerCase();
 
     return (!filtroIndice || indiceExibido === Number(filtroIndice))
       && (!filtroData || dataFormatada.includes(filtroData))
+      && (!filtroRota || rota.includes(filtroRota))
+      && (!filtroMotorista || motorista.includes(filtroMotorista))
+      && (!filtroAuxiliar || auxiliar.includes(filtroAuxiliar))
       && (!filtroVelocidade || Math.round(ponto.velocidade || 0) === Number(filtroVelocidade))
       && (!filtroSituacao || ponto.tipo === filtroSituacao)
       && (!filtroCoordenadas || coordenadas.includes(filtroCoordenadas))
@@ -264,6 +338,9 @@ function renderizarTabela() {
     linha.innerHTML = `
       <td>${ponto.indiceOriginal + 1}</td>
       <td>${formatarData(ponto.dataInicial)}</td>
+      <td>${obterCampoEscalaPonto(ponto, 'rota')}</td>
+      <td>${obterCampoEscalaPonto(ponto, 'motorista')}</td>
+      <td>${obterCampoEscalaPonto(ponto, 'auxiliar')}</td>
       <td>${Math.round(ponto.velocidade || 0)} km/h</td>
       <td><span class="status-posicao ${ponto.tipo}">${ponto.tipo === 'parado' ? 'Parado' : 'Deslocamento'}</span></td>
       <td>${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}</td>
@@ -275,7 +352,7 @@ function renderizarTabela() {
 
   if (pontos.length === 0) {
     const linha = document.createElement('tr');
-    linha.innerHTML = '<td colspan="6" class="tabela-sem-resultados">Nenhuma posição encontrada com os filtros informados.</td>';
+    linha.innerHTML = '<td colspan="9" class="tabela-sem-resultados">Nenhuma posição encontrada com os filtros informados.</td>';
     fragmento.appendChild(linha);
   }
 
@@ -301,6 +378,60 @@ function preencherResumo(dados) {
   document.getElementById('resumo-velocidade').textContent = `${Math.round(maiorVelocidade)} km/h`;
   document.getElementById('resumo-periodo').textContent = `${formatarData(dados.dataInicial)} até ${formatarData(dados.dataFinal)}`;
   document.getElementById('titulo-percurso').textContent = dados.unidade || dados.placa;
+}
+
+function preencherResumoEscala(escalas) {
+  resumoEscalaRotaLabel.textContent = 'Rotas na escala';
+  resumoEscalaMotoristaLabel.textContent = 'Motoristas na escala';
+  resumoEscalaAuxiliarLabel.textContent = 'Auxiliares na escala';
+
+  if (!escalas.length) {
+    resumoEscalaRota.textContent = 'Sem escala';
+    resumoEscalaMotorista.textContent = 'Sem escala';
+    resumoEscalaAuxiliar.textContent = 'Sem escala';
+    return;
+  }
+
+  resumoEscalaRota.textContent = escalas
+    .map((escala) => `${formatarDataCurtaISO(escala.data_escala)}: ${valorResumoEscala(escala.rota)}`)
+    .join(' / ');
+  resumoEscalaMotorista.textContent = escalas
+    .map((escala) => `${formatarDataCurtaISO(escala.data_escala)}: ${valorResumoEscala(escala.motorista)}`)
+    .join(' / ');
+  resumoEscalaAuxiliar.textContent = escalas
+    .map((escala) => `${formatarDataCurtaISO(escala.data_escala)}: ${valorResumoEscala(escala.auxiliar)}`)
+    .join(' / ');
+}
+
+async function buscarEscalasDaPlaca(placa, dataInicioISO, dataTerminoISO) {
+  if (!placa || !dataInicioISO || !dataTerminoISO) return [];
+
+  const placasPossiveis = Array.from(new Set([placa, formatarPlaca(placa)].filter(Boolean)));
+  const { data, error } = await supabaseClient
+    .from('escala')
+    .select('data_escala, rota, motorista, auxiliar, terceiro, status, tipo_escala')
+    .gte('data_escala', dataInicioISO)
+    .lte('data_escala', dataTerminoISO)
+    .in('placa', placasPossiveis)
+    .order('data_escala', { ascending: true })
+    .order('id', { ascending: true });
+
+  if (error) {
+    console.error('Erro ao buscar escala da placa:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+function agruparEscalasPorData(escalas) {
+  return (escalas || []).reduce((mapa, escala) => {
+    const dataEscala = obterDataISOInput(escala.data_escala);
+    if (!dataEscala) return mapa;
+    if (!mapa.has(dataEscala)) mapa.set(dataEscala, []);
+    mapa.get(dataEscala).push(escala);
+    return mapa;
+  }, new Map());
 }
 
 function definirCarregando(carregando) {
@@ -347,6 +478,8 @@ async function consultarHistorico() {
   const placa = normalizarPlaca(placaInput.value);
   const inicio = new Date(inicioInput.value);
   const termino = new Date(terminoInput.value);
+  const dataEscalaInicioISO = obterDataISOInput(inicioInput.value);
+  const dataEscalaTerminoISO = obterDataISOInput(terminoInput.value);
 
   if (placa.length !== 7) {
     mostrarMensagem('Informe uma placa válida com 7 caracteres.', true);
@@ -362,6 +495,7 @@ async function consultarHistorico() {
   }
 
   placaInput.value = placa;
+  escalasPorDataAtual = new Map();
   definirCarregando(true);
   mostrarMensagem('Buscando as posições no rastreador...');
 
@@ -387,7 +521,10 @@ async function consultarHistorico() {
       ...ponto,
       indiceOriginal: indice
     }));
+    const escalasDoPeriodo = await buscarEscalasDaPlaca(placa, dataEscalaInicioISO, dataEscalaTerminoISO);
+    escalasPorDataAtual = agruparEscalasPorData(escalasDoPeriodo);
     preencherResumo(data.data);
+    preencherResumoEscala(escalasDoPeriodo);
     desenharMapa(pontosAtuais);
     renderizarTabela();
     resultado.hidden = false;

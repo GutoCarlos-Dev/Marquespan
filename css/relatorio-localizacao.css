@@ -80,7 +80,7 @@
 .resumo-grid {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
 .resumo-card {
@@ -104,6 +104,16 @@
 .resumo-card strong {
   color: #20372f;
   font-size: 1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.resumo-card-escala {
+  border-top-color: #2f7fd3;
+}
+
+.resumo-card-escala i {
+  color: #2f7fd3;
 }
 
 .mapa-card,
