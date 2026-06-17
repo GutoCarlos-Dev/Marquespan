@@ -178,17 +178,18 @@ const ClientesUI = {
         return String(this.usuarioAtual?.nivel || '').trim().toLowerCase() === 'administrador';
     },
 
-    openClienteModal(mode = 'incluir', cliente = null) {
+    async openClienteModal(mode = 'incluir', cliente = null) {
         if (!this.modalCliente) return;
         this.modalMode = mode;
         this.rotaOriginal = cliente?.rota || '';
         this.clearClienteForm({ fecharModal: false });
         if (cliente) this.preencherClienteForm(cliente);
+        if (mode === 'incluir') await this.preencherProximoCodigoCliente();
         this.aplicarModoModal(mode);
         this.modalCliente.classList.remove('hidden');
         this.modalCliente.setAttribute('aria-hidden', 'false');
         document.body.classList.add('funcionario-modal-open');
-        if (mode !== 'visualizar') document.getElementById('clienteCodigo')?.focus();
+        if (mode !== 'visualizar') document.getElementById('clienteFantasia')?.focus();
     },
 
     closeClienteModal() {
@@ -210,6 +211,43 @@ const ClientesUI = {
         }
         if (this.btnClearClienteForm) this.btnClearClienteForm.style.display = '';
         if (fecharModal) this.closeClienteModal();
+    },
+
+    async preencherProximoCodigoCliente() {
+        const codigoField = document.getElementById('clienteCodigo');
+        if (!codigoField) return;
+        codigoField.value = 'Calculando...';
+
+        try {
+            const proximoCodigo = await this.obterProximoCodigoCliente();
+            codigoField.value = proximoCodigo;
+        } catch (error) {
+            console.error('Erro ao calcular proximo codigo de cliente:', error);
+            codigoField.value = '';
+            alert('Nao foi possivel calcular o proximo codigo do cliente.');
+        }
+    },
+
+    async obterProximoCodigoCliente() {
+        const maiorLocal = this.clientes.reduce((maior, cliente) => {
+            const numero = Number(String(cliente.codigo || '').replace(/\D/g, ''));
+            return Number.isFinite(numero) ? Math.max(maior, numero) : maior;
+        }, 0);
+
+        let maiorBanco = maiorLocal;
+        const { data, error } = await supabaseClient
+            .from('clientes')
+            .select('codigo')
+            .order('codigo', { ascending: false })
+            .limit(200);
+        if (error) throw error;
+
+        (data || []).forEach((cliente) => {
+            const numero = Number(String(cliente.codigo || '').replace(/\D/g, ''));
+            if (Number.isFinite(numero)) maiorBanco = Math.max(maiorBanco, numero);
+        });
+
+        return String(maiorBanco + 1);
     },
 
     preencherClienteForm(cliente) {
@@ -249,10 +287,15 @@ const ClientesUI = {
         if (this.modalTitle) this.modalTitle.innerHTML = `<i class="fas fa-user"></i> ${titulo}`;
 
         this.formCliente?.querySelectorAll('input, select').forEach((field) => {
+            if (field.name === 'codigo') {
+                field.readOnly = true;
+                field.disabled = false;
+                return;
+            }
             if (field.tagName === 'SELECT') {
                 field.disabled = visualizar;
             } else {
-                field.readOnly = visualizar || (editar && field.name === 'codigo');
+                field.readOnly = visualizar;
             }
         });
 
