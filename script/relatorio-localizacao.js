@@ -406,12 +406,16 @@ function adicionarClienteRotaNoMapa(cliente) {
     popupAnchor: [0, -26]
   });
 
+  const streetViewUrl = `https://www.google.com/maps?q=&layer=c&cbll=${cliente.lat},${cliente.lng}`;
   L.marker([cliente.lat, cliente.lng], { icon: icone })
     .bindPopup(`
       <strong>${escaparHTML(cliente.fantasia || cliente.nome || cliente.codigo)}</strong><br>
       Cliente: ${escaparHTML(cliente.codigo)}<br>
       Rota: ${escaparHTML(cliente.rota)}<br>
-      ${escaparHTML(cliente.enderecoMapa || montarEnderecoCliente(cliente))}
+      ${escaparHTML(cliente.enderecoMapa || montarEnderecoCliente(cliente))}<br><br>
+      <a href="${streetViewUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;color:#1a73e8;font-size:13px;text-decoration:none;">
+        <i class="fas fa-street-view"></i> Abrir no Street View
+      </a>
     `)
     .addTo(camadaClientesRota);
 }
