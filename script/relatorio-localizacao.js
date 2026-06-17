@@ -142,11 +142,7 @@ function formatarDuracao(ms) {
   const minutos = Math.floor((totalSegundos % 3600) / 60);
   const segundos = totalSegundos % 60;
 
-  if (horas > 0) {
-    return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
-  }
-
-  return `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+  return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
 }
 
 function obterEscalasDoPonto(ponto) {
