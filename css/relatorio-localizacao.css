@@ -12,7 +12,7 @@
   align-items: flex-end;
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(180px, 1fr) minmax(205px, 1fr) minmax(205px, 1fr) auto;
+  grid-template-columns: minmax(135px, 0.65fr) minmax(180px, 1fr) minmax(205px, 1fr) minmax(205px, 1fr) auto;
 }
 
 .relatorio-filtros .form-group {
@@ -28,7 +28,8 @@
   text-transform: uppercase;
 }
 
-.relatorio-filtros input {
+.relatorio-filtros input,
+.relatorio-filtros select {
   width: 100%;
 }
 
@@ -75,6 +76,40 @@
 
 .resultado-relatorio[hidden] {
   display: none;
+}
+
+.escala-resultados-card {
+  margin-bottom: 18px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.escala-resultados-card[hidden] {
+  display: none;
+}
+
+.tabela-escala-wrap {
+  max-height: 330px;
+}
+
+.btn-ver-percurso {
+  align-items: center;
+  background: #008f57;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.74rem;
+  font-weight: 800;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.btn-ver-percurso:hover {
+  background: #087747;
 }
 
 .resumo-grid {

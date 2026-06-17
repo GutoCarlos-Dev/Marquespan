@@ -1,12 +1,17 @@
 import { supabaseClient } from './supabase.js';
 
 const form = document.getElementById('form-relatorio-localizacao');
+const tipoBuscaInput = document.getElementById('relatorio-tipo-busca');
 const placaInput = document.getElementById('relatorio-placa');
+const termoLabel = document.getElementById('relatorio-termo-label');
 const inicioInput = document.getElementById('relatorio-inicio');
 const terminoInput = document.getElementById('relatorio-termino');
 const listaVeiculos = document.getElementById('relatorio-lista-veiculos');
 const botaoConsultar = document.getElementById('btn-consultar-historico');
 const mensagem = document.getElementById('mensagem-relatorio-localizacao');
+const resultadoEscala = document.getElementById('resultado-escala-localizacao');
+const tabelaEscalaBody = document.getElementById('tabela-escala-localizacao-body');
+const contadorEscala = document.getElementById('contador-escala-localizacao');
 const resultado = document.getElementById('resultado-relatorio-localizacao');
 const tabelaBody = document.getElementById('tabela-posicoes-body');
 const contadorPosicoes = document.getElementById('contador-posicoes');
@@ -33,12 +38,27 @@ const filtrosTabela = {
   auxiliar: document.getElementById('filtro-posicao-auxiliar'),
   velocidade: document.getElementById('filtro-posicao-velocidade'),
   situacao: document.getElementById('filtro-posicao-situacao'),
+  tempoParado: document.getElementById('filtro-posicao-tempo-parado'),
   coordenadas: document.getElementById('filtro-posicao-coordenadas'),
   quantidade: document.getElementById('filtro-posicao-quantidade')
 };
 
 function normalizarPlaca(valor) {
   return String(valor || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function normalizarTextoBusca(valor) {
+  return String(valor || '').trim();
+}
+
+function escaparHTML(valor) {
+  return String(valor ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
 }
 
 function formatarPlaca(valor) {
@@ -90,6 +110,41 @@ function obterDataISOLocal(valor) {
 function valorResumoEscala(valor) {
   const texto = String(valor || '').trim();
   return texto || 'Não informado';
+}
+
+function calcularTempoParadoMs(ponto) {
+  if (ponto?.tipo !== 'parado') return 0;
+
+  const inicio = new Date(ponto.dataInicial || 0).getTime();
+  if (!Number.isFinite(inicio)) return 0;
+
+  const dataFinal = new Date(ponto.dataFinal || 0).getTime();
+  if (Number.isFinite(dataFinal) && dataFinal > inicio) {
+    return dataFinal - inicio;
+  }
+
+  const proximoPonto = pontosAtuais[ponto.indiceOriginal + 1];
+  const proximoInicio = new Date(proximoPonto?.dataInicial || 0).getTime();
+  if (Number.isFinite(proximoInicio) && proximoInicio > inicio) {
+    return proximoInicio - inicio;
+  }
+
+  return 0;
+}
+
+function formatarDuracao(ms) {
+  const totalSegundos = Math.max(0, Math.round((Number(ms) || 0) / 1000));
+  if (!totalSegundos) return '-';
+
+  const horas = Math.floor(totalSegundos / 3600);
+  const minutos = Math.floor((totalSegundos % 3600) / 60);
+  const segundos = totalSegundos % 60;
+
+  if (horas > 0) {
+    return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+  }
+
+  return `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
 }
 
 function obterEscalasDoPonto(ponto) {
@@ -270,6 +325,7 @@ function valorOrdenacao(ponto, campo) {
   if (campo === 'auxiliar') return obterCampoEscalaPonto(ponto, 'auxiliar');
   if (campo === 'velocidade') return Number(ponto.velocidade) || 0;
   if (campo === 'tipo') return ponto.tipo || '';
+  if (campo === 'tempoParado') return calcularTempoParadoMs(ponto);
   if (campo === 'coordenadas') return `${ponto.latitude},${ponto.longitude}`;
   if (campo === 'quantidadePosicoes') return Number(ponto.quantidadePosicoes) || 0;
   return '';
@@ -283,6 +339,7 @@ function obterPontosFiltradosOrdenados() {
   const filtroAuxiliar = filtrosTabela.auxiliar.value.trim().toLocaleLowerCase('pt-BR');
   const filtroVelocidade = filtrosTabela.velocidade.value.trim();
   const filtroSituacao = filtrosTabela.situacao.value;
+  const filtroTempoParado = filtrosTabela.tempoParado.value.trim().toLocaleLowerCase('pt-BR');
   const filtroCoordenadas = filtrosTabela.coordenadas.value.trim().toLowerCase();
   const filtroQuantidade = filtrosTabela.quantidade.value.trim();
 
@@ -292,6 +349,7 @@ function obterPontosFiltradosOrdenados() {
     const rota = obterCampoEscalaPonto(ponto, 'rota').toLocaleLowerCase('pt-BR');
     const motorista = obterCampoEscalaPonto(ponto, 'motorista').toLocaleLowerCase('pt-BR');
     const auxiliar = obterCampoEscalaPonto(ponto, 'auxiliar').toLocaleLowerCase('pt-BR');
+    const tempoParado = formatarDuracao(calcularTempoParadoMs(ponto)).toLocaleLowerCase('pt-BR');
     const coordenadas = `${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}`.toLowerCase();
 
     return (!filtroIndice || indiceExibido === Number(filtroIndice))
@@ -301,6 +359,7 @@ function obterPontosFiltradosOrdenados() {
       && (!filtroAuxiliar || auxiliar.includes(filtroAuxiliar))
       && (!filtroVelocidade || Math.round(ponto.velocidade || 0) === Number(filtroVelocidade))
       && (!filtroSituacao || ponto.tipo === filtroSituacao)
+      && (!filtroTempoParado || tempoParado.includes(filtroTempoParado))
       && (!filtroCoordenadas || coordenadas.includes(filtroCoordenadas))
       && (!filtroQuantidade || Number(ponto.quantidadePosicoes || 1) === Number(filtroQuantidade));
   });
@@ -343,7 +402,8 @@ function renderizarTabela() {
       <td>${obterCampoEscalaPonto(ponto, 'auxiliar')}</td>
       <td>${Math.round(ponto.velocidade || 0)} km/h</td>
       <td><span class="status-posicao ${ponto.tipo}">${ponto.tipo === 'parado' ? 'Parado' : 'Deslocamento'}</span></td>
-      <td>${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}</td>
+      <td>${formatarDuracao(calcularTempoParadoMs(ponto))}</td>
+      <td class="celula-coordenadas" title="Clique com o botão direito para abrir no Google Maps">${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}</td>
       <td>${ponto.quantidadePosicoes || 1}</td>
     `;
     linha.addEventListener('click', () => destacarPonto(ponto.indiceOriginal));
@@ -352,7 +412,7 @@ function renderizarTabela() {
 
   if (pontos.length === 0) {
     const linha = document.createElement('tr');
-    linha.innerHTML = '<td colspan="9" class="tabela-sem-resultados">Nenhuma posição encontrada com os filtros informados.</td>';
+    linha.innerHTML = '<td colspan="10" class="tabela-sem-resultados">Nenhuma posição encontrada com os filtros informados.</td>';
     fragmento.appendChild(linha);
   }
 
@@ -424,6 +484,32 @@ async function buscarEscalasDaPlaca(placa, dataInicioISO, dataTerminoISO) {
   return data || [];
 }
 
+async function buscarEscalasPorTermo(tipoBusca, termo, dataInicioISO, dataTerminoISO) {
+  if (!tipoBusca || !termo || !dataInicioISO || !dataTerminoISO) return [];
+
+  let query = supabaseClient
+    .from('escala')
+    .select('data_escala, placa, rota, motorista, auxiliar, terceiro, status, tipo_escala')
+    .gte('data_escala', dataInicioISO)
+    .lte('data_escala', dataTerminoISO)
+    .not('placa', 'is', null)
+    .order('data_escala', { ascending: true })
+    .order('id', { ascending: true });
+
+  if (tipoBusca === 'rota') {
+    query = query.ilike('rota', `%${termo}%`);
+  } else if (tipoBusca === 'motorista') {
+    query = query.or(`motorista.ilike.%${termo}%,terceiro.ilike.%${termo}%`);
+  } else if (tipoBusca === 'auxiliar') {
+    query = query.or(`auxiliar.ilike.%${termo}%,terceiro.ilike.%${termo}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data || []).filter((registro) => normalizarPlaca(registro.placa).length === 7);
+}
+
 function agruparEscalasPorData(escalas) {
   return (escalas || []).reduce((mapa, escala) => {
     const dataEscala = obterDataISOInput(escala.data_escala);
@@ -434,14 +520,36 @@ function agruparEscalasPorData(escalas) {
   }, new Map());
 }
 
+function obterPeriodoValidado() {
+  const inicio = new Date(inicioInput.value);
+  const termino = new Date(terminoInput.value);
+
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(termino.getTime()) || termino <= inicio) {
+    mostrarMensagem('Informe um período válido. O término deve ser posterior ao início.', true);
+    return null;
+  }
+  if (termino.getTime() - inicio.getTime() > 30 * 24 * 60 * 60 * 1000) {
+    mostrarMensagem('O período máximo por consulta é de 30 dias.', true);
+    return null;
+  }
+
+  return {
+    inicio,
+    termino,
+    dataEscalaInicioISO: obterDataISOInput(inicioInput.value),
+    dataEscalaTerminoISO: obterDataISOInput(terminoInput.value)
+  };
+}
+
 function definirCarregando(carregando) {
   botaoConsultar.disabled = carregando;
+  const buscandoVeiculo = tipoBuscaInput.value === 'veiculo';
   botaoConsultar.querySelector('i').className = carregando
     ? 'fas fa-circle-notch fa-spin'
     : 'fas fa-magnifying-glass-location';
   botaoConsultar.querySelector('span').textContent = carregando
-    ? 'Consultando histórico...'
-    : 'Consultar percurso';
+    ? (buscandoVeiculo ? 'Consultando histórico...' : 'Buscando na escala...')
+    : (buscandoVeiculo ? 'Consultar percurso' : 'Buscar na escala');
 }
 
 function mostrarMensagem(texto, erro = false) {
@@ -474,7 +582,101 @@ async function carregarVeiculos() {
   });
 }
 
+function renderizarResultadosEscala(registros) {
+  tabelaEscalaBody.innerHTML = '';
+  const fragmento = document.createDocumentFragment();
+
+  registros.forEach((registro) => {
+    const placa = normalizarPlaca(registro.placa);
+    const linha = document.createElement('tr');
+    linha.innerHTML = `
+      <td>${escaparHTML(formatarDataCurtaISO(registro.data_escala))}</td>
+      <td>${escaparHTML(valorResumoEscala(registro.rota))}</td>
+      <td><strong>${escaparHTML(formatarPlaca(placa))}</strong></td>
+      <td>${escaparHTML(valorResumoEscala(registro.motorista))}</td>
+      <td>${escaparHTML(valorResumoEscala(registro.auxiliar))}</td>
+      <td>${escaparHTML(valorResumoEscala(registro.status))}</td>
+      <td>
+        <button class="btn-ver-percurso" type="button" data-placa="${escaparHTML(placa)}">
+          <i class="fas fa-route"></i> Ver percurso
+        </button>
+      </td>
+    `;
+    fragmento.appendChild(linha);
+  });
+
+  if (registros.length === 0) {
+    const linha = document.createElement('tr');
+    linha.innerHTML = '<td colspan="7" class="tabela-sem-resultados">Nenhum veículo encontrado na escala para os filtros informados.</td>';
+    fragmento.appendChild(linha);
+  }
+
+  tabelaEscalaBody.appendChild(fragmento);
+  contadorEscala.textContent = `${registros.length} registro${registros.length === 1 ? '' : 's'}`;
+  resultadoEscala.hidden = false;
+}
+
+function obterRegistrosUnicosEscala(registros) {
+  const vistos = new Set();
+  return (registros || []).filter((registro) => {
+    const chave = [
+      obterDataISOInput(registro.data_escala),
+      normalizarPlaca(registro.placa),
+      String(registro.rota || '').trim(),
+      String(registro.motorista || '').trim(),
+      String(registro.auxiliar || '').trim()
+    ].join('|');
+    if (vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
+  });
+}
+
+async function consultarEscalaParaPercurso() {
+  const tipoBusca = tipoBuscaInput.value;
+  const termo = normalizarTextoBusca(placaInput.value);
+  const periodo = obterPeriodoValidado();
+
+  if (!periodo) return;
+  if (!termo) {
+    mostrarMensagem(`Informe ${termoLabel.textContent.toLowerCase()} para buscar na escala.`, true);
+    return;
+  }
+
+  resultado.hidden = true;
+  escalasPorDataAtual = new Map();
+  definirCarregando(true);
+  mostrarMensagem('Buscando veículos na escala...');
+
+  try {
+    const registros = await buscarEscalasPorTermo(
+      tipoBusca,
+      termo,
+      periodo.dataEscalaInicioISO,
+      periodo.dataEscalaTerminoISO
+    );
+    const registrosUnicos = obterRegistrosUnicosEscala(registros);
+    renderizarResultadosEscala(registrosUnicos);
+    mostrarMensagem(registrosUnicos.length
+      ? 'Selecione um veículo encontrado na escala para traçar o percurso.'
+      : 'Nenhum veículo encontrado na escala para os filtros informados.',
+      registrosUnicos.length === 0);
+  } catch (error) {
+    console.error('Erro ao buscar escala:', error);
+    resultadoEscala.hidden = true;
+    mostrarMensagem(error?.message || 'Não foi possível buscar veículos na escala.', true);
+  } finally {
+    definirCarregando(false);
+  }
+}
+
 async function consultarHistorico() {
+  if (tipoBuscaInput.value !== 'veiculo') {
+    await consultarEscalaParaPercurso();
+    return;
+  }
+
+  resultadoEscala.hidden = true;
   const placa = normalizarPlaca(placaInput.value);
   const inicio = new Date(inicioInput.value);
   const termino = new Date(terminoInput.value);
@@ -546,8 +748,63 @@ form.addEventListener('submit', (event) => {
   consultarHistorico();
 });
 
+function atualizarTipoBusca() {
+  const tipoBusca = tipoBuscaInput.value;
+  const configuracoes = {
+    veiculo: { label: 'Veículo', placeholder: 'GIH8F22', maxLength: 8, list: 'relatorio-lista-veiculos' },
+    rota: { label: 'Rota', placeholder: 'Digite a rota', maxLength: 30, list: '' },
+    motorista: { label: 'Motorista', placeholder: 'Nome do motorista', maxLength: 80, list: '' },
+    auxiliar: { label: 'Auxiliar', placeholder: 'Nome do auxiliar', maxLength: 80, list: '' }
+  };
+  const config = configuracoes[tipoBusca] || configuracoes.veiculo;
+
+  termoLabel.textContent = config.label;
+  placaInput.placeholder = config.placeholder;
+  placaInput.maxLength = config.maxLength;
+  if (config.list) {
+    placaInput.setAttribute('list', config.list);
+  } else {
+    placaInput.removeAttribute('list');
+  }
+  placaInput.value = '';
+  resultadoEscala.hidden = true;
+  resultado.hidden = true;
+  botaoConsultar.querySelector('span').textContent = tipoBusca === 'veiculo'
+    ? 'Consultar percurso'
+    : 'Buscar na escala';
+  mostrarMensagem('O período máximo por consulta é de 30 dias.');
+}
+
+tipoBuscaInput.addEventListener('change', atualizarTipoBusca);
+
 placaInput.addEventListener('input', () => {
-  placaInput.value = normalizarPlaca(placaInput.value);
+  if (tipoBuscaInput.value === 'veiculo') {
+    placaInput.value = normalizarPlaca(placaInput.value);
+  }
+});
+
+tabelaEscalaBody.addEventListener('click', (event) => {
+  const botao = event.target.closest('.btn-ver-percurso');
+  if (!botao) return;
+
+  const placa = botao.dataset.placa;
+  tipoBuscaInput.value = 'veiculo';
+  atualizarTipoBusca();
+  placaInput.value = placa;
+  consultarHistorico();
+});
+
+tabelaBody.addEventListener('contextmenu', (event) => {
+  const celula = event.target.closest('.celula-coordenadas');
+  if (!celula) return;
+
+  const linha = celula.closest('tr');
+  const ponto = pontosAtuais[Number(linha?.dataset.indice)];
+  if (!ponto) return;
+
+  event.preventDefault();
+  const url = `https://www.google.com/maps?q=${encodeURIComponent(`${ponto.latitude},${ponto.longitude}`)}`;
+  window.open(url, '_blank', 'noopener');
 });
 
 Object.values(filtrosTabela).forEach((campo) => {
@@ -577,3 +834,4 @@ botaoLimparFiltros.addEventListener('click', () => {
 definirPeriodoPadrao();
 iniciarMapa();
 carregarVeiculos();
+atualizarTipoBusca();

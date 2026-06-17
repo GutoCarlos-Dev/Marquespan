@@ -25,8 +25,17 @@
 
     <section class="glass-panel relatorio-filtros">
       <form id="form-relatorio-localizacao">
+        <div class="form-group">
+          <label for="relatorio-tipo-busca">Buscar por</label>
+          <select id="relatorio-tipo-busca" class="glass-input">
+            <option value="veiculo">Veículo</option>
+            <option value="rota">Rota</option>
+            <option value="motorista">Motorista</option>
+            <option value="auxiliar">Auxiliar</option>
+          </select>
+        </div>
         <div class="form-group campo-placa">
-          <label for="relatorio-placa">Veículo</label>
+          <label id="relatorio-termo-label" for="relatorio-placa">Veículo</label>
           <input
             id="relatorio-placa"
             class="glass-input"
@@ -55,6 +64,32 @@
       <p id="mensagem-relatorio-localizacao" class="mensagem-relatorio" role="status" aria-live="polite">
         O período máximo por consulta é de 30 dias.
       </p>
+    </section>
+
+    <section id="resultado-escala-localizacao" class="glass-panel escala-resultados-card" hidden>
+      <div class="posicoes-header">
+        <div>
+          <h2><i class="fas fa-truck"></i> Veículos encontrados na escala</h2>
+          <p>Selecione uma linha para traçar o percurso da placa no período informado.</p>
+        </div>
+        <span id="contador-escala-localizacao" class="contador-posicoes">0 registros</span>
+      </div>
+      <div class="table-responsive tabela-posicoes-wrap tabela-escala-wrap">
+        <table class="tabela-posicoes tabela-escala-localizacao">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Rota</th>
+              <th>Placa</th>
+              <th>Motorista</th>
+              <th>Auxiliar</th>
+              <th>Status</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-escala-localizacao-body"></tbody>
+        </table>
+      </div>
     </section>
 
     <section id="resultado-relatorio-localizacao" class="resultado-relatorio" hidden>
@@ -135,8 +170,9 @@
                 <th><button type="button" class="btn-ordenar" data-ordenar="auxiliar">Auxiliar <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="velocidade">Velocidade <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="tipo">Situação <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="btn-ordenar" data-ordenar="tempoParado">Tempo parado <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="btn-ordenar" data-ordenar="coordenadas">Coordenadas <i class="fas fa-sort"></i></button></th>
-                <th><button type="button" class="btn-ordenar" data-ordenar="quantidadePosicoes">Quantidade <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="btn-ordenar" data-ordenar="quantidadePosicoes">Pontos agrupados <i class="fas fa-sort"></i></button></th>
               </tr>
               <tr class="cabecalho-filtros">
                 <th><input id="filtro-posicao-indice" type="number" min="1" placeholder="#"></th>
@@ -152,8 +188,9 @@
                     <option value="parado">Parado</option>
                   </select>
                 </th>
+                <th><input id="filtro-posicao-tempo-parado" type="text" placeholder="Tempo"></th>
                 <th><input id="filtro-posicao-coordenadas" type="text" placeholder="Latitude ou longitude"></th>
-                <th><input id="filtro-posicao-quantidade" type="number" min="1" placeholder="Quantidade"></th>
+                <th><input id="filtro-posicao-quantidade" type="number" min="1" placeholder="Pontos"></th>
               </tr>
             </thead>
             <tbody id="tabela-posicoes-body"></tbody>
