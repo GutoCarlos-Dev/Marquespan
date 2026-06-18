@@ -181,7 +181,7 @@ export async function carregarClientes() {
 
   const { data, error } = await supabaseClient
     .from('clientes')
-    .select('*')
+    .select('id, codigo, nome, municipio, uf')
     .order('codigo', { ascending: true });
 
   if (error) {
@@ -200,8 +200,8 @@ export async function carregarClientes() {
     linha.innerHTML = `
       <td>${cliente.codigo}</td>
       <td>${cliente.nome}</td>
-      <td>${cliente.cidade}</td>
-      <td>${cliente.estado}</td>
+      <td>${cliente.municipio || ''}</td>
+      <td>${cliente.uf || ''}</td>
       <td>
         <button class="btn-icon edit" onclick="editarCliente('${cliente.id}')" title="Editar"><i class="fas fa-pen"></i></button>
         <button class="btn-icon delete" onclick="excluirCliente('${cliente.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -218,7 +218,7 @@ export async function salvarCliente(event) {
   const codigo = document.getElementById('codCliente').value.trim();
   const nome = document.getElementById('nomeCliente').value.trim();
   const cidade = document.getElementById('cidadeCliente').value.trim();
-  const estado = document.getElementById('estadoCliente').value.trim();
+  const estado = document.getElementById('estadoCliente').value.trim().toUpperCase();
 
   if (!codigo || !nome || !cidade || !estado) {
     alert('⚠️ Preencha todos os campos.');
@@ -230,13 +230,13 @@ export async function salvarCliente(event) {
     // Update
     result = await supabaseClient
       .from('clientes')
-      .update({ codigo, nome, cidade, estado })
+      .update({ codigo, nome, municipio: cidade, uf: estado })
       .eq('id', id);
   } else {
     // Insert
     result = await supabaseClient
       .from('clientes')
-      .insert([{ codigo, nome, cidade, estado }]);
+      .insert([{ codigo, nome, municipio: cidade, uf: estado }]);
   }
 
   if (result.error) {
@@ -254,7 +254,7 @@ export async function salvarCliente(event) {
 export async function editarCliente(id) {
   const { data, error } = await supabaseClient
     .from('clientes')
-    .select('*')
+    .select('id, codigo, nome, municipio, uf')
     .eq('id', id)
     .single();
 
@@ -265,8 +265,8 @@ export async function editarCliente(id) {
 
   document.getElementById('codCliente').value = data.codigo;
   document.getElementById('nomeCliente').value = data.nome;
-  document.getElementById('cidadeCliente').value = data.cidade;
-  document.getElementById('estadoCliente').value = data.estado;
+  document.getElementById('cidadeCliente').value = data.municipio || '';
+  document.getElementById('estadoCliente').value = data.uf || '';
   document.getElementById('formCliente').dataset.clienteId = data.id;
 }
 
