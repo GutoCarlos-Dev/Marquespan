@@ -202,6 +202,26 @@
 .btn-info { background: linear-gradient(135deg, #17a2b8, #117a8b); }
 .btn-orange { background: linear-gradient(135deg, #fd7e14, #d65b00); }
 .btn-yellow { background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; }
+.btn-secondary { background: linear-gradient(135deg, #6c757d, #495057); }
+
+.form-actions-inline {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.modal-actions {
+    margin-top: 15px;
+}
+
+.cliente-form-grid {
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+}
+
+.cliente-field-wide {
+    grid-column: span 2;
+}
 
 /* Tabela Glass */
 .table-responsive {

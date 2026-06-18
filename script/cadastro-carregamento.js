@@ -399,6 +399,7 @@ export function fecharModalCliente() {
 }
 
 export async function salvarCliente(event) {
+  return salvarClienteCompleto(event);
   event.preventDefault();
 
   const formData = new FormData(document.getElementById('formCliente'));
@@ -430,8 +431,9 @@ export async function salvarCliente(event) {
   };
   const rota = normalizarRota(formData.get('rota'));
 
-  if (!codigo || !nome || !cidade || !estado) {
+  if (!cliente.codigo) {
     alert('⚠️ Preencha todos os campos.');
+    document.getElementById('clienteCodigo')?.focus();
     return;
   }
 
@@ -459,6 +461,83 @@ export async function salvarCliente(event) {
   fecharModalCliente();
   await carregarClientes();
   filtrarClientes();
+}
+
+export async function salvarClienteCompleto(event) {
+  event.preventDefault();
+
+  const formData = new FormData(document.getElementById('formCliente'));
+  const agora = new Date().toISOString();
+  const cliente = {
+    codigo: normalizeCodigo(formData.get('codigo')),
+    fantasia: cleanCell(formData.get('fantasia')),
+    nome: cleanCell(formData.get('nome')),
+    tipo_pessoa: cleanCell(formData.get('tipo_pessoa')).toUpperCase(),
+    uf: cleanCell(formData.get('uf')).toUpperCase(),
+    municipio: cleanCell(formData.get('municipio')),
+    endereco: cleanCell(formData.get('endereco')),
+    geolocalizacao: cleanCell(formData.get('geolocalizacao')),
+    bairro: cleanCell(formData.get('bairro')),
+    cep: cleanCell(formData.get('cep')),
+    email: cleanCell(formData.get('email')),
+    cnpj_cpf: cleanCell(formData.get('cnpj_cpf')),
+    ie_rg: cleanCell(formData.get('ie_rg')),
+    cond_pagto: cleanCell(formData.get('cond_pagto')),
+    forma_cob: cleanCell(formData.get('forma_cob')),
+    ativo: cleanCell(formData.get('ativo')).toUpperCase() || 'A',
+    supervisor: cleanCell(formData.get('supervisor')),
+    consultor: cleanCell(formData.get('consultor')),
+    tabela_preco: cleanCell(formData.get('tabela_preco')),
+    categoria: cleanCell(formData.get('categoria')),
+    origem_arquivo: 'Cadastro manual',
+    importado_em: agora,
+    updated_at: agora
+  };
+  const rota = normalizarRota(formData.get('rota'));
+
+  if (!cliente.codigo) {
+    alert('Informe o codigo do cliente.');
+    document.getElementById('clienteCodigo')?.focus();
+    return;
+  }
+
+  const btn = document.getElementById('btnSalvarCliente');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+  try {
+    const { error: clienteError } = await supabaseClient
+      .from('clientes')
+      .upsert([cliente], { onConflict: 'codigo' });
+    if (clienteError) throw clienteError;
+
+    if (rota) {
+      const { error: rotaError } = await supabaseClient
+        .from('cliente_rotas')
+        .upsert([{
+          cliente_codigo: cliente.codigo,
+          rota,
+          supervisor: cliente.supervisor,
+          consultor: cliente.consultor,
+          ativo: cliente.ativo,
+          origem_arquivo: cliente.origem_arquivo,
+          importado_em: agora,
+          updated_at: agora
+        }], { onConflict: 'cliente_codigo,rota' });
+      if (rotaError) throw rotaError;
+    }
+
+    alert('Cliente salvo com sucesso!');
+    fecharModalCliente();
+    await carregarClientes();
+    filtrarClientes();
+  } catch (error) {
+    console.error('Erro ao salvar cliente:', error);
+    alert(`Erro ao salvar cliente: ${error.message || 'verifique os dados e tente novamente.'}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Salvar Registro';
+  }
 }
 
 export async function editarCliente(id) {

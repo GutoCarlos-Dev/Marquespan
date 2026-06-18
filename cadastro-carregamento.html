@@ -238,14 +238,15 @@
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarCliente, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-2';
+    import { carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-3';
 
     window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('formItem').addEventListener('submit', salvarItem);
-      document.getElementById('formCliente').addEventListener('submit', salvarCliente);
+      document.getElementById('formCliente').addEventListener('submit', salvarClienteCompleto);
       document.getElementById('btnAbrirModalCliente').addEventListener('click', () => abrirModalCliente());
       document.getElementById('btnFecharModalCliente').addEventListener('click', fecharModalCliente);
       document.getElementById('btnCancelarCliente').addEventListener('click', fecharModalCliente);
+      document.getElementById('btnClearClienteForm').addEventListener('click', limparFormularioCliente);
       document.getElementById('buscaClientesCarregamento').addEventListener('input', filtrarClientes);
       document.getElementById('formCliente').addEventListener('click', (event) => {
         if (event.target.id === 'formCliente') fecharModalCliente();
