@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="css/index.css"> 
   <link rel="stylesheet" href="css/menu.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-19">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-20">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -24,7 +24,6 @@
       <button type="button" class="tab-button" data-tab-target="historico"><i class="fas fa-history"></i> Histórico</button>
       <button type="button" class="tab-button" data-tab-target="itens"><i class="fas fa-boxes"></i> Itens</button>
       <button type="button" class="tab-button" data-tab-target="clientes"><i class="fas fa-users"></i> Clientes</button>
-      <button type="button" class="tab-button" data-tab-target="motoristas"><i class="fas fa-truck-moving"></i> Motoristas</button>
     </nav>
 
     <section id="requisicao" class="glass-panel tab-panel active">
@@ -358,36 +357,6 @@
       </div>
     </section>
 
-    <section id="motoristas" class="glass-panel tab-panel hidden">
-      <h3><i class="fas fa-truck-moving"></i> Motoristas</h3>
-      <form id="formMotorista">
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="nomeMotorista">Nome:</label>
-            <input type="text" id="nomeMotorista" placeholder="Nome do Motorista" required class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="nomeCompletoMotorista">Nome Completo:</label>
-            <input type="text" id="nomeCompletoMotorista" placeholder="Nome Completo do Motorista" class="glass-input">
-          </div>
-        </div>
-        <div class="form-actions" style="margin-top: 15px;">
-          <button type="submit" id="btnSalvarMotorista" class="btn-glass btn-green">âœ… Salvar Motorista</button>
-        </div>
-      </form>
-      <div class="table-responsive">
-        <table id="tabelaMotoristas" class="glass-table data-grid">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Nome Completo</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="corpoTabelaMotoristas"></tbody>
-        </table>
-      </div>
-    </section>
 
     <footer class="footer">
       &copy; 2026 GTSYSTEM - Marquespan. Todos os direitos reservados.
@@ -533,7 +502,7 @@
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-21';
+    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260618-23';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
@@ -565,14 +534,9 @@
       window.excluirItem = excluirItem;
       window.editarCliente = editarCliente;
       window.excluirCliente = excluirCliente;
-      document.getElementById('formMotorista').addEventListener('submit', salvarMotorista);
-      window.editarMotorista = editarMotorista;
-      window.excluirMotorista = excluirMotorista;
-
       await Promise.all([
         carregarItens(),
-        carregarClientes(),
-        carregarMotoristas()
+        carregarClientes()
       ]);
       await inicializarRequisicao();
       await inicializarCarregamento();

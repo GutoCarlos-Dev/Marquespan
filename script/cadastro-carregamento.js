@@ -1251,20 +1251,7 @@ export async function inicializarRequisicao() {
 const CARREGAMENTOS_TABLE = 'saidas_carregamento';
 
 let carregamentoRequisicoes = [];
-let motoristasLista = [];
 let veiculosLista = [];
-
-function popularMotoristasDatalistCarregamento() {
-  const datalist = document.getElementById('motoristas-carregamento-list');
-  if (!datalist) return;
-  datalist.innerHTML = '';
-  motoristasLista.forEach(m => {
-    const option = document.createElement('option');
-    option.value = m.nome || '';
-    option.label = m.nome_completo || '';
-    datalist.appendChild(option);
-  });
-}
 
 function popularPlacasDatalist() {
   const datalist = document.getElementById('placas-carregamento-list');
@@ -1274,6 +1261,18 @@ function popularPlacasDatalist() {
     const option = document.createElement('option');
     option.value = v.placa || '';
     option.label = [v.modelo, v.tipo, v.filial].filter(Boolean).join(' · ');
+    datalist.appendChild(option);
+  });
+}
+
+function popularMotoristasDatalist(lista) {
+  const datalist = document.getElementById('motoristas-carregamento-list');
+  if (!datalist) return;
+  datalist.innerHTML = '';
+  lista.forEach(f => {
+    const option = document.createElement('option');
+    option.value = f.nome_completo || f.nome || '';
+    option.label = f.funcao || '';
     datalist.appendChild(option);
   });
 }
@@ -1607,15 +1606,16 @@ function fecharModalRequisicoesPendentes() {
 export async function inicializarCarregamento() {
   if (!document.getElementById('carregamentoPlaca')) return;
 
-  const [{ data: motoristas }, { data: veiculos }] = await Promise.all([
-    supabaseClient.from('motoristas').select('nome, nome_completo').order('nome'),
-    supabaseClient.from('veiculos').select('placa, modelo, tipo, filial, situacao').eq('situacao', 'ativo').order('placa')
+  const [{ data: veiculos }, { data: motoristas }] = await Promise.all([
+    supabaseClient.from('veiculos').select('placa, modelo, tipo, filial, situacao').eq('situacao', 'ativo').order('placa'),
+    supabaseClient.from('funcionario').select('nome, nome_completo, funcao')
+      .or('funcao.ilike.%Motorista%,funcao.ilike.%Lider%,funcao.ilike.%Líder%')
+      .order('nome')
   ]);
 
-  motoristasLista = motoristas || [];
   veiculosLista = veiculos || [];
-  popularMotoristasDatalistCarregamento();
   popularPlacasDatalist();
+  popularMotoristasDatalist(motoristas || []);
 
   document.getElementById('btnSalvarCarregamento')?.addEventListener('click', salvarCarregamento);
 
@@ -2365,114 +2365,3 @@ export async function excluirCliente(id) {
 
 // === MOTORISTAS ===
 
-export async function carregarMotoristas() {
-  const corpoTabela = document.getElementById('corpoTabelaMotoristas');
-  corpoTabela.innerHTML = '';
-
-  const { data, error } = await supabaseClient
-    .from('motoristas')
-    .select('*')
-    .order('nome', { ascending: true });
-
-  if (error) {
-    corpoTabela.innerHTML = '<tr><td colspan="3">Erro ao carregar motoristas.</td></tr>';
-    console.error(error);
-    return;
-  }
-
-  if (data.length === 0) {
-    corpoTabela.innerHTML = '<tr><td colspan="3">Nenhum motorista encontrado.</td></tr>';
-    return;
-  }
-
-  data.forEach(motorista => {
-    const linha = document.createElement('tr');
-    linha.innerHTML = `
-      <td>${motorista.nome}</td>
-      <td>${motorista.nome_completo || ''}</td>
-      <td>
-        <button class="btn-icon edit" onclick="editarMotorista('${motorista.id}')" title="Editar"><i class="fas fa-pen"></i></button>
-        <button class="btn-icon delete" onclick="excluirMotorista('${motorista.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
-      </td>
-    `;
-    corpoTabela.appendChild(linha);
-  });
-}
-
-export async function salvarMotorista(event) {
-  event.preventDefault();
-
-  const id = document.getElementById('formMotorista').dataset.motoristaId;
-  const nome = document.getElementById('nomeMotorista').value.trim();
-  const nome_completo = document.getElementById('nomeCompletoMotorista').value.trim();
-
-  if (!nome) {
-    alert('⚠️ O campo "Nome" é obrigatório.');
-    return;
-  }
-
-  let result;
-  if (id) {
-    // Update
-    result = await supabaseClient
-      .from('motoristas')
-      .update({ nome, nome_completo })
-      .eq('id', id);
-  } else {
-    // Insert
-    result = await supabaseClient
-      .from('motoristas')
-      .insert([{ nome, nome_completo }]);
-  }
-
-  if (result.error) {
-    alert('❌ Erro ao salvar motorista.');
-    console.error(result.error);
-    return;
-  }
-
-  alert('✅ Motorista salvo com sucesso!');
-  document.getElementById('formMotorista').reset();
-  document.getElementById('formMotorista').dataset.motoristaId = '';
-  carregarMotoristas();
-}
-
-export async function editarMotorista(id) {
-  const { data, error } = await supabaseClient
-    .from('motoristas')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error || !data) {
-    alert('❌ Erro ao carregar dados do motorista.');
-    return;
-  }
-
-  document.getElementById('nomeMotorista').value = data.nome;
-  document.getElementById('nomeCompletoMotorista').value = data.nome_completo;
-  document.getElementById('formMotorista').dataset.motoristaId = data.id;
-
-  // Foca no formulário para facilitar a edição
-  document.getElementById('nomeMotorista').focus();
-}
-
-export async function excluirMotorista(id) {
-  const confirmar = confirm('Tem certeza que deseja excluir este motorista?');
-
-  if (!confirmar) return;
-
-  const { error } = await supabaseClient
-    .from('motoristas')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    alert('❌ Erro ao excluir motorista.');
-    console.error(error);
-    return;
-  }
-
-  alert('✅ Motorista excluído com sucesso!');
-  carregarMotoristas();
-}
