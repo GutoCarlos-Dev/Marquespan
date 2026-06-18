@@ -58,6 +58,73 @@
     gap: 10px;
 }
 
+.hidden {
+    display: none !important;
+}
+
+.panel-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.panel-title-row h3 {
+    border-bottom: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.grid-toolbar {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 15px;
+}
+
+.search-group {
+    width: min(460px, 100%);
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.modal-card {
+    width: min(860px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 10px;
+}
+
+.modal-header h3 {
+    border-bottom: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
 /* Form Grid */
 .form-grid {
     display: grid;
@@ -218,6 +285,11 @@
 
 /* Media Queries para Responsividade */
 @media (max-width: 768px) {
+    .panel-title-row,
+    .grid-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
     .form-grid {
         grid-template-columns: 1fr;
     }

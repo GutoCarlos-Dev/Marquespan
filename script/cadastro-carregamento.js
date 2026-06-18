@@ -1,4 +1,46 @@
 import { supabaseClient } from './supabase.js';
+
+let clientesCarregamento = [];
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
+function normalizarBusca(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function cleanCell(value) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeCodigo(value) {
+  const texto = cleanCell(value);
+  const digitos = texto.replace(/\D/g, '');
+  return digitos || texto;
+}
+
+function normalizarRota(value) {
+  const texto = cleanCell(value);
+  const numero = texto.match(/\d+/)?.[0];
+  if (!numero) return texto;
+  return numero.replace(/^0+(?=\d)/, '');
+}
+
+function clienteEstaAtivo(cliente) {
+  const ativo = String(cliente?.ativo ?? 'A').trim().toUpperCase();
+  return ['A', 'ATIVO', 'S', 'SIM', 'TRUE', '1'].includes(ativo);
+}
 // === FUNÇÕES AUXILIARES ===
 
 /**
@@ -179,29 +221,82 @@ export async function carregarClientes() {
   const corpoTabela = document.getElementById('corpoTabelaClientes');
   corpoTabela.innerHTML = '';
 
-  const { data, error } = await supabaseClient
-    .from('clientes')
-    .select('id, codigo, nome, municipio, uf')
-    .order('codigo', { ascending: true });
-
-  if (error) {
-    corpoTabela.innerHTML = '<tr><td colspan="5">Erro ao carregar clientes.</td></tr>';
+  try {
+    clientesCarregamento = await buscarTodosClientesCarregamento();
+  } catch (error) {
+    corpoTabela.innerHTML = '<tr><td colspan="7">Erro ao carregar clientes.</td></tr>';
     console.error(error);
     return;
   }
 
-  if (data.length === 0) {
-    corpoTabela.innerHTML = '<tr><td colspan="5">Nenhum cliente encontrado.</td></tr>';
+  atualizarContadorClientesAtivos();
+  renderizarClientes(clientesCarregamento);
+}
+
+async function buscarTodosClientesCarregamento() {
+  const todos = [];
+  const tamanhoPagina = 1000;
+
+  for (let inicio = 0; ; inicio += tamanhoPagina) {
+    const { data, error } = await supabaseClient
+      .from('clientes')
+      .select('*')
+      .order('codigo', { ascending: true })
+      .range(inicio, inicio + tamanhoPagina - 1);
+    if (error) throw error;
+    todos.push(...(data || []));
+    if (!data || data.length < tamanhoPagina) break;
+  }
+
+  return todos;
+}
+
+async function obterProximoCodigoCliente() {
+  const maiorLocal = clientesCarregamento.reduce((maior, cliente) => {
+    const numero = Number(String(cliente.codigo || '').replace(/\D/g, ''));
+    return Number.isFinite(numero) ? Math.max(maior, numero) : maior;
+  }, 0);
+
+  let maiorBanco = maiorLocal;
+  const { data, error } = await supabaseClient
+    .from('clientes')
+    .select('codigo')
+    .order('codigo', { ascending: false })
+    .limit(200);
+  if (error) throw error;
+
+  (data || []).forEach(cliente => {
+    const numero = Number(String(cliente.codigo || '').replace(/\D/g, ''));
+    if (Number.isFinite(numero)) maiorBanco = Math.max(maiorBanco, numero);
+  });
+
+  return String(maiorBanco + 1);
+}
+
+function atualizarContadorClientesAtivos() {
+  const contador = document.getElementById('contadorClientesAtivos');
+  if (!contador) return;
+  contador.textContent = String(clientesCarregamento.filter(clienteEstaAtivo).length);
+}
+
+function renderizarClientes(clientes) {
+  const corpoTabela = document.getElementById('corpoTabelaClientes');
+  corpoTabela.innerHTML = '';
+
+  if (!clientes.length) {
+    corpoTabela.innerHTML = '<tr><td colspan="7">Nenhum cliente encontrado.</td></tr>';
     return;
   }
 
-  data.forEach(cliente => {
+  clientes.forEach(cliente => {
     const linha = document.createElement('tr');
     linha.innerHTML = `
-      <td>${cliente.codigo}</td>
-      <td>${cliente.nome}</td>
-      <td>${cliente.municipio || ''}</td>
-      <td>${cliente.uf || ''}</td>
+      <td>${escapeHtml(cliente.codigo)}</td>
+      <td>${escapeHtml(cliente.nome)}</td>
+      <td>${escapeHtml(cliente.fantasia)}</td>
+      <td>${escapeHtml(cliente.cnpj_cpf)}</td>
+      <td>${escapeHtml(cliente.municipio)}</td>
+      <td>${escapeHtml(cliente.uf)}</td>
       <td>
         <button class="btn-icon edit" onclick="editarCliente('${cliente.id}')" title="Editar"><i class="fas fa-pen"></i></button>
         <button class="btn-icon delete" onclick="excluirCliente('${cliente.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -211,14 +306,129 @@ export async function carregarClientes() {
   });
 }
 
+export function filtrarClientes() {
+  const termo = normalizarBusca(document.getElementById('buscaClientesCarregamento')?.value);
+  if (!termo) {
+    renderizarClientes(clientesCarregamento);
+    return;
+  }
+
+  const filtrados = clientesCarregamento.filter(cliente => [
+    cliente.codigo,
+    cliente.nome,
+    cliente.fantasia,
+    cliente.cnpj_cpf
+  ].some(valor => normalizarBusca(valor).includes(termo)));
+
+  renderizarClientes(filtrados);
+}
+
+export async function abrirModalCliente(cliente = null) {
+  const form = document.getElementById('formCliente');
+  form.reset();
+  form.dataset.clienteId = cliente?.id || '';
+  document.getElementById('tituloModalCliente').innerHTML = cliente
+    ? '<i class="fas fa-user-edit"></i> Editar Cliente'
+    : '<i class="fas fa-user-plus"></i> Incluir Cliente';
+
+  if (cliente) {
+    preencherFormularioCliente(cliente);
+  } else {
+    document.getElementById('clienteAtivo').value = 'A';
+    try {
+      document.getElementById('clienteCodigo').value = await obterProximoCodigoCliente();
+    } catch (error) {
+      console.error('Erro ao calcular proximo codigo de cliente:', error);
+      document.getElementById('clienteCodigo').value = '';
+      alert('Nao foi possivel calcular o proximo codigo do cliente.');
+    }
+  }
+
+  form.classList.remove('hidden');
+  form.setAttribute('aria-hidden', 'false');
+  document.getElementById('clienteFantasia').focus();
+}
+
+function preencherFormularioCliente(cliente) {
+  const valores = {
+    clienteCodigo: cliente.codigo,
+    clienteFantasia: cliente.fantasia,
+    clienteNome: cliente.nome,
+    clienteTipoPessoa: cliente.tipo_pessoa,
+    clienteUf: cliente.uf,
+    clienteMunicipio: cliente.municipio,
+    clienteEndereco: cliente.endereco,
+    clienteGeolocalizacao: cliente.geolocalizacao,
+    clienteBairro: cliente.bairro,
+    clienteCep: cliente.cep,
+    clienteEmail: cliente.email,
+    clienteCnpjCpf: cliente.cnpj_cpf,
+    clienteIeRg: cliente.ie_rg,
+    clienteCondPagto: cliente.cond_pagto,
+    clienteFormaCob: cliente.forma_cob,
+    clienteAtivo: cliente.ativo || 'A',
+    clienteSupervisor: cliente.supervisor,
+    clienteRota: cliente.rota,
+    clienteConsultor: cliente.consultor,
+    clienteTabelaPreco: cliente.tabela_preco,
+    clienteCategoria: cliente.categoria
+  };
+
+  Object.entries(valores).forEach(([id, value]) => {
+    const field = document.getElementById(id);
+    if (field) field.value = value ?? '';
+  });
+}
+
+export function limparFormularioCliente() {
+  const form = document.getElementById('formCliente');
+  const codigo = document.getElementById('clienteCodigo').value;
+  form.reset();
+  form.dataset.clienteId = '';
+  document.getElementById('clienteCodigo').value = codigo;
+  document.getElementById('clienteAtivo').value = 'A';
+  document.getElementById('clienteFantasia').focus();
+}
+
+export function fecharModalCliente() {
+  const form = document.getElementById('formCliente');
+  form.classList.add('hidden');
+  form.setAttribute('aria-hidden', 'true');
+  form.reset();
+  form.dataset.clienteId = '';
+}
+
 export async function salvarCliente(event) {
   event.preventDefault();
 
-  const id = document.getElementById('formCliente').dataset.clienteId;
-  const codigo = document.getElementById('codCliente').value.trim();
-  const nome = document.getElementById('nomeCliente').value.trim();
-  const cidade = document.getElementById('cidadeCliente').value.trim();
-  const estado = document.getElementById('estadoCliente').value.trim().toUpperCase();
+  const formData = new FormData(document.getElementById('formCliente'));
+  const agora = new Date().toISOString();
+  const cliente = {
+    codigo: normalizeCodigo(formData.get('codigo')),
+    fantasia: cleanCell(formData.get('fantasia')),
+    nome: cleanCell(formData.get('nome')),
+    tipo_pessoa: cleanCell(formData.get('tipo_pessoa')).toUpperCase(),
+    uf: cleanCell(formData.get('uf')).toUpperCase(),
+    municipio: cleanCell(formData.get('municipio')),
+    endereco: cleanCell(formData.get('endereco')),
+    geolocalizacao: cleanCell(formData.get('geolocalizacao')),
+    bairro: cleanCell(formData.get('bairro')),
+    cep: cleanCell(formData.get('cep')),
+    email: cleanCell(formData.get('email')),
+    cnpj_cpf: cleanCell(formData.get('cnpj_cpf')),
+    ie_rg: cleanCell(formData.get('ie_rg')),
+    cond_pagto: cleanCell(formData.get('cond_pagto')),
+    forma_cob: cleanCell(formData.get('forma_cob')),
+    ativo: cleanCell(formData.get('ativo')).toUpperCase() || 'A',
+    supervisor: cleanCell(formData.get('supervisor')),
+    consultor: cleanCell(formData.get('consultor')),
+    tabela_preco: cleanCell(formData.get('tabela_preco')),
+    categoria: cleanCell(formData.get('categoria')),
+    origem_arquivo: 'Cadastro manual',
+    importado_em: agora,
+    updated_at: agora
+  };
+  const rota = normalizarRota(formData.get('rota'));
 
   if (!codigo || !nome || !cidade || !estado) {
     alert('⚠️ Preencha todos os campos.');
@@ -230,13 +440,13 @@ export async function salvarCliente(event) {
     // Update
     result = await supabaseClient
       .from('clientes')
-      .update({ codigo, nome, municipio: cidade, uf: estado })
+      .update({ codigo, nome, fantasia, cnpj_cpf, municipio: cidade, uf: estado })
       .eq('id', id);
   } else {
     // Insert
     result = await supabaseClient
       .from('clientes')
-      .insert([{ codigo, nome, municipio: cidade, uf: estado }]);
+      .insert([{ codigo, nome, fantasia, cnpj_cpf, municipio: cidade, uf: estado, ativo: 'A' }]);
   }
 
   if (result.error) {
@@ -246,28 +456,20 @@ export async function salvarCliente(event) {
   }
 
   alert('✅ Cliente salvo com sucesso!');
-  document.getElementById('formCliente').reset();
-  document.getElementById('formCliente').dataset.clienteId = '';
-  carregarClientes();
+  fecharModalCliente();
+  await carregarClientes();
+  filtrarClientes();
 }
 
 export async function editarCliente(id) {
-  const { data, error } = await supabaseClient
-    .from('clientes')
-    .select('id, codigo, nome, municipio, uf')
-    .eq('id', id)
-    .single();
+  const cliente = clientesCarregamento.find(item => String(item.id) === String(id));
 
-  if (error || !data) {
+  if (!cliente) {
     alert('❌ Erro ao carregar cliente.');
     return;
   }
 
-  document.getElementById('codCliente').value = data.codigo;
-  document.getElementById('nomeCliente').value = data.nome;
-  document.getElementById('cidadeCliente').value = data.municipio || '';
-  document.getElementById('estadoCliente').value = data.uf || '';
-  document.getElementById('formCliente').dataset.clienteId = data.id;
+  abrirModalCliente(cliente);
 }
 
 export async function excluirCliente(id) {
@@ -287,7 +489,8 @@ export async function excluirCliente(id) {
   }
 
   alert('✅ Cliente excluído com sucesso!');
-  carregarClientes();
+  await carregarClientes();
+  filtrarClientes();
 }
 
 // === MOTORISTAS ===
