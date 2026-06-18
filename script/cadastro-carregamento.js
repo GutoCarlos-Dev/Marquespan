@@ -1344,17 +1344,28 @@ async function salvarCarregamento() {
   }
 }
 
+// Motivos que determinam a direção no nível da requisição inteira
+const MOTIVOS_SO_RETORNO = ['Retirada Total', 'Retirada Parcial', 'Retirada de Empréstimo'];
+const MOTIVOS_SO_ENTREGA  = ['Aumento', 'Cliente Novo'];
+
 function direcionarItemCarregamento(item, motivoRequisicao = '') {
+  const motiNorm = normalizarTexto(motivoRequisicao);
+
+  // Retiradas: caminhão não leva nada — só traz de volta
+  if (MOTIVOS_SO_RETORNO.some(m => normalizarTexto(m) === motiNorm)) return 'retorno';
+
+  // Só entrega, sem retorno
+  if (MOTIVOS_SO_ENTREGA.some(m => normalizarTexto(m) === motiNorm)) return 'entrega';
+
+  // Troca / Aumento+Troca → usa a coluna MOD. para decidir por item
   const mod = normalizarTexto(item.modelo || '');
-  const motivo = normalizarTexto(motivoRequisicao);
+  if (mod === 'TROCA') return 'troca';     // leva novo E retorna usado
+  if (mod === 'AUMENTO') return 'entrega'; // só leva
 
-  if (mod === 'TROCA') return 'troca';     // MOD. explícito: leva e retorna
-  if (mod === 'AUMENTO') return 'entrega'; // MOD. explícito: só leva
+  // MOD. em branco + motivo Troca puro → tudo vai e tudo volta
+  if (!mod && motiNorm === 'TROCA') return 'troca';
 
-  // MOD. em branco mas o motivo da requisição já é Troca → mesma regra
-  if (!mod && motivo === 'TROCA') return 'troca';
-
-  // fallback: colunas N / U
+  // Fallback: colunas N / U da planilha
   if (item.novo) return 'entrega';
   if (item.usado) return 'retorno';
   return 'entrega';
