@@ -8,7 +8,8 @@
   <link rel="stylesheet" href="css/index.css"> 
   <link rel="stylesheet" href="css/menu.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-1">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-5">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
   <div id="menu-container"></div>
@@ -26,31 +27,40 @@
 
     <section id="requisicao" class="glass-panel tab-panel active">
       <h3><i class="fas fa-file-signature"></i> Requisição</h3>
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="requisicaoNumero">Número</label>
-          <input type="text" id="requisicaoNumero" class="glass-input" placeholder="Número da requisição">
+
+      <div class="requisicao-toolbar">
+        <div class="form-group search-group">
+          <label for="filtroSupervisorRequisicao">Filtrar por supervisor</label>
+          <input type="search" id="filtroSupervisorRequisicao" class="glass-input" placeholder="Digite o nome do supervisor" list="supervisores-requisicao-list">
+          <datalist id="supervisores-requisicao-list"></datalist>
         </div>
-        <div class="form-group">
-          <label for="requisicaoData">Data</label>
-          <input type="date" id="requisicaoData" class="glass-input">
+        <div class="form-actions requisicao-actions">
+          <button type="button" class="btn-glass btn-blue" id="btnImportarRequisicao">
+            <i class="fas fa-file-import"></i> Importar Requisição
+          </button>
         </div>
-        <div class="form-group">
-          <label for="requisicaoResponsavel">Responsável</label>
-          <input type="text" id="requisicaoResponsavel" class="glass-input" placeholder="Responsável">
-        </div>
-        <div class="form-group">
-          <label for="requisicaoStatus">Status</label>
-          <select id="requisicaoStatus" class="glass-input">
-            <option value="aberta">Aberta</option>
-            <option value="em_separacao">Em separação</option>
-            <option value="finalizada">Finalizada</option>
-          </select>
-        </div>
-        <div class="form-group cliente-field-wide">
-          <label for="requisicaoObservacoes">Observações</label>
-          <input type="text" id="requisicaoObservacoes" class="glass-input" placeholder="Observações da requisição">
-        </div>
+      </div>
+      <div id="requisicaoImportStatus" class="import-status hidden" role="status"></div>
+
+      <div class="table-responsive requisicao-status-table">
+        <table class="glass-table data-grid">
+          <thead>
+            <tr>
+              <th>Arquivo</th>
+              <th>Data/Hora</th>
+              <th>Usuário</th>
+              <th>Data Requisição</th>
+              <th>Supervisor</th>
+              <th>Cliente</th>
+              <th>Motivo</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaRequisicoes">
+            <tr><td colspan="6">Nenhuma requisição salva.</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -270,14 +280,83 @@
     </footer>
   </div>
 
+  <div id="modalImportarRequisicao" class="import-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloImportarRequisicao">
+    <div class="import-modal-content">
+      <div class="import-modal-header">
+        <h3 id="tituloImportarRequisicao"><i class="fas fa-file-excel"></i> Importar Requisição</h3>
+        <button type="button" id="btnFecharImportarRequisicao" class="modal-close" aria-label="Fechar">&times;</button>
+      </div>
+      <section class="upload-panel">
+        <label class="upload-dropzone" for="requisicaoFileUpload">
+          <i class="fas fa-cloud-arrow-up"></i>
+          <strong>Selecione um ou mais arquivos XLSX</strong>
+          <span id="requisicaoFileSelectionText">Nenhum arquivo selecionado</span>
+        </label>
+        <input type="file" id="requisicaoFileUpload" multiple accept=".xlsx,.xls">
+        <p class="upload-help">A importação lê o supervisor da célula C7 e salva todas as requisições como PENDENTE.</p>
+      </section>
+      <div class="form-actions">
+        <button type="button" id="btnCancelarImportarRequisicao" class="btn-glass btn-red">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 🚀 Scripts -->
+  <div id="modalRequisicaoDetalhes" class="import-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloRequisicaoDetalhes">
+    <div class="import-modal-content requisicao-detail-modal">
+      <div class="import-modal-header">
+        <h3 id="tituloRequisicaoDetalhes"><i class="fas fa-file-alt"></i> Requisição</h3>
+        <button type="button" id="btnFecharRequisicaoDetalhes" class="modal-close" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="formRequisicaoDetalhes">
+        <input type="hidden" id="requisicaoDetalhesId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="requisicaoDetalhesArquivo">Arquivo</label>
+            <input type="text" id="requisicaoDetalhesArquivo" class="glass-input" readonly>
+          </div>
+          <div class="form-group">
+            <label for="requisicaoDetalhesStatus">Status</label>
+            <select id="requisicaoDetalhesStatus" class="glass-input">
+              <option value="PENDENTE">PENDENTE</option>
+              <option value="CARREGADO">CARREGADO</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="requisicaoDetalhesData">Data da Requisição</label>
+            <input type="date" id="requisicaoDetalhesData" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="requisicaoDetalhesSupervisor">Supervisor</label>
+            <input type="text" id="requisicaoDetalhesSupervisor" class="glass-input" list="supervisores-requisicao-list">
+          </div>
+          <div class="form-group">
+            <label for="requisicaoDetalhesCliente">Cliente</label>
+            <input type="text" id="requisicaoDetalhesCliente" class="glass-input">
+          </div>
+          <div class="form-group">
+            <label for="requisicaoDetalhesMotivo">Motivo</label>
+            <input type="text" id="requisicaoDetalhesMotivo" class="glass-input">
+          </div>
+        </div>
+        <div id="requisicaoDetalhesMeta" class="requisicao-detail-meta"></div>
+        <div id="requisicaoDetalhesItens" class="table-responsive requisicao-detail-table"></div>
+        <div class="form-actions">
+          <button type="button" id="btnAbrirAnexoRequisicao" class="btn-glass btn-blue hidden"><i class="fas fa-paperclip"></i> Abrir anexo</button>
+          <button type="button" id="btnCancelarRequisicaoDetalhes" class="btn-glass btn-red">Cancelar</button>
+          <button type="submit" id="btnSalvarRequisicaoDetalhes" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script type="module" src="script/menu.js"></script>
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-3';
+    import { inicializarRequisicao, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-10';
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
         button.addEventListener('click', () => {
           const targetId = button.dataset.tabTarget;
@@ -311,9 +390,12 @@
       window.editarMotorista = editarMotorista;
       window.excluirMotorista = excluirMotorista;
 
-      carregarItens();
-      carregarClientes();
-      carregarMotoristas();
+      await Promise.all([
+        carregarItens(),
+        carregarClientes(),
+        carregarMotoristas()
+      ]);
+      await inicializarRequisicao();
     });
   </script>
 </body>
