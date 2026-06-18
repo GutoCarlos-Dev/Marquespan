@@ -10,6 +10,7 @@ let currentListId = null;
 let sortStateNovaLista = { key: 'placa', asc: true };
 let sortStateVencimentos = { key: 'diasRestantes', asc: true };
 let sortStateItensModal = { key: 'placa', asc: true };
+let lastVencimentoCheckbox = null;
 
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
 const PAGE_SIZE = 1000;
@@ -256,6 +257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Filtros do Modal de Vencimentos
     document.getElementById('filtroVencimentoFilial').addEventListener('change', filtrarTabelaVencimentos);
     document.getElementById('chkAllVencimentos').addEventListener('change', toggleAllVencimentos);
+    document.getElementById('tbodyVencimentos').addEventListener('click', handleShiftSelectVencimentos);
 
     // Configura os novos multiselects
     setupCustomMultiselect('filtroVencimentoMarcaDisplay', 'filtroVencimentoMarcaOptions', 'filtroVencimentoMarcaText', 'Todas as Marcas');
@@ -303,11 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Listener para contador de seleção no Modal Vencimentos
     document.getElementById('modalVencimentos').addEventListener('change', (e) => {
         if (e.target.matches('.chk-veiculo-vencimento') || e.target.matches('#chkAllVencimentos')) {
-            const count = document.querySelectorAll('#tbodyVencimentos .chk-veiculo-vencimento:checked').length;
-            const contadorSpan = document.getElementById('contadorVencimentos');
-            if (contadorSpan) {
-                contadorSpan.textContent = `${count} selecionado(s)`;
-            }
+            atualizarContadorVencimentosSelecionados();
         }
     });
 
@@ -1567,8 +1565,10 @@ function renderizarTabelaVencimentos(dados) {
     const tbody = document.getElementById('tbodyVencimentos');
     const dataReferencia = document.getElementById('dataListaVencimentos')?.value;
     tbody.innerHTML = '';
+    lastVencimentoCheckbox = null;
 
     if (dados.length === 0) {
+        atualizarContadorVencimentosSelecionados();
         tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Nenhum veículo encontrado.</td></tr>';
         return;
     }
@@ -1597,6 +1597,7 @@ function renderizarTabelaVencimentos(dados) {
         `;
         tbody.appendChild(tr);
     });
+    atualizarContadorVencimentosSelecionados();
 }
 
 function filtrarTabelaVencimentos() {
@@ -1630,6 +1631,36 @@ function filtrarTabelaVencimentos() {
 function toggleAllVencimentos(e) {
     const checked = e.target.checked;
     document.querySelectorAll('.chk-veiculo-vencimento').forEach(chk => chk.checked = checked);
+    lastVencimentoCheckbox = null;
+    atualizarContadorVencimentosSelecionados();
+}
+
+function atualizarContadorVencimentosSelecionados() {
+    const count = document.querySelectorAll('#tbodyVencimentos .chk-veiculo-vencimento:checked').length;
+    const contadorSpan = document.getElementById('contadorVencimentos');
+    if (contadorSpan) {
+        contadorSpan.textContent = `${count} selecionado(s)`;
+    }
+}
+
+function handleShiftSelectVencimentos(e) {
+    const checkbox = e.target.closest('.chk-veiculo-vencimento');
+    if (!checkbox) return;
+
+    const checkboxes = Array.from(document.querySelectorAll('#tbodyVencimentos .chk-veiculo-vencimento'));
+    const currentIndex = checkboxes.indexOf(checkbox);
+    const lastIndex = checkboxes.indexOf(lastVencimentoCheckbox);
+
+    if (e.shiftKey && currentIndex !== -1 && lastIndex !== -1 && lastIndex !== currentIndex) {
+        const [start, end] = [currentIndex, lastIndex].sort((a, b) => a - b);
+        const checked = checkbox.checked;
+        checkboxes.slice(start, end + 1).forEach(chk => {
+            chk.checked = checked;
+        });
+        atualizarContadorVencimentosSelecionados();
+    }
+
+    lastVencimentoCheckbox = checkbox;
 }
 
 async function gerarListaComSelecionados() {
