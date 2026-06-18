@@ -4,6 +4,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 let acompanhamentos = [];
 let acompanhamentoEditandoId = null;
 let rotasCadastradas = [];
+let carregandoHorariosModal = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date().toISOString().split('T')[0];
@@ -75,7 +76,12 @@ function abrirModal(item = null) {
   sugestaoRoteiro.forEach(cliente => adicionarCliente(cliente, 'sugestaoClientesMobileContainer'));
   document.getElementById('mobileHabilitarSugestaoRoteiro').checked = sugestaoRoteiro.length > 0;
   atualizarSugestaoRoteiro();
-  (horarios.length ? horarios : [{}]).forEach((dia) => adicionarDia(dia, dia.dia));
+  carregandoHorariosModal = true;
+  try {
+    (horarios.length ? horarios : [{}]).forEach((dia) => adicionarDia(dia, dia.dia));
+  } finally {
+    carregandoHorariosModal = false;
+  }
   atualizarTipoRota();
   document.getElementById('btnSalvarMobile').innerHTML = acompanhamentoEditandoId
     ? '<i class="fas fa-save"></i> SALVAR ALTERACOES'
@@ -259,7 +265,7 @@ function adicionarDia(dia = {}, numeroInformado = null) {
   item.querySelector('.dia-chegada-empresa').value = dia.chegada_empresa || '';
   item.querySelector('.dia-chegada-viagem').value = dia.chegada_viagem || dia.chegada_hotel || dia.chegada_hotel_empresa || '';
   atualizarTotalizadoresDia(item);
-  atualizarTipoRota();
+  if (!carregandoHorariosModal) atualizarTipoRota();
 }
 
 function handleClienteChange(event) {
@@ -316,7 +322,7 @@ function renumerarItens(container) {
 function atualizarTipoRota() {
   const tipo = document.getElementById('mobileTipoRota').value;
   const totalDias = document.querySelectorAll('#horariosMobileContainer .dia-item').length;
-  if (tipo === 'viagem' && totalDias < 2) {
+  if (!carregandoHorariosModal && tipo === 'viagem' && totalDias < 2) {
     for (let i = totalDias; i < 2; i += 1) adicionarDia();
     return;
   }

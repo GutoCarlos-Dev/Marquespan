@@ -7,6 +7,7 @@ let acompanhamentoVisualizando = false;
 let sortState = { field: 'data_acompanhamento', ascending: false };
 const niveisComExclusao = ['administrador', 'gerencia'];
 let rotasCadastradas = [];
+let carregandoHorariosModal = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date();
@@ -139,7 +140,12 @@ function abrirModal(item = null, somenteVisualizacao = false) {
   sugestaoRoteiro.forEach(cliente => adicionarCliente(cliente, 'sugestaoClientesContainer'));
   document.getElementById('habilitarSugestaoRoteiro').checked = sugestaoRoteiro.length > 0;
   atualizarSugestaoRoteiro();
-  (horarios.length ? horarios : [{}]).forEach((dia) => adicionarDia(dia, dia.dia));
+  carregandoHorariosModal = true;
+  try {
+    (horarios.length ? horarios : [{}]).forEach((dia) => adicionarDia(dia, dia.dia));
+  } finally {
+    carregandoHorariosModal = false;
+  }
   atualizarTipoRota();
   aplicarModoVisualizacaoAcompanhamento();
   document.getElementById('modalAcompanhamento').classList.remove('hidden');
@@ -315,7 +321,7 @@ function adicionarDia(dia = {}, numeroInformado = null) {
   item.querySelector('.dia-chegada-empresa').value = dia.chegada_empresa || '';
   item.querySelector('.dia-chegada-viagem').value = dia.chegada_viagem || dia.chegada_hotel || dia.chegada_hotel_empresa || '';
   atualizarTotalizadoresDia(item);
-  atualizarTipoRota();
+  if (!carregandoHorariosModal) atualizarTipoRota();
 }
 
 function handleClienteChange(event) {
@@ -375,7 +381,7 @@ function renumerarItens(container) {
 function atualizarTipoRota() {
   const tipo = document.getElementById('acompanhamentoTipoRota').value;
   const totalDias = document.querySelectorAll('#horariosContainer .dia-item').length;
-  if (tipo === 'viagem' && totalDias < 2) {
+  if (!carregandoHorariosModal && tipo === 'viagem' && totalDias < 2) {
     for (let i = totalDias; i < 2; i += 1) adicionarDia();
     return;
   }
