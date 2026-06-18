@@ -835,6 +835,22 @@ async function salvarRequisicaoBanco(requisicao) {
       };
     });
 
+  // Itens "RETIRAR: X Y" da célula I11 (observação) — sempre retorno, equipamento diferente
+  const itensObs = (requisicao.itensRetornoObservacao || []).map(ret => {
+    const item = encontrarItemRequisicao(ret.equipamento, '');
+    return {
+      item_id: item?.id || null,
+      item_nome: item ? `${item.codigo} - ${item.nome}` : ret.equipamento,
+      equipamento: ret.equipamento,
+      modelo: '',
+      tipo: item?.tipo || '',
+      quantidade: ret.quantidade,
+      novo: false,
+      usado: true,
+      de_observacao: true
+    };
+  });
+
   const payload = {
     arquivo: requisicao.arquivo,
     supervisor: requisicao.supervisor || '',
@@ -848,9 +864,10 @@ async function salvarRequisicaoBanco(requisicao) {
     arquivo_tipo: requisicao.arquivoTipo || null,
     arquivo_tamanho: requisicao.arquivoTamanho || null,
     status: 'PENDENTE',
-    itens,
+    itens: [...itens, ...itensObs],
     linhas: requisicao.rows,
-    cliente_planilha: requisicao.clientePlanilha || {}
+    cliente_planilha: requisicao.clientePlanilha || {},
+    observacao: requisicao.observacao || null
   };
 
   const { error } = await supabaseClient
@@ -957,7 +974,11 @@ function processarArquivoRequisicao(file) {
       }
 
       const sheet = workbook.Sheets[cfg.sheet];
-      const motivoPlanilha = String(sheet[cfg.motivoCell]?.v || sheet.I11?.v || '').trim();
+      // I11 tem dupla função: motivo (quando K8/K9 vazio) OU observação (quando K8/K9 preenchido)
+      const motivoCelula = String(sheet[cfg.motivoCell]?.v || '').trim();
+      const I11Valor    = String(sheet['I11']?.v || '').trim();
+      const motivoPlanilha      = motivoCelula || I11Valor;
+      const observacaoPlanilha  = motivoCelula ? I11Valor : '';
       const supervisorPlanilha = String(sheet[cfg.supervisorCell]?.v || '').trim();
       const dataRequisicao = converterDataExcelParaIso(sheet[cfg.dataCell], workbook);
       const dadosClientePlanilha = extrairClienteCelula(sheet[cfg.clienteCell]?.v);
@@ -997,7 +1018,9 @@ function processarArquivoRequisicao(file) {
         arquivoTamanho: anexo.arquivo_tamanho,
         rows,
         ordem: '',
-        status: 'PENDENTE'
+        status: 'PENDENTE',
+        observacao: observacaoPlanilha || null,
+        itensRetornoObservacao: parsearItensRetornoObservacao(observacaoPlanilha)
       };
 
       requisicoesImportadas.push(requisicao);
@@ -1346,27 +1369,45 @@ async function salvarCarregamento() {
 
 // Motivos que determinam a direção no nível da requisição inteira
 const MOTIVOS_SO_RETORNO = ['Retirada Total', 'Retirada Parcial', 'Retirada de Empréstimo'];
+
+// Parseia "RETIRAR: 1 CLIMA 20" da célula I11 (campo Observação)
+function parsearItensRetornoObservacao(observacao) {
+  if (!observacao) return [];
+  const itens = [];
+  const re = /RETIRAR[:\s]+(\d+)\s+([^\n\r,;]+)/gi;
+  for (const m of String(observacao).matchAll(re)) {
+    const qtd = parseInt(m[1], 10);
+    const equip = m[2].trim();
+    if (qtd > 0 && equip) itens.push({ quantidade: qtd, equipamento: equip });
+  }
+  return itens;
+}
 const MOTIVOS_SO_ENTREGA  = ['Aumento', 'Cliente Novo'];
 
-function direcionarItemCarregamento(item, motivoRequisicao = '') {
+function direcionarItemCarregamento(item, motivoRequisicao = '', temRetornoObservacao = false) {
+  // Itens vindos de "RETIRAR: X Y" no campo I11 — sempre só retorno
+  if (item.de_observacao) return 'retorno';
+
   const motiNorm = normalizarTexto(motivoRequisicao);
 
-  // Retiradas: caminhão não leva nada — só traz de volta
+  // Retiradas: caminhão não leva nada, só traz de volta
   if (MOTIVOS_SO_RETORNO.some(m => normalizarTexto(m) === motiNorm)) return 'retorno';
 
   // Só entrega, sem retorno
   if (MOTIVOS_SO_ENTREGA.some(m => normalizarTexto(m) === motiNorm)) return 'entrega';
 
-  // Troca / Aumento+Troca → usa a coluna MOD. para decidir por item
   const mod = normalizarTexto(item.modelo || '');
-  if (mod === 'TROCA') return 'troca';     // leva novo E retorna usado
+  if (mod === 'TROCA')   return 'troca';   // leva novo E retorna usado
   if (mod === 'AUMENTO') return 'entrega'; // só leva
 
-  // MOD. em branco + motivo Troca puro → tudo vai e tudo volta
+  // TROCA com observação: a tabela só carrega (itens de retorno estão em de_observacao)
+  if (motiNorm === 'TROCA' && temRetornoObservacao) return 'entrega';
+
+  // TROCA sem observação: swap simples, mesma qtd vai e volta
   if (!mod && motiNorm === 'TROCA') return 'troca';
 
   // Fallback: colunas N / U da planilha
-  if (item.novo) return 'entrega';
+  if (item.novo)  return 'entrega';
   if (item.usado) return 'retorno';
   return 'entrega';
 }
@@ -1374,10 +1415,11 @@ function direcionarItemCarregamento(item, motivoRequisicao = '') {
 function calcularTotaisCarregamento() {
   let totalEntrega = 0, totalRetorno = 0;
   carregamentoRequisicoes.forEach(req => {
+    const temRetornoObs = (Array.isArray(req.itens) ? req.itens : []).some(i => i.de_observacao);
     (Array.isArray(req.itens) ? req.itens : []).forEach(item => {
       const qtd = Number(item.quantidade) || 0;
       if (qtd <= 0) return;
-      const dir = direcionarItemCarregamento(item, req.motivo);
+      const dir = direcionarItemCarregamento(item, req.motivo, temRetornoObs);
       if (dir === 'troca') { totalEntrega += qtd; totalRetorno += qtd; }
       else if (dir === 'entrega') totalEntrega += qtd;
       else totalRetorno += qtd;
@@ -1389,13 +1431,14 @@ function calcularTotaisCarregamento() {
 function calcularTotalizadorCarregamento() {
   const mapa = new Map();
   carregamentoRequisicoes.forEach(req => {
+    const temRetornoObs = (Array.isArray(req.itens) ? req.itens : []).some(i => i.de_observacao);
     (Array.isArray(req.itens) ? req.itens : []).forEach(item => {
       const qtd = Number(item.quantidade) || 0;
       if (qtd <= 0) return;
       const key = item.item_nome || item.equipamento || '?';
       if (!mapa.has(key)) mapa.set(key, { nome: key, entrega: 0, retorno: 0 });
       const e = mapa.get(key);
-      const dir = direcionarItemCarregamento(item, req.motivo);
+      const dir = direcionarItemCarregamento(item, req.motivo, temRetornoObs);
       if (dir === 'troca') { e.entrega += qtd; e.retorno += qtd; }
       else if (dir === 'entrega') e.entrega += qtd;
       else e.retorno += qtd;

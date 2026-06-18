@@ -37,7 +37,8 @@ alter table public.requisicoes_carregamento
   add column if not exists carregamento_placa      text,
   add column if not exists carregamento_motorista  text,
   add column if not exists carregamento_data_saida date,
-  add column if not exists carregamento_modelo     text;
+  add column if not exists carregamento_modelo     text,
+  add column if not exists observacao              text;  -- conteúdo do campo I11 quando K8 tem valor
 
 -- =============================================================
 -- Índices
