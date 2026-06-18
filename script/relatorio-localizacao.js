@@ -415,6 +415,83 @@ function aplicarGeolocalizacaoCliente(cliente) {
   return true;
 }
 
+function valorGeolocalizacaoCliente(cliente) {
+  const coordenadasCadastradas = obterCoordenadasGeolocalizacao(cliente?.geolocalizacao);
+  if (coordenadasCadastradas) {
+    return `${coordenadasCadastradas.lat.toFixed(6)}, ${coordenadasCadastradas.lng.toFixed(6)}`;
+  }
+  if (Number.isFinite(cliente?.lat) && Number.isFinite(cliente?.lng)) {
+    return `${cliente.lat.toFixed(6)}, ${cliente.lng.toFixed(6)}`;
+  }
+  return '';
+}
+
+function controlesGeolocalizacaoCliente(cliente) {
+  const valor = valorGeolocalizacaoCliente(cliente);
+  return `
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
+      <label style="display:block;font-size:11px;font-weight:700;color:#374151;margin-bottom:3px;">Geolocalizacao</label>
+      <input
+        type="text"
+        class="input-geolocalizacao-cliente"
+        value="${escaparHTML(valor)}"
+        placeholder="-23.330692, -47.851799"
+        style="box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:5px 7px;font-size:12px;"
+      >
+      <button
+        type="button"
+        data-codigo-cliente="${escaparHTML(cliente.codigo)}"
+        onclick="window.salvarGeolocalizacaoClienteRelatorio(this)"
+        style="margin-top:6px;border:0;border-radius:6px;background:#006937;color:#fff;padding:5px 8px;font-size:12px;cursor:pointer;"
+      >Salvar geolocalizacao</button>
+      <span class="status-geolocalizacao-cliente" style="display:block;margin-top:4px;font-size:11px;color:#64748b;"></span>
+    </div>
+  `;
+}
+
+async function salvarGeolocalizacaoClienteRelatorio(botao) {
+  const container = botao?.closest('div');
+  const input = container?.querySelector('.input-geolocalizacao-cliente');
+  const status = container?.querySelector('.status-geolocalizacao-cliente');
+  const codigo = limparTexto(botao?.dataset?.codigoCliente);
+  const valor = limparTexto(input?.value);
+  const coordenadas = obterCoordenadasGeolocalizacao(valor);
+
+  if (!codigo) {
+    if (status) status.textContent = 'Cliente nao identificado.';
+    return;
+  }
+  if (!coordenadas) {
+    if (status) status.textContent = 'Informe no formato latitude, longitude.';
+    input?.focus();
+    return;
+  }
+
+  const valorNormalizado = `${coordenadas.lat.toFixed(6)}, ${coordenadas.lng.toFixed(6)}`;
+  botao.disabled = true;
+  if (status) status.textContent = 'Salvando...';
+
+  try {
+    const { error } = await supabaseClient
+      .from('clientes')
+      .update({ geolocalizacao: valorNormalizado })
+      .eq('codigo', codigo);
+    if (error) throw error;
+
+    if (input) input.value = valorNormalizado;
+    if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
+    mostrarMensagem(`Geolocalizacao do cliente ${codigo} atualizada.`);
+  } catch (error) {
+    console.error('Erro ao salvar geolocalizacao do cliente:', error);
+    if (status) status.textContent = 'Erro ao salvar geolocalizacao.';
+    mostrarMensagem(error?.message || 'Nao foi possivel salvar a geolocalizacao do cliente.', true);
+  } finally {
+    botao.disabled = false;
+  }
+}
+
+window.salvarGeolocalizacaoClienteRelatorio = salvarGeolocalizacaoClienteRelatorio;
+
 function normalizarLogradouroCliente(endereco) {
   return limparTexto(endereco)
     .replace(/^(R|RUA)\s*[:.-]?\s*/i, 'Rua ')
@@ -513,7 +590,8 @@ function adicionarClienteRotaNoMapa(cliente) {
       <strong>${escaparHTML(cliente.fantasia || cliente.nome || cliente.codigo)}</strong>${labelTipo}<br>
       Cliente: ${escaparHTML(cliente.codigo)}<br>
       Rota: ${escaparHTML(cliente.rota || '—')}<br>
-      ${escaparHTML(cliente.enderecoMapa || montarEnderecoCliente(cliente))}<br><br>
+      ${escaparHTML(cliente.enderecoMapa || montarEnderecoCliente(cliente))}<br>
+      ${controlesGeolocalizacaoCliente(cliente)}<br>
       <a href="${streetViewUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;color:#1a73e8;font-size:13px;text-decoration:none;">
         <i class="fas fa-street-view"></i> Abrir no Street View
       </a>
