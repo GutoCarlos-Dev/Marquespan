@@ -1447,35 +1447,67 @@ function calcularTotalizadorCarregamento() {
   return mapa;
 }
 
+// Itens que devem ser totalizados separadamente dos equipamentos de carga
+const ITENS_ESPECIAIS_NOMES = ['ESTEIRA', 'FORMA'];
+function isItemEspecial(nomeItem) {
+  const n = normalizarTexto(nomeItem || '');
+  return ITENS_ESPECIAIS_NOMES.some(esp => n.includes(esp));
+}
+
 function renderizarTotalizadorCarregamento() {
-  const tbody = document.getElementById('corpoCarregamentoTotalizador');
-  const tfoot = document.getElementById('rodapeCarregamentoTotalizador');
-  const wrapper = document.getElementById('carregamentoTotalizador');
-  if (!tbody) return;
+  const conteudo = document.getElementById('carregamentoTotalizadorConteudo');
+  const wrapper  = document.getElementById('carregamentoTotalizador');
+  if (!conteudo) return;
 
   const mapa = calcularTotalizadorCarregamento();
   if (!mapa.size) { wrapper?.classList.add('hidden'); return; }
   wrapper?.classList.remove('hidden');
 
-  let te = 0, tr_ = 0;
-  tbody.innerHTML = [...mapa.values()].map(e => {
-    te += e.entrega; tr_ += e.retorno;
-    const total = e.entrega + e.retorno;
-    return `<tr>
+  const regular   = [...mapa.values()].filter(e => !isItemEspecial(e.nome));
+  const especiais = [...mapa.values()].filter(e =>  isItemEspecial(e.nome));
+
+  function renderBloco(lista) {
+    let te = 0, tr_ = 0;
+    lista.forEach(e => { te += e.entrega; tr_ += e.retorno; });
+    const linhas = lista.map(e => `<tr>
       <td>${escapeHtml(e.nome)}</td>
       <td class="col-num col-entrega">${e.entrega || '-'}</td>
       <td class="col-num col-retorno">${e.retorno || '-'}</td>
-      <td class="col-num"><strong>${total}</strong></td>
-    </tr>`;
-  }).join('');
+    </tr>`).join('');
+    return `<div class="totalizador-bloco">
+      <div class="totalizador-cards">
+        <div class="tot-card tot-card-carregar">
+          <div class="tot-card-label"><i class="fas fa-arrow-up"></i> Total a Carregar</div>
+          <div class="tot-card-value">${te}</div>
+          <div class="tot-card-sub">itens</div>
+        </div>
+        <div class="tot-card tot-card-retirar">
+          <div class="tot-card-label"><i class="fas fa-arrow-down"></i> Total a Retirar</div>
+          <div class="tot-card-value">${tr_}</div>
+          <div class="tot-card-sub">itens</div>
+        </div>
+      </div>
+      <table class="totalizador-detalhe-table">
+        <thead><tr>
+          <th>Equipamento</th>
+          <th class="col-num">Carregar</th>
+          <th class="col-num">Retirar</th>
+        </tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>`;
+  }
 
-  const totalGeral = te + tr_;
-  tfoot.innerHTML = `<tr class="totalizador-rodape">
-    <td><strong>TOTAL GERAL</strong></td>
-    <td class="col-num col-entrega"><strong>${te || '-'}</strong></td>
-    <td class="col-num col-retorno"><strong>${tr_ || '-'}</strong></td>
-    <td class="col-num"><strong>${totalGeral}</strong></td>
-  </tr>`;
+  let html = renderBloco(regular);
+
+  if (especiais.length) {
+    html += `<div class="totalizador-separador-bloco">
+      <span><i class="fas fa-exchange-alt"></i>&nbsp;Esteiras &amp; Formas</span>
+    </div>`;
+    html += renderBloco(especiais);
+  }
+
+  conteudo.innerHTML = html;
 }
 
 function renderizarRequisicoesCarregamento() {
@@ -1608,6 +1640,316 @@ export async function inicializarCarregamento() {
     const btn = e.target.closest('[data-remover-req-car]');
     if (btn) removerRequisicaoDoCarregamento(btn.dataset.removerReqCar);
   });
+}
+
+// === HISTÓRICO DE CARREGAMENTOS ===
+
+let carregamentosSalvos = [];
+
+async function carregarHistoricoCarregamentos() {
+  const tbody = document.getElementById('corpoHistoricoCarregamentos');
+  if (!tbody) return;
+
+  const { data, error } = await supabaseClient
+    .from(CARREGAMENTOS_TABLE)
+    .select('*')
+    .order('data_saida', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao carregar histórico:', error);
+    tbody.innerHTML = `<tr><td colspan="9" class="historico-loading">Erro ao carregar histórico.</td></tr>`;
+    return;
+  }
+
+  carregamentosSalvos = data || [];
+  renderizarHistoricoCarregamentos();
+}
+
+function renderizarHistoricoCarregamentos() {
+  const tbody = document.getElementById('corpoHistoricoCarregamentos');
+  if (!tbody) return;
+
+  if (!carregamentosSalvos.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="historico-loading">Nenhum carregamento salvo.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = carregamentosSalvos.map(car => {
+    const dataFmt = formatarData(car.data_saida);
+    const criadoEm = car.created_at ? new Date(car.created_at).toLocaleDateString('pt-BR') : '-';
+    const idEsc = escapeHtml(String(car.id));
+    return `<tr>
+      <td><strong>${escapeHtml(dataFmt)}</strong><br><small style="color:#888">${criadoEm}</small></td>
+      <td><span class="hist-placa">${escapeHtml(car.placa)}</span></td>
+      <td style="font-size:0.85rem">${escapeHtml(car.modelo_veiculo || '-')}</td>
+      <td>${escapeHtml(car.motorista)}</td>
+      <td class="col-num"><span class="badge-req">${car.total_requisicoes || 0}</span></td>
+      <td class="col-num col-entrega"><strong>${car.total_entrega || 0}</strong></td>
+      <td class="col-num col-retorno"><strong>${car.total_retorno || 0}</strong></td>
+      <td style="font-size:0.78rem;color:#888">${escapeHtml(car.usuario || '-')}</td>
+      <td style="display:flex;gap:6px;align-items:center">
+        <button type="button" class="hist-btn-resumo"
+          data-resumo-carregamento="${idEsc}"
+          title="Gerar resumo deste carregamento">
+          <i class="fas fa-file-alt"></i> Resumo
+        </button>
+        <button type="button" class="btn-icon delete hist-btn-cancelar"
+          data-cancelar-carregamento="${idEsc}"
+          title="Cancelar carregamento e reverter requisições para PENDENTE">
+          <i class="fas fa-times-circle"></i> Cancelar
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function gerarResumoCarregamento(id) {
+  const modal   = document.getElementById('modalResumoCarregamento');
+  const conteudo = document.getElementById('conteudoResumoCarregamento');
+  if (!modal || !conteudo) return;
+
+  conteudo.innerHTML = '<div style="text-align:center;padding:60px"><i class="fas fa-spinner fa-spin fa-2x" style="color:#006937"></i></div>';
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  try {
+    const [{ data: car, error: errCar }, { data: reqs, error: errReqs }] = await Promise.all([
+      supabaseClient.from(CARREGAMENTOS_TABLE).select('*').eq('id', id).single(),
+      supabaseClient.from(REQUISICOES_TABLE)
+        .select('arquivo, cliente_nome, motivo, supervisor, data_requisicao, itens, observacao')
+        .eq('carregamento_id', id)
+        .order('supervisor')
+    ]);
+
+    if (errCar) throw errCar;
+    if (errReqs) throw errReqs;
+
+    // Recalcular totalizador por item usando a mesma lógica do carregamento
+    const mapaItens = new Map();
+    (reqs || []).forEach(req => {
+      const itens = Array.isArray(req.itens) ? req.itens : [];
+      const temRetornoObs = itens.some(i => i.de_observacao);
+      itens.forEach(item => {
+        const qtd = Number(item.quantidade) || 0;
+        if (qtd <= 0) return;
+        const key = item.item_nome || item.equipamento || '?';
+        if (!mapaItens.has(key)) mapaItens.set(key, { nome: key, entrega: 0, retorno: 0 });
+        const e = mapaItens.get(key);
+        const dir = direcionarItemCarregamento(item, req.motivo, temRetornoObs);
+        if (dir === 'troca')        { e.entrega += qtd; e.retorno += qtd; }
+        else if (dir === 'entrega')   e.entrega += qtd;
+        else                          e.retorno += qtd;
+      });
+    });
+
+    conteudo.innerHTML = renderResumoHTML(car, reqs || [], mapaItens);
+  } catch (err) {
+    console.error('Erro ao gerar resumo:', err);
+    conteudo.innerHTML = `<p style="color:#c0392b;padding:30px;text-align:center">Erro ao carregar dados: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+function renderResumoHTML(car, reqs, mapaItens) {
+  const agora = new Date().toLocaleString('pt-BR');
+
+  const reqRows = reqs.map(req => `<tr>
+    <td>${escapeHtml(req.cliente_nome || '-')}</td>
+    <td>${escapeHtml(req.motivo || '-')}</td>
+    <td>${escapeHtml(req.supervisor || '-')}</td>
+    <td>${escapeHtml(formatarData(req.data_requisicao))}</td>
+    <td style="font-size:0.78rem;color:#666">${escapeHtml(req.arquivo || '-')}</td>
+  </tr>`).join('');
+
+  const regular   = [...mapaItens.values()].filter(e => !isItemEspecial(e.nome));
+  const especiais = [...mapaItens.values()].filter(e =>  isItemEspecial(e.nome));
+  let teReg = 0, trReg = 0, teEsp = 0, trEsp = 0;
+  regular.forEach(e  => { teReg += e.entrega; trReg += e.retorno; });
+  especiais.forEach(e => { teEsp += e.entrega; trEsp += e.retorno; });
+
+  const linhasItem = lista => lista.map(e => `<tr>
+    <td>${escapeHtml(e.nome)}</td>
+    <td class="resumo-num-cel col-entrega">${e.entrega || '-'}</td>
+    <td class="resumo-num-cel col-retorno">${e.retorno || '-'}</td>
+  </tr>`).join('');
+
+  const blocoEspeciais = especiais.length ? `
+    <tr class="resumo-sep-row"><td colspan="3"><i class="fas fa-exchange-alt"></i> Esteiras &amp; Formas</td></tr>
+    ${linhasItem(especiais)}
+    <tr class="resumo-subtotal-row">
+      <td>Subtotal Esteiras &amp; Formas</td>
+      <td class="resumo-num-cel col-entrega">${teEsp || '-'}</td>
+      <td class="resumo-num-cel col-retorno">${trEsp || '-'}</td>
+    </tr>` : '';
+
+  return `<div class="resumo-print-area">
+
+    <div class="resumo-topo">
+      <div class="resumo-logo-wrap">
+        <img src="logo.png" alt="Marquespan" class="resumo-logo" onerror="this.style.display='none'">
+      </div>
+      <div class="resumo-titulo-wrap">
+        <h2 class="resumo-titulo">Resumo de Carregamento</h2>
+        <p class="resumo-subtitulo">Gerado em ${agora}</p>
+      </div>
+    </div>
+
+    <div class="resumo-info-grid">
+      <div class="resumo-info-item">
+        <span class="resumo-label">Data de Saída</span>
+        <strong class="resumo-valor">${escapeHtml(formatarData(car.data_saida))}</strong>
+      </div>
+      <div class="resumo-info-item">
+        <span class="resumo-label">Placa</span>
+        <strong class="resumo-valor resumo-placa-tag">${escapeHtml(car.placa)}</strong>
+      </div>
+      <div class="resumo-info-item">
+        <span class="resumo-label">Modelo / Tipo</span>
+        <strong class="resumo-valor">${escapeHtml(car.modelo_veiculo || '-')}</strong>
+      </div>
+      <div class="resumo-info-item">
+        <span class="resumo-label">Motorista</span>
+        <strong class="resumo-valor">${escapeHtml(car.motorista)}</strong>
+      </div>
+      <div class="resumo-info-item">
+        <span class="resumo-label">Salvo por</span>
+        <strong class="resumo-valor">${escapeHtml(car.usuario || '-')}</strong>
+      </div>
+    </div>
+
+    <div class="resumo-strip">
+      <div class="resumo-strip-item">
+        <span class="resumo-strip-num">${car.total_requisicoes || 0}</span>
+        <span class="resumo-strip-label">Requisições</span>
+      </div>
+      <div class="resumo-strip-item resumo-strip-carregar">
+        <span class="resumo-strip-num">${car.total_entrega || 0}</span>
+        <span class="resumo-strip-label">↑ Total a Carregar</span>
+      </div>
+      <div class="resumo-strip-item resumo-strip-retirar">
+        <span class="resumo-strip-num">${car.total_retorno || 0}</span>
+        <span class="resumo-strip-label">↓ Total a Retirar</span>
+      </div>
+    </div>
+
+    <h4 class="resumo-section-h"><i class="fas fa-list-ul"></i> Requisições Incluídas</h4>
+    <table class="resumo-table">
+      <thead><tr>
+        <th>Cliente</th><th>Motivo</th><th>Supervisor</th><th>Data Req.</th><th>Arquivo</th>
+      </tr></thead>
+      <tbody>${reqRows || '<tr><td colspan="5" style="text-align:center;color:#888">Sem requisições</td></tr>'}</tbody>
+    </table>
+
+    <h4 class="resumo-section-h"><i class="fas fa-boxes"></i> Totalizador de Equipamentos</h4>
+    <table class="resumo-table">
+      <thead><tr>
+        <th>Equipamento</th>
+        <th class="resumo-num-cel">Carregar</th>
+        <th class="resumo-num-cel">Retirar</th>
+      </tr></thead>
+      <tbody>
+        ${linhasItem(regular)}
+        <tr class="resumo-subtotal-row">
+          <td>Subtotal Equipamentos</td>
+          <td class="resumo-num-cel col-entrega">${teReg || '-'}</td>
+          <td class="resumo-num-cel col-retorno">${trReg || '-'}</td>
+        </tr>
+        ${blocoEspeciais}
+      </tbody>
+      <tfoot>
+        <tr class="resumo-total-final">
+          <td><strong>TOTAL GERAL</strong></td>
+          <td class="resumo-num-cel col-entrega"><strong>${(teReg + teEsp) || '-'}</strong></td>
+          <td class="resumo-num-cel col-retorno"><strong>${(trReg + trEsp) || '-'}</strong></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="resumo-rodape">
+      Marquespan Alimentos &bull; Documento gerado automaticamente &bull; ${agora}
+    </div>
+  </div>`;
+}
+
+async function cancelarCarregamento(id) {
+  const car = carregamentosSalvos.find(c => c.id === id);
+  const info = car ? `${car.placa} – ${formatarData(car.data_saida)}` : '';
+  const nReq = car?.total_requisicoes || 0;
+
+  if (!confirm(`Cancelar o carregamento ${info}?\n\n${nReq} requisição(ões) voltarão para PENDENTE.`)) return;
+
+  const statusEl = document.getElementById('statusHistorico');
+  const exibirStatus = (msg, erro = false) => {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.classList.remove('hidden', 'success', 'error');
+    statusEl.classList.add(erro ? 'error' : 'success');
+  };
+
+  try {
+    const { error: errReq } = await supabaseClient
+      .from(REQUISICOES_TABLE)
+      .update({
+        status: 'PENDENTE',
+        carregado_em: null,
+        carregamento_id: null,
+        carregamento_placa: null,
+        carregamento_motorista: null,
+        carregamento_data_saida: null,
+        carregamento_modelo: null
+      })
+      .eq('carregamento_id', id);
+
+    if (errReq) throw errReq;
+
+    const { error: errCar } = await supabaseClient
+      .from(CARREGAMENTOS_TABLE)
+      .delete()
+      .eq('id', id);
+
+    if (errCar) throw errCar;
+
+    exibirStatus(`Carregamento ${info} cancelado. ${nReq} requisição(ões) revertidas para PENDENTE.`);
+    await Promise.all([carregarHistoricoCarregamentos(), carregarRequisicoesBanco()]);
+  } catch (err) {
+    console.error('Erro ao cancelar carregamento:', err);
+    exibirStatus(`Erro ao cancelar: ${err.message}`, true);
+  }
+}
+
+export async function inicializarHistorico() {
+  if (!document.getElementById('corpoHistoricoCarregamentos')) return;
+
+  await carregarHistoricoCarregamentos();
+
+  document.getElementById('btnRecarregarHistorico')?.addEventListener('click', carregarHistoricoCarregamentos);
+
+  document.getElementById('corpoHistoricoCarregamentos')?.addEventListener('click', async e => {
+    const btnCancelar = e.target.closest('[data-cancelar-carregamento]');
+    if (btnCancelar) { await cancelarCarregamento(btnCancelar.dataset.cancelarCarregamento); return; }
+
+    const btnResumo = e.target.closest('[data-resumo-carregamento]');
+    if (btnResumo) await gerarResumoCarregamento(btnResumo.dataset.resumoCarregamento);
+  });
+
+  // Fechar modal
+  document.getElementById('btnFecharResumo')?.addEventListener('click', fecharModalResumo);
+  document.getElementById('modalResumoCarregamento')?.addEventListener('click', e => {
+    if (e.target.id === 'modalResumoCarregamento') fecharModalResumo();
+  });
+
+  // Imprimir
+  document.getElementById('btnImprimirResumo')?.addEventListener('click', () => window.print());
+
+  // Recarregar ao entrar na aba
+  document.querySelectorAll('[data-tab-target="historico"]').forEach(btn =>
+    btn.addEventListener('click', carregarHistoricoCarregamentos)
+  );
+}
+
+function fecharModalResumo() {
+  document.getElementById('modalResumoCarregamento')?.classList.add('hidden');
+  document.body.style.overflow = '';
 }
 
 // === CLIENTES ===

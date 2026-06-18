@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="css/index.css"> 
   <link rel="stylesheet" href="css/menu.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-11">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-15">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -21,6 +21,7 @@
     <nav class="tabs-carregamento" aria-label="Seções do cadastro de carregamento">
       <button type="button" class="tab-button active" data-tab-target="requisicao"><i class="fas fa-file-signature"></i> Requisição</button>
       <button type="button" class="tab-button" data-tab-target="carregamento"><i class="fas fa-truck"></i> Carregamento</button>
+      <button type="button" class="tab-button" data-tab-target="historico"><i class="fas fa-history"></i> Histórico</button>
       <button type="button" class="tab-button" data-tab-target="itens"><i class="fas fa-boxes"></i> Itens</button>
       <button type="button" class="tab-button" data-tab-target="clientes"><i class="fas fa-users"></i> Clientes</button>
       <button type="button" class="tab-button" data-tab-target="motoristas"><i class="fas fa-truck-moving"></i> Motoristas</button>
@@ -143,20 +144,37 @@
 
       <div id="carregamentoTotalizador" class="hidden">
         <h4 class="carregamento-section-title"><i class="fas fa-calculator"></i> Totalizador de Itens</h4>
-        <div class="table-responsive carregamento-table-wrap">
-          <table class="glass-table">
-            <thead>
-              <tr>
-                <th>Equipamento</th>
-                <th class="col-num" title="Itens que saem com o caminhão (coluna N da planilha)">Entrega</th>
-                <th class="col-num" title="Itens que voltam com o caminhão (coluna U da planilha)">Retorno</th>
-                <th class="col-num">Total</th>
-              </tr>
-            </thead>
-            <tbody id="corpoCarregamentoTotalizador"></tbody>
-            <tfoot id="rodapeCarregamentoTotalizador"></tfoot>
-          </table>
-        </div>
+        <div id="carregamentoTotalizadorConteudo"></div>
+      </div>
+    </section>
+
+    <section id="historico" class="glass-panel tab-panel hidden">
+      <div class="historico-header">
+        <h3><i class="fas fa-history"></i> Histórico de Carregamentos</h3>
+        <button type="button" id="btnRecarregarHistorico" class="btn-glass btn-sm-outline" title="Atualizar lista">
+          <i class="fas fa-sync-alt"></i> Atualizar
+        </button>
+      </div>
+      <div id="statusHistorico" class="status-message hidden"></div>
+      <div class="table-responsive">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>Data Saída</th>
+              <th>Placa</th>
+              <th>Modelo / Tipo</th>
+              <th>Motorista</th>
+              <th class="col-num" title="Requisições vinculadas">Req.</th>
+              <th class="col-num col-entrega" title="Total de itens que saíram">↑ Carregar</th>
+              <th class="col-num col-retorno" title="Total de itens que voltaram">↓ Retirar</th>
+              <th>Salvo por</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="corpoHistoricoCarregamentos">
+            <tr><td colspan="9" class="historico-loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -446,6 +464,21 @@
     </div>
   </div>
 
+  <!-- MODAL RESUMO DE CARREGAMENTO -->
+  <div id="modalResumoCarregamento" class="modal-resumo-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-resumo-box">
+      <div class="modal-resumo-toolbar no-print">
+        <button type="button" id="btnImprimirResumo" class="btn-glass btn-green">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+        <button type="button" id="btnFecharResumo" class="btn-glass btn-red" title="Fechar">
+          <i class="fas fa-times"></i> Fechar
+        </button>
+      </div>
+      <div id="conteudoResumoCarregamento"></div>
+    </div>
+  </div>
+
   <div id="carregamento-tooltip" class="carregamento-tooltip hidden" aria-hidden="true">
     <div class="tt-row"><i class="fas fa-id-card"></i> <span id="tt-placa"></span></div>
     <div class="tt-row"><i class="fas fa-car"></i> <span id="tt-modelo"></span></div>
@@ -500,7 +533,7 @@
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, inicializarCarregamento, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-15';
+    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-18';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
@@ -543,6 +576,7 @@
       ]);
       await inicializarRequisicao();
       await inicializarCarregamento();
+      await inicializarHistorico();
     });
   </script>
 </body>
