@@ -1344,15 +1344,32 @@ async function salvarCarregamento() {
   }
 }
 
+function direcionarItemCarregamento(item, motivoRequisicao = '') {
+  const mod = normalizarTexto(item.modelo || '');
+  const motivo = normalizarTexto(motivoRequisicao);
+
+  if (mod === 'TROCA') return 'troca';     // MOD. explícito: leva e retorna
+  if (mod === 'AUMENTO') return 'entrega'; // MOD. explícito: só leva
+
+  // MOD. em branco mas o motivo da requisição já é Troca → mesma regra
+  if (!mod && motivo === 'TROCA') return 'troca';
+
+  // fallback: colunas N / U
+  if (item.novo) return 'entrega';
+  if (item.usado) return 'retorno';
+  return 'entrega';
+}
+
 function calcularTotaisCarregamento() {
   let totalEntrega = 0, totalRetorno = 0;
   carregamentoRequisicoes.forEach(req => {
     (Array.isArray(req.itens) ? req.itens : []).forEach(item => {
       const qtd = Number(item.quantidade) || 0;
       if (qtd <= 0) return;
-      if (item.novo) totalEntrega += qtd;
-      else if (item.usado) totalRetorno += qtd;
-      else totalEntrega += qtd; // sem marcação → assume entrega
+      const dir = direcionarItemCarregamento(item, req.motivo);
+      if (dir === 'troca') { totalEntrega += qtd; totalRetorno += qtd; }
+      else if (dir === 'entrega') totalEntrega += qtd;
+      else totalRetorno += qtd;
     });
   });
   return { totalEntrega, totalRetorno };
@@ -1367,11 +1384,10 @@ function calcularTotalizadorCarregamento() {
       const key = item.item_nome || item.equipamento || '?';
       if (!mapa.has(key)) mapa.set(key, { nome: key, entrega: 0, retorno: 0 });
       const e = mapa.get(key);
-      // item.novo = coluna N (sai com o caminhão = entrega)
-      // item.usado = coluna U (volta com o caminhão = retorno)
-      if (item.novo) e.entrega += qtd;
-      else if (item.usado) e.retorno += qtd;
-      else e.entrega += qtd;
+      const dir = direcionarItemCarregamento(item, req.motivo);
+      if (dir === 'troca') { e.entrega += qtd; e.retorno += qtd; }
+      else if (dir === 'entrega') e.entrega += qtd;
+      else e.retorno += qtd;
     });
   });
   return mapa;
