@@ -264,7 +264,7 @@ function renderizarTabela(veiculos) {
         const tdFilial = document.createElement('td'); tdFilial.textContent = v.filial || '-';
         const tdPlaca = document.createElement('td'); tdPlaca.textContent = v.placa; tdPlaca.style.fontWeight = 'bold';
         const tdModelo = document.createElement('td'); tdModelo.textContent = v.modelo || '-';
-        const tdRenavan = document.createElement('td'); tdRenavan.textContent = v.renavan || '-';
+        const tdRenavan = document.createElement('td'); tdRenavan.textContent = normalizarRenavan(v.renavan) || '-';
         const tdTipo = document.createElement('td'); tdTipo.textContent = v.tipo || '-';
 
         const tdSituacao = document.createElement('td');
