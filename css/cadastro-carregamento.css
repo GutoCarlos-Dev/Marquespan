@@ -828,6 +828,16 @@
   text-align: center !important;
 }
 
+.col-entrega {
+  color: #155724;
+  font-weight: 600;
+}
+
+.col-retorno {
+  color: #7d4500;
+  font-weight: 600;
+}
+
 .totalizador-rodape {
   background: rgba(0, 105, 55, 0.07);
   border-top: 2px solid rgba(0, 105, 55, 0.25);

@@ -12,6 +12,8 @@ create table if not exists public.saidas_carregamento (
   data_saida         date        not null,
   usuario            text,
   total_requisicoes  integer     not null default 0,
+  total_entrega      integer     not null default 0,  -- itens que SAEM (coluna N=novo)
+  total_retorno      integer     not null default 0,  -- itens que VOLTAM (coluna U=usado)
   observacoes        text,
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
@@ -21,6 +23,8 @@ create table if not exists public.saidas_carregamento (
 alter table public.saidas_carregamento add column if not exists modelo_veiculo    text;
 alter table public.saidas_carregamento add column if not exists usuario           text;
 alter table public.saidas_carregamento add column if not exists total_requisicoes integer default 0;
+alter table public.saidas_carregamento add column if not exists total_entrega     integer default 0;
+alter table public.saidas_carregamento add column if not exists total_retorno     integer default 0;
 alter table public.saidas_carregamento add column if not exists observacoes       text;
 
 -- =============================================================

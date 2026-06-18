@@ -1290,6 +1290,8 @@ async function salvarCarregamento() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
   try {
+    const { totalEntrega, totalRetorno } = calcularTotaisCarregamento();
+
     const { data: carregamento, error: errCar } = await supabaseClient
       .from(CARREGAMENTOS_TABLE)
       .insert([{
@@ -1298,7 +1300,9 @@ async function salvarCarregamento() {
         motorista,
         data_saida: dataSaida,
         usuario: obterUsuarioAtualNome(),
-        total_requisicoes: carregamentoRequisicoes.length
+        total_requisicoes: carregamentoRequisicoes.length,
+        total_entrega: totalEntrega,
+        total_retorno: totalRetorno
       }])
       .select('id')
       .single();
@@ -1340,6 +1344,20 @@ async function salvarCarregamento() {
   }
 }
 
+function calcularTotaisCarregamento() {
+  let totalEntrega = 0, totalRetorno = 0;
+  carregamentoRequisicoes.forEach(req => {
+    (Array.isArray(req.itens) ? req.itens : []).forEach(item => {
+      const qtd = Number(item.quantidade) || 0;
+      if (qtd <= 0) return;
+      if (item.novo) totalEntrega += qtd;
+      else if (item.usado) totalRetorno += qtd;
+      else totalEntrega += qtd; // sem marcação → assume entrega
+    });
+  });
+  return { totalEntrega, totalRetorno };
+}
+
 function calcularTotalizadorCarregamento() {
   const mapa = new Map();
   carregamentoRequisicoes.forEach(req => {
@@ -1347,11 +1365,13 @@ function calcularTotalizadorCarregamento() {
       const qtd = Number(item.quantidade) || 0;
       if (qtd <= 0) return;
       const key = item.item_nome || item.equipamento || '?';
-      if (!mapa.has(key)) mapa.set(key, { nome: key, novo: 0, usado: 0, outro: 0 });
+      if (!mapa.has(key)) mapa.set(key, { nome: key, entrega: 0, retorno: 0 });
       const e = mapa.get(key);
-      if (item.novo) e.novo += qtd;
-      else if (item.usado) e.usado += qtd;
-      else e.outro += qtd;
+      // item.novo = coluna N (sai com o caminhão = entrega)
+      // item.usado = coluna U (volta com o caminhão = retorno)
+      if (item.novo) e.entrega += qtd;
+      else if (item.usado) e.retorno += qtd;
+      else e.entrega += qtd;
     });
   });
   return mapa;
@@ -1367,23 +1387,23 @@ function renderizarTotalizadorCarregamento() {
   if (!mapa.size) { wrapper?.classList.add('hidden'); return; }
   wrapper?.classList.remove('hidden');
 
-  let tn = 0, tu = 0, to = 0;
+  let te = 0, tr_ = 0;
   tbody.innerHTML = [...mapa.values()].map(e => {
-    tn += e.novo; tu += e.usado; to += e.outro;
-    const total = e.novo + e.usado + e.outro;
+    te += e.entrega; tr_ += e.retorno;
+    const total = e.entrega + e.retorno;
     return `<tr>
       <td>${escapeHtml(e.nome)}</td>
-      <td class="col-num">${e.novo || '-'}</td>
-      <td class="col-num">${e.usado || '-'}</td>
+      <td class="col-num col-entrega">${e.entrega || '-'}</td>
+      <td class="col-num col-retorno">${e.retorno || '-'}</td>
       <td class="col-num"><strong>${total}</strong></td>
     </tr>`;
   }).join('');
 
-  const totalGeral = tn + tu + to;
+  const totalGeral = te + tr_;
   tfoot.innerHTML = `<tr class="totalizador-rodape">
     <td><strong>TOTAL GERAL</strong></td>
-    <td class="col-num"><strong>${tn || '-'}</strong></td>
-    <td class="col-num"><strong>${tu || '-'}</strong></td>
+    <td class="col-num col-entrega"><strong>${te || '-'}</strong></td>
+    <td class="col-num col-retorno"><strong>${tr_ || '-'}</strong></td>
     <td class="col-num"><strong>${totalGeral}</strong></td>
   </tr>`;
 }
