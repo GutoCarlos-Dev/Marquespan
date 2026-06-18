@@ -894,8 +894,8 @@ function processarArquivoRequisicao(file) {
       const name = file.name.toUpperCase();
       const isNovo = name.includes('(NOVO)');
       const cfg = isNovo
-        ? { sheet: 'REQUERIMENTO', motivoCell: 'K9', clienteCell: 'D6', cidadeCell: 'D7', supervisorCell: 'C7', estadoSheet: 'CADASTRO NOVO', estadoCell: 'N21', startRow: 13, endRow: 23, startCol: 2, endCol: 6, filterQtd: true }
-        : { sheet: 'REQUERIMENTO MANUAL', motivoCell: 'K8', clienteCell: 'C4', cidadeCell: 'C5', supervisorCell: 'C7', startRow: 11, endRow: 21, startCol: 1, endCol: 5, filterQtd: false };
+        ? { sheet: 'REQUERIMENTO', motivoCell: 'K9', clienteCell: 'D6', cidadeCell: 'D7', supervisorCell: 'D9', dataCell: 'K7', estadoSheet: 'CADASTRO NOVO', estadoCell: 'N21', startRow: 13, endRow: 23, startCol: 2, endCol: 6, filterQtd: true }
+        : { sheet: 'REQUERIMENTO MANUAL', motivoCell: 'K8', clienteCell: 'C4', cidadeCell: 'C5', supervisorCell: 'C7', dataCell: 'K6', startRow: 11, endRow: 21, startCol: 1, endCol: 5, filterQtd: false };
 
       if (!workbook.SheetNames.includes(cfg.sheet)) {
         atualizarStatusRequisicao(`O arquivo ${file.name} não possui a aba "${cfg.sheet}".`, true);
@@ -905,7 +905,7 @@ function processarArquivoRequisicao(file) {
       const sheet = workbook.Sheets[cfg.sheet];
       const motivoPlanilha = String(sheet[cfg.motivoCell]?.v || sheet.I11?.v || '').trim();
       const supervisorPlanilha = String(sheet[cfg.supervisorCell]?.v || '').trim();
-      const dataRequisicao = converterDataExcelParaIso(sheet.K6, workbook);
+      const dataRequisicao = converterDataExcelParaIso(sheet[cfg.dataCell], workbook);
       const dadosClientePlanilha = extrairClienteCelula(sheet[cfg.clienteCell]?.v);
       const cidadePlanilha = String(sheet[cfg.cidadeCell]?.v || '').trim();
       const estadoSheet = cfg.estadoSheet ? workbook.Sheets[cfg.estadoSheet] : null;
