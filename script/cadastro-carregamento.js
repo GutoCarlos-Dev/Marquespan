@@ -1833,7 +1833,7 @@ function renderResumoHTML(car, reqs, mapaItens) {
     </div>
 
     <h4 class="resumo-section-h"><i class="fas fa-list-ul"></i> Requisições Incluídas</h4>
-    <table class="resumo-table">
+    <table class="resumo-table resumo-table-req">
       <thead><tr>
         <th>Cliente</th><th>Motivo</th><th>Supervisor</th><th>Data Req.</th><th>Arquivo</th>
       </tr></thead>
@@ -1864,6 +1864,19 @@ function renderResumoHTML(car, reqs, mapaItens) {
         </tr>
       </tfoot>
     </table>
+
+    <div class="resumo-assinatura">
+      <div class="resumo-assinatura-linha">
+        <div class="resumo-assinatura-item">
+          <div class="resumo-assinatura-espaco"></div>
+          <span>Assinatura do Conferente</span>
+        </div>
+        <div class="resumo-assinatura-item">
+          <div class="resumo-assinatura-espaco"></div>
+          <span>Assinatura do Motorista</span>
+        </div>
+      </div>
+    </div>
 
     <div class="resumo-rodape">
       Marquespan Alimentos &bull; Documento gerado automaticamente &bull; ${agora}
@@ -1939,7 +1952,7 @@ export async function inicializarHistorico() {
   });
 
   // Imprimir
-  document.getElementById('btnImprimirResumo')?.addEventListener('click', () => window.print());
+  document.getElementById('btnImprimirResumo')?.addEventListener('click', imprimirResumo);
 
   // Recarregar ao entrar na aba
   document.querySelectorAll('[data-tab-target="historico"]').forEach(btn =>
@@ -1950,6 +1963,46 @@ export async function inicializarHistorico() {
 function fecharModalResumo() {
   document.getElementById('modalResumoCarregamento')?.classList.add('hidden');
   document.body.style.overflow = '';
+}
+
+function imprimirResumo() {
+  const conteudo = document.getElementById('conteudoResumoCarregamento');
+  if (!conteudo) return;
+
+  // Base URL para referenciar CSS e imagens corretamente
+  const base = window.location.origin
+    + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+
+  // Captura o link do CSS da página atual
+  const cssLink = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+    .find(l => l.href.includes('cadastro-carregamento.css'));
+  const cssHref = cssLink ? cssLink.href : `${base}css/cadastro-carregamento.css`;
+
+  const win = window.open('', '_blank', 'width=960,height=720');
+  win.document.write(`<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Resumo de Carregamento - Marquespan</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="${cssHref}">
+  <base href="${base}">
+  <style>
+    body { margin: 6mm 10mm; background: #fff; }
+    @page { margin: 6mm 10mm; size: A4 portrait; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  </style>
+</head>
+<body>
+  ${conteudo.innerHTML}
+  <script>
+    window.addEventListener('load', function () {
+      setTimeout(function () { window.print(); window.close(); }, 600);
+    });
+  <\/script>
+</body>
+</html>`);
+  win.document.close();
 }
 
 // === CLIENTES ===
