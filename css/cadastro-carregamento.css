@@ -754,6 +754,22 @@
     color: #a71d2a;
 }
 
+.btn-icon.revert {
+    color: #fd7e14;
+}
+
+.btn-icon.revert:hover {
+    color: #c96200;
+}
+
+.btn-icon.carregar {
+    color: #006937;
+}
+
+.btn-icon.carregar:hover {
+    color: #004b28;
+}
+
 /* Ordenação de colunas */
 .glass-table th[data-sort] {
     cursor: pointer;

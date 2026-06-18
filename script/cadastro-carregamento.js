@@ -510,7 +510,9 @@ function renderizarTabelaStatusRequisicoes() {
         <button type="button" class="btn-icon view" data-visualizar-requisicao="${escapeHtml(req.id)}" title="Visualizar"><i class="fas fa-eye"></i></button>
         <button type="button" class="btn-icon edit" data-editar-requisicao="${escapeHtml(req.id)}" title="Editar"><i class="fas fa-pen"></i></button>
         <button type="button" class="btn-icon delete" data-excluir-requisicao="${escapeHtml(req.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
-        ${req.status === 'CARREGADO' ? '' : `<button type="button" class="btn-icon edit" data-carregar-requisicao="${escapeHtml(req.id)}" title="Carregar"><i class="fas fa-truck-loading"></i></button>`}
+        ${req.status === 'CARREGADO'
+          ? `<button type="button" class="btn-icon revert" data-reverter-requisicao="${escapeHtml(req.id)}" title="Reverter para Pendente"><i class="fas fa-rotate-left"></i></button>`
+          : `<button type="button" class="btn-icon carregar" data-carregar-requisicao="${escapeHtml(req.id)}" title="Marcar como Carregado"><i class="fas fa-truck-loading"></i></button>`}
       </td>
     </tr>
   `).join('');
@@ -865,6 +867,25 @@ async function marcarRequisicaoComoCarregada(id) {
   atualizarStatusRequisicao('Requisição marcada como CARREGADO.');
 }
 
+async function reverterRequisicaoParaPendente(id) {
+  const req = encontrarRequisicaoSalva(id);
+  if (!req || !confirm(`Reverter a requisição "${req.arquivo}" para PENDENTE?`)) return;
+
+  const { error } = await supabaseClient
+    .from(REQUISICOES_TABLE)
+    .update({ status: 'PENDENTE', carregado_em: null })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Erro ao reverter requisição:', error);
+    alert(`Não foi possível reverter a requisição: ${error.message}`);
+    return;
+  }
+
+  await carregarRequisicoesBanco();
+  atualizarStatusRequisicao('Requisição revertida para PENDENTE.');
+}
+
 function salvarRequisicoesNoLocalStorage() {
   localStorage.setItem(REQUISICOES_PENDENTES_KEY, JSON.stringify({
     atualizado_em: new Date().toISOString(),
@@ -1152,11 +1173,13 @@ export async function inicializarRequisicao() {
     const editar = event.target.closest('[data-editar-requisicao]');
     const excluir = event.target.closest('[data-excluir-requisicao]');
     const carregar = event.target.closest('[data-carregar-requisicao]');
+    const reverter = event.target.closest('[data-reverter-requisicao]');
 
     if (visualizar) abrirModalRequisicaoDetalhes(visualizar.dataset.visualizarRequisicao, 'visualizar');
     if (editar) abrirModalRequisicaoDetalhes(editar.dataset.editarRequisicao, 'editar');
     if (excluir) excluirRequisicao(excluir.dataset.excluirRequisicao);
     if (carregar) marcarRequisicaoComoCarregada(carregar.dataset.carregarRequisicao);
+    if (reverter) reverterRequisicaoParaPendente(reverter.dataset.reverterRequisicao);
   });
 
   await Promise.all([
