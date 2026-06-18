@@ -449,8 +449,39 @@ function controlesGeolocalizacaoCliente(cliente) {
   `;
 }
 
+function urlStreetViewPorCoordenadas(coordenadas) {
+  if (!coordenadas) return '#';
+  return `https://www.google.com/maps?q=&layer=c&cbll=${coordenadas.lat},${coordenadas.lng}`;
+}
+
+function obterContainerPopupCliente(elemento) {
+  return elemento?.closest('.leaflet-popup-content') || elemento?.closest('div');
+}
+
+function atualizarLinkStreetViewCliente(container, coordenadas) {
+  const link = container?.querySelector('.link-streetview-cliente');
+  if (!link || !coordenadas) return;
+  link.href = urlStreetViewPorCoordenadas(coordenadas);
+}
+
+function abrirStreetViewClienteRelatorio(link) {
+  const container = obterContainerPopupCliente(link);
+  const input = container?.querySelector('.input-geolocalizacao-cliente');
+  const coordenadas = obterCoordenadasGeolocalizacao(input?.value);
+
+  if (!coordenadas) {
+    window.open(link.href, '_blank', 'noopener');
+    return false;
+  }
+
+  const url = urlStreetViewPorCoordenadas(coordenadas);
+  link.href = url;
+  window.open(url, '_blank', 'noopener');
+  return false;
+}
+
 async function salvarGeolocalizacaoClienteRelatorio(botao) {
-  const container = botao?.closest('div');
+  const container = obterContainerPopupCliente(botao);
   const input = container?.querySelector('.input-geolocalizacao-cliente');
   const status = container?.querySelector('.status-geolocalizacao-cliente');
   const codigo = limparTexto(botao?.dataset?.codigoCliente);
@@ -479,6 +510,7 @@ async function salvarGeolocalizacaoClienteRelatorio(botao) {
     if (error) throw error;
 
     if (input) input.value = valorNormalizado;
+    atualizarLinkStreetViewCliente(container, coordenadas);
     if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
     mostrarMensagem(`Geolocalizacao do cliente ${codigo} atualizada.`);
   } catch (error) {
@@ -491,6 +523,7 @@ async function salvarGeolocalizacaoClienteRelatorio(botao) {
 }
 
 window.salvarGeolocalizacaoClienteRelatorio = salvarGeolocalizacaoClienteRelatorio;
+window.abrirStreetViewClienteRelatorio = abrirStreetViewClienteRelatorio;
 
 function normalizarLogradouroCliente(endereco) {
   return limparTexto(endereco)
@@ -584,7 +617,7 @@ function adicionarClienteRotaNoMapa(cliente) {
     popupAnchor: [0, -tamanho]
   });
 
-  const streetViewUrl = `https://www.google.com/maps?q=&layer=c&cbll=${cliente.lat},${cliente.lng}`;
+  const streetViewUrl = urlStreetViewPorCoordenadas(obterCoordenadasGeolocalizacao(valorGeolocalizacaoCliente(cliente)));
   L.marker([cliente.lat, cliente.lng], { icon: icone })
     .bindPopup(`
       <strong>${escaparHTML(cliente.fantasia || cliente.nome || cliente.codigo)}</strong>${labelTipo}<br>
@@ -592,7 +625,7 @@ function adicionarClienteRotaNoMapa(cliente) {
       Rota: ${escaparHTML(cliente.rota || '—')}<br>
       ${escaparHTML(cliente.enderecoMapa || montarEnderecoCliente(cliente))}<br>
       ${controlesGeolocalizacaoCliente(cliente)}<br>
-      <a href="${streetViewUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;color:#1a73e8;font-size:13px;text-decoration:none;">
+      <a href="${streetViewUrl}" class="link-streetview-cliente" onclick="return window.abrirStreetViewClienteRelatorio(this)" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;color:#1a73e8;font-size:13px;text-decoration:none;">
         <i class="fas fa-street-view"></i> Abrir no Street View
       </a>
     `)
