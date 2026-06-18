@@ -15,6 +15,22 @@ let filtrosRequisicaoAplicados = {
   status: ''
 };
 
+let sortRequisicao = { col: null, dir: 'asc' };
+
+function ordenarRequisicoes(lista) {
+  if (!sortRequisicao.col) return lista;
+  const col = sortRequisicao.col;
+  const dateCols = new Set(['created_at', 'data_requisicao']);
+  return [...lista].sort((a, b) => {
+    const av = String(a[col] ?? '');
+    const bv = String(b[col] ?? '');
+    const cmp = dateCols.has(col)
+      ? av.localeCompare(bv)
+      : av.localeCompare(bv, 'pt-BR', { sensitivity: 'base' });
+    return sortRequisicao.dir === 'asc' ? cmp : -cmp;
+  });
+}
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;',
@@ -467,13 +483,13 @@ function renderizarTabelaStatusRequisicoes() {
   const tbody = document.getElementById('corpoTabelaRequisicoes');
   if (!tbody) return;
 
-  const dados = requisicoesSalvas.filter(req => {
+  const dados = ordenarRequisicoes(requisicoesSalvas.filter(req => {
     const supervisorOk = !filtrosRequisicaoAplicados.supervisor || normalizarBusca(req.supervisor).includes(filtrosRequisicaoAplicados.supervisor);
     const dataOk = !filtrosRequisicaoAplicados.data || String(req.data_requisicao || '').slice(0, 10) === filtrosRequisicaoAplicados.data;
     const motivoOk = !filtrosRequisicaoAplicados.motivo || normalizarBusca(req.motivo).includes(filtrosRequisicaoAplicados.motivo);
     const statusOk = !filtrosRequisicaoAplicados.status || String(req.status || '').toUpperCase() === filtrosRequisicaoAplicados.status;
     return supervisorOk && dataOk && motivoOk && statusOk;
-  });
+  }));
 
   if (!dados.length) {
     tbody.innerHTML = '<tr><td colspan="9">Nenhuma requisição salva.</td></tr>';
@@ -498,6 +514,11 @@ function renderizarTabelaStatusRequisicoes() {
       </td>
     </tr>
   `).join('');
+
+  document.querySelectorAll('.requisicao-status-table .glass-table th[data-sort]').forEach(th => {
+    th.classList.toggle('sort-asc', sortRequisicao.col === th.dataset.sort && sortRequisicao.dir === 'asc');
+    th.classList.toggle('sort-desc', sortRequisicao.col === th.dataset.sort && sortRequisicao.dir === 'desc');
+  });
 }
 
 function aplicarFiltrosRequisicao() {
@@ -1117,6 +1138,15 @@ export async function inicializarRequisicao() {
   document.getElementById('modalRequisicaoDetalhes')?.addEventListener('click', event => {
     if (event.target.id === 'modalRequisicaoDetalhes') fecharModalRequisicaoDetalhes();
   });
+  document.querySelector('.requisicao-status-table .glass-table thead')?.addEventListener('click', event => {
+    const th = event.target.closest('th[data-sort]');
+    if (!th) return;
+    const col = th.dataset.sort;
+    sortRequisicao.dir = sortRequisicao.col === col && sortRequisicao.dir === 'asc' ? 'desc' : 'asc';
+    sortRequisicao.col = col;
+    renderizarTabelaStatusRequisicoes();
+  });
+
   document.getElementById('corpoTabelaRequisicoes')?.addEventListener('click', event => {
     const visualizar = event.target.closest('[data-visualizar-requisicao]');
     const editar = event.target.closest('[data-editar-requisicao]');

@@ -754,6 +754,32 @@
     color: #a71d2a;
 }
 
+/* Ordenação de colunas */
+.glass-table th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+}
+
+.glass-table th[data-sort]:hover {
+    background: rgba(0, 105, 55, 0.1);
+}
+
+.sort-icon::before {
+    content: ' ⇅';
+    color: rgba(0, 105, 55, 0.3);
+    font-size: 0.8em;
+}
+
+.glass-table th.sort-asc .sort-icon::before {
+    content: ' ▲';
+    color: var(--primary-color);
+}
+
+.glass-table th.sort-desc .sort-icon::before {
+    content: ' ▼';
+    color: var(--primary-color);
+}
+
 /* Media Queries para Responsividade */
 @media (max-width: 768px) {
     .tabs-carregamento {

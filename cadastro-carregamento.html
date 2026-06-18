@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="css/index.css"> 
   <link rel="stylesheet" href="css/menu.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-7">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-8">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -73,14 +73,14 @@
         <table class="glass-table data-grid">
           <thead>
             <tr>
-              <th>Arquivo</th>
-              <th>Data/Hora</th>
-              <th>Usuário</th>
-              <th>Data Requisição</th>
-              <th>Supervisor</th>
-              <th>Cliente</th>
-              <th>Motivo</th>
-              <th>Status</th>
+              <th data-sort="arquivo">Arquivo <span class="sort-icon"></span></th>
+              <th data-sort="created_at">Data/Hora <span class="sort-icon"></span></th>
+              <th data-sort="usuario">Usuário <span class="sort-icon"></span></th>
+              <th data-sort="data_requisicao">Data Requisição <span class="sort-icon"></span></th>
+              <th data-sort="supervisor">Supervisor <span class="sort-icon"></span></th>
+              <th data-sort="cliente_nome">Cliente <span class="sort-icon"></span></th>
+              <th data-sort="motivo">Motivo <span class="sort-icon"></span></th>
+              <th data-sort="status">Status <span class="sort-icon"></span></th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -381,7 +381,7 @@
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-11';
+    import { inicializarRequisicao, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-12';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
