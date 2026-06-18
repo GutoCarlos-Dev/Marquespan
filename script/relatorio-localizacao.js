@@ -33,6 +33,10 @@ let escalasPorDataAtual = new Map();
 let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
 const GEOCODE_DELAY_MS = 1200;
 const MAX_CLIENTES_ROTA_MAPA = 120;
+const MATRIZ_MARQUESPAN = {
+  latitude: -23.330692,
+  longitude: -47.851799
+};
 
 const filtrosTabela = {
   indice: document.getElementById('filtro-posicao-indice'),
@@ -341,6 +345,18 @@ function montarEnderecoCliente(cliente) {
   ].map(limparTexto).filter(Boolean).join(', ');
 }
 
+function isMatrizMarquespan(cliente) {
+  return cliente?.categoria === 'Grupo Marquespan'
+    && String(cliente.endereco || '').toUpperCase().includes('ANNA INGHES DEL FIOL');
+}
+
+function aplicarCoordenadasFixasCliente(cliente) {
+  if (!isMatrizMarquespan(cliente)) return false;
+  cliente.lat = MATRIZ_MARQUESPAN.latitude;
+  cliente.lng = MATRIZ_MARQUESPAN.longitude;
+  return true;
+}
+
 function normalizarLogradouroCliente(endereco) {
   return limparTexto(endereco)
     .replace(/^(R|RUA)\s*[:.-]?\s*/i, 'Rua ')
@@ -406,8 +422,7 @@ function adicionarClienteRotaNoMapa(cliente) {
   if (!Number.isFinite(cliente.lat) || !Number.isFinite(cliente.lng)) return;
 
   const isGrupoMarquespan = cliente.categoria === 'Grupo Marquespan';
-  const isMatriz = isGrupoMarquespan
-    && String(cliente.endereco || '').toUpperCase().includes('ANNA INGHES DEL FIOL');
+  const isMatriz = isMatrizMarquespan(cliente);
   const camada = isGrupoMarquespan ? camadaFiliaisMarquespan : camadaClientesRota;
   if (!camada) return;
 
@@ -497,10 +512,11 @@ async function plotarClientesDasRotas(escalas) {
     const endereco = montarEnderecoCliente(cliente);
     cliente.enderecoMapa = endereco;
 
-    if (cache[endereco]) {
+    const temCoordenadaFixa = aplicarCoordenadasFixasCliente(cliente);
+    if (!temCoordenadaFixa && cache[endereco]) {
       cliente.lat = cache[endereco].lat;
       cliente.lng = cache[endereco].lng;
-    } else {
+    } else if (!temCoordenadaFixa) {
       const posicao = await geocodificarClienteRota(cliente);
       if (posicao) {
         cliente.lat = posicao.lat;
@@ -540,10 +556,11 @@ async function plotarFiliaisMarquespan() {
     const endereco = montarEnderecoCliente(cliente);
     cliente.enderecoMapa = endereco;
 
-    if (cache[endereco]) {
+    const temCoordenadaFixa = aplicarCoordenadasFixasCliente(cliente);
+    if (!temCoordenadaFixa && cache[endereco]) {
       cliente.lat = cache[endereco].lat;
       cliente.lng = cache[endereco].lng;
-    } else {
+    } else if (!temCoordenadaFixa) {
       const posicao = await geocodificarClienteRota(cliente);
       if (posicao) {
         cliente.lat = posicao.lat;
