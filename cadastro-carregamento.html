@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="css/index.css"> 
   <link rel="stylesheet" href="css/menu.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="css/cadastro-carregamento.css">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-1">
 </head>
 <body>
   <div id="menu-container"></div>
@@ -17,7 +17,44 @@
   <div class="main-content">
     <header class="header glass-header"><h1><i class="fas fa-truck-loading"></i> Cadastro Carregamento</h1></header>
 
-    <section id="itens" class="glass-panel">
+    <nav class="tabs-carregamento" aria-label="Seções do cadastro de carregamento">
+      <button type="button" class="tab-button active" data-tab-target="requisicao"><i class="fas fa-file-signature"></i> Requisição</button>
+      <button type="button" class="tab-button" data-tab-target="itens"><i class="fas fa-boxes"></i> Itens</button>
+      <button type="button" class="tab-button" data-tab-target="clientes"><i class="fas fa-users"></i> Clientes</button>
+      <button type="button" class="tab-button" data-tab-target="motoristas"><i class="fas fa-truck-moving"></i> Motoristas</button>
+    </nav>
+
+    <section id="requisicao" class="glass-panel tab-panel active">
+      <h3><i class="fas fa-file-signature"></i> Requisição</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="requisicaoNumero">Número</label>
+          <input type="text" id="requisicaoNumero" class="glass-input" placeholder="Número da requisição">
+        </div>
+        <div class="form-group">
+          <label for="requisicaoData">Data</label>
+          <input type="date" id="requisicaoData" class="glass-input">
+        </div>
+        <div class="form-group">
+          <label for="requisicaoResponsavel">Responsável</label>
+          <input type="text" id="requisicaoResponsavel" class="glass-input" placeholder="Responsável">
+        </div>
+        <div class="form-group">
+          <label for="requisicaoStatus">Status</label>
+          <select id="requisicaoStatus" class="glass-input">
+            <option value="aberta">Aberta</option>
+            <option value="em_separacao">Em separação</option>
+            <option value="finalizada">Finalizada</option>
+          </select>
+        </div>
+        <div class="form-group cliente-field-wide">
+          <label for="requisicaoObservacoes">Observações</label>
+          <input type="text" id="requisicaoObservacoes" class="glass-input" placeholder="Observações da requisição">
+        </div>
+      </div>
+    </section>
+
+    <section id="itens" class="glass-panel tab-panel hidden">
       <h3><i class="fas fa-boxes"></i> Itens</h3>
       
       <div class="form-actions" style="justify-content: flex-start; margin-bottom: 15px;">
@@ -62,7 +99,7 @@
       </div>
     </section>
 
-    <section id="clientes" class="glass-panel">
+    <section id="clientes" class="glass-panel tab-panel hidden">
       <div class="panel-title-row">
         <h3><i class="fas fa-users"></i> Clientes (<span id="contadorClientesAtivos">0</span> ativos)</h3>
         <button type="button" id="btnAbrirModalCliente" class="btn-glass btn-blue">Incluir Cliente</button>
@@ -197,7 +234,7 @@
       </div>
     </section>
 
-    <section id="motoristas" class="glass-panel">
+    <section id="motoristas" class="glass-panel tab-panel hidden">
       <h3><i class="fas fa-truck-moving"></i> Motoristas</h3>
       <form id="formMotorista">
         <div class="form-grid">
@@ -241,6 +278,20 @@
     import { carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-3';
 
     window.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.tab-button').forEach((button) => {
+        button.addEventListener('click', () => {
+          const targetId = button.dataset.tabTarget;
+          document.querySelectorAll('.tab-button').forEach((tab) => {
+            tab.classList.toggle('active', tab === button);
+          });
+          document.querySelectorAll('.tab-panel').forEach((panel) => {
+            const active = panel.id === targetId;
+            panel.classList.toggle('active', active);
+            panel.classList.toggle('hidden', !active);
+          });
+        });
+      });
+
       document.getElementById('formItem').addEventListener('submit', salvarItem);
       document.getElementById('formCliente').addEventListener('submit', salvarClienteCompleto);
       document.getElementById('btnAbrirModalCliente').addEventListener('click', () => abrirModalCliente());
