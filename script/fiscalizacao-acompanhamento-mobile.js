@@ -70,12 +70,12 @@ function abrirModal(item = null) {
   document.getElementById('horariosMobileContainer').innerHTML = '';
   const clientes = normalizarArray(item?.clientes);
   const sugestaoRoteiro = normalizarArray(item?.sugestao_roteiro);
-  const horarios = normalizarArray(item?.horarios);
+  const horarios = normalizarHorariosAcompanhamento(item?.horarios);
   (clientes.length ? clientes : [{}]).forEach(cliente => adicionarCliente(cliente));
   sugestaoRoteiro.forEach(cliente => adicionarCliente(cliente, 'sugestaoClientesMobileContainer'));
   document.getElementById('mobileHabilitarSugestaoRoteiro').checked = sugestaoRoteiro.length > 0;
   atualizarSugestaoRoteiro();
-  (horarios.length ? horarios : [{}]).forEach((dia, index) => adicionarDia(dia, index + 1));
+  (horarios.length ? horarios : [{}]).forEach((dia) => adicionarDia(dia, dia.dia));
   atualizarTipoRota();
   document.getElementById('btnSalvarMobile').innerHTML = acompanhamentoEditandoId
     ? '<i class="fas fa-save"></i> SALVAR ALTERACOES'
@@ -413,7 +413,7 @@ function coletarClientesDoContainer(containerId) {
 
 function coletarHorarios() {
   const tipo = document.getElementById('mobileTipoRota').value;
-  return [...document.querySelectorAll('#horariosMobileContainer .dia-item')].map((item, index) => ({
+  const horarios = [...document.querySelectorAll('#horariosMobileContainer .dia-item')].map((item, index) => ({
     dia: index + 1,
     tipo_rota: tipo,
     saida_empresa: tipo === 'bate_volta' ? item.querySelector('.dia-saida-empresa').value || null : null,
@@ -428,6 +428,7 @@ function coletarHorarios() {
     chegada_empresa: tipo === 'bate_volta' ? item.querySelector('.dia-chegada-empresa').value || null : null,
     chegada_viagem: tipo === 'viagem' ? item.querySelector('.dia-chegada-viagem').value || null : null
   }));
+  return normalizarHorariosAcompanhamento(horarios);
 }
 
 async function carregarAcompanhamentos() {
@@ -516,6 +517,37 @@ function normalizarArray(valor) {
   }
 }
 
+function horarioTemDados(dia) {
+  return [
+    dia?.saida_empresa,
+    dia?.saida_viagem,
+    dia?.saida_hotel,
+    dia?.cafe_de,
+    dia?.cafe,
+    dia?.cafe_ate,
+    dia?.almoco_de,
+    dia?.almoco,
+    dia?.almoco_ate,
+    dia?.finalizacao_entregas,
+    dia?.chegada_empresa,
+    dia?.chegada_viagem,
+    dia?.chegada_hotel,
+    dia?.chegada_hotel_empresa
+  ].some(valor => String(valor || '').trim());
+}
+
+function normalizarHorariosAcompanhamento(horarios) {
+  return normalizarArray(horarios)
+    .filter(horarioTemDados)
+    .sort((a, b) => (Number(a.dia) || 999) - (Number(b.dia) || 999))
+    .map((dia, index) => ({
+      ...dia,
+      dia: index + 1,
+      cafe_total_minutos: dia.cafe_total_minutos ?? calcularMinutos(dia.cafe_de || dia.cafe, dia.cafe_ate),
+      almoco_total_minutos: dia.almoco_total_minutos ?? calcularMinutos(dia.almoco_de || dia.almoco, dia.almoco_ate)
+    }));
+}
+
 function getNumeroOuNull(id) {
   const valor = document.getElementById(id).value;
   return valor === '' ? null : Number(valor);
@@ -528,7 +560,7 @@ function resumoClientes(clientes) {
 }
 
 function resumoHorarios(horarios) {
-  const lista = normalizarArray(horarios);
+  const lista = normalizarHorariosAcompanhamento(horarios);
   if (!lista.length) return '-';
   return lista.map(dia => {
     const cafeTotal = dia.cafe_total_minutos ?? calcularMinutos(dia.cafe_de, dia.cafe_ate);

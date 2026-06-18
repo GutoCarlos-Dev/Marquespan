@@ -131,7 +131,7 @@ function abrirModal(item = null, somenteVisualizacao = false) {
 
   const clientes = normalizarArray(item?.clientes);
   const sugestaoRoteiro = normalizarArray(item?.sugestao_roteiro);
-  const horarios = normalizarArray(item?.horarios);
+  const horarios = normalizarHorariosAcompanhamento(item?.horarios);
   document.getElementById('clientesContainer').innerHTML = '';
   document.getElementById('sugestaoClientesContainer').innerHTML = '';
   document.getElementById('horariosContainer').innerHTML = '';
@@ -139,7 +139,7 @@ function abrirModal(item = null, somenteVisualizacao = false) {
   sugestaoRoteiro.forEach(cliente => adicionarCliente(cliente, 'sugestaoClientesContainer'));
   document.getElementById('habilitarSugestaoRoteiro').checked = sugestaoRoteiro.length > 0;
   atualizarSugestaoRoteiro();
-  (horarios.length ? horarios : [{}]).forEach((dia, index) => adicionarDia(dia, index + 1));
+  (horarios.length ? horarios : [{}]).forEach((dia) => adicionarDia(dia, dia.dia));
   atualizarTipoRota();
   aplicarModoVisualizacaoAcompanhamento();
   document.getElementById('modalAcompanhamento').classList.remove('hidden');
@@ -509,7 +509,7 @@ function coletarClientesDoContainer(containerId) {
 
 function coletarHorarios() {
   const tipo = document.getElementById('acompanhamentoTipoRota').value;
-  return [...document.querySelectorAll('#horariosContainer .dia-item')].map((item, index) => ({
+  const horarios = [...document.querySelectorAll('#horariosContainer .dia-item')].map((item, index) => ({
     dia: index + 1,
     tipo_rota: tipo,
     saida_empresa: tipo === 'bate_volta' ? item.querySelector('.dia-saida-empresa').value || null : null,
@@ -524,6 +524,7 @@ function coletarHorarios() {
     chegada_empresa: tipo === 'bate_volta' ? item.querySelector('.dia-chegada-empresa').value || null : null,
     chegada_viagem: tipo === 'viagem' ? item.querySelector('.dia-chegada-viagem').value || null : null
   }));
+  return normalizarHorariosAcompanhamento(horarios);
 }
 
 async function excluirAcompanhamento(item) {
@@ -678,6 +679,37 @@ function normalizarArray(valor) {
   }
 }
 
+function horarioTemDados(dia) {
+  return [
+    dia?.saida_empresa,
+    dia?.saida_viagem,
+    dia?.saida_hotel,
+    dia?.cafe_de,
+    dia?.cafe,
+    dia?.cafe_ate,
+    dia?.almoco_de,
+    dia?.almoco,
+    dia?.almoco_ate,
+    dia?.finalizacao_entregas,
+    dia?.chegada_empresa,
+    dia?.chegada_viagem,
+    dia?.chegada_hotel,
+    dia?.chegada_hotel_empresa
+  ].some(valor => String(valor || '').trim());
+}
+
+function normalizarHorariosAcompanhamento(horarios) {
+  return normalizarArray(horarios)
+    .filter(horarioTemDados)
+    .sort((a, b) => (Number(a.dia) || 999) - (Number(b.dia) || 999))
+    .map((dia, index) => ({
+      ...dia,
+      dia: index + 1,
+      cafe_total_minutos: dia.cafe_total_minutos ?? calcularMinutos(dia.cafe_de || dia.cafe, dia.cafe_ate),
+      almoco_total_minutos: dia.almoco_total_minutos ?? calcularMinutos(dia.almoco_de || dia.almoco, dia.almoco_ate)
+    }));
+}
+
 function resumoClientes(clientes) {
   const lista = normalizarArray(clientes);
   if (!lista.length) return '-';
@@ -685,7 +717,7 @@ function resumoClientes(clientes) {
 }
 
 function resumoHorarios(horarios) {
-  const lista = normalizarArray(horarios);
+  const lista = normalizarHorariosAcompanhamento(horarios);
   if (!lista.length) return '-';
   return lista.map(dia => {
     const cafeTotal = dia.cafe_total_minutos ?? calcularMinutos(dia.cafe_de, dia.cafe_ate);
@@ -796,7 +828,7 @@ function compartilharAcompanhamentoWhatsapp(acompanhamento = null) {
   }
 
   const clientes = normalizarArray(dados.clientes);
-  const horarios = normalizarArray(dados.horarios);
+  const horarios = normalizarHorariosAcompanhamento(dados.horarios);
   const sugestao = normalizarArray(dados.sugestao_roteiro);
   const linhas = [
     '*Fiscalizacao - Acompanhamento de Rota*',
