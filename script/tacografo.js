@@ -1,5 +1,11 @@
 import { supabaseClient } from './supabase.js';
 
+function normalizarRenavan(value) {
+    const digitos = String(value || '').replace(/\D/g, '');
+    if (!digitos) return '';
+    return digitos.padStart(11, '0');
+}
+
 const TacografoUI = {
     data: [],
     filteredData: [], // Armazena os dados filtrados para exportação global
@@ -222,7 +228,7 @@ const TacografoUI = {
                     filial: v.filial || '-',
                     placa: v.placa,
                     modelo: v.modelo || '-',
-                    renavan: v.renavan || '-',
+                    renavan: normalizarRenavan(v.renavan) || '-',
                     tipo: v.tipo || '-',
                     data_emissao: tData.data_emissao || '',
                     data_vencimento: venc || '',
@@ -479,6 +485,8 @@ const TacografoUI = {
         input.type = 'text';
         input.className = 'table-date-input';
         input.value = originalRenavan;
+        input.maxLength = 11;
+        input.inputMode = 'numeric';
         input.style.width = '100%';
         input.style.textAlign = 'center';
 
@@ -487,7 +495,7 @@ const TacografoUI = {
         input.focus();
 
         const saveAndExit = async () => {
-            const newRenavan = input.value.trim().toUpperCase();
+            const newRenavan = normalizarRenavan(input.value);
             if (newRenavan === originalRenavan) {
                 cell.textContent = originalRenavan || '-';
                 return;

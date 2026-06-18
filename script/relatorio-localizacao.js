@@ -167,6 +167,35 @@ function formatarDuracao(ms) {
   return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
 }
 
+function obterDataTerminoParada(ponto) {
+  const inicio = new Date(ponto?.dataInicial || 0).getTime();
+  if (!Number.isFinite(inicio)) return null;
+
+  const dataFinal = new Date(ponto?.dataFinal || 0);
+  if (Number.isFinite(dataFinal.getTime()) && dataFinal.getTime() > inicio) {
+    return dataFinal;
+  }
+
+  const proximoPonto = pontosAtuais[ponto.indiceOriginal + 1];
+  const proximoInicio = new Date(proximoPonto?.dataInicial || 0);
+  return Number.isFinite(proximoInicio.getTime()) && proximoInicio.getTime() > inicio
+    ? proximoInicio
+    : null;
+}
+
+function linhasTempoPopup(ponto) {
+  if (ponto?.tipo !== 'parado') {
+    return `${formatarData(ponto.dataInicial)}<br>`;
+  }
+
+  const termino = obterDataTerminoParada(ponto);
+  return `
+    In&iacute;cio da parada: ${formatarData(ponto.dataInicial)}<br>
+    T&eacute;rmino da parada: ${termino ? formatarData(termino) : 'N&atilde;o informado'}<br>
+    Tempo parado: ${formatarDuracao(calcularTempoParadoMs(ponto))}<br>
+  `;
+}
+
 function obterEscalasDoPonto(ponto) {
   const dataEscala = obterDataISOLocal(ponto?.dataInicial);
   return escalasPorDataAtual.get(dataEscala) || [];
@@ -268,7 +297,7 @@ function popupPonto(ponto, titulo) {
   const streetViewUrl = `https://www.google.com/maps?q=&layer=c&cbll=${ponto.latitude},${ponto.longitude}`;
   return `
     <strong>${titulo}</strong><br>
-    ${formatarData(ponto.dataInicial)}<br>
+    ${linhasTempoPopup(ponto)}
     ${linhasEscala}
     Velocidade: ${Math.round(ponto.velocidade || 0)} km/h<br>
     ${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}<br><br>
@@ -354,6 +383,35 @@ function aplicarCoordenadasFixasCliente(cliente) {
   if (!isMatrizMarquespan(cliente)) return false;
   cliente.lat = MATRIZ_MARQUESPAN.latitude;
   cliente.lng = MATRIZ_MARQUESPAN.longitude;
+  return true;
+}
+
+function obterCoordenadasGeolocalizacao(valor) {
+  const texto = limparTexto(valor);
+  if (!texto) return null;
+
+  const partes = texto
+    .replace(/[;]/g, ',')
+    .split(',')
+    .map((parte) => Number(String(parte).trim().replace(',', '.')));
+
+  if (partes.length < 2) return null;
+  const [lat, lng] = partes;
+  const coordenadasValidas = Number.isFinite(lat)
+    && Number.isFinite(lng)
+    && lat >= -90
+    && lat <= 90
+    && lng >= -180
+    && lng <= 180;
+
+  return coordenadasValidas ? { lat, lng } : null;
+}
+
+function aplicarGeolocalizacaoCliente(cliente) {
+  const coordenadas = obterCoordenadasGeolocalizacao(cliente?.geolocalizacao);
+  if (!coordenadas) return false;
+  cliente.lat = coordenadas.lat;
+  cliente.lng = coordenadas.lng;
   return true;
 }
 
@@ -484,7 +542,7 @@ async function buscarClientesDasRotas(rotas) {
 
   const { data, error } = await supabaseClient
     .from('clientes')
-    .select('codigo, fantasia, nome, uf, municipio, endereco, bairro, cep, categoria, ativo')
+    .select('codigo, fantasia, nome, uf, municipio, endereco, geolocalizacao, bairro, cep, categoria, ativo')
     .in('codigo', codigos);
   if (error) throw error;
 
@@ -512,11 +570,11 @@ async function plotarClientesDasRotas(escalas) {
     const endereco = montarEnderecoCliente(cliente);
     cliente.enderecoMapa = endereco;
 
-    const temCoordenadaFixa = aplicarCoordenadasFixasCliente(cliente);
-    if (!temCoordenadaFixa && cache[endereco]) {
+    const temCoordenadaDireta = aplicarCoordenadasFixasCliente(cliente) || aplicarGeolocalizacaoCliente(cliente);
+    if (!temCoordenadaDireta && cache[endereco]) {
       cliente.lat = cache[endereco].lat;
       cliente.lng = cache[endereco].lng;
-    } else if (!temCoordenadaFixa) {
+    } else if (!temCoordenadaDireta) {
       const posicao = await geocodificarClienteRota(cliente);
       if (posicao) {
         cliente.lat = posicao.lat;
@@ -547,7 +605,7 @@ async function plotarFiliaisMarquespan() {
 
   const { data, error } = await supabaseClient
     .from('clientes')
-    .select('codigo, fantasia, nome, uf, municipio, endereco, bairro, cep, categoria, ativo')
+    .select('codigo, fantasia, nome, uf, municipio, endereco, geolocalizacao, bairro, cep, categoria, ativo')
     .eq('categoria', 'Grupo Marquespan');
   if (error || !data?.length) return;
 
@@ -556,11 +614,11 @@ async function plotarFiliaisMarquespan() {
     const endereco = montarEnderecoCliente(cliente);
     cliente.enderecoMapa = endereco;
 
-    const temCoordenadaFixa = aplicarCoordenadasFixasCliente(cliente);
-    if (!temCoordenadaFixa && cache[endereco]) {
+    const temCoordenadaDireta = aplicarCoordenadasFixasCliente(cliente) || aplicarGeolocalizacaoCliente(cliente);
+    if (!temCoordenadaDireta && cache[endereco]) {
       cliente.lat = cache[endereco].lat;
       cliente.lng = cache[endereco].lng;
-    } else if (!temCoordenadaFixa) {
+    } else if (!temCoordenadaDireta) {
       const posicao = await geocodificarClienteRota(cliente);
       if (posicao) {
         cliente.lat = posicao.lat;

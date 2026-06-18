@@ -360,6 +360,12 @@ function parseNumberValue(value) {
     return Number.isNaN(parsed) ? null : parsed;
 }
 
+function normalizarRenavan(value) {
+    const digitos = String(value || '').replace(/\D/g, '');
+    if (!digitos) return null;
+    return digitos.padStart(11, '0');
+}
+
 function atualizarCapacidadeTotalCombustivel() {
     const tanque1 = parseNumberValue(document.getElementById('veiculoTanque1')?.value) || 0;
     const tanque2 = parseNumberValue(document.getElementById('veiculoTanque2')?.value) || 0;
@@ -492,7 +498,7 @@ async function salvarVeiculo(e) {
         tipo: getVal('veiculoTipo'),
         situacao: getVal('veiculoSituacao'),
         qrcode: getVal('veiculoQrcode'),
-        renavan: getVal('veiculoRenavan'),
+        renavan: normalizarRenavan(getVal('veiculoRenavan')),
         anofab: getVal('veiculoAnoFab'),
         anomod: getVal('veiculoAnoMod'),
         numero_crv: getVal('veiculoNumeroCRV'),
@@ -684,6 +690,7 @@ function baixarModeloImportacao() {
 function normalizarValorImportacao(dbCol, valor) {
     let excelVal = String(valor).trim();
 
+    if (dbCol === 'renavan') return normalizarRenavan(excelVal);
     if (dbCol === 'situacao') return excelVal.toLowerCase();
     if (['vuc', 'video_monitoramento', 'cobranca_automatica_pedagio'].includes(dbCol)) {
         const normalized = excelVal.toUpperCase();
