@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="css/index.css"> 
   <link rel="stylesheet" href="css/menu.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-9">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-11">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -20,6 +20,7 @@
 
     <nav class="tabs-carregamento" aria-label="Seções do cadastro de carregamento">
       <button type="button" class="tab-button active" data-tab-target="requisicao"><i class="fas fa-file-signature"></i> Requisição</button>
+      <button type="button" class="tab-button" data-tab-target="carregamento"><i class="fas fa-truck"></i> Carregamento</button>
       <button type="button" class="tab-button" data-tab-target="itens"><i class="fas fa-boxes"></i> Itens</button>
       <button type="button" class="tab-button" data-tab-target="clientes"><i class="fas fa-users"></i> Clientes</button>
       <button type="button" class="tab-button" data-tab-target="motoristas"><i class="fas fa-truck-moving"></i> Motoristas</button>
@@ -88,6 +89,74 @@
             <tr><td colspan="6">Nenhuma requisiÃ§Ã£o salva.</td></tr>
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <section id="carregamento" class="glass-panel tab-panel hidden">
+      <h3><i class="fas fa-truck"></i> Carregamento</h3>
+
+      <div class="form-grid carregamento-form-grid">
+        <div class="form-group">
+          <label for="carregamentoPlaca">Placa do Veículo</label>
+          <input type="text" id="carregamentoPlaca" class="glass-input" placeholder="ABC-1234" list="placas-carregamento-list" autocomplete="off">
+          <datalist id="placas-carregamento-list"></datalist>
+        </div>
+        <div class="form-group">
+          <label for="carregamentoMotorista">Motorista</label>
+          <input type="text" id="carregamentoMotorista" class="glass-input" list="motoristas-carregamento-list" placeholder="Nome do motorista">
+          <datalist id="motoristas-carregamento-list"></datalist>
+        </div>
+        <div class="form-group">
+          <label for="carregamentoDataSaida">Data de Saída</label>
+          <input type="date" id="carregamentoDataSaida" class="glass-input">
+        </div>
+      </div>
+
+      <div class="form-actions" style="justify-content:flex-start; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
+        <button type="button" id="btnAdicionarRequisicoesCarregamento" class="btn-glass btn-blue">
+          <i class="fas fa-plus-circle"></i> Adicionar Requisições
+        </button>
+        <button type="button" id="btnSalvarCarregamento" class="btn-glass btn-green">
+          <i class="fas fa-save"></i> Salvar Carregamento
+        </button>
+      </div>
+      <div id="carregamentoStatus" class="import-status hidden" role="status" style="margin-bottom:16px;"></div>
+
+      <div id="carregamentoRequisicoesList" class="hidden">
+        <h4 class="carregamento-section-title"><i class="fas fa-list-check"></i> Requisições Adicionadas</h4>
+        <div class="table-responsive carregamento-table-wrap">
+          <table class="glass-table">
+            <thead>
+              <tr>
+                <th>Arquivo</th>
+                <th>Supervisor</th>
+                <th>Cliente</th>
+                <th>Motivo</th>
+                <th class="col-num">Itens</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="corpoCarregamentoRequisicoes"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="carregamentoTotalizador" class="hidden">
+        <h4 class="carregamento-section-title"><i class="fas fa-calculator"></i> Totalizador de Itens</h4>
+        <div class="table-responsive carregamento-table-wrap">
+          <table class="glass-table">
+            <thead>
+              <tr>
+                <th>Equipamento</th>
+                <th class="col-num">Novo</th>
+                <th class="col-num">Usado</th>
+                <th class="col-num">Total</th>
+              </tr>
+            </thead>
+            <tbody id="corpoCarregamentoTotalizador"></tbody>
+            <tfoot id="rodapeCarregamentoTotalizador"></tfoot>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -377,11 +446,61 @@
     </div>
   </div>
 
+  <div id="carregamento-tooltip" class="carregamento-tooltip hidden" aria-hidden="true">
+    <div class="tt-row"><i class="fas fa-id-card"></i> <span id="tt-placa"></span></div>
+    <div class="tt-row"><i class="fas fa-car"></i> <span id="tt-modelo"></span></div>
+    <div class="tt-row"><i class="fas fa-user"></i> <span id="tt-motorista"></span></div>
+    <div class="tt-row"><i class="fas fa-calendar-day"></i> <span id="tt-saida"></span></div>
+  </div>
+
+  <div id="modalAdicionarRequisicoes" class="import-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloModalAdicionarReq">
+    <div class="import-modal-content modal-requisicoes-pendentes">
+      <div class="import-modal-header">
+        <h3 id="tituloModalAdicionarReq"><i class="fas fa-plus-circle"></i> Adicionar Requisições ao Carregamento</h3>
+        <button type="button" id="btnFecharModalAdicionarReq" class="modal-close" aria-label="Fechar">&times;</button>
+      </div>
+
+      <div class="busca-supervisor-wrap">
+        <div class="form-group">
+          <label for="buscaSupervisorCarregamento">Filtrar por Supervisor</label>
+          <div class="busca-supervisor-row">
+            <input type="search" id="buscaSupervisorCarregamento" class="glass-input" placeholder="Todos os supervisores" list="supervisores-requisicao-list">
+            <button type="button" id="btnBuscarReqModal" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive modal-requisicoes-table">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>Arquivo</th>
+              <th>Supervisor</th>
+              <th>Cliente</th>
+              <th>Motivo</th>
+              <th>Data Req.</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="corpoModalRequisicoesPendentes">
+            <tr><td colspan="6" style="text-align:center;color:#6c757d;">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-actions" style="margin-top:14px;">
+        <button type="button" id="btnConfirmarModalAdicionarReq" class="btn-glass btn-green">
+          <i class="fas fa-check"></i> Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="script/menu.js"></script>
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-13';
+    import { inicializarRequisicao, inicializarCarregamento, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-15';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
@@ -423,6 +542,7 @@
         carregarMotoristas()
       ]);
       await inicializarRequisicao();
+      await inicializarCarregamento();
     });
   </script>
 </body>

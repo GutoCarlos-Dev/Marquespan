@@ -451,6 +451,18 @@ function obterTipoItemDaLinha(row) {
   return '';
 }
 
+function renderizarBadgeStatus(req) {
+  if (req.status === 'CARREGADO' && req.carregamento_placa) {
+    return `<span class="status-badge carregado car-tooltip-trigger"
+      data-car-placa="${escapeHtml(req.carregamento_placa)}"
+      data-car-modelo="${escapeHtml(req.carregamento_modelo || '-')}"
+      data-car-motorista="${escapeHtml(req.carregamento_motorista || '-')}"
+      data-car-saida="${escapeHtml(formatarData(req.carregamento_data_saida))}"
+      style="cursor:help;">${escapeHtml(req.status)}</span>`;
+  }
+  return `<span class="status-badge ${req.status === 'CARREGADO' ? 'carregado' : 'pendente'}">${escapeHtml(req.status || 'PENDENTE')}</span>`;
+}
+
 function renderizarTabelaStatusRequisicoesLegado() {
   const tbody = document.getElementById('corpoTabelaRequisicoes');
   if (!tbody) return;
@@ -469,7 +481,7 @@ function renderizarTabelaStatusRequisicoesLegado() {
       <td>${escapeHtml(req.supervisor || '-')}</td>
       <td>${escapeHtml(req.cliente_nome || '-')}</td>
       <td>${escapeHtml(req.motivo)}</td>
-      <td><span class="status-badge ${req.status === 'CARREGADO' ? 'carregado' : 'pendente'}">${escapeHtml(req.status || 'PENDENTE')}</span></td>
+      <td>${renderizarBadgeStatus(req)}</td>
       <td>
         ${req.status === 'CARREGADO'
           ? '<span class="text-muted">Carregado</span>'
@@ -505,7 +517,7 @@ function renderizarTabelaStatusRequisicoes() {
       <td title="${escapeHtml(req.supervisor || '-')}">${escapeHtml(req.supervisor || '-')}</td>
       <td title="${escapeHtml(req.cliente_nome || '-')}">${escapeHtml(req.cliente_nome || '-')}</td>
       <td title="${escapeHtml(req.motivo)}">${escapeHtml(req.motivo)}</td>
-      <td><span class="status-badge ${req.status === 'CARREGADO' ? 'carregado' : 'pendente'}">${escapeHtml(req.status || 'PENDENTE')}</span></td>
+      <td>${renderizarBadgeStatus(req)}</td>
       <td class="actions-cell">
         <button type="button" class="btn-icon view" data-visualizar-requisicao="${escapeHtml(req.id)}" title="Visualizar"><i class="fas fa-eye"></i></button>
         <button type="button" class="btn-icon edit" data-editar-requisicao="${escapeHtml(req.id)}" title="Editar"><i class="fas fa-pen"></i></button>
@@ -1182,10 +1194,330 @@ export async function inicializarRequisicao() {
     if (reverter) reverterRequisicaoParaPendente(reverter.dataset.reverterRequisicao);
   });
 
+  const tooltip = document.getElementById('carregamento-tooltip');
+  if (tooltip) {
+    document.getElementById('corpoTabelaRequisicoes')?.addEventListener('mouseover', e => {
+      const trigger = e.target.closest('.car-tooltip-trigger');
+      if (!trigger) return;
+      document.getElementById('tt-placa').textContent = trigger.dataset.carPlaca || '-';
+      document.getElementById('tt-modelo').textContent = trigger.dataset.carModelo || '-';
+      document.getElementById('tt-motorista').textContent = trigger.dataset.carMotorista || '-';
+      document.getElementById('tt-saida').textContent = trigger.dataset.carSaida || '-';
+      tooltip.classList.remove('hidden');
+    });
+    document.getElementById('corpoTabelaRequisicoes')?.addEventListener('mousemove', e => {
+      if (tooltip.classList.contains('hidden')) return;
+      if (!e.target.closest('.car-tooltip-trigger')) return;
+      tooltip.style.left = `${e.pageX + 14}px`;
+      tooltip.style.top = `${e.pageY - 10}px`;
+    });
+    document.getElementById('corpoTabelaRequisicoes')?.addEventListener('mouseout', e => {
+      if (!e.target.closest('.car-tooltip-trigger')) return;
+      tooltip.classList.add('hidden');
+    });
+  }
+
   await Promise.all([
     carregarSupervisoresRequisicao(),
     carregarRequisicoesBanco()
   ]);
+}
+
+// === CARREGAMENTO ===
+
+const CARREGAMENTOS_TABLE = 'saidas_carregamento';
+
+let carregamentoRequisicoes = [];
+let motoristasLista = [];
+let veiculosLista = [];
+
+function popularMotoristasDatalistCarregamento() {
+  const datalist = document.getElementById('motoristas-carregamento-list');
+  if (!datalist) return;
+  datalist.innerHTML = '';
+  motoristasLista.forEach(m => {
+    const option = document.createElement('option');
+    option.value = m.nome || '';
+    option.label = m.nome_completo || '';
+    datalist.appendChild(option);
+  });
+}
+
+function popularPlacasDatalist() {
+  const datalist = document.getElementById('placas-carregamento-list');
+  if (!datalist) return;
+  datalist.innerHTML = '';
+  veiculosLista.forEach(v => {
+    const option = document.createElement('option');
+    option.value = v.placa || '';
+    option.label = [v.modelo, v.tipo, v.filial].filter(Boolean).join(' · ');
+    datalist.appendChild(option);
+  });
+}
+
+function encontrarVeiculo(placa) {
+  const p = String(placa || '').trim().toUpperCase();
+  return veiculosLista.find(v => String(v.placa || '').toUpperCase() === p) || null;
+}
+
+function atualizarStatusCarregamento(message, error = false) {
+  const el = document.getElementById('carregamentoStatus');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle('error', error);
+  el.classList.toggle('hidden', !message);
+}
+
+async function salvarCarregamento() {
+  const placa = document.getElementById('carregamentoPlaca')?.value.trim().toUpperCase();
+  const motorista = document.getElementById('carregamentoMotorista')?.value.trim();
+  const dataSaida = document.getElementById('carregamentoDataSaida')?.value;
+
+  if (!placa || !motorista || !dataSaida) {
+    atualizarStatusCarregamento('Preencha Placa, Motorista e Data de Saída.', true);
+    return;
+  }
+  if (!carregamentoRequisicoes.length) {
+    atualizarStatusCarregamento('Adicione ao menos uma requisição ao carregamento.', true);
+    return;
+  }
+
+  const veiculo = encontrarVeiculo(placa);
+  const modeloVeiculo = [veiculo?.modelo, veiculo?.tipo].filter(Boolean).join(' / ') || null;
+
+  const btn = document.getElementById('btnSalvarCarregamento');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+  try {
+    const { data: carregamento, error: errCar } = await supabaseClient
+      .from(CARREGAMENTOS_TABLE)
+      .insert([{
+        placa,
+        modelo_veiculo: modeloVeiculo,
+        motorista,
+        data_saida: dataSaida,
+        usuario: obterUsuarioAtualNome(),
+        total_requisicoes: carregamentoRequisicoes.length
+      }])
+      .select('id')
+      .single();
+
+    if (errCar) throw errCar;
+
+    const updates = carregamentoRequisicoes.map(req =>
+      supabaseClient
+        .from(REQUISICOES_TABLE)
+        .update({
+          status: 'CARREGADO',
+          carregado_em: new Date().toISOString(),
+          carregamento_id: carregamento.id,
+          carregamento_placa: placa,
+          carregamento_motorista: motorista,
+          carregamento_data_saida: dataSaida,
+          carregamento_modelo: modeloVeiculo
+        })
+        .eq('id', req.id)
+    );
+
+    const resultados = await Promise.all(updates);
+    const erros = resultados.filter(r => r.error);
+    if (erros.length) throw erros[0].error;
+
+    carregamentoRequisicoes = [];
+    renderizarRequisicoesCarregamento();
+    document.getElementById('carregamentoPlaca').value = '';
+    document.getElementById('carregamentoMotorista').value = '';
+    document.getElementById('carregamentoDataSaida').value = '';
+    await carregarRequisicoesBanco();
+    atualizarStatusCarregamento(`Carregamento salvo com sucesso! ${updates.length} requisição(ões) marcadas como CARREGADO.`);
+  } catch (error) {
+    console.error('Erro ao salvar carregamento:', error);
+    atualizarStatusCarregamento(`Erro ao salvar: ${error.message}`, true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Salvar Carregamento';
+  }
+}
+
+function calcularTotalizadorCarregamento() {
+  const mapa = new Map();
+  carregamentoRequisicoes.forEach(req => {
+    (Array.isArray(req.itens) ? req.itens : []).forEach(item => {
+      const qtd = Number(item.quantidade) || 0;
+      if (qtd <= 0) return;
+      const key = item.item_nome || item.equipamento || '?';
+      if (!mapa.has(key)) mapa.set(key, { nome: key, novo: 0, usado: 0, outro: 0 });
+      const e = mapa.get(key);
+      if (item.novo) e.novo += qtd;
+      else if (item.usado) e.usado += qtd;
+      else e.outro += qtd;
+    });
+  });
+  return mapa;
+}
+
+function renderizarTotalizadorCarregamento() {
+  const tbody = document.getElementById('corpoCarregamentoTotalizador');
+  const tfoot = document.getElementById('rodapeCarregamentoTotalizador');
+  const wrapper = document.getElementById('carregamentoTotalizador');
+  if (!tbody) return;
+
+  const mapa = calcularTotalizadorCarregamento();
+  if (!mapa.size) { wrapper?.classList.add('hidden'); return; }
+  wrapper?.classList.remove('hidden');
+
+  let tn = 0, tu = 0, to = 0;
+  tbody.innerHTML = [...mapa.values()].map(e => {
+    tn += e.novo; tu += e.usado; to += e.outro;
+    const total = e.novo + e.usado + e.outro;
+    return `<tr>
+      <td>${escapeHtml(e.nome)}</td>
+      <td class="col-num">${e.novo || '-'}</td>
+      <td class="col-num">${e.usado || '-'}</td>
+      <td class="col-num"><strong>${total}</strong></td>
+    </tr>`;
+  }).join('');
+
+  const totalGeral = tn + tu + to;
+  tfoot.innerHTML = `<tr class="totalizador-rodape">
+    <td><strong>TOTAL GERAL</strong></td>
+    <td class="col-num"><strong>${tn || '-'}</strong></td>
+    <td class="col-num"><strong>${tu || '-'}</strong></td>
+    <td class="col-num"><strong>${totalGeral}</strong></td>
+  </tr>`;
+}
+
+function renderizarRequisicoesCarregamento() {
+  const tbody = document.getElementById('corpoCarregamentoRequisicoes');
+  const section = document.getElementById('carregamentoRequisicoesList');
+  if (!tbody) return;
+
+  if (!carregamentoRequisicoes.length) {
+    section?.classList.add('hidden');
+    document.getElementById('carregamentoTotalizador')?.classList.add('hidden');
+    return;
+  }
+
+  section?.classList.remove('hidden');
+  tbody.innerHTML = carregamentoRequisicoes.map(req => {
+    const numItens = Array.isArray(req.itens) ? req.itens.filter(i => Number(i.quantidade) > 0).length : 0;
+    return `<tr>
+      <td title="${escapeHtml(req.arquivo)}">${escapeHtml(req.arquivo)}</td>
+      <td>${escapeHtml(req.supervisor || '-')}</td>
+      <td title="${escapeHtml(req.cliente_nome || '-')}">${escapeHtml(req.cliente_nome || '-')}</td>
+      <td>${escapeHtml(req.motivo || '-')}</td>
+      <td class="col-num">${numItens}</td>
+      <td><button type="button" class="btn-icon delete" data-remover-req-car="${escapeHtml(String(req.id))}" title="Remover"><i class="fas fa-times"></i></button></td>
+    </tr>`;
+  }).join('');
+
+  renderizarTotalizadorCarregamento();
+}
+
+function renderizarModalRequisicoesPendentes() {
+  const supervisor = normalizarBusca(document.getElementById('buscaSupervisorCarregamento')?.value);
+  const tbody = document.getElementById('corpoModalRequisicoesPendentes');
+  if (!tbody) return;
+
+  const pendentes = requisicoesSalvas.filter(req => {
+    const statusOk = String(req.status || '').toUpperCase() === 'PENDENTE';
+    const supervisorOk = !supervisor || normalizarBusca(req.supervisor || '').includes(supervisor);
+    return statusOk && supervisorOk;
+  });
+
+  if (!pendentes.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6c757d;">Nenhuma requisição PENDENTE encontrada.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = pendentes.map(req => {
+    const jaAdicionada = carregamentoRequisicoes.some(r => String(r.id) === String(req.id));
+    return `<tr>
+      <td title="${escapeHtml(req.arquivo)}">${escapeHtml(req.arquivo)}</td>
+      <td>${escapeHtml(req.supervisor || '-')}</td>
+      <td title="${escapeHtml(req.cliente_nome || '-')}">${escapeHtml(req.cliente_nome || '-')}</td>
+      <td>${escapeHtml(req.motivo || '-')}</td>
+      <td>${escapeHtml(formatarData(req.data_requisicao))}</td>
+      <td style="text-align:center;">
+        <button type="button"
+          class="btn-sm-add ${jaAdicionada ? 'btn-sm-added' : 'btn-glass btn-green'}"
+          data-adicionar-req-car="${escapeHtml(String(req.id))}"
+          title="${jaAdicionada ? 'Já adicionada' : 'Adicionar'}"
+          ${jaAdicionada ? 'disabled' : ''}>
+          <i class="fas ${jaAdicionada ? 'fa-check' : 'fa-plus'}"></i>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function adicionarRequisicaoNoCarregamento(id) {
+  const req = requisicoesSalvas.find(r => String(r.id) === String(id));
+  if (!req || carregamentoRequisicoes.some(r => String(r.id) === String(id))) return;
+
+  carregamentoRequisicoes.push(req);
+  renderizarRequisicoesCarregamento();
+
+  const btn = document.querySelector(`[data-adicionar-req-car="${CSS.escape(String(id))}"]`);
+  if (btn) {
+    btn.disabled = true;
+    btn.className = 'btn-sm-add btn-sm-added';
+    btn.innerHTML = '<i class="fas fa-check"></i>';
+    btn.title = 'Já adicionada';
+  }
+}
+
+function removerRequisicaoDoCarregamento(id) {
+  carregamentoRequisicoes = carregamentoRequisicoes.filter(r => String(r.id) !== String(id));
+  renderizarRequisicoesCarregamento();
+}
+
+function abrirModalRequisicoesPendentes() {
+  renderizarModalRequisicoesPendentes();
+  document.getElementById('modalAdicionarRequisicoes')?.classList.remove('hidden');
+}
+
+function fecharModalRequisicoesPendentes() {
+  document.getElementById('modalAdicionarRequisicoes')?.classList.add('hidden');
+}
+
+export async function inicializarCarregamento() {
+  if (!document.getElementById('carregamentoPlaca')) return;
+
+  const [{ data: motoristas }, { data: veiculos }] = await Promise.all([
+    supabaseClient.from('motoristas').select('nome, nome_completo').order('nome'),
+    supabaseClient.from('veiculos').select('placa, modelo, tipo, filial, situacao').eq('situacao', 'ativo').order('placa')
+  ]);
+
+  motoristasLista = motoristas || [];
+  veiculosLista = veiculos || [];
+  popularMotoristasDatalistCarregamento();
+  popularPlacasDatalist();
+
+  document.getElementById('btnSalvarCarregamento')?.addEventListener('click', salvarCarregamento);
+
+  document.getElementById('btnAdicionarRequisicoesCarregamento')?.addEventListener('click', abrirModalRequisicoesPendentes);
+  document.getElementById('btnFecharModalAdicionarReq')?.addEventListener('click', fecharModalRequisicoesPendentes);
+  document.getElementById('btnConfirmarModalAdicionarReq')?.addEventListener('click', fecharModalRequisicoesPendentes);
+  document.getElementById('modalAdicionarRequisicoes')?.addEventListener('click', e => {
+    if (e.target.id === 'modalAdicionarRequisicoes') fecharModalRequisicoesPendentes();
+  });
+
+  document.getElementById('btnBuscarReqModal')?.addEventListener('click', renderizarModalRequisicoesPendentes);
+  document.getElementById('buscaSupervisorCarregamento')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); renderizarModalRequisicoesPendentes(); }
+  });
+
+  document.getElementById('corpoModalRequisicoesPendentes')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-adicionar-req-car]');
+    if (btn && !btn.disabled) adicionarRequisicaoNoCarregamento(btn.dataset.adicionarReqCar);
+  });
+
+  document.getElementById('corpoCarregamentoRequisicoes')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-remover-req-car]');
+    if (btn) removerRequisicaoDoCarregamento(btn.dataset.removerReqCar);
+  });
 }
 
 // === CLIENTES ===

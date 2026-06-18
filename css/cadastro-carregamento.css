@@ -770,6 +770,122 @@
     color: #004b28;
 }
 
+/* === TOOLTIP VEÍCULO === */
+
+.carregamento-tooltip {
+  background: #1a2332;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+  color: #fff;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  padding: 10px 14px;
+  pointer-events: none;
+  position: fixed;
+  z-index: 99999;
+  min-width: 200px;
+}
+
+.tt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tt-row i {
+  color: #7ecb9e;
+  font-size: 0.78rem;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* === ABA CARREGAMENTO === */
+
+.carregamento-form-grid {
+  grid-template-columns: minmax(150px, 1fr) minmax(200px, 2fr) minmax(150px, 1fr);
+  margin-bottom: 0;
+}
+
+.carregamento-section-title {
+  color: var(--primary-color);
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 22px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.carregamento-table-wrap {
+  max-height: 280px;
+  margin-top: 0;
+  border: 1px solid rgba(0, 105, 55, 0.12);
+  border-radius: 10px;
+}
+
+.col-num {
+  text-align: center !important;
+}
+
+.totalizador-rodape {
+  background: rgba(0, 105, 55, 0.07);
+  border-top: 2px solid rgba(0, 105, 55, 0.25);
+}
+
+.totalizador-rodape td {
+  padding: 10px 15px;
+}
+
+/* === MODAL ADICIONAR REQUISIÇÕES === */
+
+.modal-requisicoes-pendentes {
+  max-width: 1000px;
+  width: 100%;
+}
+
+.busca-supervisor-wrap {
+  margin-bottom: 12px;
+}
+
+.busca-supervisor-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.busca-supervisor-row .glass-input {
+  flex: 1;
+}
+
+.modal-requisicoes-table {
+  max-height: 400px;
+  margin-top: 0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+}
+
+.btn-sm-add {
+  padding: 5px 12px;
+  font-size: 0.82rem;
+  border-radius: 8px;
+  min-width: 36px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.btn-sm-added {
+  background: #d4edda;
+  color: #155724;
+  cursor: default;
+}
+
 /* Ordenação de colunas */
 .glass-table th[data-sort] {
     cursor: pointer;
