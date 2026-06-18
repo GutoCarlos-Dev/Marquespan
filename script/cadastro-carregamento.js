@@ -1282,18 +1282,28 @@ function encontrarVeiculo(placa) {
   return veiculosLista.find(v => String(v.placa || '').toUpperCase() === p) || null;
 }
 
-function atualizarStatusCarregamento(message, error = false) {
-  const el = document.getElementById('carregamentoStatus');
+function atualizarStatusCarregamento(message, error = false, carregamentoId = null) {
+  const el     = document.getElementById('carregamentoStatus');
+  const msgEl  = document.getElementById('carregamentoStatusMsg');
+  const btnRes = document.getElementById('btnResumoAposSalvar');
   if (!el) return;
-  el.textContent = message;
+
+  if (msgEl) msgEl.textContent = message;
+  else el.textContent = message;
+
   el.classList.toggle('error', error);
   el.classList.toggle('hidden', !message);
+
+  if (btnRes) {
+    btnRes.classList.toggle('hidden', !carregamentoId || !!error);
+    btnRes.onclick = carregamentoId ? () => gerarResumoCarregamento(carregamentoId) : null;
+  }
 }
 
 async function salvarCarregamento() {
-  const placa = document.getElementById('carregamentoPlaca')?.value.trim().toUpperCase();
-  const motorista = document.getElementById('carregamentoMotorista')?.value.trim();
-  const dataSaida = document.getElementById('carregamentoDataSaida')?.value;
+  const placa       = document.getElementById('carregamentoPlaca')?.value.trim().toUpperCase();
+  const motorista   = document.getElementById('carregamentoMotorista')?.value.trim();
+  const dataSaida   = document.getElementById('carregamentoDataSaida')?.value;
 
   if (!placa || !motorista || !dataSaida) {
     atualizarStatusCarregamento('Preencha Placa, Motorista e Data de Saída.', true);
@@ -1304,7 +1314,7 @@ async function salvarCarregamento() {
     return;
   }
 
-  const veiculo = encontrarVeiculo(placa);
+  const veiculo      = encontrarVeiculo(placa);
   const modeloVeiculo = [veiculo?.modelo, veiculo?.tipo].filter(Boolean).join(' / ') || null;
 
   const btn = document.getElementById('btnSalvarCarregamento');
@@ -1313,31 +1323,81 @@ async function salvarCarregamento() {
 
   try {
     const { totalEntrega, totalRetorno } = calcularTotaisCarregamento();
+    const agora = new Date().toISOString();
+    let carregamentoId;
 
-    const { data: carregamento, error: errCar } = await supabaseClient
-      .from(CARREGAMENTOS_TABLE)
-      .insert([{
-        placa,
-        modelo_veiculo: modeloVeiculo,
-        motorista,
-        data_saida: dataSaida,
-        usuario: obterUsuarioAtualNome(),
-        total_requisicoes: carregamentoRequisicoes.length,
-        total_entrega: totalEntrega,
-        total_retorno: totalRetorno
-      }])
-      .select('id')
-      .single();
+    if (carregamentoEditandoId) {
+      // ── MODO EDIÇÃO ──────────────────────────────────────────────────────
+      carregamentoId = carregamentoEditandoId;
 
-    if (errCar) throw errCar;
+      // Requisições que estavam neste carregamento mas foram removidas da lista
+      const { data: origReqs } = await supabaseClient
+        .from(REQUISICOES_TABLE)
+        .select('id')
+        .eq('carregamento_id', carregamentoId);
 
+      const idsAtuais = new Set(carregamentoRequisicoes.map(r => r.id));
+      const removidas = (origReqs || []).filter(r => !idsAtuais.has(r.id));
+
+      if (removidas.length) {
+        await supabaseClient.from(REQUISICOES_TABLE)
+          .update({
+            status: 'PENDENTE',
+            carregado_em: null,
+            carregamento_id: null,
+            carregamento_placa: null,
+            carregamento_motorista: null,
+            carregamento_data_saida: null,
+            carregamento_modelo: null
+          })
+          .in('id', removidas.map(r => r.id));
+      }
+
+      // Atualizar registro do carregamento
+      const { error: errUpd } = await supabaseClient
+        .from(CARREGAMENTOS_TABLE)
+        .update({
+          placa,
+          modelo_veiculo: modeloVeiculo,
+          motorista,
+          data_saida: dataSaida,
+          total_requisicoes: carregamentoRequisicoes.length,
+          total_entrega: totalEntrega,
+          total_retorno: totalRetorno
+        })
+        .eq('id', carregamentoId);
+
+      if (errUpd) throw errUpd;
+
+    } else {
+      // ── MODO CRIAÇÃO ─────────────────────────────────────────────────────
+      const { data: carregamento, error: errCar } = await supabaseClient
+        .from(CARREGAMENTOS_TABLE)
+        .insert([{
+          placa,
+          modelo_veiculo: modeloVeiculo,
+          motorista,
+          data_saida: dataSaida,
+          usuario: obterUsuarioAtualNome(),
+          total_requisicoes: carregamentoRequisicoes.length,
+          total_entrega: totalEntrega,
+          total_retorno: totalRetorno
+        }])
+        .select('id')
+        .single();
+
+      if (errCar) throw errCar;
+      carregamentoId = carregamento.id;
+    }
+
+    // Atualizar todas as requisições da lista
     const updates = carregamentoRequisicoes.map(req =>
       supabaseClient
         .from(REQUISICOES_TABLE)
         .update({
           status: 'CARREGADO',
-          carregado_em: new Date().toISOString(),
-          carregamento_id: carregamento.id,
+          carregado_em: agora,
+          carregamento_id: carregamentoId,
           carregamento_placa: placa,
           carregamento_motorista: motorista,
           carregamento_data_saida: dataSaida,
@@ -1350,13 +1410,20 @@ async function salvarCarregamento() {
     const erros = resultados.filter(r => r.error);
     if (erros.length) throw erros[0].error;
 
+    const modoEdicao = !!carregamentoEditandoId;
+    carregamentoEditandoId  = null;
     carregamentoRequisicoes = [];
     renderizarRequisicoesCarregamento();
-    document.getElementById('carregamentoPlaca').value = '';
+    document.getElementById('carregamentoPlaca').value     = '';
     document.getElementById('carregamentoMotorista').value = '';
     document.getElementById('carregamentoDataSaida').value = '';
+    document.getElementById('carregamentoEdicaoBanner')?.classList.add('hidden');
+
     await carregarRequisicoesBanco();
-    atualizarStatusCarregamento(`Carregamento salvo com sucesso! ${updates.length} requisição(ões) marcadas como CARREGADO.`);
+    const msg = modoEdicao
+      ? `Carregamento atualizado! ${updates.length} requisição(ões) vinculadas.`
+      : `Carregamento salvo com sucesso! ${updates.length} requisição(ões) marcadas como CARREGADO.`;
+    atualizarStatusCarregamento(msg, false, carregamentoId);
   } catch (error) {
     console.error('Erro ao salvar carregamento:', error);
     atualizarStatusCarregamento(`Erro ao salvar: ${error.message}`, true);
@@ -1645,6 +1712,7 @@ export async function inicializarCarregamento() {
 // === HISTÓRICO DE CARREGAMENTOS ===
 
 let carregamentosSalvos = [];
+let carregamentoEditandoId = null;
 
 async function carregarHistoricoCarregamentos() {
   const tbody = document.getElementById('corpoHistoricoCarregamentos');
@@ -1693,6 +1761,11 @@ function renderizarHistoricoCarregamentos() {
           data-resumo-carregamento="${idEsc}"
           title="Gerar resumo deste carregamento">
           <i class="fas fa-file-alt"></i> Resumo
+        </button>
+        <button type="button" class="hist-btn-editar"
+          data-editar-carregamento="${idEsc}"
+          title="Editar este carregamento">
+          <i class="fas fa-pencil-alt"></i> Editar
         </button>
         <button type="button" class="btn-icon delete hist-btn-cancelar"
           data-cancelar-carregamento="${idEsc}"
@@ -1930,6 +2003,62 @@ async function cancelarCarregamento(id) {
   }
 }
 
+async function editarCarregamento(id) {
+  const car = carregamentosSalvos.find(c => c.id === id);
+  if (!car) return;
+
+  const { data: reqs, error } = await supabaseClient
+    .from(REQUISICOES_TABLE)
+    .select('*')
+    .eq('carregamento_id', id);
+
+  if (error) {
+    alert('Erro ao carregar requisições do carregamento.');
+    console.error(error);
+    return;
+  }
+
+  // Preencher formulário
+  document.getElementById('carregamentoPlaca').value       = car.placa        || '';
+  document.getElementById('carregamentoMotorista').value   = car.motorista     || '';
+  document.getElementById('carregamentoDataSaida').value   = car.data_saida    || '';
+
+  // Carregar requisições no estado
+  carregamentoRequisicoes = reqs || [];
+  carregamentoEditandoId  = id;
+
+  // Mostrar banner de edição
+  const banner  = document.getElementById('carregamentoEdicaoBanner');
+  const infoEl  = document.getElementById('carregamentoEdicaoInfo');
+  if (banner && infoEl) {
+    infoEl.textContent = `Editando: ${car.placa} – ${formatarData(car.data_saida)} (${car.motorista})`;
+    banner.classList.remove('hidden');
+  }
+
+  // Atualizar texto do botão salvar
+  const btnSalvar = document.getElementById('btnSalvarCarregamento');
+  if (btnSalvar) btnSalvar.innerHTML = '<i class="fas fa-sync-alt"></i> Atualizar Carregamento';
+
+  // Navegar para a aba Carregamento e renderizar
+  document.querySelector('[data-tab-target="carregamento"]')?.click();
+  renderizarRequisicoesCarregamento();
+}
+
+function cancelarEdicaoCarregamento() {
+  carregamentoEditandoId  = null;
+  carregamentoRequisicoes = [];
+
+  document.getElementById('carregamentoPlaca').value     = '';
+  document.getElementById('carregamentoMotorista').value = '';
+  document.getElementById('carregamentoDataSaida').value = '';
+  document.getElementById('carregamentoEdicaoBanner')?.classList.add('hidden');
+
+  const btnSalvar = document.getElementById('btnSalvarCarregamento');
+  if (btnSalvar) btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar Carregamento';
+
+  renderizarRequisicoesCarregamento();
+}
+
 export async function inicializarHistorico() {
   if (!document.getElementById('corpoHistoricoCarregamentos')) return;
 
@@ -1942,8 +2071,13 @@ export async function inicializarHistorico() {
     if (btnCancelar) { await cancelarCarregamento(btnCancelar.dataset.cancelarCarregamento); return; }
 
     const btnResumo = e.target.closest('[data-resumo-carregamento]');
-    if (btnResumo) await gerarResumoCarregamento(btnResumo.dataset.resumoCarregamento);
+    if (btnResumo) { await gerarResumoCarregamento(btnResumo.dataset.resumoCarregamento); return; }
+
+    const btnEditar = e.target.closest('[data-editar-carregamento]');
+    if (btnEditar) await editarCarregamento(btnEditar.dataset.editarCarregamento);
   });
+
+  document.getElementById('btnCancelarEdicaoCarregamento')?.addEventListener('click', cancelarEdicaoCarregamento);
 
   // Fechar modal
   document.getElementById('btnFecharResumo')?.addEventListener('click', fecharModalResumo);

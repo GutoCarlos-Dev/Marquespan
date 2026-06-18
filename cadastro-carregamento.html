@@ -14,7 +14,7 @@
 <body>
   <div id="menu-container"></div>
 
-  <!-- ðŸ§± ConteÃºdo principal -->
+  <!-- Conteúdo principal -->
   <div class="main-content">
     <header class="header glass-header"><h1><i class="fas fa-truck-loading"></i> Cadastro Carregamento</h1></header>
 
@@ -86,7 +86,7 @@
             </tr>
           </thead>
           <tbody id="corpoTabelaRequisicoes">
-            <tr><td colspan="6">Nenhuma requisiÃ§Ã£o salva.</td></tr>
+            <tr><td colspan="6">Nenhuma requisição salva.</td></tr>
           </tbody>
         </table>
       </div>
@@ -94,6 +94,14 @@
 
     <section id="carregamento" class="glass-panel tab-panel hidden">
       <h3><i class="fas fa-truck"></i> Carregamento</h3>
+
+      <div id="carregamentoEdicaoBanner" class="edicao-banner hidden">
+        <i class="fas fa-pencil-alt"></i>
+        <span id="carregamentoEdicaoInfo">Editando carregamento</span>
+        <button type="button" id="btnCancelarEdicaoCarregamento" class="btn-glass btn-sm btn-red">
+          <i class="fas fa-times"></i> Cancelar Edição
+        </button>
+      </div>
 
       <div class="form-grid carregamento-form-grid">
         <div class="form-group">
@@ -120,7 +128,12 @@
           <i class="fas fa-save"></i> Salvar Carregamento
         </button>
       </div>
-      <div id="carregamentoStatus" class="import-status hidden" role="status" style="margin-bottom:16px;"></div>
+      <div id="carregamentoStatus" class="import-status hidden" role="status" style="margin-bottom:16px;">
+        <span id="carregamentoStatusMsg"></span>
+        <button type="button" id="btnResumoAposSalvar" class="hist-btn-resumo hidden" style="margin-left:14px;">
+          <i class="fas fa-file-alt"></i> Ver Resumo
+        </button>
+      </div>
 
       <div id="carregamentoRequisicoesList" class="hidden">
         <h4 class="carregamento-section-title"><i class="fas fa-list-check"></i> Requisições Adicionadas</h4>
@@ -186,8 +199,8 @@
       <form id="formItem">
         <div class="form-grid cliente-form-grid">
           <div class="form-group">
-            <label for="codigoItem">CÃ³digo:</label>
-            <input type="text" id="codigoItem" placeholder="CÃ³digo do Item" required disabled class="glass-input">
+            <label for="codigoItem">Código:</label>
+            <input type="text" id="codigoItem" placeholder="Código do Item" required disabled class="glass-input">
           </div>
           <div class="form-group">
             <label for="nomeItem">Nome:</label>
@@ -211,7 +224,7 @@
         <table id="tabelaItens" class="glass-table data-grid">
           <thead>
             <tr>
-              <th>CÃ³digo</th>
+              <th>Código</th>
               <th>Nome</th>
               <th>Tipo</th>
               <th>Ações</th>
@@ -343,7 +356,7 @@
         <table id="tabelaClientes" class="glass-table data-grid">
           <thead>
             <tr>
-              <th>CÃ³digo</th>
+              <th>Código</th>
               <th>Nome</th>
               <th>Fantasia</th>
               <th>CPF/CNPJ</th>
@@ -376,7 +389,7 @@
           <span id="requisicaoFileSelectionText">Nenhum arquivo selecionado</span>
         </label>
         <input type="file" id="requisicaoFileUpload" multiple accept=".xlsx,.xls">
-        <p class="upload-help">A importaÃ§Ã£o lÃª o supervisor da cÃ©lula C7 e salva todas as requisiÃ§Ãµes como PENDENTE.</p>
+        <p class="upload-help">A importação lê o supervisor da célula C7 e salva todas as requisições como PENDENTE.</p>
       </section>
       <div class="form-actions">
         <button type="button" id="btnCancelarImportarRequisicao" class="btn-glass btn-red">Cancelar</button>
@@ -384,7 +397,7 @@
     </div>
   </div>
 
-  <!-- ðŸš€ Scripts -->
+  <!-- Scripts -->
   <div id="modalRequisicaoDetalhes" class="import-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloRequisicaoDetalhes">
     <div class="import-modal-content requisicao-detail-modal">
       <div class="import-modal-header">
@@ -502,7 +515,7 @@
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260618-23';
+    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260618-25';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
