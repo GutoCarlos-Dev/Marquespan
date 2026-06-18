@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
@@ -8,13 +8,13 @@
   <link rel="stylesheet" href="css/index.css"> 
   <link rel="stylesheet" href="css/menu.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-5">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-7">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
   <div id="menu-container"></div>
 
-  <!-- 🧱 Conteúdo principal -->
+  <!-- ðŸ§± ConteÃºdo principal -->
   <div class="main-content">
     <header class="header glass-header"><h1><i class="fas fa-truck-loading"></i> Cadastro Carregamento</h1></header>
 
@@ -29,15 +29,42 @@
       <h3><i class="fas fa-file-signature"></i> Requisição</h3>
 
       <div class="requisicao-toolbar">
-        <div class="form-group search-group">
-          <label for="filtroSupervisorRequisicao">Filtrar por supervisor</label>
-          <input type="search" id="filtroSupervisorRequisicao" class="glass-input" placeholder="Digite o nome do supervisor" list="supervisores-requisicao-list">
-          <datalist id="supervisores-requisicao-list"></datalist>
+        <div class="requisicao-toolbar-group requisicao-filter-group">
+          <span class="toolbar-group-title"><i class="fas fa-filter"></i> Filtro</span>
+          <div class="requisicao-filter-grid">
+            <div class="form-group">
+              <label for="filtroSupervisorRequisicao">Supervisor</label>
+              <input type="search" id="filtroSupervisorRequisicao" class="glass-input" placeholder="Nome do supervisor" list="supervisores-requisicao-list">
+              <datalist id="supervisores-requisicao-list"></datalist>
+            </div>
+            <div class="form-group">
+              <label for="filtroDataRequisicao">Data</label>
+              <input type="date" id="filtroDataRequisicao" class="glass-input">
+            </div>
+            <div class="form-group">
+              <label for="filtroMotivoRequisicao">Motivo</label>
+              <input type="search" id="filtroMotivoRequisicao" class="glass-input" placeholder="Motivo">
+            </div>
+            <div class="form-group">
+              <label for="filtroStatusRequisicao">Status</label>
+              <select id="filtroStatusRequisicao" class="glass-input">
+                <option value="">Todos</option>
+                <option value="PENDENTE">PENDENTE</option>
+                <option value="CARREGADO">CARREGADO</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="form-actions requisicao-actions">
-          <button type="button" class="btn-glass btn-blue" id="btnImportarRequisicao">
-            <i class="fas fa-file-import"></i> Importar Requisição
-          </button>
+        <div class="requisicao-toolbar-group requisicao-toolbar-actions">
+          <span class="toolbar-group-title"><i class="fas fa-bolt"></i> Ações</span>
+          <div class="form-actions requisicao-actions">
+            <button type="button" class="btn-glass btn-green" id="btnBuscarRequisicoes">
+              <i class="fas fa-search"></i> Buscar
+            </button>
+            <button type="button" class="btn-glass btn-blue" id="btnImportarRequisicao">
+              <i class="fas fa-file-import"></i> Importar Requisição
+            </button>
+          </div>
         </div>
       </div>
       <div id="requisicaoImportStatus" class="import-status hidden" role="status"></div>
@@ -58,7 +85,7 @@
             </tr>
           </thead>
           <tbody id="corpoTabelaRequisicoes">
-            <tr><td colspan="6">Nenhuma requisição salva.</td></tr>
+            <tr><td colspan="6">Nenhuma requisiÃ§Ã£o salva.</td></tr>
           </tbody>
         </table>
       </div>
@@ -68,13 +95,13 @@
       <h3><i class="fas fa-boxes"></i> Itens</h3>
       
       <div class="form-actions" style="justify-content: flex-start; margin-bottom: 15px;">
-        <button type="button" id="btnIncluirItem" class="btn-glass btn-blue">➕ Incluir Item</button>
+        <button type="button" id="btnIncluirItem" class="btn-glass btn-blue">âž• Incluir Item</button>
       </div>
       <form id="formItem">
         <div class="form-grid cliente-form-grid">
           <div class="form-group">
-            <label for="codigoItem">Código:</label>
-            <input type="text" id="codigoItem" placeholder="Código do Item" required disabled class="glass-input">
+            <label for="codigoItem">CÃ³digo:</label>
+            <input type="text" id="codigoItem" placeholder="CÃ³digo do Item" required disabled class="glass-input">
           </div>
           <div class="form-group">
             <label for="nomeItem">Nome:</label>
@@ -90,7 +117,7 @@
           </div>
         </div>
         <div class="form-actions" style="margin-top: 15px;">
-          <button type="submit" id="btnSalvarItem" disabled class="btn-glass btn-green">✅ Salvar Item</button>
+          <button type="submit" id="btnSalvarItem" disabled class="btn-glass btn-green">âœ… Salvar Item</button>
         </div>
       </form>
          
@@ -98,7 +125,7 @@
         <table id="tabelaItens" class="glass-table data-grid">
           <thead>
             <tr>
-              <th>Código</th>
+              <th>CÃ³digo</th>
               <th>Nome</th>
               <th>Tipo</th>
               <th>Ações</th>
@@ -230,7 +257,7 @@
         <table id="tabelaClientes" class="glass-table data-grid">
           <thead>
             <tr>
-              <th>Código</th>
+              <th>CÃ³digo</th>
               <th>Nome</th>
               <th>Fantasia</th>
               <th>CPF/CNPJ</th>
@@ -258,7 +285,7 @@
           </div>
         </div>
         <div class="form-actions" style="margin-top: 15px;">
-          <button type="submit" id="btnSalvarMotorista" class="btn-glass btn-green">✅ Salvar Motorista</button>
+          <button type="submit" id="btnSalvarMotorista" class="btn-glass btn-green">âœ… Salvar Motorista</button>
         </div>
       </form>
       <div class="table-responsive">
@@ -293,7 +320,7 @@
           <span id="requisicaoFileSelectionText">Nenhum arquivo selecionado</span>
         </label>
         <input type="file" id="requisicaoFileUpload" multiple accept=".xlsx,.xls">
-        <p class="upload-help">A importação lê o supervisor da célula C7 e salva todas as requisições como PENDENTE.</p>
+        <p class="upload-help">A importaÃ§Ã£o lÃª o supervisor da cÃ©lula C7 e salva todas as requisiÃ§Ãµes como PENDENTE.</p>
       </section>
       <div class="form-actions">
         <button type="button" id="btnCancelarImportarRequisicao" class="btn-glass btn-red">Cancelar</button>
@@ -301,7 +328,7 @@
     </div>
   </div>
 
-  <!-- 🚀 Scripts -->
+  <!-- ðŸš€ Scripts -->
   <div id="modalRequisicaoDetalhes" class="import-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloRequisicaoDetalhes">
     <div class="import-modal-content requisicao-detail-modal">
       <div class="import-modal-header">
@@ -354,7 +381,7 @@
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-10';
+    import { inicializarRequisicao, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes, carregarMotoristas, salvarMotorista, editarMotorista, excluirMotorista } from './script/cadastro-carregamento.js?v=20260618-11';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
@@ -400,3 +427,5 @@
   </script>
 </body>
 </html>
+
+

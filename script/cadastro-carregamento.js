@@ -8,6 +8,12 @@ let clientesCarregamento = [];
 let itensCarregamento = [];
 let requisicoesImportadas = [];
 let requisicoesSalvas = [];
+let filtrosRequisicaoAplicados = {
+  supervisor: '',
+  data: '',
+  motivo: '',
+  status: ''
+};
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -461,8 +467,13 @@ function renderizarTabelaStatusRequisicoes() {
   const tbody = document.getElementById('corpoTabelaRequisicoes');
   if (!tbody) return;
 
-  const filtroSupervisor = normalizarBusca(document.getElementById('filtroSupervisorRequisicao')?.value);
-  const dados = requisicoesSalvas.filter(req => !filtroSupervisor || normalizarBusca(req.supervisor).includes(filtroSupervisor));
+  const dados = requisicoesSalvas.filter(req => {
+    const supervisorOk = !filtrosRequisicaoAplicados.supervisor || normalizarBusca(req.supervisor).includes(filtrosRequisicaoAplicados.supervisor);
+    const dataOk = !filtrosRequisicaoAplicados.data || String(req.data_requisicao || '').slice(0, 10) === filtrosRequisicaoAplicados.data;
+    const motivoOk = !filtrosRequisicaoAplicados.motivo || normalizarBusca(req.motivo).includes(filtrosRequisicaoAplicados.motivo);
+    const statusOk = !filtrosRequisicaoAplicados.status || String(req.status || '').toUpperCase() === filtrosRequisicaoAplicados.status;
+    return supervisorOk && dataOk && motivoOk && statusOk;
+  });
 
   if (!dados.length) {
     tbody.innerHTML = '<tr><td colspan="9">Nenhuma requisição salva.</td></tr>';
@@ -487,6 +498,16 @@ function renderizarTabelaStatusRequisicoes() {
       </td>
     </tr>
   `).join('');
+}
+
+function aplicarFiltrosRequisicao() {
+  filtrosRequisicaoAplicados = {
+    supervisor: normalizarBusca(document.getElementById('filtroSupervisorRequisicao')?.value),
+    data: document.getElementById('filtroDataRequisicao')?.value || '',
+    motivo: normalizarBusca(document.getElementById('filtroMotivoRequisicao')?.value),
+    status: String(document.getElementById('filtroStatusRequisicao')?.value || '').trim().toUpperCase()
+  };
+  renderizarTabelaStatusRequisicoes();
 }
 
 function recalcularTotaisRequisicao() {
@@ -1077,7 +1098,15 @@ export async function inicializarRequisicao() {
     if (event.target.id === 'modalImportarRequisicao') fecharModalImportarRequisicao();
   });
   document.getElementById('requisicaoFileUpload')?.addEventListener('change', handleRequisicaoFileUpload);
-  document.getElementById('filtroSupervisorRequisicao')?.addEventListener('input', renderizarTabelaStatusRequisicoes);
+  document.getElementById('btnBuscarRequisicoes')?.addEventListener('click', aplicarFiltrosRequisicao);
+  ['filtroSupervisorRequisicao', 'filtroDataRequisicao', 'filtroMotivoRequisicao', 'filtroStatusRequisicao'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        aplicarFiltrosRequisicao();
+      }
+    });
+  });
   document.getElementById('btnFecharRequisicaoDetalhes')?.addEventListener('click', fecharModalRequisicaoDetalhes);
   document.getElementById('btnCancelarRequisicaoDetalhes')?.addEventListener('click', fecharModalRequisicaoDetalhes);
   document.getElementById('formRequisicaoDetalhes')?.addEventListener('submit', salvarDetalhesRequisicao);
