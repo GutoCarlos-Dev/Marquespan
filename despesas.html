@@ -145,7 +145,11 @@
 
             <!-- Card de Botões -->
             <div class="glass-panel-inner actions-panel">
+                <h4 class="card-title"><i class="fas fa-sliders"></i> Ações</h4>
                 <div class="form-actions-vertical">
+                    <button type="button" id="btnFixarCamposDespesa" class="btn-glass btn-gray" title="Escolher campos para manter preenchidos">
+                        <i class="fas fa-thumbtack"></i> Fixar Campos
+                    </button>
                     <button type="submit" id="btnSubmitDespesa" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Despesa</button>
                     <button type="button" id="btnClearDespesaForm" class="btn-glass btn-red"><i class="fas fa-eraser"></i> Limpar</button>
                 </div>
@@ -198,6 +202,26 @@
               </div>
               <div class="quarto-list-container table-responsive">
                   <ul id="listaQuartosEdicao" style="list-style: none; padding: 0; margin: 0;"></ul>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- Modal Configurar Campos Fixos -->
+  <div id="modalCamposFixosDespesa" class="modal-backdrop hidden">
+      <div class="glass-modal modal-campos-fixos-despesa">
+          <div class="modal-header">
+              <h3><i class="fas fa-thumbtack"></i> Configurar Campos Fixos</h3>
+              <button class="close-button" id="btnFecharCamposFixosDespesa">&times;</button>
+          </div>
+          <div class="modal-body">
+              <p class="campos-fixos-descricao">
+                  Selecione as informações que devem permanecer preenchidas ao salvar ou limpar uma nova despesa.
+              </p>
+              <div id="listaCamposFixosDespesa" class="campos-fixos-grid"></div>
+              <div class="modal-acoes campos-fixos-acoes">
+                  <button type="button" class="btn-glass btn-red" id="btnCancelarCamposFixosDespesa">Cancelar</button>
+                  <button type="button" class="btn-glass btn-green" id="btnSalvarCamposFixosDespesa">Salvar Preferencias</button>
               </div>
           </div>
       </div>

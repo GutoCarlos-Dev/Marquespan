@@ -2,6 +2,23 @@
 import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
+const DESPESA_CAMPOS_FIXOS_STORAGE = 'despesas_campos_fixos';
+const MAPA_CAMPOS_FIXOS_DESPESA = {
+    rota: { label: 'Rota', grupo: 'Hospedagem', icon: 'fa-route' },
+    hotel: { label: 'Hotel', grupo: 'Hospedagem', icon: 'fa-hotel' },
+    tipoQuarto: { label: 'Tipo de Quarto', grupo: 'Hospedagem', icon: 'fa-bed' },
+    funcionario1: { label: 'Motorista', grupo: 'Equipe', icon: 'fa-id-card' },
+    funcionario2: { label: 'Ajudante', grupo: 'Equipe', icon: 'fa-user-group' },
+    dataReserva: { label: 'Data Reserva', grupo: 'Periodo', icon: 'fa-calendar-day' },
+    checkin: { label: 'Check-in', grupo: 'Periodo', icon: 'fa-calendar-check' },
+    diarias: { label: 'Qtd Diarias', grupo: 'Periodo', icon: 'fa-moon' },
+    valorDiaria: { label: 'Valor Diaria', grupo: 'Financeiro', icon: 'fa-money-bill-wave' },
+    valorEnergia: { label: 'Valor Energia', grupo: 'Financeiro', icon: 'fa-bolt' },
+    formaPagamento: { label: 'Forma Pagamento', grupo: 'Financeiro', icon: 'fa-credit-card' },
+    notaFiscal: { label: 'Nota Fiscal', grupo: 'Fiscal', icon: 'fa-file-invoice' },
+    observacao: { label: 'Observacoes', grupo: 'Complemento', icon: 'fa-align-left' }
+};
+
 const DespesasUI = {
     init() {
         this.cache();
@@ -19,6 +36,7 @@ const DespesasUI = {
         this.editingIdInput = document.getElementById('despesaEditingId');
         this.btnSubmit = document.getElementById('btnSubmitDespesa');
         this.btnClearForm = document.getElementById('btnClearDespesaForm');
+        this.btnFixarCampos = document.getElementById('btnFixarCamposDespesa');
 
         // Campos para cálculo
         this.qtdDiariasInput = document.getElementById('despesaDiarias');
@@ -57,11 +75,22 @@ const DespesasUI = {
         this.listaQuartosEdicao = document.getElementById('listaQuartosEdicao');
         this.valorNegociadoDisplay = document.getElementById('valorNegociadoDisplay');
         this.btnToggleMenuLateral = document.getElementById('btnToggleMenuLateralDespesas');
+
+        // Modal Campos Fixos
+        this.modalCamposFixos = document.getElementById('modalCamposFixosDespesa');
+        this.listaCamposFixos = document.getElementById('listaCamposFixosDespesa');
+        this.btnFecharCamposFixos = document.getElementById('btnFecharCamposFixosDespesa');
+        this.btnCancelarCamposFixos = document.getElementById('btnCancelarCamposFixosDespesa');
+        this.btnSalvarCamposFixos = document.getElementById('btnSalvarCamposFixosDespesa');
     },
 
     bind() {
         this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
         this.btnClearForm.addEventListener('click', () => this.clearForm());
+        this.btnFixarCampos?.addEventListener('click', () => this.abrirModalCamposFixos());
+        this.btnFecharCamposFixos?.addEventListener('click', () => this.fecharModalCamposFixos());
+        this.btnCancelarCamposFixos?.addEventListener('click', () => this.fecharModalCamposFixos());
+        this.btnSalvarCamposFixos?.addEventListener('click', () => this.salvarCamposFixos());
         this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
         this.searchInput.addEventListener('input', () => this.renderGrid());
         this.btnToggleMenuLateral?.addEventListener('click', () => this.toggleMenuLateral());
@@ -103,6 +132,7 @@ const DespesasUI = {
         
         window.addEventListener('click', (e) => {
             if (e.target === this.modalQuartos) this.fecharModalQuartos();
+            if (e.target === this.modalCamposFixos) this.fecharModalCamposFixos();
         });
 
         this.listaQuartosEdicao.addEventListener('click', (e) => {
@@ -248,6 +278,130 @@ const DespesasUI = {
         return date.toLocaleString('pt-BR');
     },
 
+    obterCamposFixos() {
+        try {
+            return JSON.parse(localStorage.getItem(DESPESA_CAMPOS_FIXOS_STORAGE) || '[]');
+        } catch (e) {
+            return [];
+        }
+    },
+
+    abrirModalCamposFixos() {
+        if (!this.modalCamposFixos || !this.listaCamposFixos) return;
+
+        const camposSalvos = this.obterCamposFixos();
+        this.listaCamposFixos.innerHTML = '';
+
+        Object.entries(MAPA_CAMPOS_FIXOS_DESPESA).forEach(([id, config]) => {
+            const checked = camposSalvos.includes(id) ? 'checked' : '';
+            const item = document.createElement('label');
+            item.className = 'campo-fixo-option';
+            item.setAttribute('for', `chk_despesa_fix_${id}`);
+            item.innerHTML = `
+                <input type="checkbox" id="chk_despesa_fix_${id}" value="${id}" ${checked}>
+                <span class="campo-fixo-check"><i class="fas fa-check"></i></span>
+                <span class="campo-fixo-icon"><i class="fas ${config.icon}"></i></span>
+                <span class="campo-fixo-texto">
+                    <strong>${config.label}</strong>
+                    <small>${config.grupo}</small>
+                </span>
+            `;
+            this.listaCamposFixos.appendChild(item);
+        });
+
+        this.modalCamposFixos.classList.remove('hidden');
+    },
+
+    fecharModalCamposFixos() {
+        this.modalCamposFixos?.classList.add('hidden');
+    },
+
+    salvarCamposFixos() {
+        const selecionados = Array.from(this.listaCamposFixos.querySelectorAll('input[type="checkbox"]:checked'))
+            .map((checkbox) => checkbox.value);
+
+        localStorage.setItem(DESPESA_CAMPOS_FIXOS_STORAGE, JSON.stringify(selecionados));
+        alert('Preferencias salvas! Os campos selecionados nao serao limpos apos salvar uma nova despesa.');
+        this.fecharModalCamposFixos();
+    },
+
+    setSelectedValues(container, checkboxClass, values) {
+        const selecionados = new Set((values || []).map(String));
+        container.querySelectorAll(`.${checkboxClass}`).forEach((checkbox) => {
+            checkbox.checked = selecionados.has(String(checkbox.value));
+        });
+    },
+
+    capturarValoresFixos(camposFixos) {
+        const valores = {};
+        const deveFixar = (campo) => camposFixos.includes(campo);
+
+        if (deveFixar('rota')) valores.rota = this.getSelectedValues(this.despesaRotaOptions, 'rota-checkbox');
+        if (deveFixar('hotel')) valores.hotel = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
+        if (deveFixar('tipoQuarto')) valores.tipoQuarto = this.tipoQuartoSelect.value;
+        if (deveFixar('funcionario1')) valores.funcionario1 = document.getElementById('despesaFuncionario1Input').value;
+        if (deveFixar('funcionario2')) valores.funcionario2 = document.getElementById('despesaFuncionario2Input').value;
+        if (deveFixar('dataReserva')) valores.dataReserva = document.getElementById('despesaDataReserva').value;
+        if (deveFixar('checkin')) valores.checkin = this.checkinInput.value;
+        if (deveFixar('diarias')) valores.diarias = this.qtdDiariasInput.value;
+        if (deveFixar('valorDiaria')) valores.valorDiaria = this.valorDiariaInput.value;
+        if (deveFixar('valorEnergia')) valores.valorEnergia = this.valorEnergiaInput.value;
+        if (deveFixar('formaPagamento')) valores.formaPagamento = this.formaPagamentoSelect.value;
+        if (deveFixar('notaFiscal')) valores.notaFiscal = document.getElementById('despesaNotaFiscal').value;
+        if (deveFixar('observacao')) valores.observacao = document.getElementById('despesaObservacao').value;
+
+        return valores;
+    },
+
+    restaurarValoresFixos(valores) {
+        if (Object.prototype.hasOwnProperty.call(valores, 'rota')) {
+            this.setSelectedValues(this.despesaRotaOptions, 'rota-checkbox', valores.rota);
+            this.updateMultiselectText(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox');
+        }
+
+        if (Object.prototype.hasOwnProperty.call(valores, 'hotel')) {
+            this.setSelectedValues(this.despesaHotelOptions, 'hotel-checkbox', valores.hotel);
+            this.updateMultiselectText(this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox');
+            if (valores.hotel.length === 1 && Object.prototype.hasOwnProperty.call(valores, 'tipoQuarto')) {
+                this.loadTiposQuarto(valores.hotel[0], valores.tipoQuarto);
+                this.btnGerenciarQuartos.disabled = false;
+            } else {
+                this.handleHotelSelectionChange();
+            }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(valores, 'funcionario1')) {
+            document.getElementById('despesaFuncionario1Input').value = valores.funcionario1;
+        }
+        if (Object.prototype.hasOwnProperty.call(valores, 'funcionario2')) {
+            document.getElementById('despesaFuncionario2Input').value = valores.funcionario2;
+        }
+        if (Object.prototype.hasOwnProperty.call(valores, 'dataReserva')) {
+            document.getElementById('despesaDataReserva').value = valores.dataReserva;
+        }
+        if (Object.prototype.hasOwnProperty.call(valores, 'checkin')) this.checkinInput.value = valores.checkin;
+        if (Object.prototype.hasOwnProperty.call(valores, 'diarias')) this.qtdDiariasInput.value = valores.diarias;
+        if (Object.prototype.hasOwnProperty.call(valores, 'valorDiaria')) this.valorDiariaInput.value = valores.valorDiaria;
+        if (Object.prototype.hasOwnProperty.call(valores, 'valorEnergia')) this.valorEnergiaInput.value = valores.valorEnergia;
+        if (Object.prototype.hasOwnProperty.call(valores, 'formaPagamento')) this.formaPagamentoSelect.value = valores.formaPagamento;
+        if (Object.prototype.hasOwnProperty.call(valores, 'notaFiscal')) {
+            document.getElementById('despesaNotaFiscal').value = valores.notaFiscal;
+        }
+        if (Object.prototype.hasOwnProperty.call(valores, 'observacao')) {
+            document.getElementById('despesaObservacao').value = valores.observacao;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(valores, 'tipoQuarto')) {
+            if (!Object.prototype.hasOwnProperty.call(valores, 'hotel')) {
+                this.tipoQuartoSelect.value = valores.tipoQuarto;
+                this.tipoQuartoSelect.dispatchEvent(new Event('change'));
+            }
+        }
+
+        this.calcularCheckout();
+        this.calcularValorTotal();
+    },
+
     async handleFormSubmit(e) {
         e.preventDefault();
 
@@ -328,6 +482,10 @@ const DespesasUI = {
     },
 
     clearForm() {
+        const preservarFixos = !this.editingIdInput.value;
+        const camposFixos = preservarFixos ? this.obterCamposFixos() : [];
+        const valoresFixos = camposFixos.length ? this.capturarValoresFixos(camposFixos) : {};
+
         this.form.reset();
         this.editingIdInput.value = '';
         this.btnSubmit.innerHTML = '<i class="fas fa-save"></i> Salvar Despesa';
@@ -345,6 +503,10 @@ const DespesasUI = {
         
         this.despesaHotelOptions.querySelectorAll('.hotel-checkbox').forEach(cb => cb.checked = false);
         this.updateMultiselectText(this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox');
+
+        if (camposFixos.length) {
+            this.restaurarValoresFixos(valoresFixos);
+        }
     },
 
     async loadForEditing(id) {
