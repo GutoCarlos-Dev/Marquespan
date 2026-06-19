@@ -141,6 +141,7 @@
           <table class="glass-table">
             <thead>
               <tr>
+                <th class="col-ordem-carga">Ordem</th>
                 <th>Arquivo</th>
                 <th>Supervisor</th>
                 <th>Cliente</th>
@@ -194,7 +195,7 @@
       <h3><i class="fas fa-boxes"></i> Itens</h3>
       
       <div class="form-actions" style="justify-content: flex-start; margin-bottom: 15px;">
-        <button type="button" id="btnIncluirItem" class="btn-glass btn-blue">âž• Incluir Item</button>
+        <button type="button" id="btnIncluirItem" class="btn-glass btn-blue"><i class="fas fa-plus"></i> Incluir Item</button>
       </div>
       <form id="formItem">
         <div class="form-grid cliente-form-grid">
@@ -207,6 +208,10 @@
             <input type="text" id="nomeItem" placeholder="Nome do Item" required disabled class="glass-input">
           </div>
           <div class="form-group">
+            <label for="modeloItem">MOD.:</label>
+            <input type="text" id="modeloItem" placeholder="Modelo ou variação" disabled class="glass-input">
+          </div>
+          <div class="form-group">
             <label for="tipoItem">Tipo:</label>
             <select id="tipoItem" required disabled class="glass-input">
               <option value="" disabled selected>Selecione o tipo</option>
@@ -216,7 +221,7 @@
           </div>
         </div>
         <div class="form-actions" style="margin-top: 15px;">
-          <button type="submit" id="btnSalvarItem" disabled class="btn-glass btn-green">âœ… Salvar Item</button>
+          <button type="submit" id="btnSalvarItem" disabled class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Item</button>
         </div>
       </form>
          
@@ -226,6 +231,7 @@
             <tr>
               <th>Código</th>
               <th>Nome</th>
+              <th>MOD.</th>
               <th>Tipo</th>
               <th>Ações</th>
             </tr>
@@ -511,11 +517,38 @@
     </div>
   </div>
 
+  <div id="modalVincularCarregamento" class="import-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloModalVincularCarregamento">
+    <div class="import-modal-content modal-carregamentos-vinculo">
+      <div class="import-modal-header">
+        <h3 id="tituloModalVincularCarregamento"><i class="fas fa-truck-loading"></i> Vincular Requisicao a Carregamento</h3>
+        <button type="button" id="btnFecharVincularCarregamento" class="modal-close" aria-label="Fechar">&times;</button>
+      </div>
+      <div id="statusVincularCarregamento" class="status-message hidden"></div>
+      <div class="table-responsive modal-vinculo-table">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>Data Saida</th>
+              <th>Placa</th>
+              <th>Modelo / Tipo</th>
+              <th>Motorista</th>
+              <th class="col-num">Req.</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="corpoModalCarregamentosVinculo">
+            <tr><td colspan="6" style="text-align:center;color:#6c757d;">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="script/menu.js"></script>
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260618-25';
+    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260619-2';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
@@ -558,5 +591,3 @@
   </script>
 </body>
 </html>
-
-

@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="css/menu.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/iniciar-carregamento.css">
-  <link rel="stylesheet" href="css/buscar-carregamento.css">
+  <link rel="stylesheet" href="css/buscar-carregamento.css?v=20260619-1">
 </head>
 <body>
   <div id="menu-container"></div>
@@ -24,7 +24,7 @@
       <div class="form-grid search-grid">
         <div class="form-group search-term">
           <label for="termoBusca">Termo:</label>
-          <input type="search" id="termoBusca" class="glass-input" placeholder="Placa, cliente, motorista, conferente, item ou motivo">
+          <input type="search" id="termoBusca" class="glass-input" placeholder="Placa, motorista, modelo, usuario, cliente, supervisor ou motivo">
         </div>
         <div class="form-group">
           <label for="dataInicial">Data inicial:</label>
@@ -50,18 +50,19 @@
         <table id="tabelaCarregamentos" class="glass-table data-grid">
           <thead>
             <tr>
-              <th>Data</th>
-              <th>Semana</th>
+              <th>Data Saida</th>
               <th>Placa</th>
+              <th>Modelo / Tipo</th>
               <th>Motorista</th>
-              <th>Clientes</th>
-              <th>Requisições</th>
-              <th>Conferente</th>
-              <th>Ações</th>
+              <th>Req.</th>
+              <th>Carregar</th>
+              <th>Retirar</th>
+              <th>Salvo por</th>
+              <th>Acoes</th>
             </tr>
           </thead>
           <tbody id="corpoTabelaCarregamentos">
-            <tr><td colspan="8" class="empty-cell">Carregando...</td></tr>
+            <tr><td colspan="9" class="empty-cell">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -72,18 +73,22 @@
     </footer>
   </main>
 
-  <div id="modalDetalhesCarregamento" class="modal-backdrop hidden">
-    <div class="glass-modal details-modal">
-      <div class="modal-header">
-        <h3><i class="fas fa-clipboard-list"></i> Detalhes do Carregamento</h3>
-        <button type="button" class="close-button" id="fecharModalDetalhes">&times;</button>
+  <div id="modalResumoCarregamento" class="modal-resumo-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-resumo-box">
+      <div class="modal-resumo-toolbar no-print">
+        <button type="button" id="btnImprimirResumo" class="btn-glass btn-green">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+        <button type="button" id="btnFecharResumo" class="btn-glass btn-red" title="Fechar">
+          <i class="fas fa-times"></i> Fechar
+        </button>
       </div>
-      <div class="modal-body" id="conteudoDetalhesCarregamento"></div>
+      <div id="conteudoResumoCarregamento"></div>
     </div>
   </div>
 
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="./script/buscar-carregamento.js?v=20260610-3"></script>
+  <script type="module" src="./script/buscar-carregamento.js?v=20260619-1"></script>
 </body>
 </html>

@@ -802,6 +802,24 @@
 
 /* === ABA CARREGAMENTO === */
 
+#itens .cliente-form-grid {
+  grid-template-columns: minmax(140px, 1fr) minmax(220px, 2fr) minmax(180px, 1.4fr) minmax(150px, 1fr);
+}
+
+#itens .btn-glass {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+#itens .form-actions {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .carregamento-form-grid {
   grid-template-columns: minmax(150px, 1fr) minmax(200px, 2fr) minmax(150px, 1fr);
   margin-bottom: 0;
@@ -822,6 +840,74 @@
   margin-top: 0;
   border: 1px solid rgba(0, 105, 55, 0.12);
   border-radius: 10px;
+}
+
+.col-ordem-carga {
+  width: 112px;
+  text-align: center !important;
+}
+
+.ordem-carga-cell {
+  width: 112px;
+  min-width: 112px;
+}
+
+.ordem-carga-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ordem-carga-input {
+  width: 54px;
+  height: 34px;
+  border: 1px solid rgba(0, 105, 55, 0.28);
+  border-radius: 8px;
+  color: var(--primary-color) !important;
+  -webkit-text-fill-color: var(--primary-color);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  background: #f0fff4;
+}
+
+.ordem-carga-input:focus {
+  outline: 2px solid rgba(0, 105, 55, 0.18);
+  border-color: var(--primary-color);
+}
+
+.ordem-carga-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ordem-carga-btn {
+  width: 24px;
+  height: 15px;
+  border: 1px solid rgba(0, 105, 55, 0.24);
+  border-radius: 5px;
+  color: var(--primary-color);
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.58rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.ordem-carga-btn:hover:not(:disabled) {
+  background: rgba(0, 105, 55, 0.1);
+}
+
+.ordem-carga-btn:disabled {
+  color: #b7c5bd;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .col-num {
@@ -1197,12 +1283,12 @@
 .resumo-info-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px 14px;
-  margin-bottom: 10px;
+  gap: 4px 10px;
+  margin-bottom: 6px;
   background: #f0fff4;
   border: 1px solid rgba(0,105,55,0.15);
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 6px 10px;
 }
 
 .resumo-info-item {
@@ -1212,7 +1298,7 @@
 }
 
 .resumo-label {
-  font-size: 0.6rem;
+  font-size: 0.5rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -1220,7 +1306,7 @@
 }
 
 .resumo-valor {
-  font-size: 0.82rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: #222;
 }
@@ -1231,8 +1317,8 @@
   color: #155724;
   border: 1px solid #9ccc9c;
   border-radius: 4px;
-  padding: 0 8px;
-  font-size: 0.85rem;
+  padding: 0 6px;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.06em;
 }
@@ -1240,15 +1326,15 @@
 .resumo-strip {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .resumo-strip-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 6px;
+  padding: 5px 6px;
   border-radius: 8px;
   background: #f8f9fa;
   border: 1px solid rgba(0,0,0,0.08);
@@ -1267,13 +1353,13 @@
 }
 
 .resumo-strip-num {
-  font-size: 1.5rem;
+  font-size: 1.15rem;
   font-weight: 800;
   line-height: 1;
 }
 
 .resumo-strip-label {
-  font-size: 0.62rem;
+  font-size: 0.5rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -1296,11 +1382,11 @@
 .resumo-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.78rem;
+  font-size: 8px;
   margin-bottom: 4px;
   border-radius: 6px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: 0 0 0 1px #000;
 }
 
 .resumo-table th {
@@ -1308,24 +1394,30 @@
   color: #fff;
   padding: 5px 10px;
   text-align: left;
-  font-size: 0.68rem;
+  font-size: 8px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  border: 1px solid #000;
 }
 
 .resumo-table td {
   padding: 5px 10px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  color: #333;
+  border: 1px solid #000;
+  color: #000;
 }
 
-.resumo-table tbody tr:last-child td { border-bottom: none; }
 .resumo-table tbody tr:hover { background: rgba(0,105,55,0.04); }
 
-.resumo-table-req { font-size: 0.68rem; }
-.resumo-table-req th { font-size: 0.6rem; padding: 4px 8px; }
+.resumo-table-req { font-size: 8px; }
+.resumo-table-req th { font-size: 8px; padding: 4px 8px; }
 .resumo-table-req td { padding: 3px 8px; }
+.resumo-table-req th:last-child,
+.resumo-table-req td:last-child {
+  font-size: 6px !important;
+  line-height: 1.15 !important;
+  color: #000 !important;
+}
 
 .resumo-num-cel {
   text-align: center !important;
@@ -1336,20 +1428,19 @@
   background: rgba(0,105,55,0.1);
   color: #155724;
   font-weight: 700;
-  font-size: 0.66rem;
+  font-size: 8px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   text-align: center;
   padding: 3px 10px;
-  border-top: 1px solid rgba(0,105,55,0.3);
-  border-bottom: 1px solid rgba(0,105,55,0.3);
+  border: 1px solid #000;
 }
 
 .resumo-subtotal-row td {
   background: rgba(0,105,55,0.06);
   font-style: italic;
-  color: #555;
-  border-top: 1px solid rgba(0,105,55,0.2);
+  color: #000;
+  border: 1px solid #000;
   padding: 4px 10px;
 }
 
@@ -1436,6 +1527,24 @@
 .modal-requisicoes-pendentes {
   max-width: 1000px;
   width: 100%;
+}
+
+.modal-carregamentos-vinculo {
+  max-width: 980px;
+  width: 100%;
+}
+
+.modal-vinculo-table {
+  max-height: 440px;
+  margin-top: 12px;
+  border: 1px solid rgba(0, 105, 55, 0.12);
+  border-radius: 8px;
+}
+
+.btn-sm-vincular {
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .busca-supervisor-wrap {

@@ -8,6 +8,8 @@ let clientesCarregamento = [];
 let itensCarregamento = [];
 let requisicoesImportadas = [];
 let requisicoesSalvas = [];
+let requisicaoVinculoCarregamentoId = null;
+let carregamentosVinculoRequisicao = [];
 let filtrosRequisicaoAplicados = {
   supervisor: '',
   data: '',
@@ -287,13 +289,13 @@ export async function carregarItens() {
     .order('id', { ascending: true });
 
   if (error) {
-    corpoTabela.innerHTML = '<tr><td colspan="4">Erro ao carregar itens.</td></tr>';
+    corpoTabela.innerHTML = '<tr><td colspan="5">Erro ao carregar itens.</td></tr>';
     console.error(error);
     return;
   }
 
   if (data.length === 0) {
-    corpoTabela.innerHTML = '<tr><td colspan="4">Nenhum item encontrado.</td></tr>';
+    corpoTabela.innerHTML = '<tr><td colspan="5">Nenhum item encontrado.</td></tr>';
     return;
   }
 
@@ -304,6 +306,7 @@ export async function carregarItens() {
     linha.innerHTML = `
       <td>${item.codigo}</td>
       <td>${item.nome}</td>
+      <td>${escapeHtml(item.modelo || '')}</td>
       <td>${item.tipo}</td>
       <td>
         <button class="btn-icon edit" onclick="editarItem('${item.id}')" title="Editar"><i class="fas fa-pen"></i></button>
@@ -319,6 +322,7 @@ export async function salvarItem(event) {
 
   const id = document.getElementById('formItem').dataset.itemId;
   const nome = document.getElementById('nomeItem').value.trim();
+  const modelo = document.getElementById('modeloItem').value.trim();
   const tipo = document.getElementById('tipoItem').value;
 
   if (!nome || !tipo) {
@@ -340,13 +344,13 @@ export async function salvarItem(event) {
     // Update
     result = await supabaseClient
       .from('itens')
-      .update({ nome, tipo })
+      .update({ nome, modelo, tipo })
       .eq('id', id);
   } else {
     // Insert
     result = await supabaseClient
       .from('itens')
-      .insert([{ codigo, nome, tipo }]);
+      .insert([{ codigo, nome, modelo, tipo }]);
   }
 
   if (result.error) {
@@ -361,6 +365,7 @@ export async function salvarItem(event) {
   // Desabilitar campos após salvar
   document.getElementById('codigoItem').disabled = true;
   document.getElementById('nomeItem').disabled = true;
+  document.getElementById('modeloItem').disabled = true;
   document.getElementById('tipoItem').disabled = true;
   document.getElementById('btnSalvarItem').disabled = true;
   carregarItens();
@@ -380,12 +385,14 @@ export async function editarItem(id) {
 
   document.getElementById('codigoItem').value = data.codigo;
   document.getElementById('nomeItem').value = data.nome;
+  document.getElementById('modeloItem').value = data.modelo || '';
   document.getElementById('tipoItem').value = data.tipo;
   document.getElementById('formItem').dataset.itemId = data.id;
 
   // Habilitar campos para edição
   document.getElementById('codigoItem').disabled = false; // Código sempre desabilitado
   document.getElementById('nomeItem').disabled = false;
+  document.getElementById('modeloItem').disabled = false;
   document.getElementById('tipoItem').disabled = false;
   document.getElementById('btnSalvarItem').disabled = false;
 }
@@ -399,6 +406,7 @@ export async function incluirItem() {
   document.getElementById('codigoItem').value = '';
   document.getElementById('codigoItem').disabled = false; // Código editável conforme pedido
   document.getElementById('nomeItem').disabled = false;
+  document.getElementById('modeloItem').disabled = false;
   document.getElementById('tipoItem').disabled = false;
   document.getElementById('btnSalvarItem').disabled = false;
 }
@@ -423,18 +431,24 @@ export async function excluirItem(id) {
   carregarItens();
 }
 
-function encontrarItemRequisicao(nomeEquipamento, tipoEsperado = '') {
+function encontrarItemRequisicao(nomeEquipamento, tipoEsperado = '', modeloEsperado = '') {
   const equipamento = normalizarBuscaImportacao(nomeEquipamento);
+  const modeloReq = normalizarBuscaImportacao(modeloEsperado);
   if (!equipamento) return null;
 
   const candidatos = itensCarregamento
     .map(item => {
       const nome = normalizarBuscaImportacao(item.nome).replace(/\b(?:NOVO|USADO)\b/g, ' ').replace(/\s+/g, ' ').trim();
       const codigo = normalizarBuscaImportacao(item.codigo);
+      const modelo = normalizarBuscaImportacao(item.modelo);
       let pontuacao = 0;
       if (nome === equipamento || codigo === equipamento) pontuacao = 100;
       if (nome.includes(equipamento) || equipamento.includes(nome)) pontuacao = Math.max(pontuacao, 70);
       if (tipoEsperado && normalizarTexto(item.tipo) === tipoEsperado) pontuacao += 20;
+      if (modeloReq && modelo) {
+        if (modelo === modeloReq) pontuacao += 30;
+        else if (modelo.includes(modeloReq) || modeloReq.includes(modelo)) pontuacao += 15;
+      }
       return { item, pontuacao };
     })
     .filter(resultado => resultado.pontuacao >= 70)
@@ -524,7 +538,7 @@ function renderizarTabelaStatusRequisicoes() {
         <button type="button" class="btn-icon delete" data-excluir-requisicao="${escapeHtml(req.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
         ${req.status === 'CARREGADO'
           ? `<button type="button" class="btn-icon revert" data-reverter-requisicao="${escapeHtml(req.id)}" title="Reverter para Pendente"><i class="fas fa-rotate-left"></i></button>`
-          : `<button type="button" class="btn-icon carregar" data-carregar-requisicao="${escapeHtml(req.id)}" title="Marcar como Carregado"><i class="fas fa-truck-loading"></i></button>`}
+          : `<button type="button" class="btn-icon carregar" data-carregar-requisicao="${escapeHtml(req.id)}" title="Vincular a carregamento existente"><i class="fas fa-truck-loading"></i></button>`}
       </td>
     </tr>
   `).join('');
@@ -822,7 +836,7 @@ async function salvarRequisicaoBanco(requisicao) {
     .filter(row => (Number(row[0]) || 0) > 0 && normalizarTexto(row[1]))
     .map(row => {
       const tipoEsperado = obterTipoItemDaLinha(row);
-      const item = encontrarItemRequisicao(row[1], tipoEsperado);
+      const item = encontrarItemRequisicao(row[1], tipoEsperado, row[2]);
       return {
         item_id: item?.id || null,
         item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
@@ -881,11 +895,10 @@ async function salvarRequisicaoBanco(requisicao) {
 }
 
 async function marcarRequisicaoComoCarregada(id) {
-  const { error } = await supabaseClient
-    .from(REQUISICOES_TABLE)
-    .update({ status: 'CARREGADO', carregado_em: new Date().toISOString() })
-    .eq('id', id);
+  await abrirModalVincularCarregamento(id);
+}
 
+async function marcarRequisicaoComoCarregadaLegadoRemovido(error) {
   if (error) {
     console.error('Erro ao carregar requisição:', error);
     alert(`Não foi possível carregar a requisição: ${error.message}`);
@@ -894,6 +907,140 @@ async function marcarRequisicaoComoCarregada(id) {
 
   await carregarRequisicoesBanco();
   atualizarStatusRequisicao('Requisição marcada como CARREGADO.');
+}
+
+async function abrirModalVincularCarregamento(id) {
+  const req = encontrarRequisicaoSalva(id);
+  const modal = document.getElementById('modalVincularCarregamento');
+  const tbody = document.getElementById('corpoModalCarregamentosVinculo');
+  const status = document.getElementById('statusVincularCarregamento');
+  if (!req || !modal || !tbody) return;
+
+  requisicaoVinculoCarregamentoId = id;
+  if (status) {
+    status.textContent = `Selecione o carregamento que recebera a requisicao: ${req.arquivo}`;
+    status.classList.remove('hidden', 'error');
+    status.classList.add('success');
+  }
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6c757d;">Carregando...</td></tr>';
+  modal.classList.remove('hidden');
+
+  const { data, error } = await supabaseClient
+    .from(CARREGAMENTOS_TABLE)
+    .select('*')
+    .order('data_saida', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.error('Erro ao buscar carregamentos:', error);
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#c0392b;">Erro ao carregar os carregamentos.</td></tr>';
+    return;
+  }
+
+  carregamentosVinculoRequisicao = data || [];
+  renderizarCarregamentosVinculo();
+}
+
+function fecharModalVincularCarregamento() {
+  document.getElementById('modalVincularCarregamento')?.classList.add('hidden');
+  requisicaoVinculoCarregamentoId = null;
+  carregamentosVinculoRequisicao = [];
+}
+
+function renderizarCarregamentosVinculo() {
+  const tbody = document.getElementById('corpoModalCarregamentosVinculo');
+  if (!tbody) return;
+
+  if (!carregamentosVinculoRequisicao.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6c757d;">Nenhum carregamento registrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = carregamentosVinculoRequisicao.map(car => {
+    const idEsc = escapeHtml(String(car.id));
+    return `<tr>
+      <td>${escapeHtml(formatarData(car.data_saida))}</td>
+      <td><span class="hist-placa">${escapeHtml(car.placa || '-')}</span></td>
+      <td>${escapeHtml(car.modelo_veiculo || '-')}</td>
+      <td>${escapeHtml(car.motorista || '-')}</td>
+      <td class="col-num"><span class="badge-req">${escapeHtml(car.total_requisicoes || 0)}</span></td>
+      <td style="text-align:center;">
+        <button type="button" class="btn-glass btn-green btn-sm-vincular" data-vincular-carregamento="${idEsc}">
+          <i class="fas fa-link"></i> Vincular
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function obterProximaOrdemNoCarregamento(carregamentoId) {
+  const { data, error } = await supabaseClient
+    .from(REQUISICOES_TABLE)
+    .select('ordem')
+    .eq('carregamento_id', carregamentoId);
+
+  if (error) throw error;
+
+  const maior = (data || []).reduce((max, item) => {
+    const numero = Number(String(item.ordem || '').replace(/\D/g, ''));
+    return Number.isFinite(numero) ? Math.max(max, numero) : max;
+  }, 0);
+  return String(maior + 1);
+}
+
+async function vincularRequisicaoAoCarregamento(carregamentoId) {
+  const req = encontrarRequisicaoSalva(requisicaoVinculoCarregamentoId);
+  const car = carregamentosVinculoRequisicao.find(item => String(item.id) === String(carregamentoId));
+  if (!req || !car) return;
+
+  const status = document.getElementById('statusVincularCarregamento');
+  if (status) {
+    status.textContent = 'Vinculando requisicao ao carregamento...';
+    status.classList.remove('hidden', 'error');
+    status.classList.add('success');
+  }
+
+  try {
+    const ordem = await obterProximaOrdemNoCarregamento(carregamentoId);
+    const { totalEntrega, totalRetorno } = calcularTotaisRequisicoesCarregamento([req]);
+
+    const { error: errReq } = await supabaseClient
+      .from(REQUISICOES_TABLE)
+      .update({
+        status: 'CARREGADO',
+        ordem,
+        carregado_em: new Date().toISOString(),
+        carregamento_id: carregamentoId,
+        carregamento_placa: car.placa || null,
+        carregamento_motorista: car.motorista || null,
+        carregamento_data_saida: car.data_saida || null,
+        carregamento_modelo: car.modelo_veiculo || null
+      })
+      .eq('id', req.id);
+    if (errReq) throw errReq;
+
+    const { error: errCar } = await supabaseClient
+      .from(CARREGAMENTOS_TABLE)
+      .update({
+        total_requisicoes: Number(car.total_requisicoes || 0) + 1,
+        total_entrega: Number(car.total_entrega || 0) + totalEntrega,
+        total_retorno: Number(car.total_retorno || 0) + totalRetorno
+      })
+      .eq('id', carregamentoId);
+    if (errCar) throw errCar;
+
+    fecharModalVincularCarregamento();
+    await Promise.all([carregarRequisicoesBanco(), carregarHistoricoCarregamentos()]);
+    atualizarStatusRequisicao(`Requisicao vinculada ao carregamento ${car.placa || ''} - ${formatarData(car.data_saida)}.`);
+  } catch (error) {
+    console.error('Erro ao vincular requisicao ao carregamento:', error);
+    if (status) {
+      status.textContent = `Erro ao vincular: ${error.message || 'verifique os dados e tente novamente.'}`;
+      status.classList.remove('hidden', 'success');
+      status.classList.add('error');
+    }
+  }
 }
 
 async function reverterRequisicaoParaPendente(id) {
@@ -941,7 +1088,7 @@ function prepararRascunhoCarregamento() {
         .filter(row => (Number(row[0]) || 0) > 0 && normalizarTexto(row[1]))
         .map(row => {
           const tipoEsperado = obterTipoItemDaLinha(row);
-          const item = encontrarItemRequisicao(row[1], tipoEsperado);
+          const item = encontrarItemRequisicao(row[1], tipoEsperado, row[2]);
           return {
             item_id: item?.id || null,
             item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
@@ -1194,6 +1341,14 @@ export async function inicializarRequisicao() {
   document.getElementById('modalRequisicaoDetalhes')?.addEventListener('click', event => {
     if (event.target.id === 'modalRequisicaoDetalhes') fecharModalRequisicaoDetalhes();
   });
+  document.getElementById('btnFecharVincularCarregamento')?.addEventListener('click', fecharModalVincularCarregamento);
+  document.getElementById('modalVincularCarregamento')?.addEventListener('click', event => {
+    if (event.target.id === 'modalVincularCarregamento') fecharModalVincularCarregamento();
+  });
+  document.getElementById('corpoModalCarregamentosVinculo')?.addEventListener('click', event => {
+    const btn = event.target.closest('[data-vincular-carregamento]');
+    if (btn) vincularRequisicaoAoCarregamento(btn.dataset.vincularCarregamento);
+  });
   document.querySelector('.requisicao-status-table .glass-table thead')?.addEventListener('click', event => {
     const th = event.target.closest('th[data-sort]');
     if (!th) return;
@@ -1314,6 +1469,8 @@ async function salvarCarregamento() {
     return;
   }
 
+  normalizarOrdemCarregamento();
+
   const veiculo      = encontrarVeiculo(placa);
   const modeloVeiculo = [veiculo?.modelo, veiculo?.tipo].filter(Boolean).join(' / ') || null;
 
@@ -1343,6 +1500,7 @@ async function salvarCarregamento() {
         await supabaseClient.from(REQUISICOES_TABLE)
           .update({
             status: 'PENDENTE',
+            ordem: null,
             carregado_em: null,
             carregamento_id: null,
             carregamento_placa: null,
@@ -1396,6 +1554,7 @@ async function salvarCarregamento() {
         .from(REQUISICOES_TABLE)
         .update({
           status: 'CARREGADO',
+          ordem: req.ordem || null,
           carregado_em: agora,
           carregamento_id: carregamentoId,
           carregamento_placa: placa,
@@ -1479,8 +1638,12 @@ function direcionarItemCarregamento(item, motivoRequisicao = '', temRetornoObser
 }
 
 function calcularTotaisCarregamento() {
+  return calcularTotaisRequisicoesCarregamento(carregamentoRequisicoes);
+}
+
+function calcularTotaisRequisicoesCarregamento(requisicoes) {
   let totalEntrega = 0, totalRetorno = 0;
-  carregamentoRequisicoes.forEach(req => {
+  (requisicoes || []).forEach(req => {
     const temRetornoObs = (Array.isArray(req.itens) ? req.itens : []).some(i => i.de_observacao);
     (Array.isArray(req.itens) ? req.itens : []).forEach(item => {
       const qtd = Number(item.quantidade) || 0;
@@ -1511,6 +1674,66 @@ function calcularTotalizadorCarregamento() {
     });
   });
   return mapa;
+}
+
+function obterOrdemCarregamento(req, fallbackIndex = 0) {
+  const raw = req?.ordem_carregamento ?? req?.ordem ?? fallbackIndex + 1;
+  const numero = Number(String(raw).replace(/\D/g, ''));
+  return Number.isFinite(numero) && numero > 0 ? numero : fallbackIndex + 1;
+}
+
+function ordenarRequisicoesCarregamento() {
+  carregamentoRequisicoes = carregamentoRequisicoes
+    .map((req, index) => ({ req, index, ordem: obterOrdemCarregamento(req, index) }))
+    .sort((a, b) => (a.ordem - b.ordem) || (a.index - b.index))
+    .map(item => item.req);
+}
+
+function normalizarOrdemCarregamento() {
+  ordenarRequisicoesCarregamento();
+  renumerarOrdemCarregamento();
+}
+
+function renumerarOrdemCarregamento() {
+  carregamentoRequisicoes.forEach((req, index) => {
+    const ordem = String(index + 1);
+    req.ordem = ordem;
+    req.ordem_carregamento = ordem;
+  });
+}
+
+function proximaOrdemCarregamento() {
+  return String(carregamentoRequisicoes.length + 1);
+}
+
+function moverRequisicaoCarregamento(id, direcao) {
+  normalizarOrdemCarregamento();
+  const index = carregamentoRequisicoes.findIndex(req => String(req.id) === String(id));
+  if (index < 0) return;
+
+  const novoIndex = index + direcao;
+  if (novoIndex < 0 || novoIndex >= carregamentoRequisicoes.length) return;
+
+  const [req] = carregamentoRequisicoes.splice(index, 1);
+  carregamentoRequisicoes.splice(novoIndex, 0, req);
+  renumerarOrdemCarregamento();
+  renderizarRequisicoesCarregamento();
+}
+
+function alterarOrdemRequisicaoCarregamento(id, value) {
+  normalizarOrdemCarregamento();
+  const atual = carregamentoRequisicoes.findIndex(req => String(req.id) === String(id));
+  if (atual < 0) return;
+
+  const destino = Math.min(
+    Math.max(Number(value) || 1, 1),
+    carregamentoRequisicoes.length
+  ) - 1;
+
+  const [req] = carregamentoRequisicoes.splice(atual, 1);
+  carregamentoRequisicoes.splice(destino, 0, req);
+  renumerarOrdemCarregamento();
+  renderizarRequisicoesCarregamento();
 }
 
 // Itens que devem ser totalizados separadamente dos equipamentos de carga
@@ -1587,18 +1810,46 @@ function renderizarRequisicoesCarregamento() {
     return;
   }
 
+  normalizarOrdemCarregamento();
   section?.classList.remove('hidden');
-  tbody.innerHTML = carregamentoRequisicoes.map(req => {
+  tbody.innerHTML = carregamentoRequisicoes.map((req, index) => {
     const numItens = Array.isArray(req.itens) ? req.itens.filter(i => Number(i.quantidade) > 0).length : 0;
+    const idEsc = escapeHtml(String(req.id));
+    const ordem = index + 1;
     return `<tr>
+      <td class="ordem-carga-cell">
+        <div class="ordem-carga-control">
+          <input type="text"
+            class="ordem-carga-input"
+            value="${ordem}"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            min="1"
+            max="${carregamentoRequisicoes.length}"
+            data-ordem-req-car="${idEsc}"
+            title="Ordem de carregamento">
+          <div class="ordem-carga-actions">
+            <button type="button" class="ordem-carga-btn" data-mover-req-car="${idEsc}" data-direcao="-1" title="Subir" ${index === 0 ? 'disabled' : ''}>
+              <i class="fas fa-chevron-up"></i>
+            </button>
+            <button type="button" class="ordem-carga-btn" data-mover-req-car="${idEsc}" data-direcao="1" title="Descer" ${index === carregamentoRequisicoes.length - 1 ? 'disabled' : ''}>
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+      </td>
       <td title="${escapeHtml(req.arquivo)}">${escapeHtml(req.arquivo)}</td>
       <td>${escapeHtml(req.supervisor || '-')}</td>
       <td title="${escapeHtml(req.cliente_nome || '-')}">${escapeHtml(req.cliente_nome || '-')}</td>
       <td>${escapeHtml(req.motivo || '-')}</td>
       <td class="col-num">${numItens}</td>
-      <td><button type="button" class="btn-icon delete" data-remover-req-car="${escapeHtml(String(req.id))}" title="Remover"><i class="fas fa-times"></i></button></td>
+      <td><button type="button" class="btn-icon delete" data-remover-req-car="${idEsc}" title="Remover"><i class="fas fa-times"></i></button></td>
     </tr>`;
   }).join('');
+
+  tbody.querySelectorAll('[data-ordem-req-car]').forEach((input, index) => {
+    input.value = String(index + 1);
+  });
 
   renderizarTotalizadorCarregamento();
 }
@@ -1644,6 +1895,8 @@ function adicionarRequisicaoNoCarregamento(id) {
   const req = requisicoesSalvas.find(r => String(r.id) === String(id));
   if (!req || carregamentoRequisicoes.some(r => String(r.id) === String(id))) return;
 
+  req.ordem = proximaOrdemCarregamento();
+  req.ordem_carregamento = req.ordem;
   carregamentoRequisicoes.push(req);
   renderizarRequisicoesCarregamento();
 
@@ -1658,6 +1911,7 @@ function adicionarRequisicaoNoCarregamento(id) {
 
 function removerRequisicaoDoCarregamento(id) {
   carregamentoRequisicoes = carregamentoRequisicoes.filter(r => String(r.id) !== String(id));
+  normalizarOrdemCarregamento();
   renderizarRequisicoesCarregamento();
 }
 
@@ -1706,6 +1960,14 @@ export async function inicializarCarregamento() {
   document.getElementById('corpoCarregamentoRequisicoes')?.addEventListener('click', e => {
     const btn = e.target.closest('[data-remover-req-car]');
     if (btn) removerRequisicaoDoCarregamento(btn.dataset.removerReqCar);
+
+    const btnMover = e.target.closest('[data-mover-req-car]');
+    if (btnMover) moverRequisicaoCarregamento(btnMover.dataset.moverReqCar, Number(btnMover.dataset.direcao));
+  });
+
+  document.getElementById('corpoCarregamentoRequisicoes')?.addEventListener('change', e => {
+    const input = e.target.closest('[data-ordem-req-car]');
+    if (input) alterarOrdemRequisicaoCarregamento(input.dataset.ordemReqCar, input.value);
   });
 }
 
@@ -1790,8 +2052,9 @@ async function gerarResumoCarregamento(id) {
     const [{ data: car, error: errCar }, { data: reqs, error: errReqs }] = await Promise.all([
       supabaseClient.from(CARREGAMENTOS_TABLE).select('*').eq('id', id).single(),
       supabaseClient.from(REQUISICOES_TABLE)
-        .select('arquivo, cliente_nome, motivo, supervisor, data_requisicao, itens, observacao')
+        .select('arquivo, cliente_nome, motivo, supervisor, ordem, data_requisicao, itens, observacao')
         .eq('carregamento_id', id)
+        .order('ordem', { ascending: true })
         .order('supervisor')
     ]);
 
@@ -1816,7 +2079,12 @@ async function gerarResumoCarregamento(id) {
       });
     });
 
-    conteudo.innerHTML = renderResumoHTML(car, reqs || [], mapaItens);
+    const reqsOrdenadas = (reqs || [])
+      .map((req, index) => ({ req, index, ordem: obterOrdemCarregamento(req, index) }))
+      .sort((a, b) => (a.ordem - b.ordem) || (a.index - b.index))
+      .map(item => item.req);
+
+    conteudo.innerHTML = renderResumoHTML(car, reqsOrdenadas, mapaItens);
   } catch (err) {
     console.error('Erro ao gerar resumo:', err);
     conteudo.innerHTML = `<p style="color:#c0392b;padding:30px;text-align:center">Erro ao carregar dados: ${escapeHtml(err.message)}</p>`;
@@ -1826,12 +2094,13 @@ async function gerarResumoCarregamento(id) {
 function renderResumoHTML(car, reqs, mapaItens) {
   const agora = new Date().toLocaleString('pt-BR');
 
-  const reqRows = reqs.map(req => `<tr>
+  const reqRows = reqs.map((req, index) => `<tr>
+    <td class="resumo-num-cel">${escapeHtml(obterOrdemCarregamento(req, index))}</td>
     <td>${escapeHtml(req.cliente_nome || '-')}</td>
     <td>${escapeHtml(req.motivo || '-')}</td>
     <td>${escapeHtml(req.supervisor || '-')}</td>
     <td>${escapeHtml(formatarData(req.data_requisicao))}</td>
-    <td style="font-size:0.78rem;color:#666">${escapeHtml(req.arquivo || '-')}</td>
+    <td>${escapeHtml(req.arquivo || '-')}</td>
   </tr>`).join('');
 
   const regular   = [...mapaItens.values()].filter(e => !isItemEspecial(e.nome));
@@ -1908,9 +2177,9 @@ function renderResumoHTML(car, reqs, mapaItens) {
     <h4 class="resumo-section-h"><i class="fas fa-list-ul"></i> Requisições Incluídas</h4>
     <table class="resumo-table resumo-table-req">
       <thead><tr>
-        <th>Cliente</th><th>Motivo</th><th>Supervisor</th><th>Data Req.</th><th>Arquivo</th>
+        <th class="resumo-num-cel">Ordem</th><th>Cliente</th><th>Motivo</th><th>Supervisor</th><th>Data Req.</th><th>Arquivo</th>
       </tr></thead>
-      <tbody>${reqRows || '<tr><td colspan="5" style="text-align:center;color:#888">Sem requisições</td></tr>'}</tbody>
+      <tbody>${reqRows || '<tr><td colspan="6" style="text-align:center;color:#888">Sem requisições</td></tr>'}</tbody>
     </table>
 
     <h4 class="resumo-section-h"><i class="fas fa-boxes"></i> Totalizador de Equipamentos</h4>
@@ -1977,6 +2246,7 @@ async function cancelarCarregamento(id) {
       .from(REQUISICOES_TABLE)
       .update({
         status: 'PENDENTE',
+        ordem: null,
         carregado_em: null,
         carregamento_id: null,
         carregamento_placa: null,
@@ -2010,7 +2280,9 @@ async function editarCarregamento(id) {
   const { data: reqs, error } = await supabaseClient
     .from(REQUISICOES_TABLE)
     .select('*')
-    .eq('carregamento_id', id);
+    .eq('carregamento_id', id)
+    .order('ordem', { ascending: true })
+    .order('supervisor');
 
   if (error) {
     alert('Erro ao carregar requisições do carregamento.');
@@ -2025,6 +2297,7 @@ async function editarCarregamento(id) {
 
   // Carregar requisições no estado
   carregamentoRequisicoes = reqs || [];
+  normalizarOrdemCarregamento();
   carregamentoEditandoId  = id;
 
   // Mostrar banner de edição
@@ -2498,4 +2771,3 @@ export async function excluirCliente(id) {
 }
 
 // === MOTORISTAS ===
-
