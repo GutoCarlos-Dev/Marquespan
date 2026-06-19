@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Coletar KM (App) - Marquespan</title>
   <link rel="stylesheet" href="css/index.css">
-  <link rel="stylesheet" href="css/mobile-coletar-km.css">
+  <link rel="stylesheet" href="css/mobile-coletar-km.css?v=20260619-1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -122,6 +122,34 @@
     <i class="fas fa-plus"></i>
   </button>
 
+  <div id="modalLocalizacaoColetaKm" class="panel-backdrop hidden">
+    <div class="panel mobile-panel modal-localizacao-coleta-km">
+      <div class="panel-header">
+        <h3 id="modalLocalizacaoColetaKmTitulo"><i class="fas fa-location-dot"></i> Localizar veiculo</h3>
+        <button type="button" class="close-button" id="btnFecharModalLocalizacaoColetaKm">&times;</button>
+      </div>
+      <div class="panel-body modal-localizacao-coleta-km-body">
+        <div id="statusLocalizacaoColetaKm" class="localizacao-status-coleta-km">
+          <i class="fas fa-spinner fa-spin"></i> Consultando localizacao...
+        </div>
+        <iframe
+          id="iframeLocalizacaoColetaKm"
+          title="Mapa de localizacao do veiculo"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          class="hidden">
+        </iframe>
+        <a
+          id="linkAbrirLocalizacaoColetaKmMaps"
+          class="btn-abrir-maps-coleta-km hidden"
+          target="_blank"
+          rel="noopener noreferrer">
+          <i class="fas fa-up-right-from-square"></i> Abrir no Google Maps
+        </a>
+      </div>
+    </div>
+  </div>
+
   <div id="modalLancamento" class="panel-backdrop hidden">
     <div class="panel mobile-panel">
       <div class="panel-header">
@@ -176,7 +204,7 @@
 
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/presenca-online.js"></script>
-  <script type="module" src="./script/coletar-KM.js?v=20260615-1"></script>
+  <script type="module" src="./script/coletar-KM.js?v=20260619-1"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const modal = document.getElementById('modalLancamento');

@@ -295,9 +295,22 @@ function configurarListaVisualMobile() {
         });
     });
 
-    document.getElementById('listaVisualColetaKm')?.addEventListener('click', event => {
+    document.getElementById('listaVisualColetaKm')?.addEventListener('click', async event => {
+        const botaoLocalizar = event.target.closest('.btn-localizar-coleta-km');
+        if (botaoLocalizar) {
+            event.preventDefault();
+            event.stopPropagation();
+            await abrirModalLocalizacaoColetaKm(botaoLocalizar.dataset.placa);
+            return;
+        }
+
         const card = event.target.closest('[data-veiculo-placa]');
         if (card) abrirVeiculoColetaKm(card.dataset.veiculoPlaca);
+    });
+
+    document.getElementById('btnFecharModalLocalizacaoColetaKm')?.addEventListener('click', fecharModalLocalizacaoColetaKm);
+    document.getElementById('modalLocalizacaoColetaKm')?.addEventListener('click', event => {
+        if (event.target.id === 'modalLocalizacaoColetaKm') fecharModalLocalizacaoColetaKm();
     });
 }
 
@@ -392,15 +405,27 @@ function renderizarListaVisualMobile() {
         const item = itensPorPlaca.get(veiculo.placa);
         const feito = Boolean(item);
         return `
-            <button type="button"
+            <div
                 class="coleta-km-card ${feito ? 'feito' : 'pendente'}"
+                role="button"
+                tabindex="0"
                 data-veiculo-placa="${escapeHtmlColetaKm(veiculo.placa)}">
                 <div class="coleta-km-card-topo">
                     <strong>${escapeHtmlColetaKm(veiculo.placa)}</strong>
-                    <span class="coleta-km-status">
-                        <i class="fas ${feito ? 'fa-check-circle' : 'fa-clock'}"></i>
-                        ${feito ? 'FEITO' : 'PENDENTE'}
-                    </span>
+                    <div class="coleta-km-acoes">
+                        <span class="coleta-km-status">
+                            <i class="fas ${feito ? 'fa-check-circle' : 'fa-clock'}"></i>
+                            ${feito ? 'FEITO' : 'PENDENTE'}
+                        </span>
+                        <button
+                            type="button"
+                            class="btn-localizar-coleta-km"
+                            data-placa="${escapeHtmlColetaKm(veiculo.placa)}"
+                            title="Localizar placa"
+                            aria-label="Localizar placa ${escapeHtmlColetaKm(veiculo.placa)}">
+                            <i class="fas fa-location-dot"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="coleta-km-modelo">${escapeHtmlColetaKm(veiculo.modelo || 'Modelo nao informado')}</div>
                 <div class="coleta-km-card-rodape">
@@ -410,9 +435,97 @@ function renderizarListaVisualMobile() {
                         : '<span>Toque para coletar</span>'}
                     <i class="fas fa-chevron-right"></i>
                 </div>
-            </button>
+            </div>
         `;
     }).join('');
+}
+
+function placaSemMascaraColetaKm(valor) {
+    return String(valor || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function abrirModalLocalizacaoColetaKmCarregando(placa) {
+    const modal = document.getElementById('modalLocalizacaoColetaKm');
+    const titulo = document.getElementById('modalLocalizacaoColetaKmTitulo');
+    const status = document.getElementById('statusLocalizacaoColetaKm');
+    const iframe = document.getElementById('iframeLocalizacaoColetaKm');
+    const link = document.getElementById('linkAbrirLocalizacaoColetaKmMaps');
+
+    if (titulo) titulo.innerHTML = `<i class="fas fa-location-dot"></i> Localizar ${placa}`;
+    if (status) {
+        status.className = 'localizacao-status-coleta-km';
+        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando localizacao...';
+    }
+    if (iframe) {
+        iframe.src = 'about:blank';
+        iframe.classList.add('hidden');
+    }
+    if (link) {
+        link.href = '#';
+        link.classList.add('hidden');
+    }
+
+    if (modal) modal.classList.remove('hidden');
+}
+
+async function abrirModalLocalizacaoColetaKm(placaOriginal) {
+    const placa = placaSemMascaraColetaKm(placaOriginal);
+    const status = document.getElementById('statusLocalizacaoColetaKm');
+    const iframe = document.getElementById('iframeLocalizacaoColetaKm');
+    const link = document.getElementById('linkAbrirLocalizacaoColetaKmMaps');
+
+    if (placa.length !== 7) {
+        alert('Placa invalida para localizacao.');
+        return;
+    }
+
+    abrirModalLocalizacaoColetaKmCarregando(placa);
+
+    try {
+        const { data, error } = await supabaseClient.functions.invoke('localizacao-veiculo', {
+            body: { placa }
+        });
+
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.message || 'Nao foi possivel localizar o veiculo.');
+
+        const dados = data.data || {};
+        const latitude = Number(dados.latitude);
+        const longitude = Number(dados.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            throw new Error('O rastreador nao retornou coordenadas para esta placa.');
+        }
+
+        const coordenadas = `${latitude},${longitude}`;
+        const urlMapa = `https://www.google.com/maps?q=${encodeURIComponent(coordenadas)}`;
+        const urlEmbed = `${urlMapa}&output=embed`;
+
+        if (iframe) {
+            iframe.src = urlEmbed;
+            iframe.classList.remove('hidden');
+        }
+        if (link) {
+            link.href = urlMapa;
+            link.classList.remove('hidden');
+        }
+        if (status) {
+            status.className = 'localizacao-status-coleta-km sucesso';
+            status.innerHTML = `<i class="fas fa-location-dot"></i> ${dados.endereco || coordenadas}`;
+        }
+    } catch (error) {
+        console.error('Erro ao localizar veiculo:', error);
+        if (status) {
+            status.className = 'localizacao-status-coleta-km erro';
+            status.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${error?.message || 'Nao foi possivel localizar o veiculo.'}`;
+        }
+    }
+}
+
+function fecharModalLocalizacaoColetaKm() {
+    const modal = document.getElementById('modalLocalizacaoColetaKm');
+    const iframe = document.getElementById('iframeLocalizacaoColetaKm');
+    if (iframe) iframe.src = 'about:blank';
+    modal?.classList.add('hidden');
 }
 
 function renderizarTabela() {
