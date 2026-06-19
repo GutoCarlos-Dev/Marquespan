@@ -22,6 +22,14 @@ const resumoEscalaMotoristaLabel = document.getElementById('resumo-escala-motori
 const resumoEscalaMotorista = document.getElementById('resumo-escala-motorista');
 const resumoEscalaAuxiliarLabel = document.getElementById('resumo-escala-auxiliar-label');
 const resumoEscalaAuxiliar = document.getElementById('resumo-escala-auxiliar');
+const painelGoogleMaps = document.getElementById('mapa-google-relatorio');
+const linkGoogleMaps = document.getElementById('link-google-maps-relatorio');
+const painelRotaEmulada = document.getElementById('painel-rota-emulada');
+const painelRotaResumo = document.getElementById('painel-rota-resumo');
+const painelRotaParadas = document.getElementById('painel-rota-paradas');
+const linkPainelGoogleMaps = document.getElementById('link-painel-google-maps');
+const btnFecharPainelRota = document.getElementById('btn-fechar-painel-rota');
+const btnMostrarPainelRota = document.getElementById('btn-mostrar-painel-rota');
 
 let mapa;
 let camadaPercurso;
@@ -36,6 +44,8 @@ const MAX_CLIENTES_ROTA_MAPA = 120;
 const OSRM_ROUTE_SERVICE_URL = 'https://router.project-osrm.org/route/v1/driving';
 const MAX_PONTOS_ROTEIRIZACAO = 300;
 const MAX_WAYPOINTS_OSRM = 60;
+const MAX_WAYPOINTS_GOOGLE = 8;
+const MAX_PARADAS_PAINEL_ROTA = 10;
 const DISTANCIA_MINIMA_ROTEIRIZACAO_KM = 0.08;
 const DISTANCIA_MAXIMA_TRECHO_ROTEIRIZACAO_KM = 80;
 const MATRIZ_MARQUESPAN = {
@@ -288,6 +298,10 @@ function coordenadasBrutas(pontos) {
   return pontos.map((ponto) => [ponto.latitude, ponto.longitude]);
 }
 
+function coordenadaGoogle(ponto) {
+  return `${Number(ponto.latitude).toFixed(6)},${Number(ponto.longitude).toFixed(6)}`;
+}
+
 function pontoValidoRoteirizacao(ponto) {
   return Number.isFinite(ponto?.latitude)
     && Number.isFinite(ponto?.longitude)
@@ -384,6 +398,123 @@ async function obterSegmentosRoteirizados(pontos) {
   }
 }
 
+function selecionarWaypointsGoogle(pontos) {
+  const intermediarios = simplificarPontosRoteirizacao(pontos).slice(1, -1);
+  if (intermediarios.length <= MAX_WAYPOINTS_GOOGLE) return intermediarios;
+
+  const selecionados = [];
+  const intervalo = intermediarios.length / (MAX_WAYPOINTS_GOOGLE + 1);
+  for (let indice = 1; indice <= MAX_WAYPOINTS_GOOGLE; indice += 1) {
+    selecionados.push(intermediarios[Math.round(intervalo * indice) - 1]);
+  }
+
+  return selecionados.filter(Boolean);
+}
+
+function montarUrlGoogleMapsPercurso(pontos) {
+  const validos = pontos.filter(pontoValidoRoteirizacao);
+  if (validos.length < 2) return '';
+
+  const origem = validos[0];
+  const destino = validos[validos.length - 1];
+  const parametros = new URLSearchParams({
+    api: '1',
+    origin: coordenadaGoogle(origem),
+    destination: coordenadaGoogle(destino),
+    travelmode: 'driving'
+  });
+
+  const waypoints = selecionarWaypointsGoogle(validos);
+  if (waypoints.length) {
+    parametros.set('waypoints', waypoints.map(coordenadaGoogle).join('|'));
+  }
+  return `https://www.google.com/maps/dir/?${parametros.toString()}`;
+}
+
+function atualizarMapaGooglePercurso(pontos) {
+  if (!painelGoogleMaps || !linkGoogleMaps) return;
+
+  const urlExterna = montarUrlGoogleMapsPercurso(pontos);
+  if (!urlExterna) {
+    painelGoogleMaps.hidden = true;
+    linkGoogleMaps.href = '#';
+    return;
+  }
+
+  linkGoogleMaps.href = urlExterna;
+  painelGoogleMaps.hidden = false;
+}
+
+function obterRotuloPontoRota(ponto, tipo) {
+  if (tipo === 'inicio') return 'Inicio do percurso';
+  if (tipo === 'fim') return 'Fim do percurso';
+
+  const cidade = limparTexto(ponto.cidade);
+  if (cidade) return cidade;
+
+  return `${Number(ponto.latitude).toFixed(5)}, ${Number(ponto.longitude).toFixed(5)}`;
+}
+
+function selecionarPontosPainelRota(pontos) {
+  const validos = pontos.filter(pontoValidoRoteirizacao);
+  if (validos.length < 2) return [];
+
+  const inicio = { ponto: validos[0], tipo: 'inicio' };
+  const fim = { ponto: validos[validos.length - 1], tipo: 'fim' };
+  const paradas = validos
+    .filter((ponto, indice) => indice > 0 && indice < validos.length - 1 && ponto.tipo === 'parado')
+    .slice(0, MAX_PARADAS_PAINEL_ROTA)
+    .map((ponto) => ({ ponto, tipo: 'parada' }));
+
+  return [inicio, ...paradas, fim];
+}
+
+function formatarDistanciaResumo(km) {
+  return `${Number(km || 0).toLocaleString('pt-BR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  })} km`;
+}
+
+function formatarTempoEstimado(km) {
+  const minutos = Math.max(1, Math.round((Number(km) || 0) / 55 * 60));
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return horas ? `${horas}h${String(resto).padStart(2, '0')}` : `${resto} min`;
+}
+
+function atualizarPainelRotaEmulada(pontos) {
+  if (!painelRotaEmulada || !painelRotaResumo || !painelRotaParadas || !linkPainelGoogleMaps) return;
+
+  const itens = selecionarPontosPainelRota(pontos);
+  const urlGoogle = montarUrlGoogleMapsPercurso(pontos);
+  if (itens.length < 2 || !urlGoogle) {
+    painelRotaEmulada.hidden = true;
+    btnMostrarPainelRota.hidden = true;
+    return;
+  }
+
+  const distancia = calcularDistancia(pontos);
+  painelRotaResumo.innerHTML = `
+    <strong>${formatarTempoEstimado(distancia)}</strong>
+    <span>${formatarDistanciaResumo(distancia)}</span>
+  `;
+
+  painelRotaParadas.innerHTML = itens.map(({ ponto, tipo }) => `
+    <li class="${tipo}">
+      <span class="rota-ponto-marcador"></span>
+      <button type="button" data-indice="${ponto.indiceOriginal}">
+        <strong>${escaparHTML(obterRotuloPontoRota(ponto, tipo))}</strong>
+        <small>${formatarData(ponto.dataInicial)}</small>
+      </button>
+    </li>
+  `).join('');
+
+  linkPainelGoogleMaps.href = urlGoogle;
+  painelRotaEmulada.hidden = false;
+  btnMostrarPainelRota.hidden = true;
+}
+
 function popupPonto(ponto, titulo) {
   const dataEscala = obterDataISOLocal(ponto.dataInicial);
   const escalasDoDia = obterEscalasDoPonto(ponto);
@@ -426,6 +557,8 @@ async function desenharMapa(pontos) {
   }
 
   const coordenadas = coordenadasBrutas(pontos);
+  atualizarMapaGooglePercurso(pontos);
+  atualizarPainelRotaEmulada(pontos);
   const segmentosRoteirizados = await obterSegmentosRoteirizados(pontos);
   segmentosRoteirizados.forEach((segmento) => {
     L.polyline(segmento, {
@@ -1403,6 +1536,23 @@ botaoLimparFiltros.addEventListener('click', () => {
     campo.value = '';
   });
   renderizarTabela();
+});
+
+painelRotaParadas?.addEventListener('click', (event) => {
+  const botao = event.target.closest('button[data-indice]');
+  if (!botao) return;
+
+  destacarPonto(Number(botao.dataset.indice));
+});
+
+btnFecharPainelRota?.addEventListener('click', () => {
+  if (painelRotaEmulada) painelRotaEmulada.hidden = true;
+  if (btnMostrarPainelRota) btnMostrarPainelRota.hidden = false;
+});
+
+btnMostrarPainelRota?.addEventListener('click', () => {
+  if (painelRotaEmulada) painelRotaEmulada.hidden = false;
+  btnMostrarPainelRota.hidden = true;
 });
 
 definirPeriodoPadrao();

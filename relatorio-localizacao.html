@@ -144,7 +144,43 @@
             <span><i class="legenda-ponto cliente-rota"></i> Cliente da rota</span>
           </div>
         </div>
-        <div id="mapa-relatorio-localizacao"></div>
+        <div class="mapa-rota-wrap">
+          <aside id="painel-rota-emulada" class="painel-rota-emulada" hidden>
+            <div class="painel-rota-topo">
+              <div class="painel-modos-rota" aria-label="Modos de rota">
+                <span class="ativo"><i class="fas fa-car"></i></span>
+                <span><i class="fas fa-motorcycle"></i></span>
+                <span><i class="fas fa-bus"></i></span>
+                <span><i class="fas fa-person-walking"></i></span>
+              </div>
+              <button type="button" id="btn-fechar-painel-rota" title="Ocultar painel da rota" aria-label="Ocultar painel da rota">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div id="painel-rota-resumo" class="painel-rota-resumo"></div>
+            <ol id="painel-rota-paradas" class="painel-rota-paradas"></ol>
+            <div class="painel-rota-acoes">
+              <a id="link-painel-google-maps" href="#" target="_blank" rel="noopener noreferrer">
+                <i class="fas fa-arrow-up-right-from-square"></i> Abrir no Google Maps
+              </a>
+            </div>
+          </aside>
+          <button type="button" id="btn-mostrar-painel-rota" class="btn-mostrar-painel-rota" hidden>
+            <i class="fas fa-route"></i> Rota
+          </button>
+          <div id="mapa-relatorio-localizacao"></div>
+        </div>
+        <div id="mapa-google-relatorio" class="mapa-google-relatorio" hidden>
+          <div class="mapa-google-header">
+            <div>
+              <span class="mapa-subtitulo">Percurso no Google Maps</span>
+              <strong>Visualizacao pelas vias em nova aba</strong>
+            </div>
+            <a id="link-google-maps-relatorio" href="#" target="_blank" rel="noopener noreferrer">
+              <i class="fas fa-arrow-up-right-from-square"></i> Abrir no Google Maps
+            </a>
+          </div>
+        </div>
       </section>
 
       <section class="glass-panel posicoes-card">
@@ -209,6 +245,6 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="./script/relatorio-localizacao.js?v=20260619-1"></script>
+  <script type="module" src="./script/relatorio-localizacao.js?v=20260619-4"></script>
 </body>
 </html>
