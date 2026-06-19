@@ -6,6 +6,7 @@ const REQUISICOES_BUCKET = 'requisicoes-carregamento';
 
 let clientesCarregamento = [];
 let itensCarregamento = [];
+let modelosItensCarregamento = [];
 let requisicoesImportadas = [];
 let requisicoesSalvas = [];
 let requisicaoVinculoCarregamentoId = null;
@@ -300,16 +301,24 @@ export async function carregarItens() {
   }
 
   itensCarregamento = data || [];
+  await carregarModelosItens();
+  itensCarregamento = itensCarregamento.map(item => ({
+    ...item,
+    modelos: modelosItensCarregamento.filter(modelo => String(modelo.item_id) === String(item.id))
+  }));
 
-  data.forEach(item => {
+  itensCarregamento.forEach(item => {
+    const modelos = item.modelos || [];
+    const modelosTexto = modelos.length ? modelos.map(modelo => modelo.modelo).join(', ') : '-';
     const linha = document.createElement('tr');
     linha.innerHTML = `
-      <td>${item.codigo}</td>
-      <td>${item.nome}</td>
-      <td>${escapeHtml(item.modelo || '')}</td>
-      <td>${item.tipo}</td>
+      <td>${escapeHtml(item.codigo)}</td>
+      <td>${escapeHtml(item.nome)}</td>
+      <td title="${escapeHtml(modelosTexto)}">${escapeHtml(modelosTexto)}</td>
+      <td>${escapeHtml(item.tipo)}</td>
       <td>
         <button class="btn-icon edit" onclick="editarItem('${item.id}')" title="Editar"><i class="fas fa-pen"></i></button>
+        <button class="btn-icon carregar" onclick="abrirModelosItem('${item.id}')" title="Cadastrar modelos"><i class="fas fa-tags"></i></button>
         <button class="btn-icon delete" onclick="excluirItem('${item.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
       </td>
     `;
@@ -322,7 +331,6 @@ export async function salvarItem(event) {
 
   const id = document.getElementById('formItem').dataset.itemId;
   const nome = document.getElementById('nomeItem').value.trim();
-  const modelo = document.getElementById('modeloItem').value.trim();
   const tipo = document.getElementById('tipoItem').value;
 
   if (!nome || !tipo) {
@@ -344,13 +352,13 @@ export async function salvarItem(event) {
     // Update
     result = await supabaseClient
       .from('itens')
-      .update({ nome, modelo, tipo })
+      .update({ nome, tipo })
       .eq('id', id);
   } else {
     // Insert
     result = await supabaseClient
       .from('itens')
-      .insert([{ codigo, nome, modelo, tipo }]);
+      .insert([{ codigo, nome, tipo }]);
   }
 
   if (result.error) {
@@ -365,7 +373,6 @@ export async function salvarItem(event) {
   // Desabilitar campos após salvar
   document.getElementById('codigoItem').disabled = true;
   document.getElementById('nomeItem').disabled = true;
-  document.getElementById('modeloItem').disabled = true;
   document.getElementById('tipoItem').disabled = true;
   document.getElementById('btnSalvarItem').disabled = true;
   carregarItens();
@@ -385,14 +392,12 @@ export async function editarItem(id) {
 
   document.getElementById('codigoItem').value = data.codigo;
   document.getElementById('nomeItem').value = data.nome;
-  document.getElementById('modeloItem').value = data.modelo || '';
   document.getElementById('tipoItem').value = data.tipo;
   document.getElementById('formItem').dataset.itemId = data.id;
 
   // Habilitar campos para edição
   document.getElementById('codigoItem').disabled = false; // Código sempre desabilitado
   document.getElementById('nomeItem').disabled = false;
-  document.getElementById('modeloItem').disabled = false;
   document.getElementById('tipoItem').disabled = false;
   document.getElementById('btnSalvarItem').disabled = false;
 }
@@ -406,7 +411,6 @@ export async function incluirItem() {
   document.getElementById('codigoItem').value = '';
   document.getElementById('codigoItem').disabled = false; // Código editável conforme pedido
   document.getElementById('nomeItem').disabled = false;
-  document.getElementById('modeloItem').disabled = false;
   document.getElementById('tipoItem').disabled = false;
   document.getElementById('btnSalvarItem').disabled = false;
 }
@@ -431,6 +435,101 @@ export async function excluirItem(id) {
   carregarItens();
 }
 
+async function carregarModelosItens() {
+  const { data, error } = await supabaseClient
+    .from('item_modelos')
+    .select('*')
+    .order('modelo', { ascending: true });
+
+  if (error) {
+    console.error('Erro ao carregar modelos dos itens:', error);
+    modelosItensCarregamento = [];
+    return;
+  }
+
+  modelosItensCarregamento = data || [];
+}
+
+function fecharModelosItem() {
+  document.getElementById('modalModelosItem')?.classList.add('hidden');
+  document.getElementById('modeloItemId').value = '';
+  document.getElementById('modeloItemNome').value = '';
+}
+
+function renderizarModelosItem(item) {
+  const lista = document.getElementById('listaModelosItem');
+  const info = document.getElementById('modeloItemInfo');
+  if (!lista || !info || !item) return;
+
+  info.innerHTML = `<strong>${escapeHtml(item.codigo)} - ${escapeHtml(item.nome)}</strong><span>${escapeHtml(item.tipo || '')}</span>`;
+  const modelos = modelosItensCarregamento.filter(modelo => String(modelo.item_id) === String(item.id));
+
+  if (!modelos.length) {
+    lista.innerHTML = '<div class="modelo-empty">Nenhum modelo cadastrado para este item.</div>';
+    return;
+  }
+
+  lista.innerHTML = modelos.map(modelo => `
+    <span class="modelo-tag">
+      ${escapeHtml(modelo.modelo)}
+      <button type="button" data-excluir-modelo-item="${escapeHtml(String(modelo.id))}" title="Excluir modelo">
+        <i class="fas fa-times"></i>
+      </button>
+    </span>
+  `).join('');
+}
+
+export async function abrirModelosItem(id) {
+  const item = itensCarregamento.find(registro => String(registro.id) === String(id));
+  if (!item) return;
+
+  document.getElementById('modeloItemId').value = item.id;
+  document.getElementById('modeloItemNome').value = '';
+  renderizarModelosItem(item);
+  document.getElementById('modalModelosItem')?.classList.remove('hidden');
+  document.getElementById('modeloItemNome')?.focus();
+}
+
+export async function adicionarModeloItem() {
+  const itemId = document.getElementById('modeloItemId')?.value;
+  const modelo = cleanCell(document.getElementById('modeloItemNome')?.value).toUpperCase();
+  if (!itemId || !modelo) return;
+
+  const { error } = await supabaseClient
+    .from('item_modelos')
+    .upsert([{ item_id: itemId, modelo }], { onConflict: 'item_id,modelo' });
+
+  if (error) {
+    console.error('Erro ao salvar modelo do item:', error);
+    alert(`Erro ao salvar modelo: ${error.message}`);
+    return;
+  }
+
+  document.getElementById('modeloItemNome').value = '';
+  await carregarItens();
+  const item = itensCarregamento.find(registro => String(registro.id) === String(itemId));
+  renderizarModelosItem(item);
+  document.getElementById('modeloItemNome')?.focus();
+}
+
+export async function excluirModeloItem(id) {
+  const itemId = document.getElementById('modeloItemId')?.value;
+  const { error } = await supabaseClient
+    .from('item_modelos')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Erro ao excluir modelo do item:', error);
+    alert(`Erro ao excluir modelo: ${error.message}`);
+    return;
+  }
+
+  await carregarItens();
+  const item = itensCarregamento.find(registro => String(registro.id) === String(itemId));
+  renderizarModelosItem(item);
+}
+
 function encontrarItemRequisicao(nomeEquipamento, tipoEsperado = '', modeloEsperado = '') {
   const equipamento = normalizarBuscaImportacao(nomeEquipamento);
   const modeloReq = normalizarBuscaImportacao(modeloEsperado);
@@ -440,14 +539,16 @@ function encontrarItemRequisicao(nomeEquipamento, tipoEsperado = '', modeloEsper
     .map(item => {
       const nome = normalizarBuscaImportacao(item.nome).replace(/\b(?:NOVO|USADO)\b/g, ' ').replace(/\s+/g, ' ').trim();
       const codigo = normalizarBuscaImportacao(item.codigo);
-      const modelo = normalizarBuscaImportacao(item.modelo);
+      const modelos = (item.modelos || []).map(modelo => normalizarBuscaImportacao(modelo.modelo)).filter(Boolean);
       let pontuacao = 0;
       if (nome === equipamento || codigo === equipamento) pontuacao = 100;
       if (nome.includes(equipamento) || equipamento.includes(nome)) pontuacao = Math.max(pontuacao, 70);
       if (tipoEsperado && normalizarTexto(item.tipo) === tipoEsperado) pontuacao += 20;
-      if (modeloReq && modelo) {
-        if (modelo === modeloReq) pontuacao += 30;
-        else if (modelo.includes(modeloReq) || modeloReq.includes(modelo)) pontuacao += 15;
+      if (modeloReq && modelos.length) {
+        const matchExato = modelos.some(modelo => modelo === modeloReq);
+        const matchParcial = modelos.some(modelo => modelo.includes(modeloReq) || modeloReq.includes(modelo));
+        if (matchExato) pontuacao += 30;
+        else if (matchParcial) pontuacao += 15;
       }
       return { item, pontuacao };
     })
@@ -708,7 +809,68 @@ function encontrarRequisicaoSalva(id) {
   return requisicoesSalvas.find(req => String(req.id) === String(id));
 }
 
-function renderizarItensRequisicaoDetalhes(req) {
+function normalizarNomeItemParaComparacao(value) {
+  return normalizarBuscaImportacao(value)
+    .replace(/^\d+\s*[-–]\s*/, '')
+    .replace(/\b(?:NOVO|USADO)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function encontrarCadastroItemDaRequisicao(item) {
+  if (item.item_id) {
+    const porId = itensCarregamento.find(registro => String(registro.id) === String(item.item_id));
+    if (porId) return porId;
+  }
+
+  const equipamento = normalizarNomeItemParaComparacao(item.equipamento || item.item_nome);
+  const itemNome = normalizarNomeItemParaComparacao(item.item_nome);
+  if (!equipamento && !itemNome) return null;
+
+  return itensCarregamento.find(registro => {
+    const nome = normalizarNomeItemParaComparacao(registro.nome);
+    const codigo = normalizarBuscaImportacao(registro.codigo);
+    if (!nome && !codigo) return false;
+    return (
+      nome === equipamento ||
+      nome === itemNome ||
+      (nome && equipamento.includes(nome)) ||
+      (nome && itemNome.includes(nome)) ||
+      codigo === equipamento ||
+      codigo === itemNome
+    );
+  }) || null;
+}
+
+function obterModelosDoItemRequisicao(item) {
+  const cadastro = encontrarCadastroItemDaRequisicao(item);
+  return cadastro?.modelos || [];
+}
+
+function renderizarSelectModeloRequisicao(item, index, editando) {
+  const modelos = obterModelosDoItemRequisicao(item);
+  const valorAtual = String(item.modelo || '').trim();
+
+  if (!editando) return escapeHtml(valorAtual);
+  if (!modelos.length) {
+    return `<select class="glass-input requisicao-modelo-select" data-item-index="${index}" disabled>
+      <option value="">Sem modelos</option>
+    </select>`;
+  }
+
+  const opcoes = [
+    '<option value="">Selecione</option>',
+    ...modelos.map(modelo => {
+      const valor = String(modelo.modelo || '').trim();
+      const selected = normalizarTexto(valor) === normalizarTexto(valorAtual) ? 'selected' : '';
+      return `<option value="${escapeHtml(valor)}" ${selected}>${escapeHtml(valor)}</option>`;
+    })
+  ].join('');
+
+  return `<select class="glass-input requisicao-modelo-select" data-item-index="${index}">${opcoes}</select>`;
+}
+
+function renderizarItensRequisicaoDetalhes(req, editando = false) {
   const container = document.getElementById('requisicaoDetalhesItens');
   if (!container) return;
 
@@ -729,11 +891,11 @@ function renderizarItensRequisicaoDetalhes(req) {
         </tr>
       </thead>
       <tbody>
-        ${itens.map(item => `
+        ${itens.map((item, index) => `
           <tr>
             <td>${escapeHtml(item.quantidade || '')}</td>
             <td>${escapeHtml(item.item_nome || item.equipamento || '')}</td>
-            <td>${escapeHtml(item.modelo || '')}</td>
+            <td>${renderizarSelectModeloRequisicao(item, index, editando)}</td>
             <td>${escapeHtml(item.tipo || '')}</td>
           </tr>
         `).join('')}
@@ -763,9 +925,8 @@ function abrirModalRequisicaoDetalhes(id, modo = 'visualizar') {
     <p><strong>Usuário:</strong> ${escapeHtml(req.usuario || '-')}</p>
     <p><strong>Anexo:</strong> ${escapeHtml(req.arquivo_path ? req.arquivo : 'Sem anexo')}</p>
   `;
-  renderizarItensRequisicaoDetalhes(req);
-
   const editando = modo === 'editar';
+  renderizarItensRequisicaoDetalhes(req, editando);
   ['requisicaoDetalhesStatus', 'requisicaoDetalhesData', 'requisicaoDetalhesSupervisor', 'requisicaoDetalhesCliente', 'requisicaoDetalhesMotivo']
     .forEach(idCampo => {
       document.getElementById(idCampo).disabled = !editando;
@@ -782,12 +943,22 @@ function fecharModalRequisicaoDetalhes() {
 async function salvarDetalhesRequisicao(event) {
   event.preventDefault();
   const id = document.getElementById('requisicaoDetalhesId').value;
+  const req = encontrarRequisicaoSalva(id);
+  const itensAtualizados = Array.isArray(req?.itens) ? req.itens.map(item => ({ ...item })) : [];
+  document.querySelectorAll('#requisicaoDetalhesItens [data-item-index]').forEach(select => {
+    const index = Number(select.dataset.itemIndex);
+    if (Number.isInteger(index) && itensAtualizados[index]) {
+      itensAtualizados[index].modelo = select.value || '';
+    }
+  });
+
   const payload = {
     status: document.getElementById('requisicaoDetalhesStatus').value,
     data_requisicao: document.getElementById('requisicaoDetalhesData').value || null,
     supervisor: document.getElementById('requisicaoDetalhesSupervisor').value.trim(),
     cliente_nome: document.getElementById('requisicaoDetalhesCliente').value.trim(),
-    motivo: document.getElementById('requisicaoDetalhesMotivo').value.trim()
+    motivo: document.getElementById('requisicaoDetalhesMotivo').value.trim(),
+    itens: itensAtualizados
   };
 
   const { error } = await supabaseClient

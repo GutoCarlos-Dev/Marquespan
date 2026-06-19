@@ -208,10 +208,6 @@
             <input type="text" id="nomeItem" placeholder="Nome do Item" required disabled class="glass-input">
           </div>
           <div class="form-group">
-            <label for="modeloItem">MOD.:</label>
-            <input type="text" id="modeloItem" placeholder="Modelo ou variação" disabled class="glass-input">
-          </div>
-          <div class="form-group">
             <label for="tipoItem">Tipo:</label>
             <select id="tipoItem" required disabled class="glass-input">
               <option value="" disabled selected>Selecione o tipo</option>
@@ -231,7 +227,7 @@
             <tr>
               <th>Código</th>
               <th>Nome</th>
-              <th>MOD.</th>
+              <th>Modelos</th>
               <th>Tipo</th>
               <th>Ações</th>
             </tr>
@@ -544,11 +540,29 @@
     </div>
   </div>
 
+  <div id="modalModelosItem" class="import-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloModalModelosItem">
+    <div class="import-modal-content modal-modelos-item">
+      <div class="import-modal-header">
+        <h3 id="tituloModalModelosItem"><i class="fas fa-tags"></i> Modelos do Item</h3>
+        <button type="button" id="btnFecharModelosItem" class="modal-close" aria-label="Fechar">&times;</button>
+      </div>
+      <input type="hidden" id="modeloItemId">
+      <div class="modelo-item-info" id="modeloItemInfo"></div>
+      <div class="modelo-item-form">
+        <input type="text" id="modeloItemNome" class="glass-input" placeholder="Ex.: GAS, ELETRICO, 950, 1100">
+        <button type="button" id="btnAdicionarModeloItem" class="btn-glass btn-green">
+          <i class="fas fa-plus"></i> Adicionar
+        </button>
+      </div>
+      <div id="listaModelosItem" class="modelo-tags-list"></div>
+    </div>
+  </div>
+
   <script type="module" src="script/menu.js"></script>
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260619-2';
+    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, abrirModelosItem, adicionarModeloItem, excluirModeloItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260619-3';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
@@ -566,6 +580,21 @@
       });
 
       document.getElementById('formItem').addEventListener('submit', salvarItem);
+      document.getElementById('btnFecharModelosItem').addEventListener('click', () => document.getElementById('modalModelosItem').classList.add('hidden'));
+      document.getElementById('btnAdicionarModeloItem').addEventListener('click', () => window.adicionarModeloItem?.());
+      document.getElementById('modeloItemNome').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          window.adicionarModeloItem?.();
+        }
+      });
+      document.getElementById('listaModelosItem').addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-excluir-modelo-item]');
+        if (btn) window.excluirModeloItem?.(btn.dataset.excluirModeloItem);
+      });
+      document.getElementById('modalModelosItem').addEventListener('click', (event) => {
+        if (event.target.id === 'modalModelosItem') document.getElementById('modalModelosItem').classList.add('hidden');
+      });
       document.getElementById('formCliente').addEventListener('submit', salvarClienteCompleto);
       document.getElementById('btnAbrirModalCliente').addEventListener('click', () => abrirModalCliente());
       document.getElementById('btnFecharModalCliente').addEventListener('click', fecharModalCliente);
@@ -578,6 +607,9 @@
       document.getElementById('btnIncluirItem').addEventListener('click', incluirItem);
       window.editarItem = editarItem;
       window.excluirItem = excluirItem;
+      window.abrirModelosItem = abrirModelosItem;
+      window.adicionarModeloItem = adicionarModeloItem;
+      window.excluirModeloItem = excluirModeloItem;
       window.editarCliente = editarCliente;
       window.excluirCliente = excluirCliente;
       await Promise.all([

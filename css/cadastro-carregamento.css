@@ -803,7 +803,7 @@
 /* === ABA CARREGAMENTO === */
 
 #itens .cliente-form-grid {
-  grid-template-columns: minmax(140px, 1fr) minmax(220px, 2fr) minmax(180px, 1.4fr) minmax(150px, 1fr);
+  grid-template-columns: minmax(140px, 1fr) minmax(240px, 2fr) minmax(150px, 1fr);
 }
 
 #itens .btn-glass {
@@ -818,6 +818,85 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.modal-modelos-item {
+  max-width: 720px;
+  width: 100%;
+}
+
+.modelo-item-info {
+  align-items: center;
+  background: #f0fff4;
+  border: 1px solid rgba(0, 105, 55, 0.18);
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+
+.modelo-item-info strong {
+  color: var(--primary-color);
+}
+
+.modelo-item-info span {
+  color: #6c757d;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.modelo-item-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.modelo-item-form .glass-input {
+  flex: 1;
+}
+
+.modelo-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.modelo-tag {
+  align-items: center;
+  background: rgba(0, 105, 55, 0.09);
+  border: 1px solid rgba(0, 105, 55, 0.22);
+  border-radius: 999px;
+  color: var(--primary-color);
+  display: inline-flex;
+  font-size: 0.84rem;
+  font-weight: 700;
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+.modelo-tag button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #c0392b;
+  cursor: pointer;
+  display: inline-flex;
+  padding: 0;
+}
+
+.modelo-empty {
+  color: #6c757d;
+  font-size: 0.88rem;
+  padding: 8px 0;
+}
+
+.requisicao-modelo-select {
+  min-width: 150px;
+  padding: 6px 8px;
+  font-size: 0.82rem;
 }
 
 .carregamento-form-grid {
