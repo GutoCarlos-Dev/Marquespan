@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lavagem Mobile - Marquespan</title>
-    <link rel="stylesheet" href="css/mobile-lavagem.css">
+    <link rel="stylesheet" href="css/mobile-lavagem.css?v=20260619-3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Estilo para Veículos Internados - AZUL */
@@ -15,7 +15,6 @@
         /* Desabilita interação com cards internados */
         .card-internado {
             opacity: 0.8;
-            pointer-events: none; /* Impede cliques */
         }
         /* Estilo para PENDENTE - VERMELHO */
         .badge-pendente {
@@ -34,7 +33,6 @@
         }
         .card-pular {
             opacity: 0.8;
-            pointer-events: none; /* Impede cliques */
         }
     </style>
   <link rel="icon" href="img/logonavegador.png" type="image/png">
@@ -84,6 +82,34 @@
     </div>
 
     <!-- Modal de Ação -->
+    <div id="modalLocalizacaoLavagem" class="mobile-modal hidden">
+        <div class="modal-content modal-localizacao-content">
+            <div class="modal-header">
+                <h3 id="modalLocalizacaoLavagemTitulo">Localizar veiculo</h3>
+                <button id="btnFecharModalLocalizacaoLavagem" class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body modal-localizacao-body">
+                <div id="statusLocalizacaoLavagem" class="localizacao-status-mobile">
+                    <i class="fas fa-spinner fa-spin"></i> Consultando localizacao...
+                </div>
+                <iframe
+                    id="iframeLocalizacaoLavagem"
+                    title="Mapa de localizacao do veiculo"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    class="hidden">
+                </iframe>
+                <a
+                    id="linkAbrirLocalizacaoLavagemMaps"
+                    class="btn-abrir-maps-mobile hidden"
+                    target="_blank"
+                    rel="noopener noreferrer">
+                    <i class="fas fa-up-right-from-square"></i> Abrir no Google Maps
+                </a>
+            </div>
+        </div>
+    </div>
+
     <div id="modalAcaoMobile" class="mobile-modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -107,7 +133,7 @@
         </div>
     </div>
 
-    <script type="module" src="script/mobile-lavagem.js"></script>
+    <script type="module" src="script/mobile-lavagem.js?v=20260619-3"></script>
     <script>
         // Script auxiliar para aplicar estilos e bloqueios a veículos INTERNADOS
         document.addEventListener('DOMContentLoaded', () => {

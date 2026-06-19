@@ -24,18 +24,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Otimização: usa delegação de eventos para os cliques nos cards
-    document.getElementById('listaDeItens').addEventListener('click', (e) => {
+    const listaDeItens = document.getElementById('listaDeItens');
+
+    listaDeItens.addEventListener('click', async (e) => {
+        const botaoLocalizar = e.target.closest('.btn-localizar-veiculo-lavagem');
+        if (!botaoLocalizar) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        await abrirModalLocalizacaoLavagem(botaoLocalizar.dataset.placa);
+    }, true);
+
+    listaDeItens.addEventListener('click', async (e) => {
+        const botaoLocalizar = e.target.closest('.btn-localizar-veiculo-lavagem');
+        if (botaoLocalizar) {
+            e.preventDefault();
+            e.stopPropagation();
+            await abrirModalLocalizacaoLavagem(botaoLocalizar.dataset.placa);
+            return;
+        }
+
+        if (e.target.closest('button, a, input, select, textarea, label')) return;
+
         const card = e.target.closest('.card[data-item-id]');
         if (card) {
             const itemId = card.dataset.itemId;
             const item = currentItems.find(i => String(i.id) === itemId);
             if (item) {
+                const statusNormalizado = normalizarStatusLavagem(item.status);
+                if (statusNormalizado === 'INTERNADO' || statusNormalizado === 'DISPENSADO') return;
                 abrirModalAcao(item);
             }
         }
     });
 
-    document.querySelector('.close-modal').addEventListener('click', fecharModal);
+    document.querySelector('#modalAcaoMobile .close-modal')?.addEventListener('click', fecharModal);
+    document.getElementById('btnFecharModalLocalizacaoLavagem')?.addEventListener('click', fecharModalLocalizacaoLavagem);
     document.getElementById('btnSalvarLavagem').addEventListener('click', salvarLavagem);
 });
 
@@ -140,13 +165,18 @@ function atualizarContadores() {
     if (elInternados) elInternados.textContent = `(${counts.internados})`;
 }
 
+function normalizarStatusLavagem(status) {
+    if (status === 'PULAR_LAVAGEM' || status === 'DISPENSADO') return 'DISPENSADO';
+    return status || '';
+}
+
 function renderizarItens() {
     const container = document.getElementById('listaDeItens');
     const termo = document.getElementById('searchPlacaMobile').value.toUpperCase();
 
     const itensFiltrados = currentItems.filter(item => {
         const matchTermo = item.placa.includes(termo);
-        const itemStatus = (item.status === 'PULAR_LAVAGEM' || item.status === 'DISPENSADO') ? 'DISPENSADO' : item.status; // Normaliza para filtro
+        const itemStatus = normalizarStatusLavagem(item.status); // Normaliza para filtro
         const matchStatus = currentFilter === 'TODOS' || itemStatus === currentFilter;
         return matchTermo && matchStatus;
     });
@@ -173,12 +203,21 @@ function renderizarItens() {
         return `
             <div class="card ${cardClass}" data-item-id="${item.id}">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
+                    <div style="min-width:0; padding-right:10px;">
                         <h4>${item.placa}</h4>
                         <p>${item.modelo || 'Modelo não inf.'}${infoExtra}</p>
                     </div>
-                    <div style="text-align:right;">
-                        <span class="status">${(item.status === 'PULAR_LAVAGEM' || item.status === 'DISPENSADO') ? 'DISPENSADO' : item.status}</span>
+                    <div class="card-acoes-lavagem">
+                        <span class="status">${normalizarStatusLavagem(item.status)}</span>
+                        <button
+                            type="button"
+                            class="btn-localizar-veiculo-lavagem"
+                            data-placa="${item.placa}"
+                            title="Localizar placa"
+                            aria-label="Localizar placa ${item.placa}"
+                            onclick="return window.abrirLocalizacaoLavagem(event, this.dataset.placa)">
+                            <i class="fas fa-location-dot"></i>
+                        </button>
                         ${isRealizado ? '<br><i class="fas fa-check-circle" style="color:green; margin-top:5px;"></i>' : ''}
                     </div>
                 </div>
@@ -188,6 +227,98 @@ function renderizarItens() {
 
     container.innerHTML = cardsHtml;
 }
+
+function placaSemMascara(valor) {
+    return String(valor || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function abrirModalLocalizacaoLavagemCarregando(placa) {
+    const modal = document.getElementById('modalLocalizacaoLavagem');
+    const titulo = document.getElementById('modalLocalizacaoLavagemTitulo');
+    const status = document.getElementById('statusLocalizacaoLavagem');
+    const iframe = document.getElementById('iframeLocalizacaoLavagem');
+    const link = document.getElementById('linkAbrirLocalizacaoLavagemMaps');
+
+    if (titulo) titulo.textContent = `Localizar ${placa}`;
+    if (status) {
+        status.className = 'localizacao-status-mobile';
+        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando localizacao...';
+    }
+    if (iframe) {
+        iframe.src = 'about:blank';
+        iframe.classList.add('hidden');
+    }
+    if (link) {
+        link.href = '#';
+        link.classList.add('hidden');
+    }
+
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+    }
+}
+
+async function abrirModalLocalizacaoLavagem(placaOriginal) {
+    const placa = placaSemMascara(placaOriginal);
+    const status = document.getElementById('statusLocalizacaoLavagem');
+    const iframe = document.getElementById('iframeLocalizacaoLavagem');
+    const link = document.getElementById('linkAbrirLocalizacaoLavagemMaps');
+
+    if (placa.length !== 7) {
+        alert('Placa invalida para localizacao.');
+        return;
+    }
+
+    abrirModalLocalizacaoLavagemCarregando(placa);
+
+    try {
+        const { data, error } = await supabaseClient.functions.invoke('localizacao-veiculo', {
+            body: { placa }
+        });
+
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.message || 'Nao foi possivel localizar o veiculo.');
+
+        const dados = data.data || {};
+        const latitude = Number(dados.latitude);
+        const longitude = Number(dados.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            throw new Error('O rastreador nao retornou coordenadas para esta placa.');
+        }
+
+        const coordenadas = `${latitude},${longitude}`;
+        const urlMapa = `https://www.google.com/maps?q=${encodeURIComponent(coordenadas)}`;
+        const urlEmbed = `${urlMapa}&output=embed`;
+
+        if (iframe) {
+            iframe.src = urlEmbed;
+            iframe.classList.remove('hidden');
+        }
+        if (link) {
+            link.href = urlMapa;
+            link.classList.remove('hidden');
+        }
+        if (status) {
+            status.className = 'localizacao-status-mobile sucesso';
+            status.innerHTML = `<i class="fas fa-location-dot"></i> ${dados.endereco || coordenadas}`;
+        }
+    } catch (error) {
+        console.error('Erro ao localizar veiculo:', error);
+        if (status) {
+            status.className = 'localizacao-status-mobile erro';
+            status.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${error?.message || 'Nao foi possivel localizar o veiculo.'}`;
+        }
+    }
+}
+
+window.abrirLocalizacaoLavagem = async function(event, placa) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    event?.stopImmediatePropagation?.();
+    await abrirModalLocalizacaoLavagem(placa);
+    return false;
+};
 
 let itemSelecionadoParaAcao = null;
 
@@ -294,6 +425,16 @@ async function salvarLavagem() {
 function fecharModal() {
     document.getElementById('modalAcaoMobile').classList.add('hidden');
     itemSelecionadoParaAcao = null;
+}
+
+function fecharModalLocalizacaoLavagem() {
+    const modal = document.getElementById('modalLocalizacaoLavagem');
+    const iframe = document.getElementById('iframeLocalizacaoLavagem');
+    if (iframe) iframe.src = 'about:blank';
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+    }
 }
 
 function showScreenListas() {
