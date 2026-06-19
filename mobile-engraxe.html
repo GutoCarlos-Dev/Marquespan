@@ -112,8 +112,33 @@
         </div>
     </div>
 
+    <!-- MODAL DE LOCALIZACAO -->
+    <div id="modalLocalizacaoVeiculo" class="modal-overlay hidden">
+        <div class="modal-content modal-localizacao-content">
+            <div class="modal-header">
+                <h3 id="modalLocalizacaoTitulo">Localizar Veiculo</h3>
+                <button id="btnFecharModalLocalizacao" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body modal-localizacao-body">
+                <div id="statusLocalizacaoVeiculo" class="localizacao-status-mobile">
+                    <i class="fas fa-spinner fa-spin"></i> Consultando localizacao...
+                </div>
+                <iframe
+                    id="iframeLocalizacaoVeiculo"
+                    title="Localizacao do veiculo"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    allowfullscreen
+                ></iframe>
+                <a id="linkAbrirLocalizacaoMaps" class="btn-abrir-maps-mobile" href="#" target="_blank" rel="noopener noreferrer">
+                    <i class="fas fa-map-location-dot"></i> Abrir no Google Maps
+                </a>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="./script/auth-guard.js"></script>
     <script type="module" src="./script/presenca-online.js"></script>
-    <script type="module" src="script/mobile-engraxe.js?v=20260612-4"></script>
+    <script type="module" src="script/mobile-engraxe.js?v=20260619-3"></script>
 </body>
 </html>

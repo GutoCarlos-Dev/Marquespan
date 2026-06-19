@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnFechar = document.getElementById('btnFecharModal');
     if (btnFechar) btnFechar.addEventListener('click', fecharModal);
 
+    const btnFecharLocalizacao = document.getElementById('btnFecharModalLocalizacao');
+    if (btnFecharLocalizacao) btnFecharLocalizacao.addEventListener('click', fecharModalLocalizacao);
+
     const btnSalvar = document.getElementById('btnSalvarItemMobile');
     if (btnSalvar) btnSalvar.addEventListener('click', salvarItemMobile);
     
@@ -41,11 +44,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const containerItens = document.getElementById('listaVeiculosContainer');
     if (containerItens) {
         containerItens.addEventListener('click', async (e) => {
+            const botaoLocalizar = e.target.closest('.btn-localizar-veiculo');
+            if (!botaoLocalizar) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            await abrirModalLocalizacaoVeiculo(botaoLocalizar.dataset.placa);
+        }, true);
+
+        containerItens.addEventListener('click', async (e) => {
             const togglePlaqueta = e.target.closest('.plaqueta-toggle');
             if (togglePlaqueta) {
                 e.preventDefault();
                 e.stopPropagation();
                 await alternarPlaquetaMobile(togglePlaqueta);
+                return;
+            }
+
+            const botaoLocalizar = e.target.closest('.btn-localizar-veiculo');
+            if (botaoLocalizar) {
+                e.preventDefault();
+                e.stopPropagation();
+                await abrirModalLocalizacaoVeiculo(botaoLocalizar.dataset.placa);
+                return;
+            }
+
+            if (e.target.closest('button, a, input, select, textarea, label')) {
                 return;
             }
 
@@ -201,6 +226,16 @@ function renderizarItensMobile() {
                     </div>
                     <div style="text-align: right;">
                         <span class="status">${status}</span>
+                        <button
+                            type="button"
+                            class="btn-localizar-veiculo"
+                            data-placa="${item.placa}"
+                            title="Localizar placa"
+                            aria-label="Localizar placa ${item.placa}"
+                            onclick="return window.abrirLocalizacaoEngraxe(event, this.dataset.placa)"
+                        >
+                            <i class="fas fa-map-location-dot"></i>
+                        </button>
                         ${isDone ? '<br><i class="fas fa-check-circle" style="color: #28a745; margin-top: 5px; font-size: 1.2rem;"></i>' : ''}
                     </div>
                 </div>
@@ -290,6 +325,98 @@ function atualizarContadores() {
     setTxt('countRealizados', counts.realizados);
     setTxt('countRota', counts.rota);
     setTxt('countInternados', counts.internados);
+}
+
+function placaSemMascara(valor) {
+    return String(valor || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function abrirModalLocalizacaoCarregando(placa) {
+    const modal = document.getElementById('modalLocalizacaoVeiculo');
+    const titulo = document.getElementById('modalLocalizacaoTitulo');
+    const status = document.getElementById('statusLocalizacaoVeiculo');
+    const iframe = document.getElementById('iframeLocalizacaoVeiculo');
+    const link = document.getElementById('linkAbrirLocalizacaoMaps');
+
+    if (titulo) titulo.textContent = `Localizar ${placa}`;
+    if (status) {
+        status.className = 'localizacao-status-mobile';
+        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando localizacao...';
+    }
+    if (iframe) iframe.src = 'about:blank';
+    if (link) {
+        link.href = '#';
+        link.classList.add('hidden');
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+}
+
+async function abrirModalLocalizacaoVeiculo(placaOriginal) {
+    const placa = placaSemMascara(placaOriginal);
+    const status = document.getElementById('statusLocalizacaoVeiculo');
+    const iframe = document.getElementById('iframeLocalizacaoVeiculo');
+    const link = document.getElementById('linkAbrirLocalizacaoMaps');
+
+    if (placa.length !== 7) {
+        alert('Placa invalida para localizacao.');
+        return;
+    }
+
+    abrirModalLocalizacaoCarregando(placa);
+
+    try {
+        const { data, error } = await supabaseClient.functions.invoke('localizacao-veiculo', {
+            body: { placa }
+        });
+
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.message || 'Nao foi possivel localizar o veiculo.');
+
+        const dados = data.data || {};
+        const latitude = Number(dados.latitude);
+        const longitude = Number(dados.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            throw new Error('O rastreador nao retornou coordenadas para esta placa.');
+        }
+
+        const coordenadas = `${latitude},${longitude}`;
+        const urlMapa = `https://www.google.com/maps?q=${encodeURIComponent(coordenadas)}`;
+        const urlEmbed = `${urlMapa}&output=embed`;
+
+        if (iframe) iframe.src = urlEmbed;
+        if (link) {
+            link.href = urlMapa;
+            link.classList.remove('hidden');
+        }
+        if (status) {
+            status.className = 'localizacao-status-mobile sucesso';
+            status.innerHTML = `<i class="fas fa-location-dot"></i> ${dados.endereco || coordenadas}`;
+        }
+    } catch (error) {
+        console.error('Erro ao localizar veiculo:', error);
+        if (status) {
+            status.className = 'localizacao-status-mobile erro';
+            status.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${error?.message || 'Nao foi possivel localizar o veiculo.'}`;
+        }
+    }
+}
+
+window.abrirLocalizacaoEngraxe = async function(event, placa) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    event?.stopImmediatePropagation?.();
+    await abrirModalLocalizacaoVeiculo(placa);
+    return false;
+};
+
+function fecharModalLocalizacao() {
+    const modal = document.getElementById('modalLocalizacaoVeiculo');
+    const iframe = document.getElementById('iframeLocalizacaoVeiculo');
+    if (iframe) iframe.src = 'about:blank';
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
 }
 
 window.prepararEdicaoMobile = function(id) {
