@@ -270,7 +270,7 @@ function focarVeiculo(placa) {
   });
 }
 
-function renderizarFrota() {
+function renderizarFrota({ ajustarEnquadramento = false } = {}) {
   const frota = obterFrotaFiltrada();
   camadaMarcadores.clearLayers();
   marcadoresPorPlaca = new Map();
@@ -339,7 +339,7 @@ function renderizarFrota() {
       : '<span class="resumo-frota-sem-placas">Nenhuma placa.</span>';
   }
 
-  if (limites.length > 0) {
+  if (ajustarEnquadramento && limites.length > 0) {
     mapa.fitBounds(L.latLngBounds(limites), { padding: [35, 35], maxZoom: 14 });
   }
   setTimeout(() => mapa.invalidateSize(), 50);
@@ -466,7 +466,7 @@ async function consultarFrota() {
     frotaCompleta = Array.isArray(data.data?.veiculos) ? data.data.veiculos : [];
     document.getElementById('total-frota-cadastrada').textContent = data.data?.totalCadastrados || 0;
     atualizarTipos();
-    renderizarFrota();
+    renderizarFrota({ ajustarEnquadramento: !primeiraConsultaRealizada });
     status.className = 'online';
     status.innerHTML = '<i class="fas fa-circle"></i> Monitoramento ativo';
     document.getElementById('hora-atualizacao-frota').textContent = `Atualizado em ${formatarData(data.data?.consultadoEm)}`;
