@@ -157,10 +157,26 @@ function iniciarMapa() {
   camadaMarcadores = L.layerGroup().addTo(mapa);
 }
 
-function marcadorIcone(cor) {
+function isEquipamentoFrota(veiculo) {
+  return [
+    veiculo?.tipo,
+    veiculo?.modelo,
+    veiculo?.grupo,
+    veiculo?.unidade,
+    veiculo?.referencia,
+    veiculo?.placa,
+    veiculo?.placaFormatada
+  ].some(valor => normalizarTexto(valor).includes('EQPTO'));
+}
+
+function marcadorIcone(cor, veiculo = {}) {
+  const equipamento = isEquipamentoFrota(veiculo);
+  const classe = equipamento ? 'marcador-frota marcador-frota-eqpto' : 'marcador-frota';
+  const icone = equipamento ? 'fa-truck-moving' : 'fa-truck';
+  const corMarcador = equipamento ? '#f59e0b' : cor;
   return L.divIcon({
     className: '',
-    html: `<div class="marcador-frota" style="background:${cor}"><i class="fas fa-truck"></i></div>`,
+    html: `<div class="${classe}" style="background:${corMarcador}"><i class="fas ${icone}"></i></div>`,
     iconSize: [34, 34],
     iconAnchor: [17, 34],
     popupAnchor: [0, -32]
@@ -266,9 +282,9 @@ function renderizarFrota() {
     const longitude = Number(veiculo.longitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
 
-    const cor = corDoTipo(veiculo.tipo);
+    const cor = isEquipamentoFrota(veiculo) ? '#f59e0b' : corDoTipo(veiculo.tipo);
     const marcador = L.marker([latitude, longitude], {
-      icon: marcadorIcone(cor)
+      icon: marcadorIcone(cor, veiculo)
     })
       .bindTooltip(tooltipVeiculo(veiculo), {
         className: 'tooltip-frota-container',

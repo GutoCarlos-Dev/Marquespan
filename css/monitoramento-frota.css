@@ -633,6 +633,18 @@ body.frota-fullscreen-active .btn-alternar-painel-frota {
   transform: rotate(45deg);
 }
 
+.marcador-frota-eqpto {
+  border-radius: 50%;
+  color: #000000;
+  outline: 3px solid rgba(255, 255, 255, 0.72);
+  transform: none;
+}
+
+.marcador-frota-eqpto i {
+  font-size: 14px;
+  transform: none;
+}
+
 .popup-frota {
   min-width: 210px;
 }
