@@ -33,6 +33,11 @@ let escalasPorDataAtual = new Map();
 let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
 const GEOCODE_DELAY_MS = 1200;
 const MAX_CLIENTES_ROTA_MAPA = 120;
+const OSRM_ROUTE_SERVICE_URL = 'https://router.project-osrm.org/route/v1/driving';
+const MAX_PONTOS_ROTEIRIZACAO = 300;
+const MAX_WAYPOINTS_OSRM = 60;
+const DISTANCIA_MINIMA_ROTEIRIZACAO_KM = 0.08;
+const DISTANCIA_MAXIMA_TRECHO_ROTEIRIZACAO_KM = 80;
 const MATRIZ_MARQUESPAN = {
   latitude: -23.330692,
   longitude: -47.851799
@@ -279,6 +284,106 @@ function calcularDistancia(pontos) {
   return total;
 }
 
+function coordenadasBrutas(pontos) {
+  return pontos.map((ponto) => [ponto.latitude, ponto.longitude]);
+}
+
+function pontoValidoRoteirizacao(ponto) {
+  return Number.isFinite(ponto?.latitude)
+    && Number.isFinite(ponto?.longitude)
+    && ponto.latitude >= -90
+    && ponto.latitude <= 90
+    && ponto.longitude >= -180
+    && ponto.longitude <= 180;
+}
+
+function simplificarPontosRoteirizacao(pontos) {
+  const validos = pontos.filter(pontoValidoRoteirizacao);
+  if (validos.length <= 2) return validos;
+
+  const reduzidos = [validos[0]];
+  for (let indice = 1; indice < validos.length - 1; indice += 1) {
+    const ponto = validos[indice];
+    const ultimo = reduzidos[reduzidos.length - 1];
+    if (distanciaKm(ultimo, ponto) >= DISTANCIA_MINIMA_ROTEIRIZACAO_KM) {
+      reduzidos.push(ponto);
+    }
+  }
+  reduzidos.push(validos[validos.length - 1]);
+
+  if (reduzidos.length <= MAX_PONTOS_ROTEIRIZACAO) return reduzidos;
+
+  const passo = Math.ceil(reduzidos.length / MAX_PONTOS_ROTEIRIZACAO);
+  return reduzidos.filter((_, indice) => indice === 0
+    || indice === reduzidos.length - 1
+    || indice % passo === 0);
+}
+
+function dividirPontosRoteirizacao(pontos) {
+  const segmentos = [];
+  let segmentoAtual = [];
+
+  pontos.forEach((ponto) => {
+    const anterior = segmentoAtual[segmentoAtual.length - 1];
+    if (anterior && distanciaKm(anterior, ponto) > DISTANCIA_MAXIMA_TRECHO_ROTEIRIZACAO_KM) {
+      if (segmentoAtual.length >= 2) segmentos.push(segmentoAtual);
+      segmentoAtual = [ponto];
+      return;
+    }
+
+    segmentoAtual.push(ponto);
+    if (segmentoAtual.length >= MAX_WAYPOINTS_OSRM) {
+      segmentos.push(segmentoAtual);
+      segmentoAtual = [ponto];
+    }
+  });
+
+  if (segmentoAtual.length >= 2) segmentos.push(segmentoAtual);
+  return segmentos;
+}
+
+async function buscarSegmentoRoteirizado(segmento) {
+  const coordenadas = segmento
+    .map((ponto) => `${ponto.longitude},${ponto.latitude}`)
+    .join(';');
+  const url = `${OSRM_ROUTE_SERVICE_URL}/${coordenadas}?overview=full&geometries=geojson&steps=false`;
+  const resposta = await fetch(url);
+  if (!resposta.ok) {
+    throw new Error(`OSRM retornou ${resposta.status}`);
+  }
+
+  const dados = await resposta.json();
+  const rota = dados?.routes?.[0]?.geometry?.coordinates;
+  if (!Array.isArray(rota) || rota.length < 2) {
+    throw new Error('OSRM nao retornou geometria para o percurso.');
+  }
+
+  return rota.map(([longitude, latitude]) => [latitude, longitude]);
+}
+
+async function obterSegmentosRoteirizados(pontos) {
+  const pontosRoteirizacao = simplificarPontosRoteirizacao(pontos);
+  if (pontosRoteirizacao.length < 2) {
+    return [coordenadasBrutas(pontos)];
+  }
+
+  const segmentos = dividirPontosRoteirizacao(pontosRoteirizacao);
+  if (!segmentos.length) {
+    return [coordenadasBrutas(pontos)];
+  }
+
+  try {
+    const rotas = [];
+    for (const segmento of segmentos) {
+      rotas.push(await buscarSegmentoRoteirizado(segmento));
+    }
+    return rotas;
+  } catch (error) {
+    console.warn('Nao foi possivel roteirizar o percurso pelas vias. Usando coordenadas brutas.', error);
+    return [coordenadasBrutas(pontos)];
+  }
+}
+
 function popupPonto(ponto, titulo) {
   const dataEscala = obterDataISOLocal(ponto.dataInicial);
   const escalasDoDia = obterEscalasDoPonto(ponto);
@@ -307,7 +412,7 @@ function popupPonto(ponto, titulo) {
   `;
 }
 
-function desenharMapa(pontos) {
+async function desenharMapa(pontos) {
   if (!mapa || !camadaPercurso) {
     throw new Error('O mapa não foi carregado. Atualize a página e tente novamente.');
   }
@@ -320,12 +425,15 @@ function desenharMapa(pontos) {
     marcadorSelecionado = null;
   }
 
-  const coordenadas = pontos.map((ponto) => [ponto.latitude, ponto.longitude]);
-  L.polyline(coordenadas, {
-    color: '#008f57',
-    opacity: 0.88,
-    weight: 5
-  }).addTo(camadaPercurso);
+  const coordenadas = coordenadasBrutas(pontos);
+  const segmentosRoteirizados = await obterSegmentosRoteirizados(pontos);
+  segmentosRoteirizados.forEach((segmento) => {
+    L.polyline(segmento, {
+      color: '#008f57',
+      opacity: 0.88,
+      weight: 5
+    }).addTo(camadaPercurso);
+  });
 
   const inicio = pontos[0];
   const fim = pontos[pontos.length - 1];
@@ -1185,7 +1293,8 @@ async function consultarHistorico() {
     escalasPorDataAtual = agruparEscalasPorData(escalasDoPeriodo);
     preencherResumo(data.data);
     preencherResumoEscala(escalasDoPeriodo);
-    desenharMapa(pontosAtuais);
+    mostrarMensagem('Calculando percurso nas vias...');
+    await desenharMapa(pontosAtuais);
     renderizarTabela();
     resultado.hidden = false;
     setTimeout(() => mapa.invalidateSize(), 50);
