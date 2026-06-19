@@ -162,6 +162,8 @@ function bindEvents() {
     document.getElementById('btnExcluirSelecionados')?.addEventListener('click', excluirSelecionados);
     document.getElementById('filtroSemana')?.addEventListener('change', renderGrid);
     document.getElementById('filtroDiaRetorno')?.addEventListener('change', renderGrid);
+    document.getElementById('filtroSupervisor')?.addEventListener('change', renderGrid);
+    document.getElementById('filtroRota')?.addEventListener('change', renderGrid);
     document.getElementById('filtroFilial')?.addEventListener('change', carregarDados);
     document.getElementById('filtroSemanaAno')?.addEventListener('change', carregarDados);
     document.getElementById('searchInput')?.addEventListener('input', renderGrid);
@@ -430,6 +432,46 @@ async function carregarFiliaisFiltro() {
         if (valorAtual && opcoes.has(valorAtual)) select.value = valorAtual;
     } catch (error) {
         console.warn('Erro ao carregar filiais para o filtro:', error);
+    }
+}
+
+function atualizarFiltroSupervisores() {
+    const select = document.getElementById('filtroSupervisor');
+    if (!select) return;
+
+    const valorAtual = select.value;
+    const supervisores = [...new Set(gridData
+        .map(row => normalizarUpper(row.supervisor))
+        .filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+
+    select.innerHTML = '<option value="">Todos</option>';
+    supervisores.forEach(supervisor => {
+        select.add(new Option(supervisor, supervisor));
+    });
+
+    if (valorAtual && supervisores.includes(valorAtual)) {
+        select.value = valorAtual;
+    }
+}
+
+function atualizarFiltroRotas() {
+    const select = document.getElementById('filtroRota');
+    if (!select) return;
+
+    const valorAtual = select.value;
+    const rotas = [...new Map(gridData
+        .map(row => [normalizarRota(row.rota), normalizarTexto(row.rota)])
+        .filter(([chave, label]) => chave && label))]
+        .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { numeric: true }));
+
+    select.innerHTML = '<option value="">Todas</option>';
+    rotas.forEach(([chave, label]) => {
+        select.add(new Option(label, chave));
+    });
+
+    if (valorAtual && rotas.some(([chave]) => chave === valorAtual)) {
+        select.value = valorAtual;
     }
 }
 
@@ -727,6 +769,8 @@ async function carregarDados() {
         gridData = mesclarRotasComPesos(rotasBase, pesosDaSemana, semanaAno, !filial);
 
         await preencherVeiculosDasLinhas();
+        atualizarFiltroSupervisores();
+        atualizarFiltroRotas();
         renderGrid();
     } catch (error) {
         console.error('Erro ao carregar peso de rota:', error);
@@ -1011,16 +1055,20 @@ function aplicarLargurasSalvas() {
 function getLinhasVisiveis() {
     const filtroSemana = normalizarSemana(document.getElementById('filtroSemana')?.value);
     const filtroDiaRetorno = normalizarSemana(document.getElementById('filtroDiaRetorno')?.value);
+    const filtroSupervisor = normalizarUpper(document.getElementById('filtroSupervisor')?.value);
+    const filtroRota = normalizarRota(document.getElementById('filtroRota')?.value);
     const busca = normalizarUpper(document.getElementById('searchInput')?.value);
 
     const linhas = gridData
         .map((row, index) => ({ row, index }))
         .filter(({ row }) => {
             const semanaOk = !filtroSemana || normalizarSemana(row.semana) === filtroSemana;
+            const supervisorOk = !filtroSupervisor || normalizarUpper(row.supervisor) === filtroSupervisor;
+            const rotaOk = !filtroRota || normalizarRota(row.rota) === filtroRota;
             const retornoOk = !filtroDiaRetorno
                 || normalizarSemana(row.dia_semana_retorno || getDiaSemanaPorData(row.dia_retorno)) === filtroDiaRetorno;
             const buscaOk = !busca || CAMPOS_GRID.some(campo => normalizarUpper(row[campo]).includes(busca));
-            return semanaOk && retornoOk && buscaOk;
+            return semanaOk && supervisorOk && rotaOk && retornoOk && buscaOk;
         });
 
     return ordenarLinhas(linhas);
