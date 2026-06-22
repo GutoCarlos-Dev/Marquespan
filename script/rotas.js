@@ -2,6 +2,8 @@
 import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
+const ROTAS_PAGE_ID = 'rotas.html';
+
 class SupabaseService {
   static async list(table, cols='*', opts={}){
     let q = supabaseClient.from(table).select(cols).order(opts.orderBy||'id',{ascending:!!opts.ascending});
@@ -33,13 +35,66 @@ class SupabaseService {
 }
 
 const RotasUI = {
-    init() {
+    async init() {
+        const acessoPermitido = await this.verificarPermissaoPagina();
+        if (!acessoPermitido) return;
+
         this.SupabaseService = SupabaseService;
         this.cache();
         this.bind();
         this.setupInitialState();
         this.carregarSupervisores();
         this.carregarFiliais(); // Carrega as filiais ao iniciar
+        this.renderGrid();
+    },
+
+    getCurrentUser() {
+        try {
+            return JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+        } catch {
+            return null;
+        }
+    },
+
+    async verificarPermissaoPagina() {
+        const usuario = this.getCurrentUser();
+        const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+
+        if (!nivel) {
+            window.location.href = 'index.html';
+            return false;
+        }
+
+        if (nivel === 'administrador') {
+            return true;
+        }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('nivel_permissoes')
+                .select('paginas_permitidas')
+                .eq('nivel', nivel)
+                .single();
+
+            if (error) throw error;
+
+            if ((data?.paginas_permitidas || []).includes(ROTAS_PAGE_ID)) {
+                return true;
+            }
+        } catch (error) {
+            console.error('Erro ao verificar permissao da pagina de rotas:', error);
+        }
+
+        document.body.innerHTML = `
+            <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:Arial,sans-serif;">
+                <div>
+                    <h1 style="margin-bottom:12px;">Acesso negado</h1>
+                    <p>Voce nao tem permissao para acessar a pagina de rotas.</p>
+                    <a href="menu.html" style="display:inline-block;margin-top:16px;color:#2563eb;">Voltar ao menu</a>
+                </div>
+            </div>
+        `;
+        return false;
     },
 
     cache() {
@@ -465,6 +520,5 @@ const RotasUI = {
 // Inicializa a UI quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
     RotasUI.init();
-    RotasUI.renderGrid(); // Carrega os dados iniciais
 });
 
