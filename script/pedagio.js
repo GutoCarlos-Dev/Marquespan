@@ -5,6 +5,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 const TIMEZONE_BRASILIA = 'America/Sao_Paulo';
 const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
 const PEDAGIO_IMPORTACOES_BUCKET = 'pedagios_importacoes';
+const PEDAGIO_PAGE_ID = 'pedagio.html';
 
 const PedagioUI = {
     async init() {
@@ -22,6 +23,8 @@ const PedagioUI = {
         this.sortState = { field: 'data_hora_passagem', ascending: false }; // Alinhado com outros módulos
 
         this.cacheDOM();
+        const acessoPermitido = await this.verificarPermissaoPagina();
+        if (!acessoPermitido) return;
         if (this.empresaPedagioLayout && !this.empresaPedagioLayout.value.trim()) {
             this.empresaPedagioLayout.value = JSON.stringify(this.getLayoutPadraoPedagio(), null, 2);
         }
@@ -205,6 +208,33 @@ const PedagioUI = {
             const user = localStorage.getItem('usuarioLogado');
             return user ? JSON.parse(user) : null;
         } catch (e) { return null; }
+    },
+
+    async verificarPermissaoPagina() {
+        const usuario = this.getUsuarioLogado();
+        const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+
+        if (!nivel) {
+            window.location.href = 'index.html';
+            return false;
+        }
+
+        if (nivel === 'administrador') return true;
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('nivel_permissoes')
+                .select('paginas_permitidas')
+                .eq('nivel', nivel)
+                .single();
+            if (error) throw error;
+            if ((data?.paginas_permitidas || []).includes(PEDAGIO_PAGE_ID)) return true;
+        } catch (error) {
+            console.error('Erro ao validar permissao de pedagio:', error);
+        }
+
+        document.body.innerHTML = '<div style="text-align:center; padding:50px;"><h1>Acesso Negado</h1><p>Voce nao tem permissao para acessar esta pagina.</p><a href="dashboard.html">Voltar ao Dashboard</a></div>';
+        return false;
     },
 
     getUserFilial() {
