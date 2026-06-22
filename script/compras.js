@@ -766,7 +766,7 @@ const UI = {
 
   async handleRegisterQuotation(){
     if(this.cart.items.length===0) return alert('Adicione produtos para registrar a cotação');
-    const code = this.quotationCode.value.trim(); if(!code) return alert('Código não gerado');
+    let code = this.quotationCode.value.trim(); if(!code) return alert('Código não gerado');
 
     const winner = document.querySelector('input[name="empresaVencedora"]:checked');
     let idFornecedorVencedor=null, valorTotalVencedor=null;
@@ -777,7 +777,10 @@ const UI = {
 
     try{
       if (this.editingQuotationId) {
-        const { data: oldCotacao } = await supabaseClient.from('cotacoes').select('status').eq('id', this.editingQuotationId).single();
+        const { data: oldCotacao, error: oldCotacaoError } = await supabaseClient.from('cotacoes').select('codigo_cotacao,status').eq('id', this.editingQuotationId).single();
+        if (oldCotacaoError) throw oldCotacaoError;
+        code = oldCotacao?.codigo_cotacao || code;
+        this.quotationCode.value = code;
         if (oldCotacao && oldCotacao.status === 'Recebido') {
           await supabaseClient.from('recebimentos').delete().eq('id_cotacao', this.editingQuotationId);
           alert('Atenção: O lançamento de estoque anterior foi revertido.');
