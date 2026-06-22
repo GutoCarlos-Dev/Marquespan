@@ -1,5 +1,7 @@
 import { supabaseClient } from './supabase.js';
 
+const TACOGRAFO_PAGE_ID = 'tacografo.html';
+
 function normalizarRenavan(value) {
     const digitos = String(value || '').replace(/\D/g, '');
     if (!digitos) return '';
@@ -12,11 +14,63 @@ const TacografoUI = {
     sortConfig: { key: 'placa', asc: true },
 
     async init() {
+        const acessoPermitido = await this.verificarPermissaoPagina();
+        if (!acessoPermitido) return;
+
         this.injectStyles();
         this.cacheDOM();
         this.bindEvents();
         await this.carregarFiliaisMultiselect(); // Carrega as filiais para o multiselect
         await this.carregarDados();
+    },
+
+    getCurrentUser() {
+        try {
+            return JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+        } catch {
+            return null;
+        }
+    },
+
+    async verificarPermissaoPagina() {
+        const usuario = this.getCurrentUser();
+        const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+
+        if (!nivel) {
+            window.location.href = 'index.html';
+            return false;
+        }
+
+        if (nivel === 'administrador') {
+            return true;
+        }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('nivel_permissoes')
+                .select('paginas_permitidas')
+                .eq('nivel', nivel)
+                .single();
+
+            if (error) throw error;
+
+            if ((data?.paginas_permitidas || []).includes(TACOGRAFO_PAGE_ID)) {
+                return true;
+            }
+        } catch (error) {
+            console.error('Erro ao verificar permissao da pagina de tacografo:', error);
+        }
+
+        document.body.innerHTML = `
+            <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:Arial,sans-serif;">
+                <div>
+                    <h1 style="margin-bottom:12px;">Acesso negado</h1>
+                    <p>Voce nao tem permissao para acessar a pagina de tacografo.</p>
+                    <a href="menu.html" style="display:inline-block;margin-top:16px;color:#2563eb;">Voltar ao menu</a>
+                </div>
+            </div>
+        `;
+        return false;
     },
 
     injectStyles() {
