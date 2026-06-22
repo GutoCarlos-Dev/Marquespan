@@ -109,9 +109,43 @@ async function carregarNiveis() {
 
     niveisAtuais.forEach(nivel => {
         const li = document.createElement('li');
-        li.textContent = nivel;
         li.dataset.nivel = nivel;
         li.addEventListener('click', () => selecionarNivel(nivel));
+
+        const nomeNivel = document.createElement('span');
+        nomeNivel.className = 'nivel-nome';
+        nomeNivel.textContent = nivel;
+        li.appendChild(nomeNivel);
+
+        if (nivel !== 'administrador') {
+            const acoes = document.createElement('div');
+            acoes.className = 'nivel-acoes';
+
+            const btnRenomear = document.createElement('button');
+            btnRenomear.type = 'button';
+            btnRenomear.className = 'btn-nivel-acao';
+            btnRenomear.title = 'Renomear nivel';
+            btnRenomear.innerHTML = '<i class="fas fa-pen"></i>';
+            btnRenomear.addEventListener('click', (event) => {
+                event.stopPropagation();
+                renomearNivel(nivel);
+            });
+
+            const btnExcluir = document.createElement('button');
+            btnExcluir.type = 'button';
+            btnExcluir.className = 'btn-nivel-acao btn-nivel-excluir';
+            btnExcluir.title = 'Excluir nivel';
+            btnExcluir.innerHTML = '<i class="fas fa-trash"></i>';
+            btnExcluir.addEventListener('click', (event) => {
+                event.stopPropagation();
+                excluirNivel(nivel);
+            });
+
+            acoes.appendChild(btnRenomear);
+            acoes.appendChild(btnExcluir);
+            li.appendChild(acoes);
+        }
+
         listaNiveisEl.appendChild(li);
     });
 
@@ -260,4 +294,104 @@ async function adicionarNovoNivel() {
         await carregarNiveis(); // Recarrega a lista para manter a ordem e os eventos
         selecionarNivel(novoNivel); // Seleciona o nível recém-criado
     }
+}
+
+async function renomearNivel(nivelAtual) {
+    if (nivelAtual === 'administrador') {
+        alert('O nivel administrador nao pode ser renomeado.');
+        return;
+    }
+
+    const novoNivel = normalizarNivel(prompt('Digite o novo nome do nivel:', nivelAtual));
+
+    if (!novoNivel) {
+        alert('Nome de nivel invalido.');
+        return;
+    }
+
+    if (novoNivel === nivelAtual) return;
+
+    if (novoNivel === 'administrador' || niveisAtuais.includes(novoNivel)) {
+        alert(`O nivel "${novoNivel}" ja existe ou e reservado.`);
+        return;
+    }
+
+    if (!confirm(`Renomear "${nivelAtual}" para "${novoNivel}"? Os usuarios desse nivel tambem serao atualizados.`)) {
+        return;
+    }
+
+    const { error: permissaoError } = await supabaseClient
+        .from('nivel_permissoes')
+        .update({ nivel: novoNivel })
+        .eq('nivel', nivelAtual);
+
+    if (permissaoError) {
+        alert('Erro ao renomear o nivel.');
+        console.error('Erro ao renomear nivel:', permissaoError);
+        return;
+    }
+
+    const { error: usuariosError } = await supabaseClient
+        .from('usuarios')
+        .update({ nivel: novoNivel })
+        .eq('nivel', nivelAtual);
+
+    if (usuariosError) {
+        console.error('Erro ao atualizar usuarios do nivel renomeado:', usuariosError);
+        await supabaseClient
+            .from('nivel_permissoes')
+            .update({ nivel: nivelAtual })
+            .eq('nivel', novoNivel);
+        alert('O nivel nao foi renomeado porque nao foi possivel atualizar os usuarios vinculados.');
+        return;
+    }
+
+    registrarAuditoria('ALTERAR', 'Permissoes', `Renomeacao do nivel de acesso: ${nivelAtual} para ${novoNivel}`);
+    nivelSelecionado = novoNivel;
+    await carregarNiveis();
+    await selecionarNivel(novoNivel);
+    alert('Nivel renomeado com sucesso!');
+}
+
+async function excluirNivel(nivel) {
+    if (nivel === 'administrador') {
+        alert('O nivel administrador nao pode ser excluido.');
+        return;
+    }
+
+    const { count, error: countError } = await supabaseClient
+        .from('usuarios')
+        .select('id', { count: 'exact', head: true })
+        .eq('nivel', nivel);
+
+    if (countError) {
+        alert('Erro ao verificar usuarios vinculados a este nivel.');
+        console.error('Erro ao verificar usuarios do nivel:', countError);
+        return;
+    }
+
+    if ((count || 0) > 0) {
+        alert(`Nao e possivel excluir este nivel porque existem ${count} usuario(s) usando ele. Altere esses usuarios para outro nivel primeiro.`);
+        return;
+    }
+
+    if (!confirm(`Excluir definitivamente o nivel "${nivel}"?`)) {
+        return;
+    }
+
+    const { error } = await supabaseClient
+        .from('nivel_permissoes')
+        .delete()
+        .eq('nivel', nivel);
+
+    if (error) {
+        alert('Erro ao excluir o nivel.');
+        console.error('Erro ao excluir nivel:', error);
+        return;
+    }
+
+    registrarAuditoria('EXCLUIR', 'Permissoes', `Exclusao do nivel de acesso: ${nivel}`);
+    nivelSelecionado = null;
+    await carregarNiveis();
+    alert('Nivel excluido com sucesso!');
 }
