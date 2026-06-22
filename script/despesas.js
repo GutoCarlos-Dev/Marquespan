@@ -2,6 +2,7 @@
 import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
+const DESPESAS_PAGE_ID = 'despesas.html';
 const DESPESA_CAMPOS_FIXOS_STORAGE = 'despesas_campos_fixos';
 const MAPA_CAMPOS_FIXOS_DESPESA = {
     rota: { label: 'Rota', grupo: 'Hospedagem', icon: 'fa-route' },
@@ -20,7 +21,10 @@ const MAPA_CAMPOS_FIXOS_DESPESA = {
 };
 
 const DespesasUI = {
-    init() {
+    async init() {
+        const acessoPermitido = await this.verificarPermissaoPagina();
+        if (!acessoPermitido) return;
+
         this.cache();
         this.sortField = 'data_checkin'; // Campo padrão
         this.sortAsc = false; // Ordem padrão (descendente)
@@ -265,6 +269,50 @@ const DespesasUI = {
 
     getCurrentUserLevel() {
         return String(this.getCurrentUser().nivel || '').toLowerCase();
+    },
+
+    async verificarPermissaoPagina() {
+        const nivelUsuario = this.getCurrentUserLevel();
+
+        if (!nivelUsuario) {
+            window.location.href = 'index.html';
+            return false;
+        }
+
+        if (nivelUsuario === 'administrador') {
+            return true;
+        }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('nivel_permissoes')
+                .select('paginas_permitidas')
+                .eq('nivel', nivelUsuario)
+                .single();
+
+            if (error) throw error;
+
+            const paginasPermitidas = Array.isArray(data?.paginas_permitidas)
+                ? data.paginas_permitidas
+                : [];
+
+            if (paginasPermitidas.includes(DESPESAS_PAGE_ID)) {
+                return true;
+            }
+        } catch (error) {
+            console.error('Erro ao verificar permissao da pagina de despesas:', error);
+        }
+
+        document.body.innerHTML = `
+            <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:Arial,sans-serif;">
+                <div>
+                    <h1 style="margin-bottom:12px;">Acesso negado</h1>
+                    <p>Voce nao tem permissao para acessar a pagina de despesas.</p>
+                    <a href="menu.html" style="display:inline-block;margin-top:16px;color:#2563eb;">Voltar ao menu</a>
+                </div>
+            </div>
+        `;
+        return false;
     },
 
     usuarioPodeExcluir() {
