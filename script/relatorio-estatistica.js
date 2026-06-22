@@ -1,12 +1,17 @@
 import { supabaseClient } from './supabase.js';
 
+const PAGE_ID = 'relatorio-estatistica.html';
+
 const RelatorioEstatistica = {
     data: [],
     pedagiosPeriodo: [],
     hospedagensPeriodo: [],
     tipoAtual: 'ANALITICO',
 
-    init() {
+    async init() {
+        const acessoPermitido = await this.verificarPermissaoPagina();
+        if (!acessoPermitido) return;
+
         this.cacheDOM();
         this.bindEvents();
         this.loadFilters();
@@ -14,6 +19,55 @@ const RelatorioEstatistica = {
         this.popularSemanas();
         this.atualizarModoFiltros();
         this.renderHeader();
+    },
+
+    getUsuarioAtual() {
+        try {
+            return JSON.parse(localStorage.getItem('usuarioLogado') || 'null') || {};
+        } catch {
+            return {};
+        }
+    },
+
+    async verificarPermissaoPagina() {
+        const usuario = this.getUsuarioAtual();
+        const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+
+        if (!nivel) {
+            window.location.href = 'index.html';
+            return false;
+        }
+
+        if (nivel === 'administrador') {
+            return true;
+        }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('nivel_permissoes')
+                .select('paginas_permitidas')
+                .eq('nivel', nivel)
+                .single();
+
+            if (error) throw error;
+
+            if ((data?.paginas_permitidas || []).includes(PAGE_ID)) {
+                return true;
+            }
+        } catch (error) {
+            console.error('Erro ao verificar permissao do relatorio estatistico:', error);
+        }
+
+        document.body.innerHTML = `
+            <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:Arial,sans-serif;">
+                <div>
+                    <h1 style="margin-bottom:12px;">Acesso negado</h1>
+                    <p>Voce nao tem permissao para acessar o relatorio estatistico.</p>
+                    <a href="menu.html" style="display:inline-block;margin-top:16px;color:#2563eb;">Voltar ao menu</a>
+                </div>
+            </div>
+        `;
+        return false;
     },
 
     cacheDOM() {
@@ -136,13 +190,20 @@ const RelatorioEstatistica = {
         const { data: rotas } = await supabaseClient.from('rotas').select('numero').order('numero');
         const dlRotas = document.getElementById('listaRotasEstatistica');
         if (dlRotas && rotas) {
-            dlRotas.innerHTML = [...new Set(rotas.map(r => r.numero))].map(num => `<option value="${num}">`).join('');
+            dlRotas.replaceChildren();
+            [...new Set(rotas.map(r => r.numero).filter(Boolean))].forEach(num => {
+                dlRotas.appendChild(new Option('', num));
+            });
         }
 
         const { data: veiculos } = await supabaseClient.from('veiculos').select('placa').eq('situacao', 'ativo').order('placa');
         const dlVeic = document.getElementById('listaVeiculosEstatistica');
         if (dlVeic && veiculos) {
-            dlVeic.innerHTML = veiculos.map(v => `<option value="${v.placa}">`).join('');
+            dlVeic.replaceChildren();
+            veiculos
+                .map(v => v.placa)
+                .filter(Boolean)
+                .forEach(placa => dlVeic.appendChild(new Option('', placa)));
         }
     },
 
@@ -221,12 +282,17 @@ const RelatorioEstatistica = {
         const placa = document.getElementById('filtroPlaca').value.trim().toUpperCase();
         const rota = document.getElementById('filtroRota').value.trim();
 
-        const { data: priceHistory } = await supabaseClient
+        let queryPriceHistory = supabaseClient
             .from('abastecimentos')
-            .select('tanque_id, valor_litro, data')
+            .select(filial
+                ? 'tanque_id, valor_litro, data, tanques!inner(filial)'
+                : 'tanque_id, valor_litro, data')
             .neq('numero_nota', 'AJUSTE DE ESTOQUE')
             .gt('valor_litro', 0)
             .order('data', { ascending: false });
+        if (filial) queryPriceHistory = queryPriceHistory.eq('tanques.filial', filial);
+
+        const { data: priceHistory } = await queryPriceHistory;
 
         const getInternalPrice = (tanqueId, supplyDate) => {
             if (!priceHistory) return 0;
@@ -239,6 +305,15 @@ const RelatorioEstatistica = {
             .lte('data_hora', `${dtFim}T23:59:59`);
         if (placa) querySaidas = querySaidas.eq('veiculo_placa', placa);
         if (rota) querySaidas = querySaidas.eq('rota', rota);
+        if (filial) {
+            querySaidas = supabaseClient.from('saidas_combustivel')
+                .select('*, data_referencia, bicos!inner(nome, bombas!inner(tanque_id, tanques!inner(nome, filial, tipo_combustivel)))')
+                .gte('data_hora', `${dtIni}T00:00:00`)
+                .lte('data_hora', `${dtFim}T23:59:59`)
+                .eq('bicos.bombas.tanques.filial', filial);
+            if (placa) querySaidas = querySaidas.eq('veiculo_placa', placa);
+            if (rota) querySaidas = querySaidas.eq('rota', rota);
+        }
 
         let queryExt = supabaseClient.from('abastecimento_externo').select('*, data_referencia, postos(razao_social)')
             .gte('data_hora', `${dtIni}T00:00:00`)
