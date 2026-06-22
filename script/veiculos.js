@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     carregarFiliais();
     carregarTipos();
+    carregarFabricantes();
     carregarVeiculos();
     setupEventListeners();
     setupMultiselect();
@@ -178,6 +179,10 @@ function setupEventListeners() {
         if (input) input.addEventListener('input', atualizarCapacidadeTotalCombustivel);
     });
 
+    // Auto-preenche Tipo Motor ao alterar Ano Fabricação
+    const anoFabInput = document.getElementById('veiculoAnoFab');
+    if (anoFabInput) anoFabInput.addEventListener('change', atualizarTipoMotorPorAno);
+
     ['veiculoTara', 'veiculoCapacidadeCarga'].forEach(id => {
         const input = document.getElementById(id);
         if (input) input.addEventListener('input', atualizarPbtPorTaraECapacidade);
@@ -233,6 +238,29 @@ async function carregarFiliais() {
     }
 }
 
+async function carregarFabricantes() {
+    const select = document.getElementById('campo-fabricante');
+    if (!select) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('veiculos')
+            .select('fabricante')
+            .not('fabricante', 'is', null)
+            .neq('fabricante', '');
+
+        if (error) throw error;
+
+        const unicos = [...new Set(data.map(v => v.fabricante?.trim()).filter(Boolean))].sort();
+
+        unicos.forEach(fab => {
+            select.add(new Option(fab, fab));
+        });
+    } catch (err) {
+        console.error('Erro ao carregar fabricantes:', err);
+    }
+}
+
 function carregarTipos() {
     const container = document.getElementById('campo-tipo-options');
     const selectModal = document.getElementById('veiculoTipo');
@@ -272,6 +300,8 @@ async function carregarVeiculos() {
     const placa = document.getElementById('campo-placa').value.trim();
     const modelo = document.getElementById('campo-modelo').value.trim();
     const situacao = document.getElementById('campo-situacao').value;
+    const tipoMotor = document.getElementById('campo-tipo-motor')?.value || '';
+    const fabricante = document.getElementById('campo-fabricante')?.value || '';
 
     // Tipos selecionados
     const tiposSelecionados = Array.from(document.querySelectorAll('.filtro-tipo-checkbox:checked')).map(cb => cb.value);
@@ -286,6 +316,8 @@ async function carregarVeiculos() {
         if (placa) query = query.ilike('placa', `%${placa}%`);
         if (modelo) query = query.ilike('modelo', `%${modelo}%`);
         if (situacao) query = query.eq('situacao', situacao);
+        if (tipoMotor) query = query.eq('tipo_motor', tipoMotor);
+        if (fabricante) query = query.eq('fabricante', fabricante);
         if (tiposSelecionados.length > 0) query = query.in('tipo', tiposSelecionados);
 
         const { data, error } = await query;
@@ -429,6 +461,13 @@ function atualizarCapacidadeTotalCombustivel() {
     if (total) total.value = tanque1 + tanque2 > 0 ? (tanque1 + tanque2).toFixed(2) : '';
 }
 
+function atualizarTipoMotorPorAno() {
+    const ano = parseInt(document.getElementById('veiculoAnoFab')?.value);
+    const select = document.getElementById('veiculoTipoMotor');
+    if (!select || !ano || ano < 1900) return;
+    select.value = ano >= 2023 ? 'EURO 6' : 'EURO 5';
+}
+
 function atualizarPbtPorTaraECapacidade() {
     const tara = parseNumberValue(document.getElementById('veiculoTara')?.value);
     const capacidadeCarga = parseNumberValue(document.getElementById('veiculoCapacidadeCarga')?.value);
@@ -475,6 +514,7 @@ function abrirModalVeiculo(veiculo = null) {
         setInputValue('veiculoCarroceria', veiculo.carroceria);
         setInputValue('veiculoCidadeEmplac', veiculo.cidade_emplacamento || veiculo.local_emplacamento);
         setInputValue('veiculoObservacoes', veiculo.observacoes_veiculo);
+        setInputValue('veiculoTipoMotor', veiculo.tipo_motor);
         setInputValue('veiculoTransmissao', veiculo.transmissao);
         setSelectBoolean('veiculoVuc', veiculo.vuc);
         setInputValue('veiculoDimensoes', veiculo.dimensoes);
@@ -573,6 +613,7 @@ async function salvarVeiculo(e) {
         cidade_emplacamento: getVal('veiculoCidadeEmplac'),
         local_emplacamento: getVal('veiculoCidadeEmplac'),
         observacoes_veiculo: getVal('veiculoObservacoes'),
+        tipo_motor: getVal('veiculoTipoMotor'),
         transmissao: getVal('veiculoTransmissao'),
         vuc: getVal('veiculoVuc') === 'true',
         dimensoes: getVal('veiculoDimensoes'),
@@ -871,6 +912,7 @@ async function handleImportacao(e) {
                     'VOLUME_TANQUE': 'volume_tanque',
                     'MEDIA_KM': 'media_km',
                     'FABRICANTE': 'fabricante',
+                    'TIPO_MOTOR': 'tipo_motor',
                     'TRANSMISSAO': 'transmissao',
                     'EIXOS': 'eixos',
                     'PBT': 'pbt',

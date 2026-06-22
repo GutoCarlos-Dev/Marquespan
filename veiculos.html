@@ -82,6 +82,20 @@
                 <label for="campo-modelo">Modelo</label>
                 <input type="text" id="campo-modelo" class="glass-input" placeholder="Ex: Volvo FH" />
               </div>
+              <div class="form-group-filter">
+                <label for="campo-tipo-motor">Tipo Motor</label>
+                <select id="campo-tipo-motor" class="glass-input">
+                  <option value="">Todos</option>
+                  <option value="EURO 5">EURO 5</option>
+                  <option value="EURO 6">EURO 6</option>
+                </select>
+              </div>
+              <div class="form-group-filter">
+                <label for="campo-fabricante">Fabricante</label>
+                <select id="campo-fabricante" class="glass-input">
+                  <option value="">Todos</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -224,6 +238,7 @@
                 <section class="veiculo-form-section">
                     <h4><i class="fas fa-sliders"></i> Informações Complementares</h4>
                     <div class="veiculo-form-grid">
+                        <div class="form-group"><label for="veiculoTipoMotor">Tipo Motor</label><select id="veiculoTipoMotor" class="glass-input"><option value="">Selecione</option><option value="EURO 5">EURO 5</option><option value="EURO 6">EURO 6</option></select></div>
                         <div class="form-group"><label for="veiculoTransmissao">Transmissão</label><select id="veiculoTransmissao" class="glass-input"><option value="">Selecione</option><option value="MANUAL">MANUAL</option><option value="AUTOMÁTICA">AUTOMÁTICA</option><option value="AUTOMATIZADA">AUTOMATIZADA</option></select></div>
                         <div class="form-group"><label for="veiculoVuc">VUC</label><select id="veiculoVuc" class="glass-input"><option value="false">Não</option><option value="true">Sim</option></select></div>
                         <div class="form-group"><label for="veiculoDimensoes">Dimensões (Comp/Larg/Alt)</label><input type="text" id="veiculoDimensoes" class="glass-input" placeholder="Ex: 8.50/2.60/3.20"></div>
