@@ -4,6 +4,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 let ocorrencias = [];
 let ocorrenciaEditandoId = null;
 let sortState = { field: 'created_at', ascending: false };
+const PAGE_ID = 'fiscalizacao-ocorrencia.html';
 const niveisComExclusao = ['administrador', 'gerencia'];
 const bucketAnexos = 'fiscalizacao_ocorrencias_anexos';
 const niveisSomenteLeitura = [];
@@ -14,6 +15,9 @@ let visualizandoOcorrencia = false;
 let veiculosPorPlaca = new Map();
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const acessoPermitido = await verificarPermissaoPagina();
+  if (!acessoPermitido) return;
+
   const hoje = new Date();
   const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
   document.getElementById('filtroDataDe').valueAsDate = primeiroDia;
@@ -25,6 +29,47 @@ document.addEventListener('DOMContentLoaded', async () => {
   await carregarListas();
   await buscarOcorrencias();
 });
+
+async function verificarPermissaoPagina() {
+  const usuario = getUsuarioAtual();
+  const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+
+  if (!nivel) {
+    window.location.href = 'index.html';
+    return false;
+  }
+
+  if (nivel === 'administrador') {
+    return true;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('nivel_permissoes')
+      .select('paginas_permitidas')
+      .eq('nivel', nivel)
+      .single();
+
+    if (error) throw error;
+
+    if ((data?.paginas_permitidas || []).includes(PAGE_ID)) {
+      return true;
+    }
+  } catch (error) {
+    console.error('Erro ao verificar permissao da pagina de fiscalizacao de ocorrencia:', error);
+  }
+
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:Arial,sans-serif;">
+      <div>
+        <h1 style="margin-bottom:12px;">Acesso negado</h1>
+        <p>Voce nao tem permissao para acessar a pagina de fiscalizacao de ocorrencia.</p>
+        <a href="menu.html" style="display:inline-block;margin-top:16px;color:#2563eb;">Voltar ao menu</a>
+      </div>
+    </div>
+  `;
+  return false;
+}
 
 function bindEvents() {
   document.getElementById('btnIncluirOcorrencia').addEventListener('click', () => abrirModal());

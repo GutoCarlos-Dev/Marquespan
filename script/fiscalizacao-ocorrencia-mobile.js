@@ -3,6 +3,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 
 let ocorrencias = [];
 let ocorrenciaEditandoId = null;
+const PAGE_ID = 'fiscalizacao-ocorrencia-mobile.html';
 const bucketAnexos = 'fiscalizacao_ocorrencias_anexos';
 let anexosNovos = [];
 let anexosExistentes = [];
@@ -10,6 +11,9 @@ let anexosParaRemover = [];
 let veiculosPorPlaca = new Map();
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const acessoPermitido = await verificarPermissaoPagina();
+  if (!acessoPermitido) return;
+
   const hoje = new Date().toISOString().split('T')[0];
   document.getElementById('mobileData').value = hoje;
   document.getElementById('mobileFiltroDataDe').value = hoje;
@@ -18,6 +22,47 @@ document.addEventListener('DOMContentLoaded', async () => {
   await carregarListas();
   await carregarOcorrencias();
 });
+
+async function verificarPermissaoPagina() {
+  const usuario = getUsuarioAtual();
+  const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+
+  if (!nivel) {
+    window.location.href = 'index.html';
+    return false;
+  }
+
+  if (nivel === 'administrador') {
+    return true;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('nivel_permissoes')
+      .select('paginas_permitidas')
+      .eq('nivel', nivel)
+      .single();
+
+    if (error) throw error;
+
+    if ((data?.paginas_permitidas || []).includes(PAGE_ID)) {
+      return true;
+    }
+  } catch (error) {
+    console.error('Erro ao verificar permissao da pagina mobile de fiscalizacao de ocorrencia:', error);
+  }
+
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:Arial,sans-serif;">
+      <div>
+        <h1 style="margin-bottom:12px;">Acesso negado</h1>
+        <p>Voce nao tem permissao para acessar a pagina mobile de fiscalizacao de ocorrencia.</p>
+        <a href="menu.html" style="display:inline-block;margin-top:16px;color:#2563eb;">Voltar ao menu</a>
+      </div>
+    </div>
+  `;
+  return false;
+}
 
 function bindEvents() {
   document.getElementById('btnAdicionarOcorrencia').addEventListener('click', abrirModal);
