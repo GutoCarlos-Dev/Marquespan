@@ -126,15 +126,32 @@ export async function calcularEstoqueAtual(supabaseClient, filial) {
         return query;
     });
 
+    const tanqueIds = (tanques || []).map(tanque => tanque.id).filter(id => id !== null && id !== undefined);
+    if (filial && tanqueIds.length === 0) {
+        return calcularEstoquePorMovimentos(tanques, [], []);
+    }
+
     const [entradas, saidas] = await Promise.all([
-        fetchAll(() => supabaseClient
-            .from('abastecimentos')
-            .select('tanque_id, qtd_litros, data, numero_nota, valor_litro, valor_total')
-            .order('data', { ascending: true })),
-        fetchAll(() => supabaseClient
-            .from('saidas_combustivel')
-            .select('qtd_litros, data_hora, bicos(bombas(tanque_id))')
-            .order('data_hora', { ascending: true }))
+        fetchAll(() => {
+            let query = supabaseClient
+                .from('abastecimentos')
+                .select('tanque_id, qtd_litros, data, numero_nota, valor_litro, valor_total')
+                .order('data', { ascending: true });
+
+            if (filial) query = query.in('tanque_id', tanqueIds);
+            return query;
+        }),
+        fetchAll(() => {
+            let query = supabaseClient
+                .from('saidas_combustivel')
+                .select(filial
+                    ? 'qtd_litros, data_hora, bicos!inner(bombas!inner(tanque_id, tanques!inner(id, filial)))'
+                    : 'qtd_litros, data_hora, bicos(bombas(tanque_id))')
+                .order('data_hora', { ascending: true });
+
+            if (filial) query = query.eq('bicos.bombas.tanques.filial', filial);
+            return query;
+        })
     ]);
 
     return calcularEstoquePorMovimentos(tanques, entradas, saidas);

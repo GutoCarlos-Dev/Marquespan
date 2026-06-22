@@ -125,175 +125,190 @@ create policy abastecimentos_select_permitidos
 on public.abastecimentos
 for select
 to authenticated
-using (public.usuario_pode_ler_abastecimento());
+using ((select public.usuario_pode_ler_abastecimento()));
 
 create policy abastecimentos_insert_permitidos
 on public.abastecimentos
 for insert
 to authenticated
-with check (public.usuario_pode_lancar_abastecimento());
+with check ((select public.usuario_pode_lancar_abastecimento()));
 
 create policy abastecimentos_update_permitidos
 on public.abastecimentos
 for update
 to authenticated
-using (public.usuario_pode_lancar_abastecimento())
-with check (public.usuario_pode_lancar_abastecimento());
+using ((select public.usuario_pode_lancar_abastecimento()))
+with check ((select public.usuario_pode_lancar_abastecimento()));
 
 create policy abastecimentos_delete_permitidos
 on public.abastecimentos
 for delete
 to authenticated
-using (public.usuario_pode_lancar_abastecimento());
+using ((select public.usuario_pode_lancar_abastecimento()));
 
 create policy saidas_combustivel_select_permitidos
 on public.saidas_combustivel
 for select
 to authenticated
-using (public.usuario_pode_ler_abastecimento());
+using ((select public.usuario_pode_ler_abastecimento()));
 
 create policy saidas_combustivel_insert_permitidos
 on public.saidas_combustivel
 for insert
 to authenticated
-with check (public.usuario_pode_lancar_abastecimento());
+with check ((select public.usuario_pode_lancar_abastecimento()));
 
 create policy saidas_combustivel_update_permitidos
 on public.saidas_combustivel
 for update
 to authenticated
-using (public.usuario_pode_lancar_abastecimento())
-with check (public.usuario_pode_lancar_abastecimento());
+using ((select public.usuario_pode_lancar_abastecimento()))
+with check ((select public.usuario_pode_lancar_abastecimento()));
 
 create policy saidas_combustivel_delete_permitidos
 on public.saidas_combustivel
 for delete
 to authenticated
-using (public.usuario_pode_lancar_abastecimento());
+using ((select public.usuario_pode_lancar_abastecimento()));
 
 create policy abastecimento_externo_select_permitidos
 on public.abastecimento_externo
 for select
 to authenticated
-using (public.usuario_pode_ler_abastecimento());
+using ((select public.usuario_pode_ler_abastecimento()));
 
 create policy abastecimento_externo_insert_permitidos
 on public.abastecimento_externo
 for insert
 to authenticated
-with check (public.usuario_pode_lancar_abastecimento());
+with check ((select public.usuario_pode_lancar_abastecimento()));
 
 create policy abastecimento_externo_update_permitidos
 on public.abastecimento_externo
 for update
 to authenticated
-using (public.usuario_pode_lancar_abastecimento())
-with check (public.usuario_pode_lancar_abastecimento());
+using ((select public.usuario_pode_lancar_abastecimento()))
+with check ((select public.usuario_pode_lancar_abastecimento()));
 
 create policy abastecimento_externo_delete_permitidos
 on public.abastecimento_externo
 for delete
 to authenticated
-using (public.usuario_pode_lancar_abastecimento());
+using ((select public.usuario_pode_lancar_abastecimento()));
 
 create policy postos_select_permitidos
 on public.postos
 for select
 to authenticated
-using (public.usuario_pode_ler_abastecimento());
+using ((select public.usuario_pode_ler_abastecimento()));
 
 create policy postos_insert_permitidos
 on public.postos
 for insert
 to authenticated
-with check (public.usuario_pode_configurar_abastecimento());
+with check ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy postos_update_permitidos
 on public.postos
 for update
 to authenticated
-using (public.usuario_pode_configurar_abastecimento())
-with check (public.usuario_pode_configurar_abastecimento());
+using ((select public.usuario_pode_configurar_abastecimento()))
+with check ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy postos_delete_permitidos
 on public.postos
 for delete
 to authenticated
-using (public.usuario_pode_configurar_abastecimento());
+using ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy tanques_select_permitidos
 on public.tanques
 for select
 to authenticated
-using (public.usuario_pode_ler_abastecimento());
+using ((select public.usuario_pode_ler_abastecimento()));
 
 create policy tanques_insert_permitidos
 on public.tanques
 for insert
 to authenticated
-with check (public.usuario_pode_configurar_abastecimento());
+with check ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy tanques_update_permitidos
 on public.tanques
 for update
 to authenticated
-using (public.usuario_pode_configurar_abastecimento())
-with check (public.usuario_pode_configurar_abastecimento());
+using ((select public.usuario_pode_configurar_abastecimento()))
+with check ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy tanques_delete_permitidos
 on public.tanques
 for delete
 to authenticated
-using (public.usuario_pode_configurar_abastecimento());
+using ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy bombas_select_permitidos
 on public.bombas
 for select
 to authenticated
-using (public.usuario_pode_ler_abastecimento());
+using ((select public.usuario_pode_ler_abastecimento()));
 
 create policy bombas_insert_permitidos
 on public.bombas
 for insert
 to authenticated
-with check (public.usuario_pode_configurar_abastecimento());
+with check ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy bombas_update_permitidos
 on public.bombas
 for update
 to authenticated
-using (public.usuario_pode_configurar_abastecimento())
-with check (public.usuario_pode_configurar_abastecimento());
+using ((select public.usuario_pode_configurar_abastecimento()))
+with check ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy bombas_delete_permitidos
 on public.bombas
 for delete
 to authenticated
-using (public.usuario_pode_configurar_abastecimento());
+using ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy bicos_select_permitidos
 on public.bicos
 for select
 to authenticated
-using (public.usuario_pode_ler_abastecimento());
+using ((select public.usuario_pode_ler_abastecimento()));
 
 create policy bicos_insert_permitidos
 on public.bicos
 for insert
 to authenticated
-with check (public.usuario_pode_configurar_abastecimento());
+with check ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy bicos_update_permitidos
 on public.bicos
 for update
 to authenticated
-using (public.usuario_pode_configurar_abastecimento())
-with check (public.usuario_pode_configurar_abastecimento());
+using ((select public.usuario_pode_configurar_abastecimento()))
+with check ((select public.usuario_pode_configurar_abastecimento()));
 
 create policy bicos_delete_permitidos
 on public.bicos
 for delete
 to authenticated
-using (public.usuario_pode_configurar_abastecimento());
+using ((select public.usuario_pode_configurar_abastecimento()));
+
+create index if not exists idx_abastecimentos_tanque_data
+on public.abastecimentos (tanque_id, data);
+
+create index if not exists idx_saidas_combustivel_bico_data
+on public.saidas_combustivel (bico_id, data_hora);
+
+create index if not exists idx_bicos_bomba_id
+on public.bicos (bomba_id);
+
+create index if not exists idx_bombas_tanque_id
+on public.bombas (tanque_id);
+
+create index if not exists idx_tanques_filial
+on public.tanques (filial);
 
 notify pgrst, 'reload schema';

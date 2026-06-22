@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 import { calcularEstoqueAtual } from './abastecimento/estoque-service.js';
 import { configurarFiltroFilialUsuario, normalizarFilial } from './shared/filtro-filial-usuario.js';
 
+const PAGE_ID = 'monitoramento-abastecimento-interno.html';
 const REFRESH_INTERVAL = 60000;
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
 
@@ -44,11 +45,63 @@ let refreshTimer = null;
 let wakeLockSentinel = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    const acessoPermitido = await verificarPermissaoPagina();
+    if (!acessoPermitido) return;
+
     const perfil = await configurarFiltroFilialUsuario(document.getElementById('filtroFilial'));
     if (!perfil) return;
 
     initAbastecimentoRealTime();
 });
+
+function getCurrentUser() {
+    try {
+        return JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+    } catch {
+        return null;
+    }
+}
+
+async function verificarPermissaoPagina() {
+    const usuario = getCurrentUser();
+    const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+
+    if (!nivel) {
+        window.location.href = 'index.html';
+        return false;
+    }
+
+    if (nivel === 'administrador') {
+        return true;
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('nivel_permissoes')
+            .select('paginas_permitidas')
+            .eq('nivel', nivel)
+            .single();
+
+        if (error) throw error;
+
+        if ((data?.paginas_permitidas || []).includes(PAGE_ID)) {
+            return true;
+        }
+    } catch (error) {
+        console.error('Erro ao verificar permissao do monitoramento de abastecimento interno:', error);
+    }
+
+    document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:Arial,sans-serif;">
+            <div>
+                <h1 style="margin-bottom:12px;">Acesso negado</h1>
+                <p>Voce nao tem permissao para acessar o monitoramento de abastecimento interno.</p>
+                <a href="menu.html" style="display:inline-block;margin-top:16px;color:#2563eb;">Voltar ao menu</a>
+            </div>
+        </div>
+    `;
+    return false;
+}
 
 function initAbastecimentoRealTime() {
     const dataInput = document.getElementById('dataAbastecimento');
