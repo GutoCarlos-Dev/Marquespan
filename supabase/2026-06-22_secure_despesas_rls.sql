@@ -81,6 +81,20 @@ as $$
     or public.usuario_pode_acessar_pagina('despesas.html');
 $$;
 
+create or replace function public.usuario_pode_ler_funcionarios_despesas()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.usuario_pode_acessar_pagina('funcionario.html')
+    or public.usuario_pode_acessar_pagina('despesas.html')
+    or public.usuario_pode_acessar_pagina('relatorio-despesas.html')
+    or public.usuario_pode_acessar_pagina('relatorio-estatistica.html');
+$$;
+
 do $$
 declare
   tabela text;
@@ -112,6 +126,7 @@ revoke all on table public.hotel_quartos from anon;
 grant select, insert, update, delete on table public.despesas to authenticated;
 grant select, insert, update, delete on table public.hoteis to authenticated;
 grant select, insert, update, delete on table public.hotel_quartos to authenticated;
+grant select on table public.funcionario to authenticated;
 
 alter table public.despesas enable row level security;
 alter table public.hoteis enable row level security;
@@ -121,75 +136,97 @@ create policy despesas_select_permitidos
 on public.despesas
 for select
 to authenticated
-using (public.usuario_pode_ler_despesas());
+using ((select public.usuario_pode_ler_despesas()));
 
 create policy despesas_insert_permitidos
 on public.despesas
 for insert
 to authenticated
-with check (public.usuario_pode_editar_despesas());
+with check ((select public.usuario_pode_editar_despesas()));
 
 create policy despesas_update_permitidos
 on public.despesas
 for update
 to authenticated
-using (public.usuario_pode_editar_despesas())
-with check (public.usuario_pode_editar_despesas());
+using ((select public.usuario_pode_editar_despesas()))
+with check ((select public.usuario_pode_editar_despesas()));
 
 create policy despesas_delete_permitidos
 on public.despesas
 for delete
 to authenticated
-using (public.usuario_pode_editar_despesas());
+using ((select public.usuario_pode_editar_despesas()));
 
 create policy hoteis_select_permitidos
 on public.hoteis
 for select
 to authenticated
-using (public.usuario_pode_ler_hospedagem());
+using ((select public.usuario_pode_ler_hospedagem()));
 
 create policy hoteis_insert_permitidos
 on public.hoteis
 for insert
 to authenticated
-with check (public.usuario_pode_editar_hoteis());
+with check ((select public.usuario_pode_editar_hoteis()));
 
 create policy hoteis_update_permitidos
 on public.hoteis
 for update
 to authenticated
-using (public.usuario_pode_editar_hoteis())
-with check (public.usuario_pode_editar_hoteis());
+using ((select public.usuario_pode_editar_hoteis()))
+with check ((select public.usuario_pode_editar_hoteis()));
 
 create policy hoteis_delete_permitidos
 on public.hoteis
 for delete
 to authenticated
-using (public.usuario_pode_editar_hoteis());
+using ((select public.usuario_pode_editar_hoteis()));
 
 create policy hotel_quartos_select_permitidos
 on public.hotel_quartos
 for select
 to authenticated
-using (public.usuario_pode_ler_hospedagem());
+using ((select public.usuario_pode_ler_hospedagem()));
 
 create policy hotel_quartos_insert_permitidos
 on public.hotel_quartos
 for insert
 to authenticated
-with check (public.usuario_pode_editar_quartos_hotel());
+with check ((select public.usuario_pode_editar_quartos_hotel()));
 
 create policy hotel_quartos_update_permitidos
 on public.hotel_quartos
 for update
 to authenticated
-using (public.usuario_pode_editar_quartos_hotel())
-with check (public.usuario_pode_editar_quartos_hotel());
+using ((select public.usuario_pode_editar_quartos_hotel()))
+with check ((select public.usuario_pode_editar_quartos_hotel()));
 
 create policy hotel_quartos_delete_permitidos
 on public.hotel_quartos
 for delete
 to authenticated
-using (public.usuario_pode_editar_quartos_hotel());
+using ((select public.usuario_pode_editar_quartos_hotel()));
+
+drop policy if exists funcionario_select_permitidos on public.funcionario;
+create policy funcionario_select_permitidos
+on public.funcionario
+for select
+to authenticated
+using ((select public.usuario_pode_ler_funcionarios_despesas()));
+
+create index if not exists idx_despesas_data_checkin
+on public.despesas (data_checkin desc);
+
+create index if not exists idx_despesas_id_hotel
+on public.despesas (id_hotel);
+
+create index if not exists idx_despesas_id_funcionario1
+on public.despesas (id_funcionario1);
+
+create index if not exists idx_despesas_id_funcionario2
+on public.despesas (id_funcionario2);
+
+create index if not exists idx_hotel_quartos_id_hotel
+on public.hotel_quartos (id_hotel);
 
 notify pgrst, 'reload schema';

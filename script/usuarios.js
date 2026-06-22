@@ -3,7 +3,6 @@ import { registrarAuditoria } from './auditoria-utils.js';
 
 const USUARIOS_PAGE_ID = 'usuarios.html';
 const ADMIN_USUARIOS_FUNCTION_URL = 'https://hlzcycvlcuhgnnjkmslt.supabase.co/functions/v1/admin-usuarios';
-const NIVEIS_GERENCIAMENTO_USUARIOS = new Set(['administrador']);
 const CONFIGURACAO_SESSAO_ID = 'global';
 const TEMPO_INATIVIDADE_PADRAO_MINUTOS = 30;
 
@@ -37,7 +36,7 @@ async function verificarPermissaoPaginaUsuarios() {
     const usuario = getUsuarioAtual();
     const nivel = String(usuario?.nivel || '').toLowerCase();
 
-    if (!NIVEIS_GERENCIAMENTO_USUARIOS.has(nivel)) {
+    if (!nivel) {
         return false;
     }
 
