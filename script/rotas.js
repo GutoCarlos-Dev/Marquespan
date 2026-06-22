@@ -41,6 +41,7 @@ const RotasUI = {
 
         this.SupabaseService = SupabaseService;
         this.cache();
+        this.setupFiltroGridFilial();
         this.bind();
         this.setupInitialState();
         this.carregarSupervisores();
@@ -108,6 +109,7 @@ const RotasUI = {
         this.editingIdInput = document.getElementById('rotaEditingId');
         this.supervisorSelect = document.getElementById('rotaSupervisor');
         this.filialSelect = document.getElementById('rotaFilial'); // Novo campo Filial
+        this.filtroGridFilial = document.getElementById('filtroGridFilial');
 
         // Botão e input de importação
         this.btnImportarLista = document.getElementById('btnImportarLista');
@@ -128,6 +130,9 @@ const RotasUI = {
         if (this.searchInput) {
             this.searchInput.addEventListener('input', () => this.renderGrid());
         }
+        if (this.filtroGridFilial) {
+            this.filtroGridFilial.addEventListener('change', () => this.renderGrid());
+        }
 
         // Eventos de importação
         if (this.btnImportarLista) {
@@ -145,6 +150,35 @@ const RotasUI = {
             const field = th.getAttribute('data-field');
             th.addEventListener('click', () => { this.toggleSort(field) });
         });
+    },
+
+    setupFiltroGridFilial() {
+        if (!this.searchInput || document.getElementById('filtroGridFilial')) {
+            this.filtroGridFilial = document.getElementById('filtroGridFilial');
+            return;
+        }
+
+        const searchGroup = this.searchInput.closest('.form-group') || this.searchInput.parentElement;
+        if (!searchGroup?.parentNode) return;
+
+        const filtroGroup = document.createElement('div');
+        filtroGroup.className = 'form-group';
+        filtroGroup.style.marginBottom = '15px';
+        filtroGroup.style.maxWidth = '280px';
+
+        const label = document.createElement('label');
+        label.htmlFor = 'filtroGridFilial';
+        label.textContent = 'Filial';
+
+        const select = document.createElement('select');
+        select.id = 'filtroGridFilial';
+        select.className = 'glass-input';
+        select.innerHTML = '<option value="">Todas</option>';
+
+        filtroGroup.appendChild(label);
+        filtroGroup.appendChild(select);
+        searchGroup.parentNode.insertBefore(filtroGroup, searchGroup);
+        this.filtroGridFilial = select;
     },
 
     setupInitialState() {
@@ -188,6 +222,13 @@ const RotasUI = {
                 data.forEach(f => {
                     const value = f.sigla || f.nome;
                     this.filialSelect.add(new Option(f.sigla ? `${f.nome} (${f.sigla})` : f.nome, value));
+                });
+            }
+            if (this.filtroGridFilial && data) {
+                this.filtroGridFilial.innerHTML = '<option value="">Todas</option>';
+                data.forEach(f => {
+                    const value = f.sigla || f.nome;
+                    this.filtroGridFilial.add(new Option(f.sigla ? `${f.nome} (${f.sigla})` : f.nome, value));
                 });
             }
         } catch (err) {
@@ -379,7 +420,12 @@ const RotasUI = {
         let rotas = []; // Declarar a variável aqui para que seja acessível fora do try/catch
         try {
             const searchTerm = this.searchInput?.value.trim();
+            const filialFiltro = this.filtroGridFilial?.value || '';
             let queryOptions = { orderBy: this._sort.field, ascending: this._sort.ascending };
+
+            if (filialFiltro) {
+                queryOptions.eq = { field: 'filial', value: filialFiltro };
+            }
 
             if (searchTerm) {
                 const searchConditions = [
