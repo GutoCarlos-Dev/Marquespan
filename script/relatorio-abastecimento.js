@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const RELATORIO_ABASTECIMENTO_STATE_KEY = 'relatorio_abastecimento_estado_edicao';
+    const NIVEIS_SOMENTE_ABASTECIMENTO_EXTERNO = ['pr_encarregado', 'pr_lider'];
 
     const RelatorioUI = {
         dadosRelatorio: [],
@@ -21,7 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
             this.cache();
             this.bind();
             this.iniciarRolagemAutomatica();
+            await this.loadFiliais();
+            this.aplicarRestricaoResumoDiesel();
             this.updateFilterOptions();
+            this.aplicarRestricaoFiltroMovimentacao();
             this.updateTipoVeiculoFilterOptions();
             
             // Define datas padrão (início do mês até hoje)
@@ -48,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.dataInicial = document.getElementById('dataInicial');
             this.dataFinal = document.getElementById('dataFinal');
             this.filtroTanque = document.getElementById('filtroTanque');
+            this.filtroFilial = document.getElementById('filtroFilial');
             this.filtroTipo = document.getElementById('filtroTipoMovimentacao');
             this.filtroTipoVeiculoDisplay = null;
             this.filtroBicoDisplay = null; // Novo elemento
@@ -60,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtroRota = document.getElementById('filtroRota');
             this.filtroPosto = document.getElementById('filtroPosto');
             this.postosFiltroCache = [];
+            this.filiaisCache = [];
             this.btnLimpar = document.getElementById('btnLimparFiltros');
             
             this.cardResultados = document.getElementById('cardResultados');
@@ -76,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnGerarResumoDiesel = document.getElementById('btnGerarResumoDiesel');
             this.btnExportarResumoDieselPDF = document.getElementById('btnExportarResumoDieselPDF');
             this.resumoDieselResultado = document.getElementById('resumoDieselResultado');
+            this.resumoDieselPanel = document.getElementById('resumoDieselPanel');
             this.resumoDieselTitulo = document.getElementById('resumoDieselTitulo');
             this.resumoDieselPeriodo = document.getElementById('resumoDieselPeriodo');
             this.theadResumoDiesel = document.getElementById('theadResumoDiesel');
@@ -102,6 +109,15 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnFullscreenGrid?.addEventListener('click', this.toggleFullscreenGrid.bind(this));
             this.btnGerarResumoDiesel?.addEventListener('click', this.gerarResumoSemanalDiesel.bind(this));
             this.btnExportarResumoDieselPDF?.addEventListener('click', this.exportarResumoSemanalPDF.bind(this));
+            this.filtroFilial?.addEventListener('change', async () => {
+                await Promise.all([
+                    this.loadTanques(),
+                    this.loadBicos(),
+                    this.loadPostos(),
+                    this.loadVeiculos(),
+                    this.loadTiposVeiculo()
+                ]);
+            });
             document.addEventListener('fullscreenchange', this.handleFullscreenChange.bind(this));
             document.addEventListener('keydown', this.handleFullscreenKeydown.bind(this));
 
@@ -238,6 +254,88 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch {
                 return '';
             }
+        },
+
+        getUserLevel() {
+            try {
+                return String(JSON.parse(localStorage.getItem('usuarioLogado'))?.nivel || '').toLowerCase();
+            } catch {
+                return '';
+            }
+        },
+
+        usuarioSomenteAbastecimentoExterno() {
+            return NIVEIS_SOMENTE_ABASTECIMENTO_EXTERNO.includes(this.getUserLevel());
+        },
+
+        getFilialSelecionada() {
+            return this.filtroFilial?.value || this.getFilialUsuario();
+        },
+
+        getValoresFilialSelecionada() {
+            const filial = this.getFilialSelecionada();
+            if (!filial) return [];
+
+            const filialNormalizada = String(filial).trim().toUpperCase();
+            const valores = new Set([filial]);
+            (this.filiaisCache || []).forEach(f => {
+                const nome = String(f.nome || '').trim();
+                const sigla = String(f.sigla || '').trim();
+                if (
+                    nome.toUpperCase() === filialNormalizada
+                    || sigla.toUpperCase() === filialNormalizada
+                    || String(sigla || nome).trim().toUpperCase() === filialNormalizada
+                ) {
+                    if (nome) valores.add(nome);
+                    if (sigla) valores.add(sigla);
+                }
+            });
+
+            return Array.from(valores);
+        },
+
+        registroPertenceFilial(valorFilial) {
+            const valores = this.getValoresFilialSelecionada().map(valor => String(valor).trim().toUpperCase());
+            return valores.length === 0 || valores.includes(String(valorFilial || '').trim().toUpperCase());
+        },
+
+        getFilialUsuarioSelecionavel() {
+            const filialUsuario = this.getFilialUsuario();
+            if (!filialUsuario) return '';
+
+            const filialNormalizada = String(filialUsuario).trim().toUpperCase();
+            const matchingFilial = (this.filiaisCache || []).find(f => {
+                const nome = String(f.nome || '').trim().toUpperCase();
+                const sigla = String(f.sigla || '').trim().toUpperCase();
+                const valor = String(f.sigla || f.nome || '').trim().toUpperCase();
+                return nome === filialNormalizada || sigla === filialNormalizada || valor === filialNormalizada;
+            });
+
+            return matchingFilial ? (matchingFilial.sigla || matchingFilial.nome || filialUsuario) : filialUsuario;
+        },
+
+        aplicarBloqueioFiltroFilial() {
+            if (!this.filtroFilial) return;
+
+            const filialUsuario = this.getFilialUsuario();
+            if (!filialUsuario) {
+                this.filtroFilial.disabled = false;
+                return;
+            }
+
+            const valorFilial = this.getFilialUsuarioSelecionavel();
+            if (valorFilial && !Array.from(this.filtroFilial.options).some(option => option.value === valorFilial)) {
+                this.filtroFilial.add(new Option(valorFilial, valorFilial));
+            }
+
+            this.filtroFilial.value = valorFilial;
+            this.filtroFilial.disabled = true;
+            this.filtroFilial.title = 'Filial definida pelo usuario logado.';
+        },
+
+        aplicarRestricaoResumoDiesel() {
+            if (!this.resumoDieselPanel) return;
+            this.resumoDieselPanel.classList.toggle('hidden', this.usuarioSomenteAbastecimentoExterno());
         },
 
         normalizarChaveTexto(value) {
@@ -525,12 +623,45 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        async loadTanques() {
+        async loadFiliais() {
+            if (!this.filtroFilial) return;
+
             try {
                 const { data, error } = await supabaseClient
+                    .from('filiais')
+                    .select('nome, sigla')
+                    .order('nome');
+
+                if (error) throw error;
+
+                this.filiaisCache = data || [];
+                this.filtroFilial.innerHTML = '<option value="">Todas</option>';
+                this.filiaisCache.forEach(filial => {
+                    const valor = filial.sigla || filial.nome;
+                    const option = document.createElement('option');
+                    option.value = valor;
+                    option.textContent = filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome;
+                    this.filtroFilial.appendChild(option);
+                });
+
+                this.aplicarBloqueioFiltroFilial();
+            } catch (error) {
+                console.error('Erro ao carregar filiais:', error);
+                this.aplicarBloqueioFiltroFilial();
+            }
+        },
+
+        async loadTanques() {
+            try {
+                const valoresFilial = this.getValoresFilialSelecionada();
+                let query = supabaseClient
                     .from('tanques')
                     .select('id, nome, tipo_combustivel')
                     .order('nome');
+
+                if (valoresFilial.length > 0) query = query.in('filial', valoresFilial);
+
+                const { data, error } = await query;
 
                 if (error) throw error;
 
@@ -550,10 +681,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async loadVeiculos() {
             try {
-                const { data, error } = await supabaseClient
+                const valoresFilial = this.getValoresFilialSelecionada();
+                let query = supabaseClient
                     .from('veiculos')
                     .select('placa')
                     .order('placa');
+
+                if (valoresFilial.length > 0) query = query.in('filial', valoresFilial);
+
+                const { data, error } = await query;
                 if (error) throw error;
     
                 const datalist = document.getElementById('listaVeiculosFiltro');
@@ -598,10 +734,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.filtroPosto) return;
 
             try {
-                const { data, error } = await supabaseClient
+                const valoresFilial = this.getValoresFilialSelecionada();
+                let query = supabaseClient
                     .from('postos')
-                    .select('id, razao_social, cnpj')
+                    .select('id, razao_social, cnpj, filial')
                     .order('razao_social');
+
+                if (valoresFilial.length > 0) query = query.in('filial', valoresFilial);
+
+                const { data, error } = await query;
 
                 if (error) throw error;
 
@@ -645,10 +786,14 @@ document.addEventListener('DOMContentLoaded', () => {
         async loadTiposVeiculo() {
             if (!this.filtroTipoVeiculoOptions) return;
             try {
-                const { data, error } = await supabaseClient
+                const valoresFilial = this.getValoresFilialSelecionada();
+                let query = supabaseClient
                     .from('veiculos')
                     .select('tipo');
 
+                if (valoresFilial.length > 0) query = query.in('filial', valoresFilial);
+
+                const { data, error } = await query;
                 if (error) throw error;
 
                 // Pega valores únicos, remove nulos/vazios e ordena
@@ -679,15 +824,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.filtroBicoOptions) return;
 
             try {
-                const { data, error } = await supabaseClient
+                let query = supabaseClient
                     .from('bicos')
-                    .select('id, nome, bombas(nome, tanques(nome, tipo_combustivel))')
+                    .select('id, nome, bombas(nome, tanques(nome, tipo_combustivel, filial))')
                     .order('nome');
+
+                const { data, error } = await query;
 
                 if (error) throw error;
 
                 this.filtroBicoOptions.innerHTML = '';
-                data.forEach(bico => {
+                (data || [])
+                    .filter(bico => this.registroPertenceFilial(bico.bombas?.tanques?.filial))
+                    .forEach(bico => {
                     const tanqueInfo = bico.bombas?.tanques?.nome || 'N/A';
                     const bombaInfo = bico.bombas?.nome || 'N/A';
                     const label = document.createElement('label');
@@ -835,7 +984,10 @@ document.addEventListener('DOMContentLoaded', () => {
             optionsContainer.className = 'glass-dropdown hidden';
             optionsContainer.style.cssText = 'position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;';
 
-            const options = [
+            const externoRestrito = this.usuarioSomenteAbastecimentoExterno();
+            const options = externoRestrito ? [
+                { value: 'EXTERNO', text: 'Abastecimento Externo' }
+            ] : [
                 { value: 'ENTRADA', text: 'Entrada (Recebimento)' },
                 { value: 'SAIDA', text: 'Abastecimento Interno (Saída)' },
                 { value: 'EXTERNO', text: 'Abastecimento Externo' },
@@ -848,7 +1000,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 label.style.padding = '5px';
                 label.style.cursor = 'pointer';
                 label.style.color = '#000';
-                label.innerHTML = `<input type="checkbox" class="tipo-checkbox" value="${opt.value}" style="margin-right: 8px;"> ${opt.text}`;
+                const checked = externoRestrito ? 'checked disabled' : '';
+                label.innerHTML = `<input type="checkbox" class="tipo-checkbox" value="${opt.value}" style="margin-right: 8px;" ${checked}> ${opt.text}`;
                 optionsContainer.appendChild(label);
             });
 
@@ -861,6 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtroTipoText = document.getElementById('filtroTipoText');
 
             this.bindMultiselectEvents();
+            this.updateMultiselectText();
         },
 
         bindMultiselectEvents() {
@@ -891,15 +1045,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        aplicarRestricaoFiltroMovimentacao() {
+            if (!this.usuarioSomenteAbastecimentoExterno() || !this.filtroTipoOptions) return;
+
+            this.filtroTipoOptions.querySelectorAll('.tipo-checkbox').forEach(cb => {
+                cb.checked = cb.value === 'EXTERNO';
+                cb.disabled = true;
+            });
+            this.updateMultiselectText();
+        },
+
         getFiltrosAtuais() {
             return {
                 dataInicial: this.dataInicial.value,
                 dataFinal: this.dataFinal.value,
+                filial: this.getFilialSelecionada(),
                 tanque: this.filtroTanque.value,
                 veiculo: this.filtroVeiculo.value,
                 rota: this.filtroRota.value,
                 posto: this.filtroPosto ? this.filtroPosto.value : '',
-                tiposMov: this.filtroTipoOptions ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value) : [],
+                tiposMov: this.usuarioSomenteAbastecimentoExterno() ? ['EXTERNO'] : (this.filtroTipoOptions ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value) : []),
                 bicos: this.filtroBicoOptions ? Array.from(this.filtroBicoOptions.querySelectorAll('.bico-checkbox:checked')).map(cb => cb.value) : [],
                 tiposVeiculo: this.filtroTipoVeiculoOptions ? Array.from(this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox:checked')).map(cb => cb.value) : []
             };
@@ -936,6 +1101,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const filtros = estado.filtros || {};
                 this.dataInicial.value = filtros.dataInicial || this.dataInicial.value;
                 this.dataFinal.value = filtros.dataFinal || this.dataFinal.value;
+                if (this.filtroFilial && !this.getFilialUsuario()) this.filtroFilial.value = filtros.filial || '';
+                await Promise.all([
+                    this.loadTanques(),
+                    this.loadBicos(),
+                    this.loadPostos(),
+                    this.loadVeiculos(),
+                    this.loadTiposVeiculo()
+                ]);
                 this.filtroTanque.value = filtros.tanque || '';
                 this.filtroVeiculo.value = filtros.veiculo || '';
                 this.filtroRota.value = filtros.rota || '';
@@ -943,6 +1116,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.marcarCheckboxes(this.filtroTipoOptions, '.tipo-checkbox', filtros.tiposMov);
                 this.marcarCheckboxes(this.filtroBicoOptions, '.bico-checkbox', filtros.bicos);
                 this.marcarCheckboxes(this.filtroTipoVeiculoOptions, '.tipo-veiculo-checkbox', filtros.tiposVeiculo);
+                this.aplicarRestricaoFiltroMovimentacao();
                 this.updateMultiselectText();
                 this.updateBicoMultiselectText();
                 this.updateTipoVeiculoMultiselectText();
@@ -982,6 +1156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const dtIni = this.dataInicial.value;
             const dtFim = this.dataFinal.value;
+            const valoresFilial = this.getValoresFilialSelecionada();
             const tanqueId = this.filtroTanque.value;
             const postoId = this.getPostoIdFiltro();
             const tiposVeiculo = this.filtroTipoVeiculoOptions
@@ -989,15 +1164,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 : [];
             const veiculoPlaca = this.filtroVeiculo.value.trim().toUpperCase();
             const rota = this.filtroRota.value.trim();
-            const tiposMov = this.filtroTipoOptions 
-                ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value)
-                : [];
+            const tiposMov = this.usuarioSomenteAbastecimentoExterno()
+                ? ['EXTERNO']
+                : (this.filtroTipoOptions 
+                    ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value)
+                    : []);
             const bicosSelecionados = this.filtroBicoOptions
                 ? Array.from(this.filtroBicoOptions.querySelectorAll('.bico-checkbox:checked')).map(cb => parseInt(cb.value))
                 : [];
 
             if (!dtIni || !dtFim) {
                 alert('Por favor, selecione o período.');
+                return;
+            }
+
+            if (this.usuarioSomenteAbastecimentoExterno() && valoresFilial.length === 0) {
+                alert('Seu nivel acessa somente o relatorio externo da sua filial. Cadastre uma filial para este usuario.');
                 return;
             }
 
@@ -1013,10 +1195,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // --- Filtro por Tipo de Veículo ---
                 let placasPorTipo = [];
                 if (tiposVeiculo.length > 0) {
-                    const { data: veiculosDoTipo, error: veiculosError } = await supabaseClient
+                    let queryVeiculosDoTipo = supabaseClient
                         .from('veiculos')
                         .select('placa')
                         .in('tipo', tiposVeiculo);
+
+                    if (valoresFilial.length > 0) queryVeiculosDoTipo = queryVeiculosDoTipo.in('filial', valoresFilial);
+
+                    const { data: veiculosDoTipo, error: veiculosError } = await queryVeiculosDoTipo;
                     
                     if (veiculosError) throw veiculosError;
                     
@@ -1051,7 +1237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (this.tipoMovimentacaoPermitido(tiposMov, 'ENTRADA') || this.tipoMovimentacaoPermitido(tiposMov, 'AJUSTE')) {
                     let queryEntradas = supabaseClient
                         .from('abastecimentos')
-                        .select('*, tanques(nome, tipo_combustivel)')
+                        .select('*, tanques(nome, tipo_combustivel, filial)')
                         .gte('data', `${dtIni}T00:00:00-03:00`)
                         .lte('data', `${dtFim}T23:59:59-03:00`);
 
@@ -1072,7 +1258,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (errEntradas) throw errEntradas;
                     
                     // Normalizar dados de entrada
-                    dadosEntradas = (resEntradas || []).map(e => ({
+                    dadosEntradas = (resEntradas || [])
+                        .filter(e => this.registroPertenceFilial(e.tanques?.filial))
+                        .map(e => ({
                         id: e.id,
                         tipo: e.numero_nota === 'AJUSTE DE ESTOQUE' ? 'AJUSTE' : 'ENTRADA',
                         data_hora: e.data,
@@ -1096,7 +1284,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (this.tipoMovimentacaoPermitido(tiposMov, 'SAIDA')) {
                     let querySaidas = supabaseClient
                         .from('saidas_combustivel')
-                        .select('*, bicos!inner(nome, bombas!inner(tanque_id, tanques!inner(id, nome, tipo_combustivel)))')
+                        .select('*, bicos!inner(nome, bombas!inner(tanque_id, tanques!inner(id, nome, tipo_combustivel, filial)))')
                         .gte('data_hora', `${dtIni}T00:00:00-03:00`)
                         .lte('data_hora', `${dtFim}T23:59:59-03:00`);
 
@@ -1123,6 +1311,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (errSaidas) throw errSaidas;
 
                     let saidasFiltradas = resSaidas || [];
+                    if (valoresFilial.length > 0) {
+                        saidasFiltradas = saidasFiltradas.filter(s => this.registroPertenceFilial(s.bicos?.bombas?.tanques?.filial));
+                    }
                     if (tanqueId) {
                         saidasFiltradas = saidasFiltradas.filter(s => s.bicos?.bombas?.tanques?.id == tanqueId); // Comparação fraca int/string
                     }
@@ -1176,6 +1367,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (postoId) {
                         queryExterno = queryExterno.eq('posto_id', postoId);
+                    }
+                    if (valoresFilial.length > 0) {
+                        queryExterno = queryExterno.in('filial', valoresFilial);
                     }
 
                     const { data: resExterno, error: errExterno } = await queryExterno;
@@ -1785,10 +1979,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        clearFilters() {
+        async clearFilters() {
             this.form.reset();
+            this.aplicarBloqueioFiltroFilial();
+            await Promise.all([
+                this.loadTanques(),
+                this.loadBicos(),
+                this.loadPostos(),
+                this.loadVeiculos(),
+                this.loadTiposVeiculo()
+            ]);
             if (this.filtroTipoOptions) {
                 this.filtroTipoOptions.querySelectorAll('.tipo-checkbox').forEach(cb => cb.checked = false);
+                this.aplicarRestricaoFiltroMovimentacao();
                 this.updateMultiselectText();
             } else if (this.filtroTipo) {
                 this.filtroTipo.value = "";

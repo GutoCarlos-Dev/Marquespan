@@ -41,6 +41,16 @@
             <h3><i class="fas fa-filter"></i> Filtros do Relatório</h3>
             <form id="formFiltroAbastecimento">
                 <div class="filtros-cards-container">
+                    <div class="filtro-card">
+                        <h4>Filial</h4>
+                        <div class="form-group">
+                            <label for="filtroFilial">Filial</label>
+                            <select id="filtroFilial" class="glass-input">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Card 1: Período -->
                     <div class="filtro-card">
                         <h4>Período</h4>
@@ -107,7 +117,7 @@
             </form>
         </section>
 
-        <section class="glass-panel resumo-diesel-panel">
+        <section id="resumoDieselPanel" class="glass-panel resumo-diesel-panel">
             <div class="resumo-diesel-toolbar">
                 <div>
                     <h3><i class="fas fa-calendar-week"></i> Resumo Semanal Diesel Interno</h3>

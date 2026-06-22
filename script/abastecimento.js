@@ -55,6 +55,7 @@ import { filtrarOrdenarPostos, montarHtmlPostos } from './abastecimento/tabela-p
 import { filtrarOrdenarSaidas, montarHtmlSaidas } from './abastecimento/tabela-saidas.js';
 
 const ABASTECIMENTO_PAGE_ID = 'abastecimento.html';
+const NIVEIS_SOMENTE_ABASTECIMENTO_EXTERNO = ['pr_encarregado', 'pr_lider'];
 
 document.addEventListener('DOMContentLoaded', () => {
     const AbastecimentoUI = {
@@ -80,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.initTabs();
             this.cache();
             this.bind();
+            this.aplicarRestricaoAbastecimentoExterno();
 
              // Define a data de hoje como padrão para o formulário de entrada e filtros
             const now = new Date();
@@ -116,12 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             buttons.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    buttons.forEach(b => b.classList.remove('active'));
-                    sections.forEach(s => s.classList.add('hidden'));
-
-                    btn.classList.add('active');
-                    const targetId = btn.getAttribute('data-secao');
-                    document.getElementById(targetId)?.classList.remove('hidden');
+                    this.activateSection(btn.getAttribute('data-secao'));
                 });
             });
         },
@@ -735,6 +732,10 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         activateSection(sectionId) {
+            if (this.usuarioSomenteAbastecimentoExterno() && sectionId !== 'sectionExterno') {
+                sectionId = 'sectionExterno';
+            }
+
             const buttons = document.querySelectorAll('#menu-abastecimento .painel-btn');
             const sections = document.querySelectorAll('.main-content .glass-panel');
 
@@ -746,12 +747,34 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(sectionId)?.classList.remove('hidden');
         },
 
+        usuarioSomenteAbastecimentoExterno() {
+            return NIVEIS_SOMENTE_ABASTECIMENTO_EXTERNO.includes(this.getUserLevel());
+        },
+
+        aplicarRestricaoAbastecimentoExterno() {
+            if (!this.usuarioSomenteAbastecimentoExterno()) return;
+
+            document.querySelectorAll('#menu-abastecimento .painel-btn').forEach(btn => {
+                const isExterno = btn.getAttribute('data-secao') === 'sectionExterno';
+                btn.classList.toggle('hidden', !isExterno);
+                btn.style.display = isExterno ? '' : 'none';
+            });
+
+            document.querySelector('a[href="mobile-abastecimento.html"]')?.classList.add('hidden');
+            this.activateSection('sectionExterno');
+        },
+
         async handleInitialEditParams() {
             const params = new URLSearchParams(window.location.search);
             const tipo = (params.get('tipo') || '').toUpperCase();
             const id = params.get('id');
 
             if (!tipo || !id) return;
+            if (this.usuarioSomenteAbastecimentoExterno() && tipo !== 'EXTERNO') {
+                this.activateSection('sectionExterno');
+                alert('Seu nivel permite acessar somente Abastecimento Externo.');
+                return;
+            }
 
             try {
                 if (tipo === 'ENTRADA' || tipo === 'AJUSTE') {
