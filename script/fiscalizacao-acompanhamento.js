@@ -5,11 +5,15 @@ let acompanhamentos = [];
 let acompanhamentoEditandoId = null;
 let acompanhamentoVisualizando = false;
 let sortState = { field: 'data_acompanhamento', ascending: false };
+const PAGE_ID = 'fiscalizacao-acompanhamento.html';
 const niveisComExclusao = ['administrador', 'gerencia'];
 let rotasCadastradas = [];
 let carregandoHorariosModal = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const acessoPermitido = await verificarPermissaoPagina();
+  if (!acessoPermitido) return;
+
   const hoje = new Date();
   const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
   document.getElementById('filtroDataDe').valueAsDate = primeiroDia;
@@ -20,6 +24,55 @@ document.addEventListener('DOMContentLoaded', async () => {
   await carregarListas();
   await buscarAcompanhamentos();
 });
+
+function getUsuarioAtual() {
+  try {
+    return JSON.parse(localStorage.getItem('usuarioLogado') || 'null') || {};
+  } catch {
+    return {};
+  }
+}
+
+async function verificarPermissaoPagina() {
+  const usuario = getUsuarioAtual();
+  const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+
+  if (!nivel) {
+    window.location.href = 'index.html';
+    return false;
+  }
+
+  if (nivel === 'administrador') {
+    return true;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('nivel_permissoes')
+      .select('paginas_permitidas')
+      .eq('nivel', nivel)
+      .single();
+
+    if (error) throw error;
+
+    if ((data?.paginas_permitidas || []).includes(PAGE_ID)) {
+      return true;
+    }
+  } catch (error) {
+    console.error('Erro ao verificar permissao da pagina de fiscalizacao de acompanhamento:', error);
+  }
+
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:Arial,sans-serif;">
+      <div>
+        <h1 style="margin-bottom:12px;">Acesso negado</h1>
+        <p>Voce nao tem permissao para acessar a pagina de fiscalizacao de acompanhamento.</p>
+        <a href="menu.html" style="display:inline-block;margin-top:16px;color:#2563eb;">Voltar ao menu</a>
+      </div>
+    </div>
+  `;
+  return false;
+}
 
 function bindEvents() {
   document.getElementById('btnIncluirAcompanhamento').addEventListener('click', abrirModal);
