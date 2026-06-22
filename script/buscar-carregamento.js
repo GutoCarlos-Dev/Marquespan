@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 
 const CARREGAMENTOS_TABLE = 'saidas_carregamento';
 const REQUISICOES_TABLE = 'requisicoes_carregamento';
+const BUSCAR_CARREGAMENTO_PAGE_ID = 'buscar-carregamento.html';
 const MOTIVOS_SO_RETORNO = ['Retirada Total', 'Retirada Parcial', 'Retirada de Emprestimo'];
 const MOTIVOS_SO_ENTREGA = ['Aumento', 'Cliente Novo'];
 const ITENS_ESPECIAIS_NOMES = ['ESTEIRA', 'FORMA'];
@@ -9,7 +10,10 @@ const ITENS_ESPECIAIS_NOMES = ['ESTEIRA', 'FORMA'];
 let carregamentos = [];
 let requisicoesPorCarregamento = new Map();
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  const acessoPermitido = await verificarPermissaoPagina();
+  if (!acessoPermitido) return;
+
   document.getElementById('btnBuscar')?.addEventListener('click', carregarCarregamentos);
   document.getElementById('btnLimpar')?.addEventListener('click', limparFiltros);
   document.getElementById('termoBusca')?.addEventListener('keydown', event => {
@@ -23,6 +27,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
   carregarCarregamentos();
 });
+
+function getUserLevel() {
+  try {
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+    return String(usuario?.nivel || '').trim().toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+async function verificarPermissaoPagina() {
+  const nivel = getUserLevel();
+
+  if (!nivel) {
+    window.location.href = 'index.html';
+    return false;
+  }
+
+  if (nivel === 'administrador') return true;
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('nivel_permissoes')
+      .select('paginas_permitidas')
+      .eq('nivel', nivel)
+      .single();
+    if (error) throw error;
+    if ((data?.paginas_permitidas || []).includes(BUSCAR_CARREGAMENTO_PAGE_ID)) return true;
+  } catch (error) {
+    console.error('Erro ao validar permissao de buscar carregamento:', error);
+  }
+
+  document.body.innerHTML = '<div style="text-align:center; padding:50px;"><h1>Acesso Negado</h1><p>Voce nao tem permissao para acessar esta pagina.</p><a href="dashboard.html">Voltar ao Dashboard</a></div>';
+  return false;
+}
 
 async function carregarCarregamentos() {
   const tbody = document.getElementById('corpoTabelaCarregamentos');
