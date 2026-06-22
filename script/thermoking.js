@@ -1,15 +1,78 @@
 import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
+const THERMOKING_PAGE_ID = 'thermoking.html';
+
 let tkData = [];
 let currentSort = { column: 'numero_serie', direction: 'asc' };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const acessoPermitido = await verificarPermissaoPagina();
+    if (!acessoPermitido) return;
+
     carregarFiliais();
     carregarPlacas();
     carregarTK();
     setupEventListeners();
 });
+
+function getCurrentUser() {
+    try {
+        return JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+    } catch {
+        return null;
+    }
+}
+
+async function verificarPermissaoPagina() {
+    const usuario = getCurrentUser();
+    const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+
+    if (!nivel) {
+        window.location.href = 'index.html';
+        return false;
+    }
+
+    if (nivel === 'administrador') {
+        return true;
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('nivel_permissoes')
+            .select('paginas_permitidas')
+            .eq('nivel', nivel)
+            .single();
+
+        if (error) throw error;
+
+        if ((data?.paginas_permitidas || []).includes(THERMOKING_PAGE_ID)) {
+            return true;
+        }
+    } catch (error) {
+        console.error('Erro ao verificar permissao da pagina Thermoking:', error);
+    }
+
+    document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:Arial,sans-serif;">
+            <div>
+                <h1 style="margin-bottom:12px;">Acesso negado</h1>
+                <p>Voce nao tem permissao para acessar a pagina Thermoking.</p>
+                <a href="menu.html" style="display:inline-block;margin-top:16px;color:#2563eb;">Voltar ao menu</a>
+            </div>
+        </div>
+    `;
+    return false;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 function setupEventListeners() {
     document.getElementById('btn-buscar')?.addEventListener('click', carregarTK);
@@ -81,13 +144,13 @@ function renderizarTabela() {
     const tbody = document.getElementById('grid-tk-body');
     tbody.innerHTML = tkData.map(v => `
         <tr>
-            <td>${v.filial}</td>
-            <td style="font-weight:bold">${v.numero_serie}</td>
-            <td>${v.modelo || '-'}</td>
-            <td>${v.ano || '-'}</td>
-            <td>${v.placa_vinculada || '-'}</td>
-            <td><span class="status-badge status-${v.status.replace(' ', '-').toLowerCase()}">${v.status}</span></td> 
-            <td>${v.descricao_status || '-'}</td>
+            <td>${escapeHtml(v.filial)}</td>
+            <td style="font-weight:bold">${escapeHtml(v.numero_serie)}</td>
+            <td>${escapeHtml(v.modelo || '-')}</td>
+            <td>${escapeHtml(v.ano || '-')}</td>
+            <td>${escapeHtml(v.placa_vinculada || '-')}</td>
+            <td><span class="status-badge status-${escapeHtml(v.status.replace(' ', '-').toLowerCase())}">${escapeHtml(v.status)}</span></td> 
+            <td>${escapeHtml(v.descricao_status || '-')}</td>
             <td>
                 <button class="btn-icon edit btn-edit" data-id="${v.id}" title="Editar"><i class="fas fa-edit"></i></button>
                 <button class="btn-icon delete btn-delete" data-id="${v.id}" title="Excluir"><i class="fas fa-trash"></i></button>
