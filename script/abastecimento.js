@@ -530,6 +530,45 @@ document.addEventListener('DOMContentLoaded', () => {
             return '';
         },
 
+        getFilialUsuarioSelecionavel() {
+            const userFilial = this.getUserFilial();
+            if (!userFilial) return '';
+
+            const filialNormalizada = String(userFilial).trim().toUpperCase();
+            const matchingFilial = (this.filiaisCache || []).find(f => {
+                const nome = String(f.nome || '').trim().toUpperCase();
+                const sigla = String(f.sigla || '').trim().toUpperCase();
+                const valor = String(f.sigla || f.nome || '').trim().toUpperCase();
+                return nome === filialNormalizada || sigla === filialNormalizada || valor === filialNormalizada;
+            });
+
+            return matchingFilial ? (matchingFilial.sigla || matchingFilial.nome || userFilial) : userFilial;
+        },
+
+        aplicarBloqueioFilialExterna() {
+            if (!this.extFilial) return;
+
+            const userFilial = this.getUserFilial();
+            if (!userFilial) {
+                this.extFilial.disabled = false;
+                this.extFilial.title = '';
+                return;
+            }
+
+            const valorFilial = this.getFilialUsuarioSelecionavel();
+            if (valorFilial && !Array.from(this.extFilial.options).some(option => option.value === valorFilial)) {
+                this.extFilial.add(new Option(valorFilial, valorFilial));
+            }
+
+            this.extFilial.value = valorFilial;
+            this.extFilial.disabled = true;
+            this.extFilial.title = 'Filial definida pelo usuario logado.';
+        },
+
+        getFilialAbastecimentoExterno() {
+            return this.getUserFilial() ? this.getFilialUsuarioSelecionavel() : (this.extFilial?.value || '');
+        },
+
         getUserLevel() {
             try {
                 const usuarioLogado = localStorage.getItem('usuarioLogado');
@@ -1619,22 +1658,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (this.extFilial) {
                     this.extFilial.innerHTML = options;
-                    if (userFilial && this.filiaisCache.length > 0) {
-                        // Tenta encontrar o valor correspondente no dropdown (seja sigla ou nome)
-                        const matchingFilial = this.filiaisCache.find(f => f.nome === userFilial || f.sigla === userFilial || (f.sigla || f.nome) === userFilial);
-                        if (matchingFilial) {
-                            this.extFilial.value = matchingFilial.sigla || matchingFilial.nome;
-                        } else {
-                            this.extFilial.value = userFilial;
-                        }
-                    } else {
-                        // Se o usuário não tem filial definida, preenche com 'SP' como padrão
+                    if (!userFilial) {
                         if (this.extFilial.querySelector('option[value="SP"]')) {
                             this.extFilial.value = 'SP';
                         }
-                        this.extFilial.disabled = false; // Permite seleção para usuários sem filial definida
                     }
-                    this.loadPostosOptions(); // Carrega postos filtrados pela filial definida
+                    this.aplicarBloqueioFilialExterna();
+                    this.loadPostosOptions();
                 }
                 if (this.postoFilial) {
                     this.postoFilial.innerHTML = options;
@@ -1868,7 +1898,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     postosCache: this.postosCache,
                     postoTexto: this.extPosto.value,
                     dataHora: this.extDataHora.value,
-                    filial: this.extFilial.value,
+                    filial: this.getFilialAbastecimentoExterno(),
                     veiculo: this.extVeiculo.value,
                     tipo: this.extTipo.value,
                     kmAtual: this.extKmAtual.value,
@@ -1995,6 +2025,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.extDataHora.value = date.toISOString().slice(0, 16);
             }
             this.extFilial.value = data.filial || '';
+            this.aplicarBloqueioFilialExterna();
             
             if (data.postos) {
                 // Garante que o datalist seja populado antes de tentar setar o valor
@@ -2034,6 +2065,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = this.formExt.querySelector('button[type="submit"]');
             if(btn) btn.innerHTML = '<i class="fas fa-save"></i> Salvar Registro';
             this.extMotorista.value = ''; // Limpa o motorista
+            this.aplicarBloqueioFilialExterna();
+            this.loadPostosOptions();
         },
 
         async handleBulkDeleteExt() {
