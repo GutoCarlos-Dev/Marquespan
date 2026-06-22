@@ -86,7 +86,11 @@ export async function buscarPostosPaginados({ supabaseClient, filial }) {
             .from('postos')
             .select('*');
 
-        if (filial) query = query.eq('filial', filial);
+        if (Array.isArray(filial) && filial.length > 0) {
+            query = query.in('filial', filial);
+        } else if (filial) {
+            query = query.eq('filial', filial);
+        }
 
         const { data, error } = await query.range(from, from + step - 1);
         if (error) throw error;

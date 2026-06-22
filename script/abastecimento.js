@@ -55,7 +55,7 @@ import { filtrarOrdenarPostos, montarHtmlPostos } from './abastecimento/tabela-p
 import { filtrarOrdenarSaidas, montarHtmlSaidas } from './abastecimento/tabela-saidas.js';
 
 const ABASTECIMENTO_PAGE_ID = 'abastecimento.html';
-const NIVEIS_SOMENTE_ABASTECIMENTO_EXTERNO = ['pr_encarregado', 'pr_lider'];
+const NIVEIS_ABASTECIMENTO_EXTERNO_E_POSTOS = ['pr_encarregado', 'pr_lider'];
 
 document.addEventListener('DOMContentLoaded', () => {
     const AbastecimentoUI = {
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.initTabs();
             this.cache();
             this.bind();
-            this.aplicarRestricaoAbastecimentoExterno();
+            this.aplicarRestricaoAbastecimentoExternoEPostos();
 
              // Define a data de hoje como padrão para o formulário de entrada e filtros
             const now = new Date();
@@ -542,6 +542,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return matchingFilial ? (matchingFilial.sigla || matchingFilial.nome || userFilial) : userFilial;
         },
 
+        getValoresFilialUsuario() {
+            const userFilial = this.getUserFilial();
+            if (!userFilial) return [];
+
+            const filialNormalizada = String(userFilial).trim().toUpperCase();
+            const valores = new Set([userFilial]);
+            (this.filiaisCache || []).forEach(f => {
+                const nome = String(f.nome || '').trim();
+                const sigla = String(f.sigla || '').trim();
+                if (
+                    nome.toUpperCase() === filialNormalizada
+                    || sigla.toUpperCase() === filialNormalizada
+                    || String(sigla || nome).trim().toUpperCase() === filialNormalizada
+                ) {
+                    if (nome) valores.add(nome);
+                    if (sigla) valores.add(sigla);
+                }
+            });
+
+            return Array.from(valores);
+        },
+
+        registroPertenceFilialUsuario(valorFilial) {
+            const valores = this.getValoresFilialUsuario().map(valor => String(valor).trim().toUpperCase());
+            return valores.length === 0 || valores.includes(String(valorFilial || '').trim().toUpperCase());
+        },
+
         aplicarBloqueioFilialExterna() {
             if (!this.extFilial) return;
 
@@ -564,6 +591,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         getFilialAbastecimentoExterno() {
             return this.getUserFilial() ? this.getFilialUsuarioSelecionavel() : (this.extFilial?.value || '');
+        },
+
+        aplicarBloqueioFilialPosto() {
+            if (!this.postoFilial) return;
+
+            const userFilial = this.getUserFilial();
+            if (!userFilial) {
+                this.postoFilial.disabled = false;
+                this.postoFilial.title = '';
+                return;
+            }
+
+            const valorFilial = this.getFilialUsuarioSelecionavel();
+            if (valorFilial && !Array.from(this.postoFilial.options).some(option => option.value === valorFilial)) {
+                this.postoFilial.add(new Option(valorFilial, valorFilial));
+            }
+
+            this.postoFilial.value = valorFilial;
+            this.postoFilial.disabled = true;
+            this.postoFilial.title = 'Filial definida pelo usuario logado.';
+        },
+
+        getFilialCadastroPosto() {
+            return this.getUserFilial() ? this.getFilialUsuarioSelecionavel() : (this.postoFilial?.value || '');
         },
 
         getUserLevel() {
@@ -732,7 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         activateSection(sectionId) {
-            if (this.usuarioSomenteAbastecimentoExterno() && sectionId !== 'sectionExterno') {
+            if (this.usuarioSomenteAbastecimentoExternoEPostos() && !['sectionExterno', 'sectionPostos'].includes(sectionId)) {
                 sectionId = 'sectionExterno';
             }
 
@@ -747,20 +798,23 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(sectionId)?.classList.remove('hidden');
         },
 
-        usuarioSomenteAbastecimentoExterno() {
-            return NIVEIS_SOMENTE_ABASTECIMENTO_EXTERNO.includes(this.getUserLevel());
+        usuarioSomenteAbastecimentoExternoEPostos() {
+            return NIVEIS_ABASTECIMENTO_EXTERNO_E_POSTOS.includes(this.getUserLevel());
         },
 
-        aplicarRestricaoAbastecimentoExterno() {
-            if (!this.usuarioSomenteAbastecimentoExterno()) return;
+        aplicarRestricaoAbastecimentoExternoEPostos() {
+            if (!this.usuarioSomenteAbastecimentoExternoEPostos()) return;
 
             document.querySelectorAll('#menu-abastecimento .painel-btn').forEach(btn => {
-                const isExterno = btn.getAttribute('data-secao') === 'sectionExterno';
-                btn.classList.toggle('hidden', !isExterno);
-                btn.style.display = isExterno ? '' : 'none';
+                const secao = btn.getAttribute('data-secao');
+                const permitido = ['sectionExterno', 'sectionPostos'].includes(secao);
+                btn.classList.toggle('hidden', !permitido);
+                btn.style.display = permitido ? '' : 'none';
             });
 
             document.querySelector('a[href="mobile-abastecimento.html"]')?.classList.add('hidden');
+            this.btnImportarPostos?.classList.add('hidden');
+            this.fileImportarPostos?.classList.add('hidden');
             this.activateSection('sectionExterno');
         },
 
@@ -770,9 +824,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = params.get('id');
 
             if (!tipo || !id) return;
-            if (this.usuarioSomenteAbastecimentoExterno() && tipo !== 'EXTERNO') {
+            if (this.usuarioSomenteAbastecimentoExternoEPostos() && tipo !== 'EXTERNO') {
                 this.activateSection('sectionExterno');
-                alert('Seu nivel permite acessar somente Abastecimento Externo.');
+                alert('Seu nivel permite acessar somente Abastecimento Externo e Cadastro de Posto.');
                 return;
             }
 
@@ -1691,10 +1745,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (this.postoFilial) {
                     this.postoFilial.innerHTML = options;
-                    if (userFilial) {
-                        this.postoFilial.value = userFilial;
-                        this.postoFilial.disabled = true;
-                    }
+                    this.aplicarBloqueioFilialPosto();
                 }
             } catch (error) {
                 console.error('Erro ao carregar filiais:', error);
@@ -2181,7 +2232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const payload = montarPayloadPosto({
-                filial: this.postoFilial.value,
+                filial: this.getFilialCadastroPosto(),
                 razaoSocial: this.postoRazao.value,
                 cnpj: cnpjValue,
                 cidade: this.postoCidade.value,
@@ -2222,7 +2273,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     this.postosData = await buscarPostosPaginados({
                         supabaseClient,
-                        filial: this.getUserFilial()
+                        filial: this.getValoresFilialUsuario()
                     });
                 } catch (error) {
                     console.error("Erro ao buscar postos para a tabela:", error);
@@ -2257,10 +2308,14 @@ document.addEventListener('DOMContentLoaded', () => {
         async editPosto(id) {
             const { data, error } = await supabaseClient.from('postos').select('*').eq('id', id).single();
             if (error || !data) return alert('Erro ao carregar dados do posto.');
+            if (this.getUserFilial() && !this.registroPertenceFilialUsuario(data.filial)) {
+                return alert('Voce nao tem permissao para editar posto de outra filial.');
+            }
 
             this.postoEditingId = id;
             
             this.postoFilial.value = data.filial || '';
+            this.aplicarBloqueioFilialPosto();
             this.postoRazao.value = data.razao_social || '';
             this.postoCnpj.value = data.cnpj || '';
             this.postoCidade.value = data.cidade || '';
@@ -2278,6 +2333,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.postoEditingId = null;
             const btn = this.formPosto.querySelector('button[type="submit"]');
             if(btn) btn.innerHTML = '<i class="fas fa-save"></i> Salvar Posto';
+            this.aplicarBloqueioFilialPosto();
 
             // Reseta a data para o momento atual após limpar o formulário para o próximo lançamento
             const now = new Date();
@@ -2287,6 +2343,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async deletePosto(id) {
             if(confirm('Excluir este posto?')) {
+                if (this.getUserFilial()) {
+                    const { data: posto, error: postoError } = await supabaseClient
+                        .from('postos')
+                        .select('filial')
+                        .eq('id', id)
+                        .single();
+                    if (postoError || !posto) return alert('Erro ao validar filial do posto.');
+                    if (!this.registroPertenceFilialUsuario(posto.filial)) {
+                        return alert('Voce nao tem permissao para excluir posto de outra filial.');
+                    }
+                }
+
                 const { error } = await supabaseClient.from('postos').delete().eq('id', id);
                 if(error) alert('Erro ao excluir: ' + error.message);
                 else {
