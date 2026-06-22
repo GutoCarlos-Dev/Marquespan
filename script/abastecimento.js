@@ -54,6 +54,8 @@ import { filtrarOrdenarExternos, montarHtmlExternos } from './abastecimento/tabe
 import { filtrarOrdenarPostos, montarHtmlPostos } from './abastecimento/tabela-postos.js';
 import { filtrarOrdenarSaidas, montarHtmlSaidas } from './abastecimento/tabela-saidas.js';
 
+const ABASTECIMENTO_PAGE_ID = 'abastecimento.html';
+
 document.addEventListener('DOMContentLoaded', () => {
     const AbastecimentoUI = {
         async init() {
@@ -73,6 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.estoqueFallbackTimer = null;
             this.estoqueRefreshPendente = false;
             this.auditoriaEstoqueDados = [];
+            const acessoPermitido = await this.verificarPermissaoPagina();
+            if (!acessoPermitido) return;
             this.initTabs();
             this.cache();
             this.bind();
@@ -535,6 +539,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) { console.error(e); }
             return '';
+        },
+
+        async verificarPermissaoPagina() {
+            const nivel = this.getUserLevel();
+
+            if (!nivel) {
+                window.location.href = 'index.html';
+                return false;
+            }
+
+            if (nivel === 'administrador') return true;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('nivel_permissoes')
+                    .select('paginas_permitidas')
+                    .eq('nivel', nivel)
+                    .single();
+                if (error) throw error;
+                if ((data?.paginas_permitidas || []).includes(ABASTECIMENTO_PAGE_ID)) return true;
+            } catch (error) {
+                console.error('Erro ao validar permissao de abastecimento:', error);
+            }
+
+            document.body.innerHTML = '<div style="text-align:center; padding:50px;"><h1>Acesso Negado</h1><p>Voce nao tem permissao para acessar esta pagina.</p><a href="dashboard.html">Voltar ao Dashboard</a></div>';
+            return false;
         },
 
         canViewEstoqueAuditoria() {
