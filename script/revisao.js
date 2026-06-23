@@ -468,18 +468,18 @@ function renderGrid() {
         <tr>
             <td>${escapeHtml(item.filial)}</td>
             <td>${escapeHtml(item.placa)}</td>
-            <td>${escapeHtml(item.modelo)}</td>
+            <td title="${escapeHtml(item.modelo)}">${escapeHtml(item.modelo)}</td>
             <td>${escapeHtml(item.tipo_motor)}</td>
             <td>${formatInteiro(item.km_atual)}</td>
-            <td>${escapeHtml(item.garantia)}</td>
-            <td>${escapeHtml(item.servico)}</td>
-            <td>${escapeHtml(item.regra)}</td>
+            <td title="${escapeHtml(item.garantia)}">${escapeHtml(item.garantia)}</td>
+            <td title="${escapeHtml(item.servico)}">${escapeHtml(item.servico)}</td>
+            <td title="${escapeHtml(item.regra)}">${escapeHtml(item.regra)}</td>
             <td>${item.proximo_km ? formatInteiro(item.proximo_km) : '-'}</td>
             <td>${item.km_restante === null ? '-' : formatInteiro(item.km_restante)}</td>
-            <td>${escapeHtml(item.local_execucao)}</td>
+            <td title="${escapeHtml(item.local_execucao)}">${escapeHtml(item.local_execucao)}</td>
             <td>${statusHtml(item.status)}</td>
-            <td>${escapeHtml(item.fonte_km)}</td>
-            <td class="obs-cell">${escapeHtml(item.observacao)}</td>
+            <td title="${escapeHtml(item.fonte_km)}">${escapeHtml(item.fonte_km)}</td>
+            <td title="${escapeHtml(item.observacao)}">${escapeHtml(item.observacao)}</td>
         </tr>
     `).join('');
 }
