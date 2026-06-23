@@ -9,8 +9,13 @@ const AVENCER_KM = 5000;
 const state = {
     linhas: [],
     veiculos: [],
+    kmPorPlaca: new Map(),
+    historico: new Map(),
+    renderedLinhas: [],
     sort: { key: 'km_restante', asc: true }
 };
+
+let modalItemAtual = null;
 
 const els = {};
 
@@ -32,6 +37,9 @@ function cacheEls() {
     els.filtroFilial = document.getElementById('filtroFilial');
     els.filtroBusca = document.getElementById('filtroBusca');
     els.filtroSituacao = document.getElementById('filtroSituacao');
+    els.filtroStatus = document.getElementById('filtroStatus');
+    els.filtroServico = document.getElementById('filtroServico');
+    els.filtroMotor = document.getElementById('filtroMotor');
     els.statusBusca = document.getElementById('statusBusca');
     els.btnFiltrar = document.getElementById('btnFiltrar');
     els.btnExportarXlsx = document.getElementById('btnExportarXlsx');
@@ -44,6 +52,12 @@ function cacheEls() {
     els.kpiRevisoes = document.getElementById('kpiRevisoes');
     els.kpiAVencer = document.getElementById('kpiAVencer');
     els.kpiVencidas = document.getElementById('kpiVencidas');
+    els.modal = document.getElementById('modalRevisao');
+    els.modalForm = document.getElementById('formRegistrarServico');
+    els.modalDataRealizado = document.getElementById('modalDataRealizado');
+    els.modalKmRealizado = document.getElementById('modalKmRealizado');
+    els.modalObservacao = document.getElementById('modalObservacao');
+    els.btnSalvarModal = document.getElementById('btnSalvarModal');
 }
 
 function bindEvents() {
@@ -51,7 +65,11 @@ function bindEvents() {
         event.preventDefault();
         buscarRevisoes();
     });
+
     els.buscaGrid?.addEventListener('input', renderGrid);
+    els.filtroStatus?.addEventListener('change', renderGrid);
+    els.filtroServico?.addEventListener('change', renderGrid);
+    els.filtroMotor?.addEventListener('change', renderGrid);
     els.btnExportarXlsx?.addEventListener('click', exportarXlsx);
     els.btnExportarPdf?.addEventListener('click', exportarPdf);
 
@@ -61,6 +79,20 @@ function bindEvents() {
             renderGrid();
         });
     });
+
+    els.tbodyRevisao?.addEventListener('click', event => {
+        const btn = event.target.closest('.btn-reg');
+        if (!btn) return;
+        const idx = parseInt(btn.dataset.idx, 10);
+        abrirModal(state.renderedLinhas[idx]);
+    });
+
+    document.getElementById('btnFecharModal')?.addEventListener('click', fecharModal);
+    document.getElementById('btnCancelarModal')?.addEventListener('click', fecharModal);
+    els.modal?.addEventListener('click', event => {
+        if (event.target === els.modal) fecharModal();
+    });
+    els.modalForm?.addEventListener('submit', salvarModal);
 }
 
 async function verificarPermissaoPagina() {
@@ -136,10 +168,21 @@ async function buscarRevisoes() {
             return;
         }
 
-        setLoading(true, `Buscando maior KM em abastecimentos para ${veiculos.length} veiculo(s)...`);
-        const kmPorPlaca = await buscarMaiorKmPorPlaca(veiculos.map(v => v.placa));
-        state.linhas = veiculos.flatMap(veiculo => montarLinhasVeiculo(veiculo, kmPorPlaca.get(normalizarPlaca(veiculo.placa))));
+        const placas = veiculos.map(v => v.placa);
 
+        setLoading(true, `Buscando maior KM em abastecimentos para ${veiculos.length} veiculo(s)...`);
+        const kmPorPlaca = await buscarMaiorKmPorPlaca(placas);
+        state.kmPorPlaca = kmPorPlaca;
+
+        setLoading(true, 'Buscando historico de revisoes...');
+        const historico = await buscarHistorico(placas);
+        state.historico = historico;
+
+        state.linhas = veiculos.flatMap(veiculo =>
+            montarLinhasVeiculo(veiculo, kmPorPlaca.get(normalizarPlaca(veiculo.placa)), historico)
+        );
+
+        popularFiltroServico();
         renderTudo();
         setStatus(`${veiculos.length} veiculo(s) e ${state.linhas.length} revisao(oes) calculados.`);
     } catch (error) {
@@ -245,7 +288,30 @@ async function buscarTodos(buildQuery) {
     return dados;
 }
 
-function montarLinhasVeiculo(veiculo, kmInfo) {
+async function buscarHistorico(placas) {
+    if (!placas.length) return new Map();
+
+    const placasNorm = [...new Set(placas.flatMap(variantesPlaca).filter(Boolean))];
+    const { data, error } = await supabaseClient
+        .from('revisao_historico')
+        .select('placa, servico, km_realizado, data_realizado')
+        .in('placa', placasNorm)
+        .order('km_realizado', { ascending: false });
+
+    if (error) {
+        console.error('Erro ao buscar historico de revisao:', error);
+        return new Map();
+    }
+
+    const mapa = new Map();
+    for (const reg of (data || [])) {
+        const chave = `${normalizarPlaca(reg.placa)}|${reg.servico}`;
+        if (!mapa.has(chave)) mapa.set(chave, reg);
+    }
+    return mapa;
+}
+
+function montarLinhasVeiculo(veiculo, kmInfo, historico) {
     const kmAtual = kmInfo?.km || 0;
     const perfil = classificarVeiculo(veiculo, kmAtual);
     const regras = obterRegrasRevisao(perfil, kmAtual);
@@ -261,9 +327,15 @@ function montarLinhasVeiculo(veiculo, kmInfo) {
     }
 
     return regras.map(regra => {
-        const proximoKm = calcularProximoKm(kmAtual, regra.intervalo, regra.kmFixo);
-        const kmRestante = proximoKm > 0 ? proximoKm - kmAtual : null;
-        const status = calcularStatus(kmRestante, kmAtual, regra.kmFixo);
+        const chave = `${normalizarPlaca(veiculo.placa)}|${regra.servico}`;
+        const ultimoReg = historico?.get(chave) || null;
+        const ultimoKm = ultimoReg?.km_realizado || null;
+        const ultimaData = ultimoReg?.data_realizado || null;
+
+        const proximoKm = calcularProximoKm(kmAtual, regra.intervalo, regra.kmFixo, ultimoKm);
+        const kmRestante = proximoKm ? proximoKm - kmAtual : null;
+        const status = calcularStatus(kmRestante, kmAtual, regra.kmFixo, ultimoKm);
+
         return {
             filial: veiculo.filial || '-',
             placa: normalizarPlaca(veiculo.placa),
@@ -279,7 +351,9 @@ function montarLinhasVeiculo(veiculo, kmInfo) {
             local_execucao: regra.local,
             status,
             fonte_km: kmInfo ? `${kmInfo.fonte}${kmInfo.data_hora ? ` - ${formatarData(kmInfo.data_hora)}` : ''}` : 'Sem abastecimento',
-            observacao: [perfil.observacao, regra.observacao].filter(Boolean).join(' | ')
+            observacao: [perfil.observacao, regra.observacao].filter(Boolean).join(' | '),
+            ultimo_km_realizado: ultimoKm,
+            ultimo_data_realizado: ultimaData
         };
     });
 }
@@ -427,13 +501,18 @@ function regrasAccelo(perfil, kmAtual) {
     return regras;
 }
 
-function calcularProximoKm(kmAtual, intervalo, kmFixo) {
-    if (kmFixo) return kmAtual <= kmFixo ? kmFixo : kmFixo;
+function calcularProximoKm(kmAtual, intervalo, kmFixo, ultimoKm) {
+    if (kmFixo) {
+        if (ultimoKm && ultimoKm >= kmFixo) return null;
+        return kmFixo;
+    }
     if (!intervalo) return 0;
+    if (ultimoKm) return ultimoKm + intervalo;
     return Math.ceil((kmAtual + 1) / intervalo) * intervalo;
 }
 
-function calcularStatus(kmRestante, kmAtual, kmFixo) {
+function calcularStatus(kmRestante, kmAtual, kmFixo, ultimoKm) {
+    if (kmFixo && ultimoKm && ultimoKm >= kmFixo) return 'Concluido';
     if (kmRestante === null) return 'Informativo';
     if (kmFixo && kmAtual >= kmFixo) return 'Vencida';
     if (kmRestante <= 0) return 'Vencida';
@@ -459,12 +538,21 @@ function renderKpis() {
 
 function renderGrid() {
     const termo = normalizarBusca(els.buscaGrid?.value);
+    const filtroStatus = els.filtroStatus?.value || '';
+    const filtroServico = els.filtroServico?.value || '';
+    const filtroMotor = els.filtroMotor?.value || '';
+
     const dados = ordenar([...state.linhas], state.sort).filter(item => {
+        if (filtroStatus && item.status !== filtroStatus) return false;
+        if (filtroServico && item.servico !== filtroServico) return false;
+        if (filtroMotor && item.tipo_motor !== filtroMotor) return false;
         if (!termo) return true;
         return normalizarBusca(Object.values(item).join(' ')).includes(termo);
     });
 
-    els.tbodyRevisao.innerHTML = dados.map(item => `
+    state.renderedLinhas = dados;
+
+    els.tbodyRevisao.innerHTML = dados.map((item, idx) => `
         <tr>
             <td>${escapeHtml(item.filial)}</td>
             <td>${escapeHtml(item.placa)}</td>
@@ -480,8 +568,110 @@ function renderGrid() {
             <td>${statusHtml(item.status)}</td>
             <td title="${escapeHtml(item.fonte_km)}">${escapeHtml(item.fonte_km)}</td>
             <td title="${escapeHtml(item.observacao)}">${escapeHtml(item.observacao)}</td>
+            <td title="${item.ultimo_km_realizado ? formatInteiro(item.ultimo_km_realizado) + (item.ultimo_data_realizado ? ' em ' + formatarData(item.ultimo_data_realizado) : '') : ''}">${item.ultimo_km_realizado ? formatInteiro(item.ultimo_km_realizado) : '-'}</td>
+            <td><button class="btn-icon btn-reg" data-idx="${idx}" title="Registrar servico realizado"><i class="fas fa-wrench"></i></button></td>
         </tr>
     `).join('');
+}
+
+function popularFiltroServico() {
+    if (!els.filtroServico) return;
+    const servicos = [...new Set(state.linhas.map(l => l.servico))].sort((a, b) =>
+        a.localeCompare(b, 'pt-BR')
+    );
+    const current = els.filtroServico.value;
+    els.filtroServico.innerHTML = '<option value="">Todos</option>';
+    servicos.forEach(s => els.filtroServico.add(new Option(s, s)));
+    if (current && servicos.includes(current)) els.filtroServico.value = current;
+}
+
+function abrirModal(item) {
+    if (!item) return;
+    modalItemAtual = item;
+
+    document.getElementById('modalPlaca').textContent = item.placa;
+    document.getElementById('modalModelo').textContent = item.modelo;
+    document.getElementById('modalMotor').textContent = item.tipo_motor;
+    document.getElementById('modalKmAtualDisplay').textContent = formatInteiro(item.km_atual);
+    document.getElementById('modalServicoDisplay').textContent = item.servico;
+    document.getElementById('modalRegraDisplay').textContent = item.regra;
+
+    const boxUltimo = document.getElementById('modalUltimoRegistro');
+    if (item.ultimo_km_realizado) {
+        document.getElementById('modalUltimoTexto').textContent =
+            `Ultimo registro: ${formatInteiro(item.ultimo_km_realizado)} km em ${formatarData(item.ultimo_data_realizado)}`;
+        boxUltimo.classList.remove('hidden');
+    } else {
+        boxUltimo.classList.add('hidden');
+    }
+
+    if (els.modalDataRealizado) els.modalDataRealizado.value = formatDateLocal(new Date());
+    if (els.modalKmRealizado) els.modalKmRealizado.value = item.km_atual || '';
+    if (els.modalObservacao) els.modalObservacao.value = '';
+
+    els.modal?.classList.remove('hidden');
+    els.modalKmRealizado?.focus();
+}
+
+function fecharModal() {
+    els.modal?.classList.add('hidden');
+    modalItemAtual = null;
+}
+
+async function salvarModal(event) {
+    event.preventDefault();
+    if (!modalItemAtual) return;
+
+    const kmRealizado = parseInt(els.modalKmRealizado?.value, 10);
+    const dataRealizado = els.modalDataRealizado?.value;
+    const observacao = els.modalObservacao?.value?.trim() || null;
+
+    if (!kmRealizado || !dataRealizado) return;
+
+    if (els.btnSalvarModal) {
+        els.btnSalvarModal.disabled = true;
+        els.btnSalvarModal.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    }
+
+    try {
+        const usuario = getUsuarioLocal();
+        const { error } = await supabaseClient
+            .from('revisao_historico')
+            .insert({
+                placa: modalItemAtual.placa,
+                servico: modalItemAtual.servico,
+                km_realizado: kmRealizado,
+                data_realizado: dataRealizado,
+                observacao,
+                usuario_email: usuario?.email || null
+            });
+
+        if (error) throw error;
+
+        const chave = `${modalItemAtual.placa}|${modalItemAtual.servico}`;
+        state.historico.set(chave, {
+            placa: modalItemAtual.placa,
+            servico: modalItemAtual.servico,
+            km_realizado: kmRealizado,
+            data_realizado: dataRealizado
+        });
+
+        state.linhas = state.veiculos.flatMap(v =>
+            montarLinhasVeiculo(v, state.kmPorPlaca.get(normalizarPlaca(v.placa)), state.historico)
+        );
+
+        renderKpis();
+        renderGrid();
+        fecharModal();
+    } catch (err) {
+        console.error('Erro ao salvar registro:', err);
+        alert('Erro ao salvar: ' + (err.message || err));
+    } finally {
+        if (els.btnSalvarModal) {
+            els.btnSalvarModal.disabled = false;
+            els.btnSalvarModal.innerHTML = '<i class="fas fa-save"></i> Salvar';
+        }
+    }
 }
 
 function exportarXlsx() {
@@ -501,7 +691,9 @@ function exportarXlsx() {
         Local: item.local_execucao,
         Status: item.status,
         'Fonte KM': item.fonte_km,
-        Observacao: item.observacao
+        Observacao: item.observacao,
+        'Ult. KM realizado': item.ultimo_km_realizado || '',
+        'Ult. data realizado': item.ultimo_data_realizado ? formatarData(item.ultimo_data_realizado) : ''
     }));
 
     const wb = XLSX.utils.book_new();
@@ -526,7 +718,7 @@ async function exportarPdf() {
         startY: 27,
         head: [[
             'Filial', 'Placa', 'Modelo', 'Motor', 'KM atual', 'Garantia',
-            'Servico', 'Regra', 'Prox. KM', 'Restante', 'Local', 'Status'
+            'Servico', 'Regra', 'Prox. KM', 'Restante', 'Local', 'Status', 'Ult. KM'
         ]],
         body: state.linhas.map(item => [
             item.filial,
@@ -540,15 +732,16 @@ async function exportarPdf() {
             item.proximo_km ? formatInteiro(item.proximo_km) : '-',
             item.km_restante === null ? '-' : formatInteiro(item.km_restante),
             item.local_execucao,
-            item.status
+            item.status,
+            item.ultimo_km_realizado ? formatInteiro(item.ultimo_km_realizado) : '-'
         ]),
-        styles: { fontSize: 7, cellPadding: 1.6, halign: 'center', valign: 'middle' },
+        styles: { fontSize: 6.5, cellPadding: 1.4, halign: 'center', valign: 'middle' },
         headStyles: { fillColor: [0, 105, 55], textColor: 255 },
         alternateRowStyles: { fillColor: [246, 248, 246] },
         didDrawPage: data => {
             if (data.pageNumber > 1) desenharCabecalhoPdf(doc, logoBase64, pageWidth);
         },
-        margin: { top: 27, left: 8, right: 8, bottom: 10 }
+        margin: { top: 27, left: 6, right: 6, bottom: 10 }
     });
 
     doc.save(`Revisao_${formatDateLocal(new Date())}.pdf`);
@@ -594,14 +787,14 @@ function detectarEuro(veiculo) {
 }
 
 function statusHtml(status) {
-    const classe = status === 'Vencida'
-        ? 'status-vencido'
-        : status === 'A vencer'
-            ? 'status-alerta'
-            : status === 'Informativo'
-                ? 'status-info'
-                : 'status-ok';
-    return `<span class="status-pill ${classe}">${escapeHtml(status)}</span>`;
+    const classes = {
+        'Vencida': 'status-vencido',
+        'A vencer': 'status-alerta',
+        'Informativo': 'status-info',
+        'Concluido': 'status-concluido'
+    };
+    const cls = classes[status] || 'status-ok';
+    return `<span class="status-pill ${cls}">${escapeHtml(status)}</span>`;
 }
 
 function setLoading(loading, message = '') {
@@ -671,7 +864,7 @@ function normalizarBusca(value) {
     return normalizarTexto(value)
         .toUpperCase()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
+        .replace(/[̀-ͯ]/g, '');
 }
 
 function parseNumero(value) {

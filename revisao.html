@@ -46,6 +46,31 @@
                             <option value="INTERNADO">Internado</option>
                         </select>
                     </div>
+                    <div class="form-group-filter">
+                        <label for="filtroStatus">Status</label>
+                        <select id="filtroStatus" class="glass-input">
+                            <option value="">Todos</option>
+                            <option value="Em dia">Em dia</option>
+                            <option value="A vencer">A vencer</option>
+                            <option value="Vencida">Vencida</option>
+                            <option value="Concluido">Concluido</option>
+                            <option value="Informativo">Informativo</option>
+                        </select>
+                    </div>
+                    <div class="form-group-filter">
+                        <label for="filtroServico">Servico</label>
+                        <select id="filtroServico" class="glass-input">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="form-group-filter">
+                        <label for="filtroMotor">Motor</label>
+                        <select id="filtroMotor" class="glass-input">
+                            <option value="">Todos</option>
+                            <option value="EURO 5">EURO 5</option>
+                            <option value="EURO 6">EURO 6</option>
+                        </select>
+                    </div>
                 </form>
             </section>
 
@@ -91,6 +116,8 @@
                                 <th data-sort="status">Status</th>
                                 <th>Fonte KM</th>
                                 <th>Observacao</th>
+                                <th data-sort="ultimo_km_realizado">Ult. KM <i class="fas fa-sort"></i></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody id="tbodyRevisao"></tbody>
@@ -107,6 +134,54 @@
     </main>
 
     <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+    <div id="modalRevisao" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fas fa-wrench"></i> Registrar Servico Realizado</h3>
+                <button class="modal-close" id="btnFecharModal" type="button"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-info-grid">
+                    <div class="modal-info-item"><span>Placa</span><strong id="modalPlaca">-</strong></div>
+                    <div class="modal-info-item"><span>Modelo</span><strong id="modalModelo">-</strong></div>
+                    <div class="modal-info-item"><span>Motor</span><strong id="modalMotor">-</strong></div>
+                    <div class="modal-info-item"><span>KM atual</span><strong id="modalKmAtualDisplay">-</strong></div>
+                </div>
+                <div class="modal-servico-box">
+                    <span class="modal-servico-label">Servico</span>
+                    <p id="modalServicoDisplay">-</p>
+                    <small id="modalRegraDisplay">-</small>
+                </div>
+                <div id="modalUltimoRegistro" class="modal-ultimo-registro hidden">
+                    <i class="fas fa-history"></i>
+                    <span id="modalUltimoTexto">-</span>
+                </div>
+                <form id="formRegistrarServico" class="modal-form">
+                    <div class="modal-form-row">
+                        <div class="form-group-filter">
+                            <label for="modalDataRealizado">Data realizada *</label>
+                            <input type="date" id="modalDataRealizado" class="glass-input" required>
+                        </div>
+                        <div class="form-group-filter">
+                            <label for="modalKmRealizado">KM realizado *</label>
+                            <input type="number" id="modalKmRealizado" class="glass-input" placeholder="Ex: 100000" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group-filter">
+                        <label for="modalObservacao">Observacao</label>
+                        <textarea id="modalObservacao" class="glass-input" rows="2" placeholder="Opcional..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-glass btn-outline" id="btnCancelarModal">Cancelar</button>
+                <button type="submit" form="formRegistrarServico" class="btn-glass btn-green" id="btnSalvarModal">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="./script/auth-guard.js"></script>
     <script type="module" src="./script/menu.js" defer></script>
     <script type="module" src="./script/revisao.js"></script>
