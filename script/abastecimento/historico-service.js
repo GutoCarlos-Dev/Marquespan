@@ -64,7 +64,11 @@ export async function buscarAbastecimentosExternos({
         .from('abastecimento_externo')
         .select('*, postos(razao_social)');
 
-    if (filial) query = query.eq('filial', filial);
+    if (Array.isArray(filial) && filial.length > 0) {
+        query = query.in('filial', filial);
+    } else if (filial) {
+        query = query.eq('filial', filial);
+    }
 
     if (dataInicial && dataFinal) {
         query = query.gte('data_hora', `${dataInicial}T00:00:00-03:00`);

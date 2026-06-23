@@ -233,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnFiltrarHistoricoSaida = document.getElementById('btnFiltrarHistoricoSaida');
 
             // Elementos do filtro de histórico EXTERNO
+            this.filtroExtFilial = document.getElementById('filtroExtFilial');
             this.filtroExtDataInicial = document.getElementById('filtroExtDataInicial');
             this.filtroExtDataFinal = document.getElementById('filtroExtDataFinal');
             this.btnFiltrarHistoricoExt = document.getElementById('btnFiltrarHistoricoExt');
@@ -357,6 +358,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Listener para o filtro de histórico EXTERNO
             if (this.btnFiltrarHistoricoExt) {
                 this.btnFiltrarHistoricoExt.addEventListener('click', () => this.renderExtTable(true));
+            }
+            if (this.filtroExtFilial) {
+                this.filtroExtFilial.addEventListener('change', () => {
+                    this.loadPostosOptions();
+                    this.renderExtTable(true);
+                });
             }
             // Listeners Abastecimento Externo
             if (this.formExt) this.formExt.addEventListener('submit', this.handleExtSubmit.bind(this));
@@ -595,6 +602,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
         getFilialAbastecimentoExterno() {
             return this.getUserFilial() ? this.getFilialUsuarioSelecionavel() : (this.extFilial?.value || '');
+        },
+
+        getFilialFiltroExternoSelecionada() {
+            return this.getUserFilial() ? this.getFilialUsuarioSelecionavel() : (this.filtroExtFilial?.value || '');
+        },
+
+        getValoresFiltroExterno() {
+            const filialSelecionada = this.getFilialFiltroExternoSelecionada();
+            if (!filialSelecionada) return [];
+
+            const filialNormalizada = String(filialSelecionada).trim().toUpperCase();
+            const valores = new Set([filialSelecionada]);
+            (this.filiaisCache || []).forEach(f => {
+                const nome = String(f.nome || '').trim();
+                const sigla = String(f.sigla || '').trim();
+                if (
+                    nome.toUpperCase() === filialNormalizada
+                    || sigla.toUpperCase() === filialNormalizada
+                    || String(sigla || nome).trim().toUpperCase() === filialNormalizada
+                ) {
+                    if (nome) valores.add(nome);
+                    if (sigla) valores.add(sigla);
+                }
+            });
+
+            return Array.from(valores);
+        },
+
+        aplicarBloqueioFiltroExterno() {
+            if (!this.filtroExtFilial) return;
+
+            const userFilial = this.getUserFilial();
+            if (!userFilial) {
+                this.filtroExtFilial.disabled = false;
+                this.filtroExtFilial.title = '';
+                return;
+            }
+
+            const valorFilial = this.getFilialUsuarioSelecionavel();
+            if (valorFilial && !Array.from(this.filtroExtFilial.options).some(option => option.value === valorFilial)) {
+                this.filtroExtFilial.add(new Option(valorFilial, valorFilial));
+            }
+
+            this.filtroExtFilial.value = valorFilial;
+            this.filtroExtFilial.disabled = true;
+            this.filtroExtFilial.title = 'Filial definida pelo usuario logado.';
         },
 
         aplicarBloqueioFilialPosto() {
@@ -1792,6 +1845,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.aplicarBloqueioFilialExterna();
                     this.loadPostosOptions();
                 }
+                if (this.filtroExtFilial) {
+                    this.filtroExtFilial.innerHTML = '<option value="">Todas</option>' + options.replace('<option value="">Selecione a Filial</option>', '');
+                    this.aplicarBloqueioFiltroExterno();
+                    if (this.tableBodyExt) this.renderExtTable(true);
+                }
                 if (this.postoFilial) {
                     this.postoFilial.innerHTML = options;
                     this.aplicarBloqueioFilialPosto();
@@ -2073,10 +2131,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.tableBodyExt) return;
             
             if (fetchData) {
-                this.tableBodyExt.innerHTML = '<tr><td colspan="11" style="text-align:center;">Carregando...</td></tr>';
+                this.tableBodyExt.innerHTML = '<tr><td colspan="13" style="text-align:center;">Carregando...</td></tr>';
                 this.extData = await buscarAbastecimentosExternos({
                     supabaseClient,
-                    filial: this.getUserFilial(),
+                    filial: this.getValoresFiltroExterno(),
                     dataInicial: this.filtroExtDataInicial?.value,
                     dataFinal: this.filtroExtDataFinal?.value
                 });

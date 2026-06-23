@@ -456,6 +456,10 @@
 
           <div style="margin-top: 20px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
               <div class="filtro-periodo-container" style="display: flex; gap: 10px; align-items: center;">
+                <label for="filtroExtFilial">Filial:</label>
+                <select id="filtroExtFilial" class="glass-input" style="padding: 5px; min-width: 180px;">
+                  <option value="">Todas</option>
+                </select>
                 <label for="filtroExtDataInicial">De:</label>
                 <input type="date" id="filtroExtDataInicial" class="glass-input" style="padding: 5px;">
                 <label for="filtroExtDataFinal">Até:</label>
@@ -470,6 +474,7 @@
                 <thead>
                     <tr>
                         <th class="sortable-ext" data-sort="data_hora" style="cursor: pointer;">Data <i class="fas fa-sort"></i></th>
+                        <th class="sortable-ext" data-sort="filial" style="cursor: pointer;">Filial <i class="fas fa-sort"></i></th>
                         <th class="sortable-ext" data-sort="usuario" style="cursor: pointer;">Usuário <i class="fas fa-sort"></i></th>
                         <th class="sortable-ext" data-sort="posto" style="cursor: pointer;">Posto <i class="fas fa-sort"></i></th>
                         <th class="sortable-ext" data-sort="veiculo_placa" style="cursor: pointer;">Veículo <i class="fas fa-sort"></i></th>
@@ -584,7 +589,7 @@
 
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="./script/abastecimento.js?v=20260623-1" defer></script>
+  <script type="module" src="./script/abastecimento.js?v=20260623-2" defer></script>
 
       <!-- 🦶 Rodapé -->
     <footer class="footer">

@@ -21,7 +21,8 @@ export function filtrarOrdenarExternos(extData, term, sortState) {
     const busca = String(term || '').toLowerCase();
     const filtrados = (extData || []).filter(item => {
         const postoNome = item.postos?.razao_social || '';
-        return String(item.veiculo_placa || '').toLowerCase().includes(busca) ||
+        return String(item.filial || '').toLowerCase().includes(busca) ||
+            String(item.veiculo_placa || '').toLowerCase().includes(busca) ||
             String(postoNome).toLowerCase().includes(busca) ||
             String(item.motorista || '').toLowerCase().includes(busca) ||
             String(item.data_hora || '').toLowerCase().includes(busca);
@@ -31,7 +32,7 @@ export function filtrarOrdenarExternos(extData, term, sortState) {
 }
 
 export function montarHtmlExternos(registros, isAdmin) {
-    const colCount = isAdmin ? 13 : 12;
+    const colCount = isAdmin ? 14 : 13;
 
     if (!registros.length) {
         return `<tr><td colspan="${colCount}">Nenhum registro.</td></tr>`;
@@ -48,6 +49,7 @@ export function montarHtmlExternos(registros, isAdmin) {
             <tr>
                 ${checkboxHtml}
                 <td>${data}</td>
+                <td>${item.filial || '-'}</td>
                 <td>${item.usuario || '-'}</td>
                 <td>${item.postos?.razao_social || '-'}</td>
                 <td>${item.veiculo_placa}</td>
