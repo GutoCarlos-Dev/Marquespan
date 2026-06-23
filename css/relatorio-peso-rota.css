@@ -135,6 +135,7 @@ body {
 
 .btn-blue { background: linear-gradient(135deg, #007bff, #0056b3); }
 .btn-green { background: linear-gradient(135deg, #28a745, #1e7e34); }
+.btn-red { background: linear-gradient(135deg, #dc3545, #9f1d2a); }
 .btn-secondary { background: linear-gradient(135deg, #6c757d, #495057); }
 
 .hidden {

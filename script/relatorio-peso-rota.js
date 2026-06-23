@@ -54,6 +54,7 @@ function cacheEls() {
     els.buscaDetalhe = document.getElementById('buscaDetalhe');
     els.btnLimparFiltros = document.getElementById('btnLimparFiltros');
     els.btnExportarXlsx = document.getElementById('btnExportarXlsx');
+    els.btnExportarPdf = document.getElementById('btnExportarPdf');
     els.chartPesoPorRota = document.getElementById('chartPesoPorRota');
     els.chartStatus = document.getElementById('chartStatus');
     els.chartEvolucao = document.getElementById('chartEvolucao');
@@ -73,6 +74,7 @@ function bindEvents() {
 
     els.btnLimparFiltros?.addEventListener('click', limparFiltros);
     els.btnExportarXlsx?.addEventListener('click', exportarXlsx);
+    els.btnExportarPdf?.addEventListener('click', exportarPdf);
     els.buscaComparativo?.addEventListener('input', renderComparativo);
     els.buscaDetalhe?.addEventListener('input', renderDetalhe);
     els.filtroFilial?.addEventListener('change', carregarOpcoes);
@@ -424,6 +426,226 @@ function exportarXlsx() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumo), 'Comparativo');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalhe), 'Detalhamento');
     XLSX.writeFile(wb, `Relatorio_Peso_Rota_${els.dataInicial.value}_${els.dataFinal.value}.xlsx`);
+}
+
+async function exportarPdf() {
+    if (!state.dados.length) {
+        alert('Busque os dados antes de exportar o PDF.');
+        return;
+    }
+
+    if (!window.jspdf?.jsPDF) {
+        alert('Biblioteca jsPDF nao carregada. Verifique sua conexao.');
+        return;
+    }
+
+    const btn = els.btnExportarPdf;
+    const htmlOriginal = btn?.innerHTML;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const logoBase64 = await getLogoBase64();
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        desenharCabecalhoPdf(doc, logoBase64, pageWidth);
+
+        const filtros = [
+            ['Periodo', `${formatarData(els.dataInicial.value)} a ${formatarData(els.dataFinal.value)}`],
+            ['Filial', els.filtroFilial.value || 'Todas'],
+            ['Rota', els.filtroRota.value || 'Todas'],
+            ['Placa', els.filtroPlaca.value || 'Todas'],
+            ['Motorista', els.filtroMotorista.value || 'Todos'],
+            ['Supervisor', els.filtroSupervisor.value || 'Todos']
+        ];
+
+        doc.autoTable({
+            startY: 33,
+            head: [['Filtro', 'Valor']],
+            body: filtros,
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+            margin: { left: 10, right: 10 }
+        });
+
+        const kpis = getKpisResumo();
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 5,
+            head: [['Rotas', 'Peso total', 'Uso medio', 'Acima de 90%', 'Excesso', 'Clientes']],
+            body: [[
+                formatInteiro(kpis.rotas),
+                `${formatNumero(kpis.pesoTotal)} kg`,
+                formatPercent(kpis.usoMedio),
+                formatInteiro(kpis.acima90),
+                formatInteiro(kpis.excesso),
+                formatInteiro(kpis.clientes)
+            ]],
+            theme: 'grid',
+            styles: { fontSize: 8, halign: 'center', cellPadding: 2 },
+            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+            margin: { left: 10, right: 10 }
+        });
+
+        doc.setFontSize(12);
+        doc.setTextColor(0, 105, 55);
+        doc.text('Comparativo por rota', 10, doc.lastAutoTable.finalY + 9);
+
+        const comparativoOrdenado = ordenar([...state.comparativo], state.sortComparativo);
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 12,
+            head: [['Rota', 'Lanc.', 'Peso total', 'Peso medio', 'Uso medio', 'Maior uso', 'Excesso', 'Caixas', 'Clientes']],
+            body: comparativoOrdenado.map(item => [
+                item.rota,
+                formatInteiro(item.qtd),
+                formatNumero(item.peso_total),
+                formatNumero(item.peso_medio),
+                formatPercent(item.uso_medio),
+                formatPercent(item.uso_maximo),
+                formatInteiro(item.excesso),
+                formatInteiro(item.qtd_caixas),
+                formatInteiro(item.qtd_clientes)
+            ]),
+            theme: 'striped',
+            styles: { fontSize: 7, cellPadding: 1.8 },
+            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+            margin: { left: 10, right: 10 }
+        });
+
+        doc.addPage();
+        desenharCabecalhoPdf(doc, logoBase64, pageWidth);
+        doc.setFontSize(12);
+        doc.setTextColor(0, 105, 55);
+        doc.text('Detalhamento', 10, 32);
+
+        const detalheOrdenado = ordenar([...state.dados], state.sortDetalhe);
+        doc.autoTable({
+            startY: 36,
+            head: [[
+                'Retorno',
+                'Filial',
+                'Rota',
+                'Saida',
+                'Supervisor',
+                'Motorista',
+                'Placa',
+                'Modelo',
+                'Capacidade',
+                'Peso',
+                'Uso',
+                'Caixas',
+                'Clientes',
+                'Chegada'
+            ]],
+            body: detalheOrdenado.map(item => [
+                formatarData(item.dia_retorno),
+                item.filial,
+                item.rota,
+                item.semana,
+                item.supervisor,
+                item.motorista,
+                item.placa,
+                item.tipo_veiculo,
+                formatNumero(item.pbt),
+                formatNumero(item.peso_carga),
+                formatPercent(item.status_percentual),
+                formatInteiro(item.qtd_caixas),
+                formatInteiro(item.qtd_clientes),
+                (item.horario_chegada || '').slice(0, 5)
+            ]),
+            theme: 'striped',
+            styles: { fontSize: 6.4, cellPadding: 1.4, overflow: 'linebreak' },
+            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+            columnStyles: {
+                4: { cellWidth: 24 },
+                5: { cellWidth: 28 },
+                7: { cellWidth: 24 }
+            },
+            margin: { left: 6, right: 6 }
+        });
+
+        adicionarRodapePdf(doc);
+        doc.save(`Relatorio_Peso_Rota_${els.dataInicial.value}_${els.dataFinal.value}.pdf`);
+    } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        alert(`Erro ao gerar PDF: ${error.message || error}`);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = htmlOriginal;
+        }
+    }
+}
+
+function desenharCabecalhoPdf(doc, logoBase64, pageWidth) {
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, 28, 'F');
+    doc.setDrawColor(220, 226, 222);
+    doc.line(10, 28, pageWidth - 10, 28);
+
+    if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', 10, 7, 44, 14);
+    }
+
+    doc.setTextColor(0, 105, 55);
+    doc.setFontSize(15);
+    doc.text('Relatorio de Peso de Rota', pageWidth / 2, 12, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setTextColor(90, 100, 112);
+    doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 18, { align: 'center' });
+}
+
+function adicionarRodapePdf(doc) {
+    const totalPaginas = doc.internal.getNumberOfPages();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    for (let i = 1; i <= totalPaginas; i += 1) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Pagina ${i} de ${totalPaginas}`, pageWidth - 10, pageHeight - 6, { align: 'right' });
+        doc.text('Marquespan - Relatorio de Peso de Rota', 10, pageHeight - 6);
+    }
+}
+
+function getKpisResumo() {
+    const rotas = new Set(state.dados.map(item => item.rota).filter(Boolean));
+    const pesoTotal = soma(state.dados, 'peso_carga');
+    const clientes = soma(state.dados, 'qtd_clientes');
+    const comPercentual = state.dados.filter(item => Number.isFinite(item.status_percentual));
+    const usoMedio = comPercentual.length ? soma(comPercentual, 'status_percentual') / comPercentual.length : 0;
+    const acima90 = state.dados.filter(item => item.status_percentual > 90 && item.status_percentual <= 100).length;
+    const excesso = state.dados.filter(item => item.status_percentual > 100).length;
+
+    return {
+        rotas: rotas.size,
+        pesoTotal,
+        usoMedio,
+        acima90,
+        excesso,
+        clientes
+    };
+}
+
+async function getLogoBase64() {
+    try {
+        const response = await fetch('logo.png');
+        const blob = await response.blob();
+        return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.warn('Nao foi possivel carregar o logo para o PDF:', error);
+        return '';
+    }
 }
 
 function limparFiltros() {
