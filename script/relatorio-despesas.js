@@ -60,6 +60,7 @@ const RelatorioDespesasUI = {
         this.totalQtd = document.getElementById('totalQtd');
         this.totalValor = document.getElementById('totalValor');
         this.tableBodyResultados = document.getElementById('tableBodyResultados');
+        this.btnToggleMenuLateral = document.getElementById('btnToggleMenuLateralRelatorioDespesas');
     },
 
     injectSupervisorFilterHTML() {
@@ -94,6 +95,7 @@ const RelatorioDespesasUI = {
         });
         this.btnExportarExcel?.addEventListener('click', () => this.exportarExcel());
         this.btnExportarPDF?.addEventListener('click', () => this.exportarPDF());
+        this.btnToggleMenuLateral?.addEventListener('click', () => this.toggleMenuLateral());
 
         // Eventos do Multiselect de Rotas
         if (this.filtroRotaDisplay) {
@@ -146,6 +148,15 @@ const RelatorioDespesasUI = {
             this.filtroSupervisorOptions.addEventListener('change', () => {
                 this.atualizarTextoSupervisor();
             });
+        }
+    },
+
+    toggleMenuLateral() {
+        document.body.classList.toggle('relatorio-despesas-menu-oculto');
+        const oculto = document.body.classList.contains('relatorio-despesas-menu-oculto');
+        if (this.btnToggleMenuLateral) {
+            this.btnToggleMenuLateral.title = oculto ? 'Mostrar menu lateral' : 'Ocultar menu lateral';
+            this.btnToggleMenuLateral.setAttribute('aria-label', this.btnToggleMenuLateral.title);
         }
     },
 
