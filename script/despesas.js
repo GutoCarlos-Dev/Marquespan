@@ -126,8 +126,21 @@ const DespesasUI = {
         if (this.despesaHotelOptions) {
             this.despesaHotelOptions.addEventListener('change', () => {
                 this.handleHotelSelectionChange();
+                if (this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox').length > 0) {
+                    this.despesaHotelDisplay.classList.remove('campo-invalido');
+                }
             });
         }
+
+        // Limpar destaque de validação ao corrigir os campos obrigatórios
+        this.tipoQuartoSelect.addEventListener('change', () => {
+            if (this.tipoQuartoSelect.value) this.tipoQuartoSelect.classList.remove('campo-invalido');
+        });
+        document.getElementById('despesaFuncionario1Input')?.addEventListener('input', () => {
+            if (document.getElementById('despesaFuncionario1Input').value.trim()) {
+                document.getElementById('despesaFuncionario1Input').classList.remove('campo-invalido');
+            }
+        });
 
         // Listeners do Modal de Quartos
         this.btnGerenciarQuartos.addEventListener('click', () => this.abrirModalQuartos());
@@ -450,11 +463,49 @@ const DespesasUI = {
         this.calcularValorTotal();
     },
 
+    validarCamposObrigatorios() {
+        const erros = [];
+        const func1Input = document.getElementById('despesaFuncionario1Input');
+
+        // Hotel
+        const hoteisSelecionados = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
+        if (hoteisSelecionados.length === 0) {
+            erros.push('Hotel');
+            this.despesaHotelDisplay.classList.add('campo-invalido');
+        } else {
+            this.despesaHotelDisplay.classList.remove('campo-invalido');
+        }
+
+        // Tipo de Quarto
+        if (!this.tipoQuartoSelect.value) {
+            erros.push('Tipo de Quarto');
+            this.tipoQuartoSelect.classList.add('campo-invalido');
+        } else {
+            this.tipoQuartoSelect.classList.remove('campo-invalido');
+        }
+
+        // Funcionário 1
+        if (!func1Input.value.trim()) {
+            erros.push('Funcionário 1 (Motorista)');
+            func1Input.classList.add('campo-invalido');
+        } else {
+            func1Input.classList.remove('campo-invalido');
+        }
+
+        if (erros.length > 0) {
+            alert('❌ Preencha os campos obrigatórios:\n\n• ' + erros.join('\n• '));
+            return false;
+        }
+        return true;
+    },
+
     async handleFormSubmit(e) {
         e.preventDefault();
 
         if (this.btnSubmit.disabled) return;
-        
+
+        if (!this.validarCamposObrigatorios()) return;
+
         const originalText = this.btnSubmit.innerHTML;
         this.btnSubmit.disabled = true;
         this.btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
@@ -479,8 +530,7 @@ const DespesasUI = {
                 func2Id = func2.id;
             }
 
-            const hotelId = hoteisSelecionados.length > 0 ? hoteisSelecionados[0] : null;
-            if (!hotelId) throw new Error("Selecione pelo menos um hotel.");
+            const hotelId = hoteisSelecionados[0];
 
             const payload = {
                 id: this.editingIdInput.value || undefined,
