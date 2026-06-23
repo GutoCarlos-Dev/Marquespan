@@ -82,6 +82,15 @@ body {
     transform: scale(0.96);
 }
 
+.btn-localizar-veiculo-lavagem.localizacao-bloqueada,
+.btn-localizar-veiculo-lavagem:disabled {
+    background: #9ca3af;
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.58;
+    transform: none;
+}
+
 .search-bar { position: relative; margin-bottom: 15px; }
 .search-bar input {
     width: 100%; padding: 12px 15px 12px 40px;

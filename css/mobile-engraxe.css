@@ -135,6 +135,16 @@ body {
     transform: scale(0.94);
 }
 
+.btn-localizar-veiculo.localizacao-bloqueada,
+.btn-localizar-veiculo:disabled {
+    background: #e5e7eb;
+    color: #6b7280;
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.58;
+    transform: none;
+}
+
 /* Cores por Status */
 .status-aberta { border-left-color: #006937; }
 .status-aberta .status { background-color: #e8f5e9; color: #006937; }

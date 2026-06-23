@@ -3,6 +3,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 
 const STORAGE_KEY_RASCUNHO = 'marquespan_coleta_km_rascunho';
 const IS_MOBILE_COLETA_KM = Boolean(document.getElementById('listaVisualColetaKm'));
+const NIVEIS_BLOQUEIO_LOCALIZACAO_MOBILE = new Set(['equipe_sabado', 'coleta_km']);
 
 let itensColeta = [];
 let veiculosCache = [];
@@ -10,6 +11,19 @@ let filtroMobileColetaKm = 'TODOS';
 let salvandoColeta = false;
 let originalDataColeta = null; // Armazena a data original do lote em edição
 let currentSort = { key: null, asc: true }; // Estado da ordenação
+
+function getNivelUsuarioColetaKm() {
+    try {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+        return String(usuario?.nivel || '').trim().toLowerCase();
+    } catch {
+        return '';
+    }
+}
+
+function localizacaoBloqueadaColetaKm() {
+    return NIVEIS_BLOQUEIO_LOCALIZACAO_MOBILE.has(getNivelUsuarioColetaKm());
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Verificar Login
@@ -300,6 +314,7 @@ function configurarListaVisualMobile() {
         if (botaoLocalizar) {
             event.preventDefault();
             event.stopPropagation();
+            if (botaoLocalizar.disabled || localizacaoBloqueadaColetaKm()) return;
             await abrirModalLocalizacaoColetaKm(botaoLocalizar.dataset.placa);
             return;
         }
@@ -404,6 +419,10 @@ function renderizarListaVisualMobile() {
     container.innerHTML = veiculos.map(veiculo => {
         const item = itensPorPlaca.get(veiculo.placa);
         const feito = Boolean(item);
+        const bloquearLocalizacao = localizacaoBloqueadaColetaKm();
+        const localizacaoAttrs = bloquearLocalizacao
+            ? 'disabled aria-disabled="true" title="Localizacao bloqueada para seu nivel"'
+            : 'title="Localizar placa"';
         return `
             <div
                 class="coleta-km-card ${feito ? 'feito' : 'pendente'}"
@@ -419,10 +438,10 @@ function renderizarListaVisualMobile() {
                         </span>
                         <button
                             type="button"
-                            class="btn-localizar-coleta-km"
+                            class="btn-localizar-coleta-km ${bloquearLocalizacao ? 'localizacao-bloqueada' : ''}"
                             data-placa="${escapeHtmlColetaKm(veiculo.placa)}"
-                            title="Localizar placa"
-                            aria-label="Localizar placa ${escapeHtmlColetaKm(veiculo.placa)}">
+                            ${localizacaoAttrs}
+                            aria-label="${bloquearLocalizacao ? 'Localizacao bloqueada' : 'Localizar placa'} ${escapeHtmlColetaKm(veiculo.placa)}">
                             <i class="fas fa-location-dot"></i>
                         </button>
                     </div>

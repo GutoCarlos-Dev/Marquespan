@@ -3,6 +3,20 @@ import { supabaseClient } from './supabase.js';
 let currentListId = null;
 let currentItems = [];
 let currentFilter = 'TODOS';
+const NIVEIS_BLOQUEIO_LOCALIZACAO_MOBILE = new Set(['equipe_sabado', 'coleta_km']);
+
+function getNivelUsuarioMobile() {
+    try {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+        return String(usuario?.nivel || '').trim().toLowerCase();
+    } catch {
+        return '';
+    }
+}
+
+function localizacaoBloqueadaMobile() {
+    return NIVEIS_BLOQUEIO_LOCALIZACAO_MOBILE.has(getNivelUsuarioMobile());
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -50,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
+            if (botaoLocalizar.disabled || localizacaoBloqueadaMobile()) return;
             await abrirModalLocalizacaoVeiculo(botaoLocalizar.dataset.placa);
         }, true);
 
@@ -66,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (botaoLocalizar) {
                 e.preventDefault();
                 e.stopPropagation();
+                if (botaoLocalizar.disabled || localizacaoBloqueadaMobile()) return;
                 await abrirModalLocalizacaoVeiculo(botaoLocalizar.dataset.placa);
                 return;
             }
@@ -216,6 +232,10 @@ function renderizarItensMobile() {
         
         const isDone = status === 'OK' || status === 'REALIZADO';
         const possuiPlaqueta = String(item.plaquinha || '').trim().toUpperCase() === 'SIM';
+        const bloquearLocalizacao = localizacaoBloqueadaMobile();
+        const localizacaoAttrs = bloquearLocalizacao
+            ? 'disabled aria-disabled="true" title="Localizacao bloqueada para seu nivel"'
+            : 'title="Localizar placa"';
 
         return `
             <div class="card ${statusClass}" data-item-id="${item.id}">
@@ -228,10 +248,10 @@ function renderizarItensMobile() {
                         <span class="status">${status}</span>
                         <button
                             type="button"
-                            class="btn-localizar-veiculo"
+                            class="btn-localizar-veiculo ${bloquearLocalizacao ? 'localizacao-bloqueada' : ''}"
                             data-placa="${item.placa}"
-                            title="Localizar placa"
-                            aria-label="Localizar placa ${item.placa}"
+                            ${localizacaoAttrs}
+                            aria-label="${bloquearLocalizacao ? 'Localizacao bloqueada' : 'Localizar placa'} ${item.placa}"
                             onclick="return window.abrirLocalizacaoEngraxe(event, this.dataset.placa)"
                         >
                             <i class="fas fa-map-location-dot"></i>
@@ -407,6 +427,7 @@ window.abrirLocalizacaoEngraxe = async function(event, placa) {
     event?.preventDefault();
     event?.stopPropagation();
     event?.stopImmediatePropagation?.();
+    if (event?.currentTarget?.disabled || localizacaoBloqueadaMobile()) return false;
     await abrirModalLocalizacaoVeiculo(placa);
     return false;
 };

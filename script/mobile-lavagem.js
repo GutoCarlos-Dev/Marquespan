@@ -4,6 +4,20 @@ import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 let currentListId = null;
 let currentItems = [];
 let currentFilter = 'TODOS';
+const NIVEIS_BLOQUEIO_LOCALIZACAO_MOBILE = new Set(['equipe_sabado', 'coleta_km']);
+
+function getNivelUsuarioMobile() {
+    try {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+        return String(usuario?.nivel || '').trim().toLowerCase();
+    } catch {
+        return '';
+    }
+}
+
+function localizacaoBloqueadaMobile() {
+    return NIVEIS_BLOQUEIO_LOCALIZACAO_MOBILE.has(getNivelUsuarioMobile());
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -33,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
+        if (botaoLocalizar.disabled || localizacaoBloqueadaMobile()) return;
         await abrirModalLocalizacaoLavagem(botaoLocalizar.dataset.placa);
     }, true);
 
@@ -41,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (botaoLocalizar) {
             e.preventDefault();
             e.stopPropagation();
+            if (botaoLocalizar.disabled || localizacaoBloqueadaMobile()) return;
             await abrirModalLocalizacaoLavagem(botaoLocalizar.dataset.placa);
             return;
         }
@@ -199,6 +215,10 @@ function renderizarItens() {
         // Adicionado verificação se tipo_lavagem existe
         let infoExtra = isRealizado && item.tipo_lavagem ? `<br><small>Lavagem: ${item.tipo_lavagem}</small>` : '';
         const cardClass = getCardStatusClass(item.status);
+        const bloquearLocalizacao = localizacaoBloqueadaMobile();
+        const localizacaoAttrs = bloquearLocalizacao
+            ? 'disabled aria-disabled="true" title="Localizacao bloqueada para seu nivel"'
+            : 'title="Localizar placa"';
         
         return `
             <div class="card ${cardClass}" data-item-id="${item.id}">
@@ -211,10 +231,10 @@ function renderizarItens() {
                         <span class="status">${normalizarStatusLavagem(item.status)}</span>
                         <button
                             type="button"
-                            class="btn-localizar-veiculo-lavagem"
+                            class="btn-localizar-veiculo-lavagem ${bloquearLocalizacao ? 'localizacao-bloqueada' : ''}"
                             data-placa="${item.placa}"
-                            title="Localizar placa"
-                            aria-label="Localizar placa ${item.placa}"
+                            ${localizacaoAttrs}
+                            aria-label="${bloquearLocalizacao ? 'Localizacao bloqueada' : 'Localizar placa'} ${item.placa}"
                             onclick="return window.abrirLocalizacaoLavagem(event, this.dataset.placa)">
                             <i class="fas fa-location-dot"></i>
                         </button>
@@ -316,6 +336,7 @@ window.abrirLocalizacaoLavagem = async function(event, placa) {
     event?.preventDefault();
     event?.stopPropagation();
     event?.stopImmediatePropagation?.();
+    if (event?.currentTarget?.disabled || localizacaoBloqueadaMobile()) return false;
     await abrirModalLocalizacaoLavagem(placa);
     return false;
 };
