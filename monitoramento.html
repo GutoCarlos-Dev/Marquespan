@@ -155,6 +155,17 @@
                     <div id="tooltip-checkin-rota-content">Carregando...</div>
                 </div>
             </div>
+            <div class="kpi-card glass-card brown" id="card-aguardando-os" style="position: relative; cursor: help;">
+                <div class="kpi-icon"><i class="fas fa-file-signature"></i></div>
+                <div class="kpi-info">
+                    <h3>Aguardando O.S</h3>
+                    <p id="kpi-aguardando-os">0</p>
+                </div>
+                <div id="tooltip-aguardando-os" style="display: none; position: absolute; top: 110%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 12px; border-radius: 8px; z-index: 9999; min-width: 280px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: none;">
+                    <div style="text-align: center; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 4px; font-weight: bold;">Placas Aguardando O.S</div>
+                    <div id="tooltip-aguardando-os-content">Carregando...</div>
+                </div>
+            </div>
             <div class="kpi-card glass-card green">
                 <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
                 <div class="kpi-info">
@@ -454,6 +465,56 @@
                 }
             });
             cardCheckinRota.addEventListener('mouseleave', () => { tooltipCheckinRota.style.display = 'none'; });
+        }
+
+        // Lógica para Tooltip de Aguardando O.S
+        const cardAguardandoOS = document.getElementById('card-aguardando-os');
+        const tooltipAguardandoOS = document.getElementById('tooltip-aguardando-os');
+        const tooltipAguardandoOSContent = document.getElementById('tooltip-aguardando-os-content');
+
+        if (cardAguardandoOS && tooltipAguardandoOS) {
+            cardAguardandoOS.addEventListener('mouseenter', async () => {
+                tooltipAguardandoOS.style.display = 'block';
+                tooltipAguardandoOSContent.innerHTML = 'Carregando...';
+
+                try {
+                    const filial = document.getElementById('filtroFilial').value;
+
+                    let query = supabaseClient
+                        .from('coletas_manutencao_checklist')
+                        .select('coletas_manutencao!inner(placa, data_hora, filial), oficinas(nome)')
+                        .eq('status', 'FINALIZADO AGUARDANDO O.S');
+
+                    if (filial) query = query.eq('coletas_manutencao.filial', filial);
+
+                    const { data, error } = await query;
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        const veiculosMap = new Map();
+                        data.forEach(item => {
+                            const placa = item.coletas_manutencao.placa;
+                            const oficina = item.oficinas ? item.oficinas.nome : 'Sem Oficina';
+                            if (!veiculosMap.has(placa)) veiculosMap.set(placa, oficina);
+                        });
+                        let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                        Array.from(veiculosMap.entries()).sort((a, b) => a[0].localeCompare(b[0])).forEach(([placa, oficina]) => {
+                            html += `<li style="padding: 4px 0; border-bottom: 1px solid #444; color: #ddd; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: bold;">${placa}</span>
+                                <span style="font-size: 0.85em; color: #aaa; margin-left: 10px; text-align: right;">${oficina}</span>
+                            </li>`;
+                        });
+                        html += '</ul>';
+                        tooltipAguardandoOSContent.innerHTML = html;
+                    } else {
+                        tooltipAguardandoOSContent.innerHTML = 'Nenhum veículo aguardando O.S.';
+                    }
+                } catch (err) {
+                    console.error('Erro ao carregar aguardando O.S:', err);
+                    tooltipAguardandoOSContent.innerHTML = 'Erro ao carregar dados.';
+                }
+            });
+            cardAguardandoOS.addEventListener('mouseleave', () => { tooltipAguardandoOS.style.display = 'none'; });
         }
     });
   </script>

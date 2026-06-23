@@ -14,12 +14,13 @@ let chartEmManutencaoAtual = null;
 
 // Cores padrão dos status
 const STATUS_COLORS = {
-    'FINALIZADO': '#28a745',       // Verde Escuro
-    'PENDENTE': '#dc3545',         // Vermelho Escuro
-    'INTERNADO': '#007bff',        // Azul Escuro
-    'CHECK-IN OFICINA': '#ffc107', // Amarelo Escuro
-    'CHECK-IN ROTA': '#fd7e14',    // Laranja Escuro
-    'FINALIZADO ROTA': '#006400'   // Verde Muito Escuro
+    'FINALIZADO': '#28a745',                    // Verde Escuro
+    'PENDENTE': '#dc3545',                      // Vermelho Escuro
+    'INTERNADO': '#007bff',                     // Azul Escuro
+    'CHECK-IN OFICINA': '#ffc107',              // Amarelo Escuro
+    'CHECK-IN ROTA': '#fd7e14',                 // Laranja Escuro
+    'FINALIZADO ROTA': '#006400',               // Verde Muito Escuro
+    'FINALIZADO AGUARDANDO O.S': '#a0785a'      // Marrom
 };
 
 // Intervalo de atualização automática (10 minutos)
@@ -358,6 +359,18 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         const { count: countFinalizadoRota } = await queryFinalizadoRota;
         counts.finalizadoRota = countFinalizadoRota || 0;
 
+        // FINALIZADO AGUARDANDO O.S (Status Atual - Sem filtro de data)
+        let queryAguardandoOS = supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select('*, coletas_manutencao!inner(id, filial, veiculos!inner(tipo))', { count: 'exact', head: true })
+            .eq('status', 'FINALIZADO AGUARDANDO O.S');
+        queryAguardandoOS = applyKPIFilters(queryAguardandoOS);
+        const { count: countAguardandoOS } = await queryAguardandoOS;
+        counts.finalizadoAguardandoOS = countAguardandoOS || 0;
+
+        const kpiAguardandoOS = document.getElementById('kpi-aguardando-os');
+        if (kpiAguardandoOS) kpiAguardandoOS.textContent = countAguardandoOS || 0;
+
         // 3. Finalizados Hoje (Contar Itens)
         // Usa a data atual do sistema para filtrar "Hoje"
         // Formata a data como 'YYYY-MM-DD' para evitar problemas de fuso horário.
@@ -379,7 +392,7 @@ async function carregarKPIsDetalhados(dtIni, dtFim, filial, status) {
         }
 
         // 4. Total Manutenções (Soma de status específicos no período)
-        const statusesParaContar = ['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'INTERNADO', 'FINALIZADO', 'OK'];
+        const statusesParaContar = ['CHECK-IN OFICINA', 'CHECK-IN ROTA', 'INTERNADO', 'FINALIZADO', 'FINALIZADO AGUARDANDO O.S', 'OK'];
         let queryManutencoes = supabaseClient
             .from('coletas_manutencao_checklist')
             .select('id, coletas_manutencao!inner(data_hora, filial, veiculos!inner(tipo))', { count: 'exact', head: true })
@@ -873,6 +886,7 @@ function renderChartStatus(data, kpiCounts) {
         if (kpiCounts.checkinOficina > 0) contagem['CHECK-IN OFICINA'] = kpiCounts.checkinOficina;
         if (kpiCounts.checkinRota > 0) contagem['CHECK-IN ROTA'] = kpiCounts.checkinRota;
         if (kpiCounts.finalizadoRota > 0) contagem['FINALIZADO ROTA'] = kpiCounts.finalizadoRota;
+        if (kpiCounts.finalizadoAguardandoOS > 0) contagem['FINALIZADO AGUARDANDO O.S'] = kpiCounts.finalizadoAguardandoOS;
     } else {
         // Fallback para contagem local (caso kpiCounts não esteja disponível)
         data.forEach(item => {
