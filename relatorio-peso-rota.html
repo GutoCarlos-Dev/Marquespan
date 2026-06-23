@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatorio de Peso de Rota</title>
+    <link rel="icon" href="img/logonavegador.png" type="image/png">
+    <link rel="stylesheet" href="css/relatorio-peso-rota.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div id="menu-container"></div>
+
+    <main class="main-content">
+        <header class="glass-header">
+            <h1><i class="fas fa-chart-column"></i> Relatorio de Peso de Rota</h1>
+        </header>
+
+        <section class="glass-panel">
+            <div class="panel-title-row">
+                <h3><i class="fas fa-filter"></i> Filtros</h3>
+                <span id="periodoResumo" class="muted-info">Selecione um periodo para analisar.</span>
+            </div>
+
+            <form id="formRelatorioPesoRota" class="filters-grid">
+                <div class="form-group-filter">
+                    <label for="filtroFilial">Filial</label>
+                    <select id="filtroFilial" class="glass-input">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="form-group-filter">
+                    <label for="dataInicial">Data inicial</label>
+                    <input type="date" id="dataInicial" class="glass-input" required>
+                </div>
+                <div class="form-group-filter">
+                    <label for="dataFinal">Data final</label>
+                    <input type="date" id="dataFinal" class="glass-input" required>
+                </div>
+                <div class="form-group-filter">
+                    <label for="filtroRota">Rota</label>
+                    <input type="text" id="filtroRota" class="glass-input" list="listaRotas" placeholder="Todas">
+                    <datalist id="listaRotas"></datalist>
+                </div>
+                <div class="form-group-filter">
+                    <label for="filtroPlaca">Placa</label>
+                    <input type="text" id="filtroPlaca" class="glass-input" list="listaPlacas" placeholder="Todas">
+                    <datalist id="listaPlacas"></datalist>
+                </div>
+                <div class="form-group-filter">
+                    <label for="filtroMotorista">Motorista</label>
+                    <input type="text" id="filtroMotorista" class="glass-input" list="listaMotoristas" placeholder="Todos">
+                    <datalist id="listaMotoristas"></datalist>
+                </div>
+                <div class="form-group-filter">
+                    <label for="filtroSupervisor">Supervisor</label>
+                    <input type="text" id="filtroSupervisor" class="glass-input" list="listaSupervisores" placeholder="Todos">
+                    <datalist id="listaSupervisores"></datalist>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+                    <button type="button" id="btnLimparFiltros" class="btn-glass btn-secondary"><i class="fas fa-eraser"></i> Limpar</button>
+                </div>
+            </form>
+        </section>
+
+        <section id="resultadosPanel" class="hidden">
+            <div class="kpi-grid">
+                <div class="kpi-card"><span>Rotas analisadas</span><strong id="kpiRotas">0</strong></div>
+                <div class="kpi-card"><span>Peso total</span><strong id="kpiPesoTotal">0 kg</strong></div>
+                <div class="kpi-card"><span>Uso medio</span><strong id="kpiUsoMedio">0%</strong></div>
+                <div class="kpi-card warning"><span>Acima de 90%</span><strong id="kpiAcima90">0</strong></div>
+                <div class="kpi-card danger"><span>Excesso</span><strong id="kpiExcesso">0</strong></div>
+                <div class="kpi-card"><span>Clientes</span><strong id="kpiClientes">0</strong></div>
+            </div>
+
+            <section class="glass-panel charts-panel">
+                <div class="panel-title-row">
+                    <h3><i class="fas fa-chart-line"></i> Comparativos</h3>
+                    <div class="export-actions">
+                        <button type="button" id="btnExportarXlsx" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Exportar XLSX</button>
+                    </div>
+                </div>
+                <div class="charts-grid">
+                    <div class="chart-box">
+                        <h4>Peso total por rota</h4>
+                        <canvas id="chartPesoPorRota"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <h4>Status de capacidade</h4>
+                        <canvas id="chartStatus"></canvas>
+                    </div>
+                    <div class="chart-box chart-wide">
+                        <h4>Evolucao no periodo</h4>
+                        <canvas id="chartEvolucao"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-panel">
+                <div class="panel-title-row">
+                    <h3><i class="fas fa-route"></i> Comparativo por rota</h3>
+                    <input type="text" id="buscaComparativo" class="glass-input compact-input" placeholder="Buscar rota...">
+                </div>
+                <div class="table-responsive">
+                    <table class="relatorio-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="rota">Rota <i class="fas fa-sort"></i></th>
+                                <th data-sort="qtd">Lanc.</th>
+                                <th data-sort="peso_total">Peso total</th>
+                                <th data-sort="peso_medio">Peso medio</th>
+                                <th data-sort="uso_medio">Uso medio</th>
+                                <th data-sort="uso_maximo">Maior uso</th>
+                                <th data-sort="excesso">Excesso</th>
+                                <th data-sort="qtd_caixas">Caixas</th>
+                                <th data-sort="qtd_clientes">Clientes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyComparativo"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="glass-panel">
+                <div class="panel-title-row">
+                    <h3><i class="fas fa-table"></i> Detalhamento</h3>
+                    <input type="text" id="buscaDetalhe" class="glass-input compact-input" placeholder="Buscar no detalhe...">
+                </div>
+                <div class="table-responsive">
+                    <table class="relatorio-table">
+                        <thead>
+                            <tr>
+                                <th data-detail-sort="dia_retorno">Data retorno <i class="fas fa-sort"></i></th>
+                                <th data-detail-sort="filial">Filial</th>
+                                <th data-detail-sort="rota">Rota</th>
+                                <th data-detail-sort="semana">Dia saida</th>
+                                <th data-detail-sort="supervisor">Supervisor</th>
+                                <th data-detail-sort="motorista">Motorista</th>
+                                <th data-detail-sort="placa">Placa</th>
+                                <th data-detail-sort="tipo_veiculo">Modelo</th>
+                                <th data-detail-sort="pbt">Capacidade</th>
+                                <th data-detail-sort="peso_carga">Peso</th>
+                                <th data-detail-sort="status_percentual">Uso</th>
+                                <th data-detail-sort="qtd_caixas">Caixas</th>
+                                <th data-detail-sort="qtd_clientes">Clientes</th>
+                                <th data-detail-sort="horario_chegada">Chegada</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDetalhe"></tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+
+        <section id="emptyPanel" class="glass-panel empty-state">
+            <i class="fas fa-magnifying-glass-chart"></i>
+            <strong>Nenhum dado carregado</strong>
+            <span>Use os filtros para analisar uma rota especifica ou comparar todo o periodo.</span>
+        </section>
+    </main>
+
+    <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+    <script type="module" src="./script/auth-guard.js"></script>
+    <script type="module" src="./script/menu.js" defer></script>
+    <script type="module" src="./script/relatorio-peso-rota.js"></script>
+</body>
+</html>
