@@ -3783,6 +3783,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- GERAÇÃO DE PDF NA PAGINA ESCALA ---
+    async function carregarLogoComFundoBranco(src = 'logo.png') {
+        const response = await fetch(src);
+        if (!response.ok) return null;
+
+        const blob = await response.blob();
+        const img = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = URL.createObjectURL(blob);
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(img.src);
+        return canvas.toDataURL('image/png');
+    }
+
     async function gerarPDF(orientation = 'portrait', selectedSections = null) {
         if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
 
@@ -3825,11 +3848,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Logo
         try {
-            const response = await fetch('logo.png');
-            if (response.ok) {
-                const blob = await response.blob();
-                const reader = new FileReader();
-                const base64data = await new Promise(r => { reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
+            const base64data = await carregarLogoComFundoBranco('logo.png');
+            if (base64data) {
                 doc.addImage(base64data, 'PNG', 5, 5, 40, 10);
             }
         } catch (e) {}
