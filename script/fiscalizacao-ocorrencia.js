@@ -83,6 +83,7 @@ function bindEvents() {
   document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
   document.getElementById('filtroLocal').addEventListener('input', renderizarTabela);
   document.getElementById('filtroFilial').addEventListener('change', buscarOcorrencias);
+  document.getElementById('filtroBoletimOcorrencia').addEventListener('change', buscarOcorrencias);
   document.getElementById('ocorrenciaPlaca').addEventListener('change', preencherFilialPorPlaca);
   document.getElementById('ocorrenciaRelatorio').addEventListener('input', aplicarMaiusculasRelatorio);
   document.getElementById('formOcorrencia').addEventListener('submit', salvarOcorrencia);
@@ -548,6 +549,7 @@ async function buscarOcorrencias() {
     const motorista = document.getElementById('filtroMotorista').value.trim();
     const rota = document.getElementById('filtroRota').value.trim();
     const filial = usuarioRestritoPorFilial() ? getFilialUsuario() : document.getElementById('filtroFilial').value;
+    const boletimOcorrencia = document.getElementById('filtroBoletimOcorrencia').value;
 
     let query = supabaseClient.from('fiscalizacao_ocorrencias').select('*');
     if (dataDe) query = query.gte('data_ocorrencia', dataDe);
@@ -556,6 +558,7 @@ async function buscarOcorrencias() {
     if (motorista) query = query.ilike('motorista', `%${motorista}%`);
     if (rota) query = query.ilike('rota', `%${rota}%`);
     if (filial) query = query.eq('filial', filial);
+    if (boletimOcorrencia) query = query.eq('boletim_ocorrencia_status', boletimOcorrencia);
 
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;

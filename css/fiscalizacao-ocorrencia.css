@@ -309,7 +309,7 @@
 }
 
 .boletim-toggle input[value="NAO_EMITIDO"]:checked + span {
-  background: #6c757d;
+  background: #dc3545;
 }
 
 .boletim-status-badge {
@@ -328,8 +328,8 @@
 }
 
 .boletim-status-nao_emitido {
-  background: #edf2f7;
-  color: #475467;
+  background: #f8d7da;
+  color: #842029;
 }
 
 .anexo-ocorrencia-item {
