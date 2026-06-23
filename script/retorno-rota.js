@@ -58,19 +58,69 @@ const COLUMN_MAP = [
     'retorno_pecas', 'pecas_desc'
 ];
 
+function getCurrentUser() {
+    try {
+        return JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+    } catch {
+        return null;
+    }
+}
+
 function getCurrentUserName() {
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const usuario = getCurrentUser();
     return usuario ? usuario.nome : null;
 }
 
+function getCurrentUserFilial() {
+    const usuario = getCurrentUser();
+    return usuario ? (usuario.filial || null) : null;
+}
+
+function getFilialRetornoSelecionada() {
+    return getCurrentUserFilial() || document.getElementById('filialRetorno')?.value || '';
+}
+
+async function sincronizarUsuarioLogado() {
+    try {
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError || !session?.user?.id) return getCurrentUser();
+
+        const { data, error } = await supabaseClient
+            .from('usuarios')
+            .select('id, auth_user_id, nome, nomecompleto, email, nivel, filial, status')
+            .eq('auth_user_id', session.user.id)
+            .maybeSingle();
+
+        if (error || !data) return getCurrentUser();
+
+        const usuarioAtual = getCurrentUser() || {};
+        const usuarioSincronizado = {
+            ...usuarioAtual,
+            ...data,
+            nome: data.nomecompleto || data.nome || usuarioAtual.nome
+        };
+
+        localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSincronizado));
+        return usuarioSincronizado;
+    } catch (error) {
+        console.warn('Nao foi possivel sincronizar os dados do usuario logado.', error);
+        return getCurrentUser();
+    }
+}
+
 function getUserLevel() {
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const usuario = getCurrentUser();
     return usuario ? (usuario.nivel || '').toLowerCase().trim() : null;
 }
 //**Liberação para editar o Grid da Pagina */
 function canManageGrid() {
     const nivel = getUserLevel();
     return nivel === 'administrador' || nivel === 'gerencia' || nivel === 'adm_logistica';
+}
+
+function canImportarEscalaOnline() {
+    const nivel = getUserLevel();
+    return canManageGrid() || nivel === 'pr_encarregado' || nivel === 'pr_lider';
 }
 
 function canDelete() {
@@ -80,10 +130,15 @@ function canDelete() {
 function applyGridPermissionUI() {
     if (canManageGrid()) return;
 
-    ['btnAdicionarLinha', 'btnFabAdicionarLinha', 'btnSalvarTudo', 'btnExcluirSelecionados', 'btnFabExcluirSelecionados', 'btnIncluirSelecionadosDiaSeguinte', 'btnFabIncluirSelecionadosDiaSeguinte', 'btnImportarRoteiro', 'btnImportarEscalaOnline'].forEach(id => {
+    ['btnAdicionarLinha', 'btnFabAdicionarLinha', 'btnSalvarTudo', 'btnExcluirSelecionados', 'btnFabExcluirSelecionados', 'btnIncluirSelecionadosDiaSeguinte', 'btnFabIncluirSelecionadosDiaSeguinte', 'btnImportarRoteiro'].forEach(id => {
         const element = document.getElementById(id);
         if (element) element.style.display = 'none';
     });
+
+    const btnImportarEscalaOnline = document.getElementById('btnImportarEscalaOnline');
+    if (btnImportarEscalaOnline) {
+        btnImportarEscalaOnline.style.display = canImportarEscalaOnline() ? '' : 'none';
+    }
 
     const pasteInfo = document.querySelector('.info-paste');
     if (pasteInfo) pasteInfo.style.display = 'none';
@@ -340,6 +395,7 @@ function toggleMenuLateralRetornoRota() {
 
 async function carregarFiliais() {
     try {
+        const usuarioFilial = getCurrentUserFilial();
         const { data, error } = await supabaseClient
             .from('filiais')
             .select('nome, sigla')
@@ -349,6 +405,7 @@ async function carregarFiliais() {
         const select = document.getElementById('filialRetorno');
         if (!select) return;
 
+        select.innerHTML = '<option value="">Selecione a Filial</option>';
         (data || []).forEach(f => {
             const opt = document.createElement('option');
             opt.value = f.sigla || f.nome;
@@ -356,9 +413,13 @@ async function carregarFiliais() {
             select.appendChild(opt);
         });
 
-        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-        if (usuario?.filial) {
-            select.value = usuario.filial;
+        if (usuarioFilial) {
+            select.value = usuarioFilial;
+            select.disabled = true;
+            select.title = 'Filial definida pelo usuario logado';
+        } else {
+            select.disabled = false;
+            select.title = '';
         }
     } catch (err) {
         console.error('Erro ao carregar filiais:', err);
@@ -379,13 +440,13 @@ async function carregarSupervisores() {
 }
 
 async function importarEscalaOnline() {
-    if (!canManageGrid()) {
+    if (!canImportarEscalaOnline()) {
         alert('Você não tem permissão para importar lançamentos no grid.');
         return;
     }
 
     const dataSelecionada = document.getElementById('dataRetorno').value;
-    const filialSelecionada = document.getElementById('filialRetorno').value;
+    const filialSelecionada = getFilialRetornoSelecionada();
 
     if (!dataSelecionada) {
         alert('⚠️ Informe a Data do Retorno antes de importar.');
@@ -479,7 +540,7 @@ async function incluirSelecionadosNoDiaSeguinte() {
     }
 
     const dataAtual = document.getElementById('dataRetorno')?.value;
-    const filialSelecionada = document.getElementById('filialRetorno')?.value;
+    const filialSelecionada = getFilialRetornoSelecionada();
 
     if (!dataAtual) {
         alert('Selecione a Data do Retorno antes de incluir no dia seguinte.');
@@ -534,17 +595,22 @@ async function incluirSelecionadosNoDiaSeguinte() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    await sincronizarUsuarioLogado();
+
     // Inicializa a data com o dia de hoje
     const dataInput = document.getElementById('dataRetorno');
     dataInput.value = getDataSaoPaulo();
 
-    // Carrega dados do dia atual
-    loadDataFromSupabase();
-
     // Listeners
     document.getElementById('btnToggleMenuLateralRetornoRota')?.addEventListener('click', toggleMenuLateralRetornoRota);
     dataInput.addEventListener('change', loadDataFromSupabase);
-    document.getElementById('filialRetorno').addEventListener('change', loadDataFromSupabase);
+    document.getElementById('filialRetorno').addEventListener('change', () => {
+        if (getCurrentUserFilial()) {
+            document.getElementById('filialRetorno').value = getCurrentUserFilial();
+            return;
+        }
+        loadDataFromSupabase();
+    });
     document.getElementById('btnAdicionarLinha').addEventListener('click', incluirLinhaVazia);
     document.getElementById('btnFabAdicionarLinha')?.addEventListener('click', incluirLinhaVazia);
     document.getElementById('tbodyRetornoRota').addEventListener('paste', handlePaste);
@@ -588,6 +654,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Carrega dados auxiliares
     await carregarFiliais();
     await carregarSupervisores();
+
+    // Carrega dados do dia atual somente depois de aplicar a filial do usuario.
+    loadDataFromSupabase();
 
     // Listener para o modal de materiais (paletes)
     document.getElementById('matTemPaletes').addEventListener('change', (e) => {
@@ -795,7 +864,7 @@ function updateSelectAllState() {
  */
 async function loadDataFromSupabase() {
     const dataSelecionada = document.getElementById('dataRetorno').value;
-    const filialSelecionada = document.getElementById('filialRetorno').value;
+    const filialSelecionada = getFilialRetornoSelecionada();
     if (!dataSelecionada) return;
 
     try {
@@ -934,7 +1003,7 @@ function addEmptyRow() {
     const newRow = {};
     COLUMN_MAP.forEach(key => newRow[key] = null);
     newRow.data_retorno = document.getElementById('dataRetorno')?.value || null;
-    newRow.filial = document.getElementById('filialRetorno')?.value || null;
+    newRow.filial = getFilialRetornoSelecionada() || null;
     gridData.push(newRow);
 }
 
@@ -1304,6 +1373,7 @@ async function saveMateriaisData() {
  * @returns {object} O payload pronto para ser enviado ao Supabase.
  */
 function mapRowToPayload(rowData, dataRetorno) {
+    const filialRetorno = getFilialRetornoSelecionada();
     const parseNum = (val) => {
         if (val === '' || val === null || val === undefined) return null;
         const n = parseInt(val, 10);
@@ -1312,7 +1382,7 @@ function mapRowToPayload(rowData, dataRetorno) {
 
     const item = {
         data_retorno: dataRetorno,
-        filial: rowData.filial || null,
+        filial: filialRetorno || rowData.filial || null,
         placa: rowData.placa ? rowData.placa.trim().toUpperCase() : null,
         rota: rowData.rota,
         status_rota: rowData.status_rota || null,
