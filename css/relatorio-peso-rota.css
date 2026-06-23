@@ -238,6 +238,28 @@ body {
     text-align: right;
 }
 
+.detalhe-panel .relatorio-table th,
+.detalhe-panel .relatorio-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.detalhe-panel .relatorio-table td.numeric,
+.detalhe-panel .relatorio-table th.numeric {
+    text-align: center;
+}
+
+.comparativo-panel .relatorio-table th,
+.comparativo-panel .relatorio-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.comparativo-panel .relatorio-table td.numeric,
+.comparativo-panel .relatorio-table th.numeric {
+    text-align: center;
+}
+
 .status-pill {
     border-radius: 999px;
     display: inline-block;
