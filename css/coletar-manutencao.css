@@ -125,6 +125,29 @@
     margin-top: 15px;
 }
 
+#sectionGerarArquivo .panel-header {
+    align-items: center;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.resultado-grid-search {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    width: min(420px, 100%);
+}
+
+.resultado-grid-search i {
+    color: var(--primary-color);
+}
+
+.resultado-grid-search .glass-input {
+    margin-bottom: 0;
+}
+
 .form-group-filter label, .custom-multiselect label {
     display: block;
     margin-bottom: 4px;

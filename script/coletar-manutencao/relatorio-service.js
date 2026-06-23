@@ -55,6 +55,36 @@ function aplicarFiltros(query, filtros, { oficinasMap = {}, filtroOficinaPorDeta
     return query;
 }
 
+async function buscarTodosEmBlocos(montarQuery, tamanhoBloco = 1000) {
+    const countQuery = montarQuery({ count: 'exact', head: true });
+    const { count, error: countError } = await countQuery;
+    if (countError) throw countError;
+
+    const total = count || 0;
+    const data = [];
+
+    if (total === 0) {
+        return { data, meta: { total, carregados: 0, blocos: 0, tamanhoBloco } };
+    }
+
+    for (let inicio = 0; inicio < total; inicio += tamanhoBloco) {
+        const fim = Math.min(inicio + tamanhoBloco - 1, total - 1);
+        const { data: lote, error } = await montarQuery().range(inicio, fim);
+        if (error) throw error;
+        data.push(...(lote || []));
+    }
+
+    return {
+        data,
+        meta: {
+            total,
+            carregados: data.length,
+            blocos: Math.ceil(total / tamanhoBloco),
+            tamanhoBloco
+        }
+    };
+}
+
 export async function buscarDadosRelatorio({
     usuarioLogado,
     filtros,
@@ -69,26 +99,32 @@ export async function buscarDadosRelatorio({
 
     const selectQuery = `*, coletas_manutencao!inner(*)${oficinaSelect}`;
 
-    let query = supabaseClient
-        .from('coletas_manutencao_checklist')
-        .select(selectQuery);
+    const montarQuery = (selectOptions = {}) => {
+        let query = supabaseClient
+            .from('coletas_manutencao_checklist')
+            .select(selectQuery, selectOptions);
 
-    if (filialUsuario) {
-        query = query.ilike('coletas_manutencao.filial', filialUsuario);
-    }
+        if (filialUsuario) {
+            query = query.ilike('coletas_manutencao.filial', filialUsuario);
+        }
 
-    if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
-    if (nivel === 'mecanica_externa') query = query.in('item', ['MECANICA EXTERNA', 'MECANICA - EXTERNA']);
+        if (nivel === 'moleiro') query = query.eq('item', 'MOLEIRO');
+        if (nivel === 'mecanica_externa') query = query.in('item', ['MECANICA EXTERNA', 'MECANICA - EXTERNA']);
 
-    query = aplicarFiltros(query, filtros, { oficinasMap, filtroOficinaPorDetalhes });
+        return aplicarFiltros(query, filtros, { oficinasMap, filtroOficinaPorDetalhes });
+    };
 
-    const { data, error } = await query;
-    if (error) throw error;
-
-    const resultados = data || [];
+    const resultado = await buscarTodosEmBlocos(montarQuery);
+    const resultados = resultado.data || [];
+    resultados.meta = resultado.meta;
     if (!filialUsuario) return resultados;
 
-    return resultados.filter(item =>
+    const filtrados = resultados.filter(item =>
         normalizarFilial(item.coletas_manutencao?.filial) === filialUsuario
     );
+    filtrados.meta = {
+        ...resultado.meta,
+        carregados: filtrados.length
+    };
+    return filtrados;
 }

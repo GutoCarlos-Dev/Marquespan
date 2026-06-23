@@ -53,6 +53,7 @@ const ColetarManutencaoUI = {
         this.chartItems = null; // Instância do gráfico de itens
         this.chartOficinas = null; // Instância do novo gráfico de oficinas
         this.oficinasMap = {}; // Mapa de nome para ID das oficinas
+        this.relatorioMetaTexto = '';
         
         // Carrega filtros e depois aplica restrições
         this.carregarFiltrosDinamicos().then(() => {
@@ -153,6 +154,7 @@ const ColetarManutencaoUI = {
         this.filtroFilialRelatorio = document.getElementById('filtroFilialRelatorio');
         this.filtroDataIni = document.getElementById('filtroDataIni');
         this.filtroDataFim = document.getElementById('filtroDataFim');
+        this.filtroDetalhesRelatorio = document.getElementById('filtroDetalhesRelatorio');
         this.filtroItemDisplay = document.getElementById('filtroItemDisplay');
         this.filtroItemOptions = document.getElementById('filtroItemOptions');
         this.filtroItemText = document.getElementById('filtroItemText');
@@ -374,6 +376,7 @@ const ColetarManutencaoUI = {
 
         if(this.formExportacao) this.formExportacao.addEventListener('submit', (e) => this.gerarRelatorioExcel(e));
         if(this.btnBuscarRelatorio) this.btnBuscarRelatorio.addEventListener('click', () => this.buscarRelatorio());
+        if (this.filtroDetalhesRelatorio) this.filtroDetalhesRelatorio.addEventListener('input', () => this.renderRelatorio());
         if(this.btnExportarPDFServicos) this.btnExportarPDFServicos.addEventListener('click', (e) => this.gerarRelatorioPDF(e, 'ITEM'));
         if(this.btnExportarPDFOficina) this.btnExportarPDFOficina.addEventListener('click', (e) => this.gerarRelatorioPDF(e, 'OFICINA'));
         
@@ -460,6 +463,7 @@ const ColetarManutencaoUI = {
         this.filtroPlaca.value = '';
         this.filtroDataIni.value = '';
         this.filtroDataFim.value = '';
+        if (this.filtroDetalhesRelatorio) this.filtroDetalhesRelatorio.value = '';
         this.limparSelecaoItem();
         this.limparSelecaoOficina();
         limparSelecaoMultiselect(this.filtroStatusOptions, this.filtroStatusText, 'filtro-status-checkbox', 'Todos');
@@ -1449,13 +1453,15 @@ const ColetarManutencaoUI = {
             placa: this.filtroPlaca?.value?.trim().toUpperCase() || '',
             filial: this.filtroFilialRelatorio?.value || '',
             dataIni: this.filtroDataIni.value,
-            dataFim: this.filtroDataFim.value
+            dataFim: this.filtroDataFim.value,
+            detalhes: ''
         };
     },
 
     async buscarRelatorio() {
         if (!this.tableBodyRelatorio) return;
-        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="13" class="text-center">Buscando...</td></tr>';
+        this.tableBodyRelatorio.innerHTML = '<tr><td colspan="13" class="text-center">Buscando registros em blocos de 1000...</td></tr>';
+        if (this.contadorResultados) this.contadorResultados.textContent = '(carregando em blocos...)';
         
         try {
             const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -1465,8 +1471,13 @@ const ColetarManutencaoUI = {
                 oficinasMap: this.oficinasMap,
                 incluirOficinas: true
             });
-            // Atualiza contador
-            if (this.contadorResultados) this.contadorResultados.textContent = `(${data ? data.length : 0})`;
+            const meta = data?.meta || null;
+            if (this.contadorResultados) {
+                this.relatorioMetaTexto = meta
+                    ? `(${meta.carregados} de ${meta.total} carregados em ${meta.blocos} bloco${meta.blocos === 1 ? '' : 's'})`
+                    : `(${data ? data.length : 0})`;
+                this.contadorResultados.textContent = this.relatorioMetaTexto;
+            }
 
             this.tableBodyRelatorio.innerHTML = '';
             if (!data || data.length === 0) {
@@ -1489,15 +1500,31 @@ const ColetarManutencaoUI = {
     renderRelatorio() {
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
         const nivelUsuario = usuarioLogado ? usuarioLogado.nivel.toLowerCase() : '';
+        const dadosFiltrados = this.getReportDataFiltradoPorDetalhes();
 
         renderizarTabelaRelatorio({
             tbody: this.tableBodyRelatorio,
-            reportData: this.reportData,
+            reportData: dadosFiltrados,
             sortConfig: this.currentReportSort,
             nivelUsuario
         });
 
+        if (this.contadorResultados && this.reportData.length !== dadosFiltrados.length) {
+            this.contadorResultados.textContent = `(${dadosFiltrados.length} de ${this.reportData.length} exibidos)`;
+        } else if (this.contadorResultados) {
+            this.contadorResultados.textContent = this.relatorioMetaTexto || `(${this.reportData.length})`;
+        }
         this.updateReportSortIcons();
+    },
+
+    getReportDataFiltradoPorDetalhes() {
+        const termo = this.filtroDetalhesRelatorio?.value?.trim().toLowerCase() || '';
+        if (!termo) return [...this.reportData];
+
+        return this.reportData.filter(item =>
+            String(item.detalhes || '').toLowerCase().includes(termo)
+            || String(item.pecas_usadas || '').toLowerCase().includes(termo)
+        );
     },
     // Renderiza os gráficos de análise
     renderizarGraficos() {
