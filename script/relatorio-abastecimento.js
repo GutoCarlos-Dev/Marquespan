@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.loadBicos(),
                     this.loadPostos(),
                     this.loadVeiculos(),
+                    this.loadRotas(),
                     this.loadTiposVeiculo()
                 ]);
             });
@@ -708,10 +709,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
         async loadRotas() {
             try {
-                const { data, error } = await supabaseClient
+                const valoresFilial = this.getValoresFilialSelecionada();
+                let query = supabaseClient
                     .from('rotas')
-                    .select('numero')
+                    .select('numero, filial')
                     .order('numero');
+
+                if (valoresFilial.length > 0) query = query.in('filial', valoresFilial);
+
+                const { data, error } = await query;
                 if (error) throw error;
     
                 const datalist = document.getElementById('listaRotasFiltro');
@@ -1107,6 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.loadBicos(),
                     this.loadPostos(),
                     this.loadVeiculos(),
+                    this.loadRotas(),
                     this.loadTiposVeiculo()
                 ]);
                 this.filtroTanque.value = filtros.tanque || '';
@@ -1987,6 +1994,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.loadBicos(),
                 this.loadPostos(),
                 this.loadVeiculos(),
+                this.loadRotas(),
                 this.loadTiposVeiculo()
             ]);
             if (this.filtroTipoOptions) {
