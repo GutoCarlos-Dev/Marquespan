@@ -8,9 +8,14 @@ const PAGE_ID = 'fiscalizacao-ocorrencia.html';
 const niveisComExclusao = ['administrador', 'gerencia'];
 const bucketAnexos = 'fiscalizacao_ocorrencias_anexos';
 const niveisSomenteLeitura = [];
+const CATEGORIA_ANEXO_GERAL = 'GERAL';
+const CATEGORIA_ANEXO_BOLETIM = 'BOLETIM_OCORRENCIA';
 let anexosNovos = [];
 let anexosExistentes = [];
 let anexosParaRemover = [];
+let boletimOcorrenciaNovo = null;
+let boletimOcorrenciaExistente = null;
+let boletimOcorrenciaParaRemover = null;
 let visualizandoOcorrencia = false;
 let veiculosPorPlaca = new Map();
 
@@ -86,6 +91,11 @@ function bindEvents() {
   document.getElementById('btnCompartilharOcorrenciaWhatsapp').addEventListener('click', () => compartilharOcorrenciaWhatsapp());
   document.getElementById('ocorrenciaAnexos').addEventListener('change', handleAnexosChange);
   document.getElementById('listaAnexosOcorrencia').addEventListener('click', handleAnexoClick);
+  document.getElementById('boletimOcorrenciaAnexo').addEventListener('change', handleBoletimOcorrenciaChange);
+  document.getElementById('listaBoletimOcorrencia').addEventListener('click', handleBoletimOcorrenciaClick);
+  document.querySelectorAll('input[name="boletimOcorrenciaStatus"]').forEach(input => {
+    input.addEventListener('change', atualizarCampoBoletimOcorrencia);
+  });
   ['envolveVeiculoEmpresa', 'envolveVeiculoTerceiro', 'envolveOutroPatrimonio'].forEach(id => {
     document.getElementById(id).addEventListener('change', atualizarGruposEnvolvimento);
   });
@@ -289,8 +299,12 @@ async function abrirModal(item = null, modo = 'editar') {
   anexosNovos = [];
   anexosExistentes = [];
   anexosParaRemover = [];
+  boletimOcorrenciaNovo = null;
+  boletimOcorrenciaExistente = null;
+  boletimOcorrenciaParaRemover = null;
   visualizandoOcorrencia = modo === 'visualizar' || usuarioSomenteLeitura();
   document.getElementById('ocorrenciaAnexos').value = '';
+  document.getElementById('boletimOcorrenciaAnexo').value = '';
   ocorrenciaEditandoId = item?.id || null;
   document.getElementById('btnSalvarOcorrencia').textContent = ocorrenciaEditandoId ? 'Salvar Alterações' : 'Salvar';
   atualizarTituloModalOcorrencia();
@@ -303,11 +317,14 @@ async function abrirModal(item = null, modo = 'editar') {
   document.getElementById('ocorrenciaMotorista').value = item?.motorista || '';
   document.getElementById('ocorrenciaAuxiliar').value = item?.auxiliar || '';
   document.getElementById('ocorrenciaLocal').value = item?.local_ocorrencia || '';
+  definirStatusBoletimOcorrencia(item?.boletim_ocorrencia_status || 'NAO_EMITIDO');
   document.getElementById('ocorrenciaRelatorio').value = textoMaiusculo(item?.relatorio);
   if (usuarioRestritoPorFilial()) definirValorSelect('ocorrenciaFilial', getFilialUsuario());
   preencherEnvolvimento(item?.envolvimento);
   atualizarGruposEnvolvimento();
+  renderizarBoletimOcorrencia();
   renderizarAnexos();
+  atualizarCampoBoletimOcorrencia();
   atualizarModoVisualizacao();
   document.getElementById('modalOcorrencia').classList.remove('hidden');
   if (ocorrenciaEditandoId) {
@@ -334,9 +351,49 @@ function atualizarModoVisualizacao() {
   modal.querySelectorAll('input, textarea, select').forEach(campo => {
     campo.disabled = visualizandoOcorrencia;
   });
+  atualizarCampoBoletimOcorrencia();
   document.getElementById('btnSalvarOcorrencia').classList.toggle('hidden', visualizandoOcorrencia);
   document.getElementById('btnCancelarOcorrencia').textContent = visualizandoOcorrencia ? 'Fechar' : 'Cancelar';
   atualizarBotaoCompartilharModal();
+}
+
+function getStatusBoletimOcorrencia() {
+  return document.querySelector('input[name="boletimOcorrenciaStatus"]:checked')?.value || 'NAO_EMITIDO';
+}
+
+function definirStatusBoletimOcorrencia(status) {
+  const normalizado = status === 'EMITIDO' ? 'EMITIDO' : 'NAO_EMITIDO';
+  const input = document.querySelector(`input[name="boletimOcorrenciaStatus"][value="${normalizado}"]`);
+  if (input) input.checked = true;
+}
+
+function atualizarCampoBoletimOcorrencia() {
+  const emitido = getStatusBoletimOcorrencia() === 'EMITIDO';
+  const input = document.getElementById('boletimOcorrenciaAnexo');
+  if (!input) return;
+
+  input.disabled = visualizandoOcorrencia || usuarioSomenteLeitura() || !emitido;
+  input.title = emitido ? 'Anexe o Boletim de Ocorrencia.' : 'Disponivel somente quando o BO estiver como Emitido.';
+
+  if (!emitido && !visualizandoOcorrencia && !usuarioSomenteLeitura()) {
+    if (boletimOcorrenciaExistente) {
+      boletimOcorrenciaParaRemover = boletimOcorrenciaExistente;
+      boletimOcorrenciaExistente = null;
+    }
+    boletimOcorrenciaNovo = null;
+    input.value = '';
+    renderizarBoletimOcorrencia();
+  }
+}
+
+function formatarStatusBoletimOcorrencia(status) {
+  return status === 'EMITIDO' ? 'Emitido' : 'Nao Emitido';
+}
+
+function badgeStatusBoletimOcorrencia(status) {
+  const normalizado = status === 'EMITIDO' ? 'EMITIDO' : 'NAO_EMITIDO';
+  const classe = normalizado === 'EMITIDO' ? 'boletim-status-emitido' : 'boletim-status-nao_emitido';
+  return `<span class="boletim-status-badge ${classe}">${formatarStatusBoletimOcorrencia(normalizado)}</span>`;
 }
 
 async function handleTabelaClick(event) {
@@ -395,6 +452,7 @@ async function salvarOcorrencia(event) {
       motorista: document.getElementById('ocorrenciaMotorista').value.trim(),
       auxiliar: document.getElementById('ocorrenciaAuxiliar').value.trim() || null,
       local_ocorrencia: document.getElementById('ocorrenciaLocal').value.trim() || null,
+      boletim_ocorrencia_status: getStatusBoletimOcorrencia(),
       envolvimento: coletarEnvolvimento(),
       relatorio: textoMaiusculo(document.getElementById('ocorrenciaRelatorio').value).trim()
     };
@@ -530,6 +588,7 @@ function getDadosGrid() {
       item.placa,
       item.motorista,
       item.auxiliar,
+      formatarStatusBoletimOcorrencia(item.boletim_ocorrencia_status),
       item.local_ocorrencia,
       resumoEnvolvimento(item.envolvimento),
       item.relatorio
@@ -556,7 +615,7 @@ function renderizarTabela() {
   document.getElementById('totalRegistros').textContent = dados.length;
 
   if (dados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
     atualizarIconesOrdenacao();
     return;
   }
@@ -571,6 +630,7 @@ function renderizarTabela() {
       <td><strong>${escapeHtml(item.placa || '-')}</strong></td>
       <td>${escapeHtml(item.motorista || '-')}</td>
       <td>${escapeHtml(item.auxiliar || '-')}</td>
+      <td>${badgeStatusBoletimOcorrencia(item.boletim_ocorrencia_status)}</td>
       <td class="ocorrencia-texto">${escapeHtml(item.relatorio || '-')}</td>
       <td class="acoes-cell">
         ${somenteLeitura ? '' : `
@@ -650,6 +710,7 @@ function dadosParaExportacao() {
     Placa: item.placa || '',
     Motorista: item.motorista || '',
     Auxiliar: item.auxiliar || '',
+    'Boletim de Ocorrencia': formatarStatusBoletimOcorrencia(item.boletim_ocorrencia_status),
     Horario: item.hora_ocorrencia || '',
     'Local da Ocorrencia': item.local_ocorrencia || '',
     Envolvimento: resumoEnvolvimento(item.envolvimento),
@@ -749,6 +810,7 @@ function obterOcorrenciaDoFormulario() {
     motorista: document.getElementById('ocorrenciaMotorista').value.trim(),
     auxiliar: document.getElementById('ocorrenciaAuxiliar').value.trim() || null,
     local_ocorrencia: document.getElementById('ocorrenciaLocal').value.trim() || null,
+    boletim_ocorrencia_status: getStatusBoletimOcorrencia(),
     envolvimento: coletarEnvolvimento(),
     relatorio: textoMaiusculo(document.getElementById('ocorrenciaRelatorio').value).trim()
   };
@@ -771,6 +833,7 @@ function compartilharOcorrenciaWhatsapp(ocorrencia = null) {
     `Placa: ${dados.placa || '-'}`,
     `Motorista(s): ${dados.motorista || '-'}`,
     `Auxiliar: ${dados.auxiliar || '-'}`,
+    `Boletim de Ocorrencia: ${formatarStatusBoletimOcorrencia(dados.boletim_ocorrencia_status)}`,
     `Local: ${dados.local_ocorrencia || '-'}`,
     `Envolvimento: ${resumoEnvolvimento(dados.envolvimento) || '-'}`,
     '',
@@ -792,6 +855,29 @@ function handleAnexosChange(event) {
   anexosNovos.push(...Array.from(event.target.files || []));
   event.target.value = '';
   renderizarAnexos();
+}
+
+function handleBoletimOcorrenciaChange(event) {
+  if (usuarioSomenteLeitura() || visualizandoOcorrencia) {
+    event.target.value = '';
+    return;
+  }
+
+  if (getStatusBoletimOcorrencia() !== 'EMITIDO') {
+    event.target.value = '';
+    alert('Marque o Boletim de Ocorrencia como Emitido antes de anexar.');
+    return;
+  }
+
+  const [file] = Array.from(event.target.files || []);
+  if (!file) return;
+  boletimOcorrenciaNovo = file;
+  if (boletimOcorrenciaExistente) {
+    boletimOcorrenciaParaRemover = boletimOcorrenciaExistente;
+    boletimOcorrenciaExistente = null;
+  }
+  event.target.value = '';
+  renderizarBoletimOcorrencia();
 }
 
 async function handleAnexoClick(event) {
@@ -820,6 +906,65 @@ async function handleAnexoClick(event) {
   if (action === 'baixar' && tipo === 'existente') {
     await baixarAnexo(anexosExistentes[index]);
   }
+}
+
+async function handleBoletimOcorrenciaClick(event) {
+  const button = event.target.closest('[data-boletim-action]');
+  if (!button) return;
+  const action = button.dataset.boletimAction;
+  const tipo = button.dataset.tipo;
+
+  if (action === 'remover') {
+    if (visualizandoOcorrencia || usuarioSomenteLeitura()) return;
+    if (tipo === 'novo') {
+      boletimOcorrenciaNovo = null;
+    } else if (tipo === 'existente') {
+      boletimOcorrenciaParaRemover = boletimOcorrenciaExistente;
+      boletimOcorrenciaExistente = null;
+    }
+    renderizarBoletimOcorrencia();
+    return;
+  }
+
+  if (action === 'baixar' && tipo === 'existente') {
+    await baixarAnexo(boletimOcorrenciaExistente);
+  }
+}
+
+function renderizarBoletimOcorrencia() {
+  const container = document.getElementById('listaBoletimOcorrencia');
+  if (!container) return;
+
+  const anexo = boletimOcorrenciaNovo || boletimOcorrenciaExistente;
+  const tipo = boletimOcorrenciaNovo ? 'novo' : boletimOcorrenciaExistente ? 'existente' : '';
+
+  if (!anexo) {
+    container.innerHTML = '<div class="anexo-ocorrencia-item"><span class="anexo-ocorrencia-nome">Nenhum Boletim de Ocorrencia anexado.</span></div>';
+    return;
+  }
+
+  const nome = tipo === 'novo' ? anexo.name : anexo.nome_arquivo;
+  container.innerHTML = `
+    <div class="anexo-ocorrencia-item">
+      <div class="anexo-ocorrencia-nome">
+        <i class="fas fa-file-shield"></i>
+        <span>${escapeHtml(nome || 'Boletim de Ocorrencia')}</span>
+        ${tipo === 'novo' ? '<strong>(Novo)</strong>' : ''}
+      </div>
+      <div class="anexo-ocorrencia-acoes">
+        ${tipo === 'existente' ? `
+          <button type="button" class="btn-anexo btn-anexo-download" data-boletim-action="baixar" data-tipo="${tipo}" title="Baixar BO">
+            <i class="fas fa-download"></i>
+          </button>
+        ` : ''}
+        ${visualizandoOcorrencia || usuarioSomenteLeitura() ? '' : `
+          <button type="button" class="btn-anexo btn-anexo-remove" data-boletim-action="remover" data-tipo="${tipo}" title="Remover BO">
+            <i class="fas fa-trash"></i>
+          </button>
+        `}
+      </div>
+    </div>
+  `;
 }
 
 function renderizarAnexos() {
@@ -869,18 +1014,26 @@ async function carregarAnexosExistentes(idOcorrencia) {
       .order('created_at', { ascending: true });
 
     if (error) throw error;
-    anexosExistentes = data || [];
+    const anexos = data || [];
+    boletimOcorrenciaExistente = anexos.find(anexo => anexo.categoria === CATEGORIA_ANEXO_BOLETIM) || null;
+    anexosExistentes = anexos.filter(anexo => (anexo.categoria || CATEGORIA_ANEXO_GERAL) !== CATEGORIA_ANEXO_BOLETIM);
+    renderizarBoletimOcorrencia();
     renderizarAnexos();
   } catch (error) {
     console.error('Erro ao carregar anexos:', error);
     anexosExistentes = [];
+    boletimOcorrenciaExistente = null;
+    renderizarBoletimOcorrencia();
     renderizarAnexos();
   }
 }
 
 async function salvarAnexos(idOcorrencia) {
-  if (anexosParaRemover.length) {
-    const caminhos = anexosParaRemover.map(anexo => anexo.caminho_arquivo).filter(Boolean);
+  const anexosRemocao = [...anexosParaRemover];
+  if (boletimOcorrenciaParaRemover?.caminho_arquivo) anexosRemocao.push(boletimOcorrenciaParaRemover);
+
+  if (anexosRemocao.length) {
+    const caminhos = anexosRemocao.map(anexo => anexo.caminho_arquivo).filter(Boolean);
     if (caminhos.length) {
       const { error: storageError } = await supabaseClient.storage.from(bucketAnexos).remove(caminhos);
       if (storageError) throw storageError;
@@ -890,29 +1043,41 @@ async function salvarAnexos(idOcorrencia) {
     }
   }
 
+  if (getStatusBoletimOcorrencia() === 'EMITIDO' && boletimOcorrenciaNovo) {
+    await salvarArquivoAnexo(idOcorrencia, boletimOcorrenciaNovo, CATEGORIA_ANEXO_BOLETIM);
+  }
+
   for (const file of anexosNovos) {
-    const caminho = `${idOcorrencia}/${Date.now()}-${sanitizarNomeArquivo(file.name)}`;
-    const { data, error } = await supabaseClient.storage
-      .from(bucketAnexos)
-      .upload(caminho, file, { contentType: file.type || 'application/octet-stream' });
-
-    if (error) throw error;
-
-    const { error: insertError } = await supabaseClient
-      .from('fiscalizacao_ocorrencias_anexos')
-      .insert({
-        ocorrencia_id: idOcorrencia,
-        nome_arquivo: file.name,
-        caminho_arquivo: data.path,
-        tipo_arquivo: file.type || null,
-        tamanho_bytes: file.size || null
-      });
-
-    if (insertError) throw insertError;
+    await salvarArquivoAnexo(idOcorrencia, file, CATEGORIA_ANEXO_GERAL);
   }
 
   anexosNovos = [];
   anexosParaRemover = [];
+  boletimOcorrenciaNovo = null;
+  boletimOcorrenciaParaRemover = null;
+}
+
+async function salvarArquivoAnexo(idOcorrencia, file, categoria) {
+  const pasta = categoria === CATEGORIA_ANEXO_BOLETIM ? 'boletim-ocorrencia' : 'anexos';
+  const caminho = `${idOcorrencia}/${pasta}/${Date.now()}-${sanitizarNomeArquivo(file.name)}`;
+  const { data, error } = await supabaseClient.storage
+    .from(bucketAnexos)
+    .upload(caminho, file, { contentType: file.type || 'application/octet-stream' });
+
+  if (error) throw error;
+
+  const { error: insertError } = await supabaseClient
+    .from('fiscalizacao_ocorrencias_anexos')
+    .insert({
+      ocorrencia_id: idOcorrencia,
+      nome_arquivo: file.name,
+      caminho_arquivo: data.path,
+      tipo_arquivo: file.type || null,
+      tamanho_bytes: file.size || null,
+      categoria
+    });
+
+  if (insertError) throw insertError;
 }
 
 async function baixarAnexo(anexo) {
@@ -977,7 +1142,7 @@ async function exportarPDF() {
   doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 18, { align: 'right' });
 
   doc.autoTable({
-    head: [['Data Inclusao', 'Data Ocorrencia', 'Ultima Edicao', 'Filial', 'Rota', 'Placa', 'Motorista', 'Ocorrencia']],
+    head: [['Data Inclusao', 'Data Ocorrencia', 'Ultima Edicao', 'Filial', 'Rota', 'Placa', 'Motorista', 'BO', 'Ocorrencia']],
     body: rows.map(row => [
       row['Data Inclusao'],
       row['Data Ocorrencia'],
@@ -986,6 +1151,7 @@ async function exportarPDF() {
       row.Rota,
       row.Placa,
       row.Motorista,
+      row['Boletim de Ocorrencia'],
       row.Ocorrencia
     ]),
     startY: 30,
@@ -994,7 +1160,7 @@ async function exportarPDF() {
     styles: { fontSize: 8, cellPadding: 2 },
     alternateRowStyles: { fillColor: [240, 240, 240] },
     columnStyles: {
-      7: { cellWidth: 80 }
+      8: { cellWidth: 70 }
     }
   });
 

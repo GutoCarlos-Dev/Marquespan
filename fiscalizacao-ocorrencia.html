@@ -89,12 +89,13 @@
               <th class="sortable" data-sort="placa">Placa <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="motorista">Motorista <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="auxiliar">Auxiliar <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="boletim_ocorrencia_status">BO <i class="fas fa-sort"></i></th>
               <th>Ocorrência</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody id="tbodyOcorrencias">
-            <tr><td colspan="10" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
+            <tr><td colspan="11" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
           </tbody>
         </table>
       </div>
@@ -251,8 +252,28 @@
 
           <section class="ocorrencia-card-form">
             <h4><i class="fas fa-paperclip"></i> Anexos</h4>
+            <div class="boletim-ocorrencia-box">
+              <div class="boletim-ocorrencia-header">
+                <label>Boletim de Ocorrencia</label>
+                <div class="boletim-toggle" role="radiogroup" aria-label="Status do Boletim de Ocorrencia">
+                  <label>
+                    <input type="radio" name="boletimOcorrenciaStatus" value="EMITIDO" id="boletimOcorrenciaEmitido">
+                    <span>Emitido</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="boletimOcorrenciaStatus" value="NAO_EMITIDO" id="boletimOcorrenciaNaoEmitido" checked>
+                    <span>Nao Emitido</span>
+                  </label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="boletimOcorrenciaAnexo">Anexo do Boletim de Ocorrencia</label>
+                <input type="file" id="boletimOcorrenciaAnexo" class="glass-input" accept="image/*,.pdf,.doc,.docx">
+              </div>
+              <div id="listaBoletimOcorrencia" class="lista-anexos-ocorrencia"></div>
+            </div>
             <div class="form-group">
-              <label for="ocorrenciaAnexos">Boletim de ocorrencia, fotos, videos e outros arquivos</label>
+              <label for="ocorrenciaAnexos">Fotos, videos e outros arquivos</label>
               <input type="file" id="ocorrenciaAnexos" class="glass-input" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
             </div>
             <div id="listaAnexosOcorrencia" class="lista-anexos-ocorrencia"></div>

@@ -252,6 +252,86 @@
   margin-top: 12px;
 }
 
+.boletim-ocorrencia-box {
+  background: #fbfdfc;
+  border: 1px solid #d9e2dc;
+  border-left: 4px solid #006937;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  padding: 14px;
+}
+
+.boletim-ocorrencia-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.boletim-ocorrencia-header > label {
+  color: #111827;
+  font-weight: 700;
+}
+
+.boletim-toggle {
+  background: #eef4f0;
+  border: 1px solid #d9e2dc;
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+}
+
+.boletim-toggle label {
+  cursor: pointer;
+  margin: 0;
+}
+
+.boletim-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boletim-toggle span {
+  border-radius: 6px;
+  color: #344054;
+  display: inline-flex;
+  font-size: 0.86rem;
+  font-weight: 800;
+  padding: 7px 12px;
+}
+
+.boletim-toggle input:checked + span {
+  background: #006937;
+  color: #fff;
+}
+
+.boletim-toggle input[value="NAO_EMITIDO"]:checked + span {
+  background: #6c757d;
+}
+
+.boletim-status-badge {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.boletim-status-emitido {
+  background: #d9f7e5;
+  color: #137333;
+}
+
+.boletim-status-nao_emitido {
+  background: #edf2f7;
+  color: #475467;
+}
+
 .anexo-ocorrencia-item {
   align-items: center;
   background: #f8fafc;
