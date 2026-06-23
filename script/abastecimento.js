@@ -211,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.postoEditingId = null; // Variável para controlar edição de posto
             this.extMotorista = document.getElementById('extMotorista'); // Novo campo Motorista
             this.listaMotoristasExt = document.getElementById('listaMotoristasExt'); // Datalist para Motorista
+            this.filtroPostoFilial = document.getElementById('filtroPostoFilial');
             this.searchPostoInput = document.getElementById('searchPostoInput'); // Input de busca de postos
        // Elementos do filtro de histórico de entrada
             this.filtroDataInicial = document.getElementById('filtroDataInicial');
@@ -398,6 +399,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Listeners para Busca e Ordenação de Postos
             if (this.searchPostoInput) {
                 this.searchPostoInput.addEventListener('input', () => this.renderPostosTable(false));
+            }
+            if (this.filtroPostoFilial) {
+                this.filtroPostoFilial.addEventListener('change', () => this.renderPostosTable(true));
             }
             document.querySelectorAll('.sortable-posto').forEach(th => {
                 th.addEventListener('click', () => {
@@ -615,6 +619,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
         getFilialCadastroPosto() {
             return this.getUserFilial() ? this.getFilialUsuarioSelecionavel() : (this.postoFilial?.value || '');
+        },
+
+        getValoresFiltroPostos() {
+            const filialSelecionada = this.getUserFilial()
+                ? this.getFilialUsuarioSelecionavel()
+                : (this.filtroPostoFilial?.value || '');
+
+            if (!filialSelecionada) return [];
+
+            const filialNormalizada = String(filialSelecionada).trim().toUpperCase();
+            const valores = new Set([filialSelecionada]);
+            (this.filiaisCache || []).forEach(f => {
+                const nome = String(f.nome || '').trim();
+                const sigla = String(f.sigla || '').trim();
+                if (
+                    nome.toUpperCase() === filialNormalizada
+                    || sigla.toUpperCase() === filialNormalizada
+                    || String(sigla || nome).trim().toUpperCase() === filialNormalizada
+                ) {
+                    if (nome) valores.add(nome);
+                    if (sigla) valores.add(sigla);
+                }
+            });
+
+            return Array.from(valores);
+        },
+
+        aplicarBloqueioFiltroPostos() {
+            if (!this.filtroPostoFilial) return;
+
+            const userFilial = this.getUserFilial();
+            if (!userFilial) {
+                this.filtroPostoFilial.disabled = false;
+                this.filtroPostoFilial.title = '';
+                return;
+            }
+
+            const valorFilial = this.getFilialUsuarioSelecionavel();
+            if (valorFilial && !Array.from(this.filtroPostoFilial.options).some(option => option.value === valorFilial)) {
+                this.filtroPostoFilial.add(new Option(valorFilial, valorFilial));
+            }
+
+            this.filtroPostoFilial.value = valorFilial;
+            this.filtroPostoFilial.disabled = true;
+            this.filtroPostoFilial.title = 'Filial definida pelo usuario logado.';
         },
 
         getUserLevel() {
@@ -1747,6 +1796,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.postoFilial.innerHTML = options;
                     this.aplicarBloqueioFilialPosto();
                 }
+                if (this.filtroPostoFilial) {
+                    this.filtroPostoFilial.innerHTML = '<option value="">Todas</option>' + options.replace('<option value="">Selecione a Filial</option>', '');
+                    this.aplicarBloqueioFiltroPostos();
+                    if (this.tableBodyPostos) this.renderPostosTable(true);
+                }
             } catch (error) {
                 console.error('Erro ao carregar filiais:', error);
             }
@@ -2273,7 +2327,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     this.postosData = await buscarPostosPaginados({
                         supabaseClient,
-                        filial: this.getValoresFilialUsuario()
+                        filial: this.getValoresFiltroPostos()
                     });
                 } catch (error) {
                     console.error("Erro ao buscar postos para a tabela:", error);

@@ -551,7 +551,13 @@
             </div>
           </form>
 
-          <div style="margin-top: 20px; margin-bottom: 10px;">
+          <div style="margin-top: 20px; margin-bottom: 10px; display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 10px; align-items: end;">
+              <div class="form-group" style="margin-bottom: 0;">
+                  <label for="filtroPostoFilial">Filial</label>
+                  <select id="filtroPostoFilial" class="glass-input">
+                      <option value="">Todas</option>
+                  </select>
+              </div>
               <input type="text" id="searchPostoInput" class="glass-input" placeholder="🔍 Buscar por Razão Social, CNPJ ou Cidade..." style="width: 100%;">
           </div>
 
@@ -578,7 +584,7 @@
 
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="./script/abastecimento.js" defer></script>
+  <script type="module" src="./script/abastecimento.js?v=20260623-1" defer></script>
 
       <!-- 🦶 Rodapé -->
     <footer class="footer">
