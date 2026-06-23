@@ -374,14 +374,30 @@ body {
 }
 
 /* Estilos para o select de status com cores */
-.checklist-status.status-ok {
+.checklist-status.status-ok,
+.checklist-status.status-finalizado {
     background-color: #d4edda !important;
     color: #155724 !important;
     border-color: #c3e6cb !important;
     font-weight: bold;
 }
 
-.checklist-status.status-nao-realizado {
+.checklist-status.status-finalizado-aguardando-os {
+    background-color: #c8a882 !important;
+    color: #3e1a00 !important;
+    border-color: #a0785a !important;
+    font-weight: bold;
+}
+
+.checklist-status.status-finalizado-rota {
+    background-color: #d4edda !important;
+    color: #0b3314 !important;
+    border-color: #c3e6cb !important;
+    font-weight: bold;
+}
+
+.checklist-status.status-nao-realizado,
+.checklist-status.status-pendente {
     background-color: #f8d7da !important;
     color: #721c24 !important;
     border-color: #f5c6cb !important;
@@ -394,6 +410,29 @@ body {
     border-color: #b8daff !important;
     font-weight: bold;
 }
+
+.checklist-status.status-checkin-oficina {
+    background-color: #fff3cd !important;
+    color: #856404 !important;
+    border-color: #ffeeba !important;
+    font-weight: bold;
+}
+
+.checklist-status.status-checkin-rota {
+    background-color: #ffe0b2 !important;
+    color: #d35400 !important;
+    border-color: #ffcc80 !important;
+    font-weight: bold;
+}
+
+/* Cores nas options do select de status */
+option[value="CHECK-IN OFICINA"] { background-color: #fff3cd; color: #856404; }
+option[value="CHECK-IN ROTA"]    { background-color: #ffe0b2; color: #d35400; }
+option[value="FINALIZADO"]       { background-color: #d4edda; color: #155724; }
+option[value="FINALIZADO AGUARDANDO O.S"] { background-color: #c8a882; color: #3e1a00; font-weight: bold; }
+option[value="FINALIZADO ROTA"]  { background-color: #d4edda; color: #0b3314; font-weight: bold; }
+option[value="INTERNADO"]        { background-color: #cce5ff; color: #004085; }
+option[value="PENDENTE"]         { background-color: #f8d7da; color: #721c24; }
 /* Estilos adicionais para filtros mobile */
 .mobile-filters {
     background: white;

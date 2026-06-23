@@ -1,6 +1,7 @@
 export const STATUS_CLASSES = [
     'status-ok',
     'status-finalizado',
+    'status-finalizado-aguardando-os',
     'status-finalizado-rota',
     'status-nao-realizado',
     'status-pendente',
@@ -25,6 +26,8 @@ export function getStatusClass(status) {
     switch (normalizarStatus(status)) {
         case 'FINALIZADO':
             return 'status-finalizado';
+        case 'FINALIZADO AGUARDANDO O.S':
+            return 'status-finalizado-aguardando-os';
         case 'FINALIZADO ROTA':
             return 'status-finalizado-rota';
         case 'PENDENTE':

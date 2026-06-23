@@ -414,6 +414,12 @@
     border: 1px solid #f5c6cb !important;
 }
 
+.status-finalizado-aguardando-os {
+    background-color: #c8a882 !important;
+    color: #3e1a00 !important;
+    border: 1px solid #a0785a !important;
+}
+
 .status-finalizado-rota {
     background-color: #d4edda !important;
     color: #0b3314 !important;
@@ -467,6 +473,12 @@ option[value="CHECK-IN OFICINA"] {
 option[value="CHECK-IN ROTA"] {
     background-color: #ffe0b2;
     color: #d35400;
+}
+
+option[value="FINALIZADO AGUARDANDO O.S"] {
+    background-color: #c8a882;
+    color: #3e1a00;
+    font-weight: bold;
 }
 
 option[value="FINALIZADO ROTA"] {

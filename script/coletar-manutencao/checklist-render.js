@@ -87,12 +87,13 @@ function criarChecklistItem(item, oficinasPorItem, callbacks) {
         <input type="text" class="checklist-details" placeholder="Detalhes...">
         <select class="checklist-status">
             <option value="" selected>-</option>
-            <option value="PENDENTE">PENDENTE</option>
-            <option value="FINALIZADO">FINALIZADO</option>
-            <option value="INTERNADO">INTERNADO</option>
             <option value="CHECK-IN OFICINA">CHECK-IN OFICINA</option>
             <option value="CHECK-IN ROTA">CHECK-IN ROTA</option>
+            <option value="FINALIZADO">FINALIZADO</option>
+            <option value="FINALIZADO AGUARDANDO O.S">FINALIZADO AGUARDANDO O.S</option>
             <option value="FINALIZADO ROTA">FINALIZADO ROTA</option>
+            <option value="INTERNADO">INTERNADO</option>
+            <option value="PENDENTE">PENDENTE</option>
         </select>
         <div class="oficina-selector-wrapper" style="display: none; margin-top: 5px;">
             <select class="oficina-selector" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; background-color: #f0f8ff;">

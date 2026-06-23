@@ -6,13 +6,18 @@ function getStatusGeral(checklist) {
     const hasCheckinOficina = checklist.some(i => i.status === 'CHECK-IN OFICINA');
     const hasCheckinRota = checklist.some(i => i.status === 'CHECK-IN ROTA');
     const hasFinalizadoRota = checklist.some(i => i.status === 'FINALIZADO ROTA');
-    const allOk = checklist.every(i => i.status === 'FINALIZADO' || i.status === 'OK' || i.status === 'FINALIZADO ROTA');
+    const hasFinalizadoAguardandoOS = checklist.some(i => i.status === 'FINALIZADO AGUARDANDO O.S');
+    const allOk = checklist.every(i => ['FINALIZADO', 'OK', 'FINALIZADO ROTA', 'FINALIZADO AGUARDANDO O.S'].includes(i.status));
 
     if (hasNaoRealizado) return 'PENDENTE';
     if (hasInternado) return 'INTERNADO';
     if (hasCheckinOficina) return 'CHECK-IN OFICINA';
     if (hasCheckinRota) return 'CHECK-IN ROTA';
-    if (allOk) return hasFinalizadoRota ? 'FINALIZADO ROTA' : 'FINALIZADO';
+    if (allOk) {
+        if (hasFinalizadoRota) return 'FINALIZADO ROTA';
+        if (hasFinalizadoAguardandoOS) return 'FINALIZADO AGUARDANDO O.S';
+        return 'FINALIZADO';
+    }
     return 'NONE';
 }
 
@@ -36,6 +41,10 @@ function aplicarCorStatusGeral(tr, status) {
     } else if (status === 'CHECK-IN ROTA') {
         tr.style.backgroundColor = '#ffe0b2';
         tr.style.color = '#d35400';
+    } else if (status === 'FINALIZADO AGUARDANDO O.S') {
+        tr.style.backgroundColor = '#c8a882';
+        tr.style.color = '#3e1a00';
+        tr.style.fontWeight = 'bold';
     }
 }
 
