@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisao</title>
+    <link rel="icon" href="img/logonavegador.png" type="image/png">
+    <link rel="stylesheet" href="css/revisao.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div id="menu-container"></div>
+
+    <main class="main-content">
+        <header class="glass-header">
+            <h1><i class="fas fa-screwdriver-wrench"></i> Revisao</h1>
+        </header>
+
+        <section class="top-grid">
+            <section class="glass-panel">
+                <div class="panel-title-row">
+                    <h3><i class="fas fa-filter"></i> Filtros</h3>
+                    <span id="statusBusca" class="muted-info">Selecione uma filial e filtre para calcular as revisoes.</span>
+                </div>
+
+                <form id="formRevisao" class="filters-grid">
+                    <div class="form-group-filter">
+                        <label for="filtroFilial">Filial</label>
+                        <select id="filtroFilial" class="glass-input">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="form-group-filter">
+                        <label for="filtroBusca">Placa ou modelo</label>
+                        <input type="text" id="filtroBusca" class="glass-input" placeholder="Buscar na frota...">
+                    </div>
+                    <div class="form-group-filter">
+                        <label for="filtroSituacao">Situacao</label>
+                        <select id="filtroSituacao" class="glass-input">
+                            <option value="ATIVOS">Ativos e internados</option>
+                            <option value="">Todas</option>
+                            <option value="ativo">Ativo</option>
+                            <option value="INTERNADO">Internado</option>
+                        </select>
+                    </div>
+                </form>
+            </section>
+
+            <section class="glass-panel acoes-panel">
+                <h3><i class="fas fa-cogs"></i> Acao</h3>
+                <div class="acoes-grid">
+                    <button type="submit" form="formRevisao" id="btnFiltrar" class="btn-glass btn-blue"><i class="fas fa-search"></i> Filtrar</button>
+                    <button type="button" id="btnExportarXlsx" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Exportar XLSX</button>
+                    <button type="button" id="btnExportarPdf" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+                </div>
+            </section>
+        </section>
+
+        <section id="resultadosPanel" class="hidden">
+            <div class="kpi-grid">
+                <div class="kpi-card"><span>Veiculos</span><strong id="kpiVeiculos">0</strong></div>
+                <div class="kpi-card"><span>Revisoes</span><strong id="kpiRevisoes">0</strong></div>
+                <div class="kpi-card warning"><span>A vencer</span><strong id="kpiAVencer">0</strong></div>
+                <div class="kpi-card danger"><span>Vencidas</span><strong id="kpiVencidas">0</strong></div>
+            </div>
+
+            <section class="glass-panel">
+                <div class="panel-title-row">
+                    <h3><i class="fas fa-table"></i> Plano de Revisao</h3>
+                    <input type="text" id="buscaGrid" class="glass-input compact-input" placeholder="Buscar no grid...">
+                </div>
+
+                <div class="table-responsive">
+                    <table class="relatorio-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="filial">Filial <i class="fas fa-sort"></i></th>
+                                <th data-sort="placa">Placa</th>
+                                <th data-sort="modelo">Modelo</th>
+                                <th data-sort="tipo_motor">Motor</th>
+                                <th data-sort="km_atual">KM atual</th>
+                                <th data-sort="garantia">Garantia</th>
+                                <th data-sort="servico">Servico</th>
+                                <th data-sort="regra">Regra</th>
+                                <th data-sort="proximo_km">Proximo KM</th>
+                                <th data-sort="km_restante">KM restante</th>
+                                <th data-sort="local_execucao">Local</th>
+                                <th data-sort="status">Status</th>
+                                <th>Fonte KM</th>
+                                <th>Observacao</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyRevisao"></tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+
+        <section id="emptyPanel" class="glass-panel empty-state">
+            <i class="fas fa-clipboard-list"></i>
+            <strong>Nenhum dado carregado</strong>
+            <span>Use o filtro para buscar a frota e calcular as revisoes pelo maior KM de abastecimento interno ou externo.</span>
+        </section>
+    </main>
+
+    <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+    <script type="module" src="./script/auth-guard.js"></script>
+    <script type="module" src="./script/menu.js" defer></script>
+    <script type="module" src="./script/revisao.js"></script>
+</body>
+</html>
