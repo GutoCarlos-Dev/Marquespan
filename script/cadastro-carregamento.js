@@ -290,13 +290,13 @@ export async function carregarItens() {
     .order('id', { ascending: true });
 
   if (error) {
-    corpoTabela.innerHTML = '<tr><td colspan="5">Erro ao carregar itens.</td></tr>';
+    corpoTabela.innerHTML = '<tr><td colspan="4">Erro ao carregar itens.</td></tr>';
     console.error(error);
     return;
   }
 
   if (data.length === 0) {
-    corpoTabela.innerHTML = '<tr><td colspan="5">Nenhum item encontrado.</td></tr>';
+    corpoTabela.innerHTML = '<tr><td colspan="4">Nenhum item encontrado.</td></tr>';
     return;
   }
 
@@ -315,7 +315,6 @@ export async function carregarItens() {
       <td>${escapeHtml(item.codigo)}</td>
       <td>${escapeHtml(item.nome)}</td>
       <td title="${escapeHtml(modelosTexto)}">${escapeHtml(modelosTexto)}</td>
-      <td>${escapeHtml(item.tipo)}</td>
       <td>
         <button class="btn-icon edit" onclick="editarItem('${item.id}')" title="Editar"><i class="fas fa-pen"></i></button>
         <button class="btn-icon carregar" onclick="abrirModelosItem('${item.id}')" title="Cadastrar modelos"><i class="fas fa-tags"></i></button>
@@ -331,10 +330,9 @@ export async function salvarItem(event) {
 
   const id = document.getElementById('formItem').dataset.itemId;
   const nome = document.getElementById('nomeItem').value.trim();
-  const tipo = document.getElementById('tipoItem').value;
 
-  if (!nome || !tipo) {
-    alert('⚠️ Preencha todos os campos.');
+  if (!nome) {
+    alert('⚠️ Preencha o nome do item.');
     return;
   }
 
@@ -352,13 +350,13 @@ export async function salvarItem(event) {
     // Update
     result = await supabaseClient
       .from('itens')
-      .update({ nome, tipo })
+      .update({ nome })
       .eq('id', id);
   } else {
     // Insert
     result = await supabaseClient
       .from('itens')
-      .insert([{ codigo, nome, tipo }]);
+      .insert([{ codigo, nome }]);
   }
 
   if (result.error) {
@@ -373,7 +371,6 @@ export async function salvarItem(event) {
   // Desabilitar campos após salvar
   document.getElementById('codigoItem').disabled = true;
   document.getElementById('nomeItem').disabled = true;
-  document.getElementById('tipoItem').disabled = true;
   document.getElementById('btnSalvarItem').disabled = true;
   carregarItens();
 }
@@ -392,13 +389,10 @@ export async function editarItem(id) {
 
   document.getElementById('codigoItem').value = data.codigo;
   document.getElementById('nomeItem').value = data.nome;
-  document.getElementById('tipoItem').value = data.tipo;
   document.getElementById('formItem').dataset.itemId = data.id;
 
-  // Habilitar campos para edição
-  document.getElementById('codigoItem').disabled = false; // Código sempre desabilitado
+  document.getElementById('codigoItem').disabled = false;
   document.getElementById('nomeItem').disabled = false;
-  document.getElementById('tipoItem').disabled = false;
   document.getElementById('btnSalvarItem').disabled = false;
 }
 
@@ -409,9 +403,8 @@ export async function incluirItem() {
 
   // Deixar o campo código em branco e habilitar para edição
   document.getElementById('codigoItem').value = '';
-  document.getElementById('codigoItem').disabled = false; // Código editável conforme pedido
+  document.getElementById('codigoItem').disabled = false;
   document.getElementById('nomeItem').disabled = false;
-  document.getElementById('tipoItem').disabled = false;
   document.getElementById('btnSalvarItem').disabled = false;
 }
 
@@ -461,7 +454,7 @@ function renderizarModelosItem(item) {
   const info = document.getElementById('modeloItemInfo');
   if (!lista || !info || !item) return;
 
-  info.innerHTML = `<strong>${escapeHtml(item.codigo)} - ${escapeHtml(item.nome)}</strong><span>${escapeHtml(item.tipo || '')}</span>`;
+  info.innerHTML = `<strong>${escapeHtml(item.codigo)} - ${escapeHtml(item.nome)}</strong>`;
   const modelos = modelosItensCarregamento.filter(modelo => String(modelo.item_id) === String(item.id));
 
   if (!modelos.length) {
@@ -530,20 +523,19 @@ export async function excluirModeloItem(id) {
   renderizarModelosItem(item);
 }
 
-function encontrarItemRequisicao(nomeEquipamento, tipoEsperado = '', modeloEsperado = '') {
+function encontrarItemRequisicao(nomeEquipamento, modeloEsperado = '') {
   const equipamento = normalizarBuscaImportacao(nomeEquipamento);
   const modeloReq = normalizarBuscaImportacao(modeloEsperado);
   if (!equipamento) return null;
 
   const candidatos = itensCarregamento
     .map(item => {
-      const nome = normalizarBuscaImportacao(item.nome).replace(/\b(?:NOVO|USADO)\b/g, ' ').replace(/\s+/g, ' ').trim();
+      const nome = normalizarBuscaImportacao(item.nome);
       const codigo = normalizarBuscaImportacao(item.codigo);
       const modelos = (item.modelos || []).map(modelo => normalizarBuscaImportacao(modelo.modelo)).filter(Boolean);
       let pontuacao = 0;
       if (nome === equipamento || codigo === equipamento) pontuacao = 100;
       if (nome.includes(equipamento) || equipamento.includes(nome)) pontuacao = Math.max(pontuacao, 70);
-      if (tipoEsperado && normalizarTexto(item.tipo) === tipoEsperado) pontuacao += 20;
       if (modeloReq && modelos.length) {
         const matchExato = modelos.some(modelo => modelo === modeloReq);
         const matchParcial = modelos.some(modelo => modelo.includes(modeloReq) || modeloReq.includes(modelo));
@@ -556,14 +548,6 @@ function encontrarItemRequisicao(nomeEquipamento, tipoEsperado = '', modeloEsper
     .sort((a, b) => b.pontuacao - a.pontuacao);
 
   return candidatos[0]?.item || null;
-}
-
-function obterTipoItemDaLinha(row) {
-  const novo = normalizarTexto(row[3]) === 'X';
-  const usado = normalizarTexto(row[4]) === 'X';
-  if (novo && !usado) return 'NOVO';
-  if (usado && !novo) return 'USADO';
-  return '';
 }
 
 function renderizarBadgeStatus(req) {
@@ -887,7 +871,6 @@ function renderizarItensRequisicaoDetalhes(req, editando = false) {
           <th>Qtd</th>
           <th>Equipamento</th>
           <th>Modelo</th>
-          <th>Tipo</th>
         </tr>
       </thead>
       <tbody>
@@ -896,7 +879,6 @@ function renderizarItensRequisicaoDetalhes(req, editando = false) {
             <td>${escapeHtml(item.quantidade || '')}</td>
             <td>${escapeHtml(item.item_nome || item.equipamento || '')}</td>
             <td>${renderizarSelectModeloRequisicao(item, index, editando)}</td>
-            <td>${escapeHtml(item.tipo || '')}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -1006,14 +988,12 @@ async function salvarRequisicaoBanco(requisicao) {
   const itens = requisicao.rows
     .filter(row => (Number(row[0]) || 0) > 0 && normalizarTexto(row[1]))
     .map(row => {
-      const tipoEsperado = obterTipoItemDaLinha(row);
-      const item = encontrarItemRequisicao(row[1], tipoEsperado, row[2]);
+      const item = encontrarItemRequisicao(row[1], row[2]);
       return {
         item_id: item?.id || null,
         item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
         equipamento: String(row[1] || '').trim(),
         modelo: String(row[2] || '').trim(),
-        tipo: item?.tipo || '',
         quantidade: Number(row[0]) || 0,
         novo: normalizarTexto(row[3]) === 'X',
         usado: normalizarTexto(row[4]) === 'X'
@@ -1028,7 +1008,6 @@ async function salvarRequisicaoBanco(requisicao) {
       item_nome: item ? `${item.codigo} - ${item.nome}` : ret.equipamento,
       equipamento: ret.equipamento,
       modelo: '',
-      tipo: item?.tipo || '',
       quantidade: ret.quantidade,
       novo: false,
       usado: true,
@@ -1258,13 +1237,11 @@ function prepararRascunhoCarregamento() {
       itens: grid.rows
         .filter(row => (Number(row[0]) || 0) > 0 && normalizarTexto(row[1]))
         .map(row => {
-          const tipoEsperado = obterTipoItemDaLinha(row);
-          const item = encontrarItemRequisicao(row[1], tipoEsperado, row[2]);
+          const item = encontrarItemRequisicao(row[1], row[2]);
           return {
             item_id: item?.id || null,
             item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
             modelo: String(row[2] || '').trim(),
-            tipo: item?.tipo || '',
             quantidade: Number(row[0]) || 0
           };
         })
@@ -1836,12 +1813,19 @@ function calcularTotalizadorCarregamento() {
       const qtd = Number(item.quantidade) || 0;
       if (qtd <= 0) return;
       const key = item.item_nome || item.equipamento || '?';
-      if (!mapa.has(key)) mapa.set(key, { nome: key, entrega: 0, retorno: 0 });
+      if (!mapa.has(key)) mapa.set(key, { nome: key, entrega: 0, retorno: 0, entregaNovo: 0, entregaUsado: 0, retornoNovo: 0, retornoUsado: 0 });
       const e = mapa.get(key);
       const dir = direcionarItemCarregamento(item, req.motivo, temRetornoObs);
-      if (dir === 'troca') { e.entrega += qtd; e.retorno += qtd; }
-      else if (dir === 'entrega') e.entrega += qtd;
-      else e.retorno += qtd;
+      if (dir === 'troca') {
+        e.entrega += qtd; e.retorno += qtd;
+        e.entregaNovo += qtd; e.retornoUsado += qtd;
+      } else if (dir === 'entrega') {
+        e.entrega += qtd;
+        if (item.usado) e.entregaUsado += qtd; else e.entregaNovo += qtd;
+      } else {
+        e.retorno += qtd;
+        if (item.novo) e.retornoNovo += qtd; else e.retornoUsado += qtd;
+      }
     });
   });
   return mapa;
@@ -1927,12 +1911,18 @@ function renderizarTotalizadorCarregamento() {
   const especiais = [...mapa.values()].filter(e =>  isItemEspecial(e.nome));
 
   function renderBloco(lista) {
-    let te = 0, tr_ = 0;
-    lista.forEach(e => { te += e.entrega; tr_ += e.retorno; });
+    let te = 0, tr_ = 0, teNovo = 0, teUsado = 0, trNovo = 0, trUsado = 0;
+    lista.forEach(e => {
+      te += e.entrega; tr_ += e.retorno;
+      teNovo += e.entregaNovo; teUsado += e.entregaUsado;
+      trNovo += e.retornoNovo; trUsado += e.retornoUsado;
+    });
     const linhas = lista.map(e => `<tr>
       <td>${escapeHtml(e.nome)}</td>
-      <td class="col-num col-entrega">${e.entrega || '-'}</td>
-      <td class="col-num col-retorno">${e.retorno || '-'}</td>
+      <td class="col-num col-entrega">${e.entregaNovo || '-'}</td>
+      <td class="col-num col-entrega-usado">${e.entregaUsado || '-'}</td>
+      <td class="col-num col-retorno-novo">${e.retornoNovo || '-'}</td>
+      <td class="col-num col-retorno">${e.retornoUsado || '-'}</td>
     </tr>`).join('');
     return `<div class="totalizador-bloco">
       <div class="totalizador-cards">
@@ -1940,19 +1930,35 @@ function renderizarTotalizadorCarregamento() {
           <div class="tot-card-label"><i class="fas fa-arrow-up"></i> Total a Carregar</div>
           <div class="tot-card-value">${te}</div>
           <div class="tot-card-sub">itens</div>
+          <div class="tot-card-breakdown">
+            <span class="tot-breakdown-novo">N: ${teNovo}</span>
+            <span class="tot-breakdown-usado">U: ${teUsado}</span>
+          </div>
         </div>
         <div class="tot-card tot-card-retirar">
           <div class="tot-card-label"><i class="fas fa-arrow-down"></i> Total a Retirar</div>
           <div class="tot-card-value">${tr_}</div>
           <div class="tot-card-sub">itens</div>
+          <div class="tot-card-breakdown">
+            <span class="tot-breakdown-novo">N: ${trNovo}</span>
+            <span class="tot-breakdown-usado">U: ${trUsado}</span>
+          </div>
         </div>
       </div>
       <table class="totalizador-detalhe-table">
-        <thead><tr>
-          <th>Equipamento</th>
-          <th class="col-num">Carregar</th>
-          <th class="col-num">Retirar</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th rowspan="2" class="th-equipamento">Equipamento</th>
+            <th colspan="2" class="col-num col-entrega">↑ Carregar</th>
+            <th colspan="2" class="col-num col-retorno">↓ Retirar</th>
+          </tr>
+          <tr>
+            <th class="col-num col-num-sub col-entrega">Novos</th>
+            <th class="col-num col-num-sub col-entrega-usado">Usados</th>
+            <th class="col-num col-num-sub col-retorno-novo">Novos</th>
+            <th class="col-num col-num-sub col-retorno">Usados</th>
+          </tr>
+        </thead>
         <tbody>${linhas}</tbody>
       </table>
     </div>`;
