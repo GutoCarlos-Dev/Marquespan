@@ -185,7 +185,7 @@ function obterIdItemPorTexto(textoDigitado) {
 async function obterDadosItemPorId(itemId) {
     const { data, error } = await supabase
         .from('itens')
-        .select('id, codigo, nome, tipo')
+        .select('id, codigo, nome')
         .eq('id', itemId)
         .single();
 
@@ -271,7 +271,7 @@ let itensSelecionados = []; // Armazena os itens selecionados para adicionar
 async function carregarTodosItensParaModal() {
     const { data: itens, error } = await supabase
         .from('itens')
-        .select('id, codigo, nome, tipo')
+        .select('id, codigo, nome')
         .order('nome', { ascending: true });
 
     if (error) {
@@ -319,11 +319,16 @@ function renderizarTabelaItensModal(termoBusca = '') {
             <td>
                 <span class="nome-item" style="font-weight: 600;">${item.codigo} - ${item.nome}</span>
                 <input type="hidden" class="item-id" value="${item.id}">
-                <input type="hidden" class="item-tipo" value="${item.tipo}">
             </td>
             <td>
                 <input type="text" class="input-modelo glass-input" data-item-id="${item.id}"
                        placeholder="Ex: VERTICAL">
+            </td>
+            <td>
+                <select class="item-estado glass-input" data-item-id="${item.id}" style="width:80px;">
+                    <option value="novo">Novo</option>
+                    <option value="usado">Usado</option>
+                </select>
             </td>
         `;
         corpoTabela.appendChild(tr);
@@ -371,11 +376,13 @@ function toggleSelecaoItem(itemId) {
         if (item) {
             const quantidade = document.querySelector(`.input-quantidade[data-item-id="${itemId}"]`).value;
             const modelo = document.querySelector(`.input-modelo[data-item-id="${itemId}"]`).value;
+            const estado = document.querySelector(`.item-estado[data-item-id="${itemId}"]`)?.value || 'novo';
 
             itensSelecionados.push({
                 item_id: itemId,
                 item_nome: `${item.codigo} - ${item.nome}`,
-                tipo: item.tipo,
+                novo: estado === 'novo',
+                usado: estado === 'usado',
                 quantidade: parseInt(quantidade),
                 modelo: modelo || ''
             });
@@ -418,10 +425,12 @@ function adicionarItensSelecionadosARequisicao() {
             console.log('Item encontrado:', item);
 
             if (item) {
+                const estado = document.querySelector(`.item-estado[data-item-id="${itemId}"]`)?.value || 'novo';
                 itensParaAdicionar.push({
                     item_id: itemId,
                     item_nome: `${item.codigo} - ${item.nome}`,
-                    tipo: item.tipo,
+                    novo: estado === 'novo',
+                    usado: estado === 'usado',
                     quantidade: quantidade,
                     modelo: modelo || ''
                 });
@@ -440,11 +449,11 @@ function adicionarItensSelecionadosARequisicao() {
 
     // Adiciona cada item à requisição atual
     itensParaAdicionar.forEach(itemParaAdicionar => {
-        // Verifica se um item idêntico (mesmo id, modelo e tipo) já foi adicionado
+        // Verifica se um item idêntico (mesmo id, modelo e estado) já foi adicionado
         const itemExistente = requisicaoAtual.itens.find(i =>
             i.item_id === itemParaAdicionar.item_id &&
             i.modelo.toLowerCase() === itemParaAdicionar.modelo.toLowerCase() &&
-            i.tipo === itemParaAdicionar.tipo
+            i.novo === itemParaAdicionar.novo
         );
 
         if (itemExistente) {
@@ -455,7 +464,8 @@ function adicionarItensSelecionadosARequisicao() {
                 item_id: itemParaAdicionar.item_id,
                 item_nome: itemParaAdicionar.item_nome,
                 modelo: itemParaAdicionar.modelo,
-                tipo: itemParaAdicionar.tipo,
+                novo: itemParaAdicionar.novo,
+                usado: itemParaAdicionar.usado,
                 quantidade: parseInt(itemParaAdicionar.quantidade),
             });
             console.log('Novo item adicionado:', itemParaAdicionar);
@@ -645,13 +655,10 @@ async function handleAdicionarItemNaRequisicao(event) {
         return;
     }
 
-    const tipo = dadosItem.tipo; // Usa o tipo que vem do cadastro do item
-
-    // Verifica se um item idêntico (mesmo id, modelo e tipo) já foi adicionado
+    // Verifica se um item idêntico (mesmo id e modelo) já foi adicionado
     const itemExistente = requisicaoAtual.itens.find(i =>
         i.item_id === itemId &&
-        i.modelo.toLowerCase() === modelo.toLowerCase() &&
-        i.tipo === tipo
+        i.modelo.toLowerCase() === modelo.toLowerCase()
     );
 
     if (itemExistente) {
@@ -661,7 +668,8 @@ async function handleAdicionarItemNaRequisicao(event) {
             item_id: itemId,
             item_nome: textoItem,
             modelo: modelo,
-            tipo: tipo,
+            novo: true,
+            usado: false,
             quantidade: parseInt(quantidade),
         });
     }
@@ -684,7 +692,7 @@ function renderizarItensRequisicaoAtual() {
     const tabela = document.getElementById('tabelaItensRequisicaoAtual');
     if (!tabela) return;
     if (tabela) tabela.classList.add('glass-table');
-    tabela.innerHTML = `<thead><tr><th>ITEM</th><th>MODELO</th><th>TIPO</th><th>QTD</th><th style="width: 60px;">AÇÃO</th></tr></thead>`;
+    tabela.innerHTML = `<thead><tr><th>ITEM</th><th>MODELO</th><th>ESTADO</th><th>QTD</th><th style="width: 60px;">AÇÃO</th></tr></thead>`;
     const tbody = document.createElement('tbody');
 
     requisicaoAtual.itens.forEach((item, index) => {
@@ -692,7 +700,7 @@ function renderizarItensRequisicaoAtual() {
         tr.innerHTML = `
             <td>${item.item_nome}</td>
             <td>${item.modelo}</td>
-            <td>${item.tipo}</td>
+            <td>${item.novo ? 'NOVO' : item.usado ? 'USADO' : '-'}</td>
             <td>${item.quantidade}</td>
             <td class="actions-cell"><button type="button" class="btn-icon delete btn-remover-item" data-index="${index}" title="Remover item"><i class="fas fa-trash"></i></button></td>
         `;
@@ -763,15 +771,14 @@ function renderizarTabelaCarregamento() {
     const tabela = document.getElementById('tabelaItensCarregados');
     if (!tabela) return;
     if (tabela) tabela.classList.add('glass-table');
-    tabela.innerHTML = '<thead><tr><th>ITEM</th><th>MODELO</th><th>TIPO</th><th>TOTAL</th><th>MOTIVO</th></tr></thead>';
+    tabela.innerHTML = '<thead><tr><th>ITEM</th><th>MODELO</th><th>ESTADO</th><th>TOTAL</th><th>MOTIVO</th></tr></thead>';
     const tbody = document.createElement('tbody');
 
     const itensAgrupados = {};
 
     carregamentoState.requisicoesCarregamento.forEach(req => {
         req.itens.forEach(item => {
-            // Cria uma chave única para agrupar itens idênticos
-            const chave = `${item.item_nome}|${item.modelo}|${item.tipo}`;
+            const chave = `${item.item_nome}|${item.modelo}|${item.novo ? 'N' : 'U'}`;
             if (itensAgrupados[chave]) {
                 itensAgrupados[chave].quantidade += item.quantidade;
                 itensAgrupados[chave].motivos.push(req.motivo);
@@ -790,7 +797,7 @@ function renderizarTabelaCarregamento() {
         tr.innerHTML = `
             <td>${item.item_nome}</td>
             <td>${item.modelo}</td>
-            <td>${item.tipo}</td>
+            <td>${item.novo ? 'NOVO' : item.usado ? 'USADO' : '-'}</td>
             <td>${item.quantidade}</td>
             <td>${item.motivos.join(', ')}</td>
         `;
@@ -1092,7 +1099,7 @@ function agruparItensPDF(requisicoes) {
 
     requisicoes.forEach(req => {
         (req.itens || []).forEach(item => {
-            const chave = `${item.item_nome}|${item.modelo}|${item.tipo}`;
+            const chave = `${item.item_nome}|${item.modelo}|${item.novo ? 'N' : 'U'}`;
             if (itensAgrupados[chave]) {
                 itensAgrupados[chave].quantidade += Number(item.quantidade) || 0;
                 itensAgrupados[chave].motivos.push(req.motivo);
@@ -1130,7 +1137,7 @@ function adicionarTabelaItensPDF(doc, titulo, requisicoes, y, pageWidth, pageHei
         ? itens.map(item => [
             item.item_nome || '',
             item.modelo || '',
-            item.tipo || '',
+            item.novo ? 'NOVO' : item.usado ? 'USADO' : '',
             String(item.quantidade),
             [...new Set(item.motivos)].join(', ')
         ])
@@ -1140,7 +1147,7 @@ function adicionarTabelaItensPDF(doc, titulo, requisicoes, y, pageWidth, pageHei
         startY: inicioTabela,
         margin: { left: margem, right: margem, bottom: 12 },
         theme: 'grid',
-        head: [['ITEM', 'MODELO', 'TIPO', 'QUANTIDADE', 'MOTIVO']],
+        head: [['ITEM', 'MODELO', 'ESTADO', 'QUANTIDADE', 'MOTIVO']],
         body,
         styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle' },
         headStyles: { fillColor: verde, textColor: 255, fontStyle: 'bold' },
@@ -1166,15 +1173,14 @@ function renderizarTabelaTrocaRetirada() {
     const tabela = document.getElementById('tabelaItensTrocaRetirada');
     if (!tabela) return;
     if (tabela) tabela.classList.add('glass-table');
-    tabela.innerHTML = '<thead><tr><th>ITEM</th><th>MODELO</th><th>TIPO</th><th>TOTAL</th><th>MOTIVO</th></tr></thead>';
+    tabela.innerHTML = '<thead><tr><th>ITEM</th><th>MODELO</th><th>ESTADO</th><th>TOTAL</th><th>MOTIVO</th></tr></thead>';
     const tbody = document.createElement('tbody');
 
     const itensAgrupados = {};
 
     carregamentoState.requisicoesTrocaRetirada.forEach(req => {
         req.itens.forEach(item => {
-            // Cria uma chave única para agrupar itens idênticos
-            const chave = `${item.item_nome}|${item.modelo}|${item.tipo}`;
+            const chave = `${item.item_nome}|${item.modelo}|${item.novo ? 'N' : 'U'}`;
             if (itensAgrupados[chave]) {
                 itensAgrupados[chave].quantidade += item.quantidade;
                 itensAgrupados[chave].motivos.push(req.motivo);
@@ -1193,7 +1199,7 @@ function renderizarTabelaTrocaRetirada() {
         tr.innerHTML = `
             <td>${item.item_nome}</td>
             <td>${item.modelo}</td>
-            <td>${item.tipo}</td>
+            <td>${item.novo ? 'NOVO' : item.usado ? 'USADO' : '-'}</td>
             <td>${item.quantidade}</td>
             <td>${item.motivos.join(', ')}</td>
         `;
@@ -1509,7 +1515,8 @@ function carregarImportacaoXlsx() {
                     item_id: item.item_id,
                     item_nome: item.item_nome,
                     modelo: item.modelo || '',
-                    tipo: item.tipo || '',
+                    novo: item.novo || false,
+                    usado: item.usado || false,
                     quantidade: Number(item.quantidade) || 0
                 }))
             };

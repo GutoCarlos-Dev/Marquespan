@@ -188,7 +188,7 @@ async function carregarCadastrosImportacao() {
             .order('nome'),
         supabaseClient
             .from('itens')
-            .select('id, codigo, nome, tipo')
+            .select('id, codigo, nome')
             .order('nome')
     ]);
 
@@ -336,14 +336,6 @@ function singularizarEquipamento(value) {
     return texto;
 }
 
-function obterTipoItemDaLinha(row) {
-    const novo = normalizarTexto(row[3]) === 'X';
-    const usado = normalizarTexto(row[4]) === 'X';
-    if (novo && !usado) return 'NOVO';
-    if (usado && !novo) return 'USADO';
-    return '';
-}
-
 function removerTipoDoNomeItem(value) {
     return normalizarBusca(value)
         .replace(/\b(?:NOVO|USADO)\b/g, ' ')
@@ -381,7 +373,7 @@ function obterNomeEsperadoItem(nomeEquipamento, modeloEquipamento) {
     return aliases[equipamento] || equipamento;
 }
 
-function encontrarItem(nomeEquipamento, modeloEquipamento, tipoEsperado) {
+function encontrarItem(nomeEquipamento, modeloEquipamento) {
     const equipamento = normalizarBusca(nomeEquipamento);
     const modelo = normalizarModeloEquipamento(modeloEquipamento);
     const nomeEsperado = obterNomeEsperadoItem(nomeEquipamento, modeloEquipamento);
@@ -413,10 +405,6 @@ function encontrarItem(nomeEquipamento, modeloEquipamento, tipoEsperado) {
             if (singular && (singular.includes(nome) || nome.includes(singular))) {
                 pontuacao = Math.max(pontuacao, 65);
             }
-
-            const tipo = normalizarTexto(item.tipo);
-            if (tipoEsperado && tipo === tipoEsperado) pontuacao += 30;
-            if (tipoEsperado && tipo && tipo !== tipoEsperado) pontuacao = 0;
 
             return { item, pontuacao };
         })
@@ -1099,19 +1087,18 @@ function prepararInicioCarregamento() {
         const itens = grid.rows
             .filter(row => (parseFloat(row[0]) || 0) > 0 && normalizarTexto(row[1]))
             .map(row => {
-                const tipoEsperado = obterTipoItemDaLinha(row);
-                const item = encontrarItem(row[1], row[2], tipoEsperado);
+                const item = encontrarItem(row[1], row[2]);
                 if (!item) {
                     const detalheModelo = normalizarTexto(row[2]) ? `, modelo "${row[2]}"` : '';
-                    const detalheTipo = tipoEsperado ? `, tipo ${tipoEsperado}` : '';
-                    erros.add(`Item "${row[1]}"${detalheModelo}${detalheTipo} não encontrado no cadastro.`);
+                    erros.add(`Item "${row[1]}"${detalheModelo} não encontrado no cadastro.`);
                 }
 
                 return {
                     item_id: item?.id || null,
                     item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
                     modelo: String(row[2] || '').trim(),
-                    tipo: item?.tipo || '',
+                    novo: normalizarTexto(row[3]) === 'X',
+                    usado: normalizarTexto(row[4]) === 'X',
                     quantidade: parseFloat(row[0]) || 0
                 };
             });
