@@ -578,7 +578,11 @@ async function desenharMapa(pontos) {
     weight: 3
   }).bindPopup(popupPonto(inicio, 'Início do percurso')).addTo(camadaPercurso);
 
-  const paradas = pontos.filter((ponto) => ponto.tipo === 'parado').slice(0, 200);
+  // Só exibe no mapa paradas com duração mínima de 2 minutos para evitar sinais/GPS oscilado
+  const DURACAO_MIN_PARADA_MS = 2 * 60 * 1000;
+  const paradas = pontos
+    .filter((ponto) => ponto.tipo === 'parado' && calcularTempoParadoMs(ponto) >= DURACAO_MIN_PARADA_MS)
+    .slice(0, 200);
   paradas.forEach((ponto) => {
     L.circleMarker([ponto.latitude, ponto.longitude], {
       color: '#fff',
@@ -593,7 +597,7 @@ async function desenharMapa(pontos) {
   for (let i = 1; i < pontos.length; i++) {
     const ant = pontos[i - 1];
     const cur = pontos[i];
-    if (ant.ignicao === cur.ignicao || ant.ignicao === null || cur.ignicao === null) continue;
+    if (ant.ignicao == null || cur.ignicao == null || ant.ignicao === cur.ignicao) continue;
 
     const ligada = cur.ignicao === true;
     const iconeIgnicao = L.divIcon({
