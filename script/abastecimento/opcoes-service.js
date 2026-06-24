@@ -38,7 +38,7 @@ export async function buscarBicos(supabaseClient, filial) {
 export async function buscarVeiculos(supabaseClient, filial) {
     let query = supabaseClient
         .from('veiculos')
-        .select('placa, modelo, tipo');
+        .select('placa, modelo, tipo, volume_tanque');
 
     if (filial) query = query.eq('filial', filial);
 

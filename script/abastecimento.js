@@ -1659,6 +1659,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.btnSalvarSaida.innerHTML = originalText;
                 return;
             }
+
+            // VALIDAÇÕES DE NEGÓCIO (Gerador fica isento)
+            if (veiculoObj.tipo !== 'GERADOR') {
+                // 1. Validar diferença de KM (máx. 5.000 km)
+                const ultimoKmRaw = document.getElementById('saidaUltimoKm')?.value || '';
+                const ultimoKm = parseFloat(ultimoKmRaw);
+                if (!isNaN(ultimoKm) && ultimoKm > 0 && !isNaN(kmValue) && kmValue > 0) {
+                    const difKm = kmValue - ultimoKm;
+                    if (difKm > 5000) {
+                        alert(
+                            `⚠️ KM Inválido!\n\n` +
+                            `O KM atual informado (${kmValue.toLocaleString('pt-BR')}) excede em ` +
+                            `${difKm.toLocaleString('pt-BR')} km o Último KM registrado (${ultimoKm.toLocaleString('pt-BR')}).\n\n` +
+                            `A diferença máxima permitida é de 5.000 km.\n` +
+                            `Verifique o odômetro e tente novamente.`
+                        );
+                        this.btnSalvarSaida.disabled = false;
+                        this.btnSalvarSaida.innerHTML = originalText;
+                        return;
+                    }
+                }
+
+                // 2. Validar capacidade total do tanque do veículo
+                const capacidade = parseFloat(veiculoObj.volume_tanque) || 0;
+                if (capacidade > 0) {
+                    const totalLitros = payloads.reduce((soma, p) => soma + (parseFloat(p.qtd_litros) || 0), 0);
+                    if (totalLitros > capacidade) {
+                        alert(
+                            `⚠️ Capacidade do Tanque Excedida!\n\n` +
+                            `Total informado: ${totalLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} L\n` +
+                            `Capacidade do veículo: ${capacidade.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} L\n\n` +
+                            `Corrija a litragem e tente novamente.`
+                        );
+                        this.btnSalvarSaida.disabled = false;
+                        this.btnSalvarSaida.innerHTML = originalText;
+                        return;
+                    }
+                }
+            }
+
             try {
                 // REGISTRA NA TABELA DE COLETA DE KM (Odometer History)
                 if (!isNaN(kmValue) && kmValue > 0) {
