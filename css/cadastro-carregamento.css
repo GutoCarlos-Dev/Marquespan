@@ -1805,18 +1805,58 @@
   white-space: nowrap;
 }
 
-.busca-supervisor-wrap {
-  margin-bottom: 12px;
-}
-
-.busca-supervisor-row {
+.filtros-modal-req {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 10px;
   align-items: flex-end;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  background: rgba(0, 105, 55, 0.04);
+  border: 1px solid rgba(0, 105, 55, 0.12);
+  border-radius: 10px;
 }
 
-.busca-supervisor-row .glass-input {
-  flex: 1;
+.filtros-modal-req .form-group {
+  flex: 1 1 160px;
+  margin: 0;
+  min-width: 130px;
+}
+
+.filtros-modal-req .form-group label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary-color);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.filtros-btn-buscar {
+  flex-shrink: 0;
+  align-self: flex-end;
+  white-space: nowrap;
+}
+
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.th-sortable:hover {
+  background: rgba(0, 105, 55, 0.08) !important;
+}
+
+.sort-icon {
+  font-size: 0.7rem;
+  color: #adb5bd;
+  margin-left: 4px;
+}
+
+.sort-icon.sort-active {
+  color: var(--primary-color);
 }
 
 .modal-requisicoes-table {

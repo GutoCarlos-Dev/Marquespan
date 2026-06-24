@@ -468,25 +468,40 @@
         <button type="button" id="btnFecharModalAdicionarReq" class="modal-close" aria-label="Fechar">&times;</button>
       </div>
 
-      <div class="busca-supervisor-wrap">
+      <div class="filtros-modal-req">
         <div class="form-group">
-          <label for="buscaSupervisorCarregamento">Filtrar por Supervisor</label>
-          <div class="busca-supervisor-row">
-            <input type="search" id="buscaSupervisorCarregamento" class="glass-input" placeholder="Todos os supervisores" list="supervisores-requisicao-list">
-            <button type="button" id="btnBuscarReqModal" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
-          </div>
+          <label for="buscaSupervisorCarregamento">Supervisor</label>
+          <input type="search" id="buscaSupervisorCarregamento" class="glass-input" placeholder="Todos" list="supervisores-requisicao-list">
         </div>
+        <div class="form-group">
+          <label for="buscaClienteCarregamento">Cliente</label>
+          <input type="search" id="buscaClienteCarregamento" class="glass-input" placeholder="Todos">
+        </div>
+        <div class="form-group">
+          <label for="filtroMotivoCarregamento">Motivo</label>
+          <select id="filtroMotivoCarregamento" class="glass-input">
+            <option value="">Todos</option>
+            <option>Aumento</option>
+            <option>Troca</option>
+            <option>Aumento+Troca</option>
+            <option>Cliente Novo</option>
+            <option>Retirada de Empréstimo</option>
+            <option>Retirada Parcial</option>
+            <option>Retirada Total</option>
+          </select>
+        </div>
+        <button type="button" id="btnBuscarReqModal" class="btn-glass btn-blue filtros-btn-buscar"><i class="fas fa-search"></i> Buscar</button>
       </div>
 
       <div class="table-responsive modal-requisicoes-table">
         <table class="glass-table">
           <thead>
             <tr>
-              <th>Arquivo</th>
-              <th>Supervisor</th>
-              <th>Cliente</th>
-              <th>Motivo</th>
-              <th>Data Req.</th>
+              <th class="th-sortable" data-sort-col="arquivo">Arquivo <i class="fas fa-sort sort-icon"></i></th>
+              <th class="th-sortable" data-sort-col="supervisor">Supervisor <i class="fas fa-sort sort-icon"></i></th>
+              <th class="th-sortable" data-sort-col="cliente">Cliente <i class="fas fa-sort sort-icon"></i></th>
+              <th class="th-sortable" data-sort-col="motivo">Motivo <i class="fas fa-sort sort-icon"></i></th>
+              <th class="th-sortable" data-sort-col="data">Data Req. <i class="fas fa-sort-down sort-icon sort-active"></i></th>
               <th></th>
             </tr>
           </thead>

@@ -2088,15 +2088,40 @@ function renderizarRequisicoesCarregamento() {
   renderizarTotalizadorCarregamento();
 }
 
+let sortModalReq = { col: 'data', dir: 'desc' };
+
 function renderizarModalRequisicoesPendentes() {
   const supervisor = normalizarBusca(document.getElementById('buscaSupervisorCarregamento')?.value);
+  const cliente   = normalizarBusca(document.getElementById('buscaClienteCarregamento')?.value);
+  const motivo    = normalizarBusca(document.getElementById('filtroMotivoCarregamento')?.value);
   const tbody = document.getElementById('corpoModalRequisicoesPendentes');
   if (!tbody) return;
 
-  const pendentes = requisicoesSalvas.filter(req => {
-    const statusOk = String(req.status || '').toUpperCase() === 'PENDENTE';
+  let pendentes = requisicoesSalvas.filter(req => {
+    const statusOk    = String(req.status || '').toUpperCase() === 'PENDENTE';
     const supervisorOk = !supervisor || normalizarBusca(req.supervisor || '').includes(supervisor);
-    return statusOk && supervisorOk;
+    const clienteOk   = !cliente   || normalizarBusca(req.cliente_nome || '').includes(cliente);
+    const motivoOk    = !motivo    || normalizarBusca(req.motivo || '') === motivo;
+    return statusOk && supervisorOk && clienteOk && motivoOk;
+  });
+
+  const colMap = { arquivo: 'arquivo', supervisor: 'supervisor', cliente: 'cliente_nome', motivo: 'motivo', data: 'data_requisicao' };
+  const sortKey = colMap[sortModalReq.col] || 'data_requisicao';
+  const sortDir = sortModalReq.dir;
+  pendentes.sort((a, b) => {
+    const va = String(a[sortKey] || '');
+    const vb = String(b[sortKey] || '');
+    return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+
+  document.querySelectorAll('#modalAdicionarRequisicoes .th-sortable').forEach(th => {
+    const icon = th.querySelector('.sort-icon');
+    if (!icon) return;
+    if (th.dataset.sortCol === sortModalReq.col) {
+      icon.className = `fas fa-sort-${sortDir === 'asc' ? 'up' : 'down'} sort-icon sort-active`;
+    } else {
+      icon.className = 'fas fa-sort sort-icon';
+    }
   });
 
   if (!pendentes.length) {
@@ -2182,8 +2207,26 @@ export async function inicializarCarregamento() {
   });
 
   document.getElementById('btnBuscarReqModal')?.addEventListener('click', renderizarModalRequisicoesPendentes);
-  document.getElementById('buscaSupervisorCarregamento')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); renderizarModalRequisicoesPendentes(); }
+
+  ['buscaSupervisorCarregamento', 'buscaClienteCarregamento'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', renderizarModalRequisicoesPendentes);
+    document.getElementById(id)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); renderizarModalRequisicoesPendentes(); }
+    });
+  });
+  document.getElementById('filtroMotivoCarregamento')?.addEventListener('change', renderizarModalRequisicoesPendentes);
+
+  document.querySelector('#modalAdicionarRequisicoes thead')?.addEventListener('click', e => {
+    const th = e.target.closest('.th-sortable');
+    if (!th) return;
+    const col = th.dataset.sortCol;
+    if (sortModalReq.col === col) {
+      sortModalReq.dir = sortModalReq.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortModalReq.col = col;
+      sortModalReq.dir = col === 'data' ? 'desc' : 'asc';
+    }
+    renderizarModalRequisicoesPendentes();
   });
 
   document.getElementById('corpoModalRequisicoesPendentes')?.addEventListener('click', e => {
