@@ -463,7 +463,10 @@ function renderizarModelosItem(item) {
   }
 
   lista.innerHTML = modelos.map(modelo => `
-    <span class="modelo-tag">
+    <span class="modelo-tag ${modelo.padrao ? 'modelo-tag-padrao' : ''}">
+      <button type="button" data-padrao-modelo-item="${escapeHtml(String(modelo.id))}" title="${modelo.padrao ? 'Padrão definido' : 'Definir como padrão'}" class="btn-modelo-padrao ${modelo.padrao ? 'is-padrao' : ''}">
+        <i class="${modelo.padrao ? 'fas' : 'far'} fa-star"></i>
+      </button>
       ${escapeHtml(modelo.modelo)}
       <button type="button" data-excluir-modelo-item="${escapeHtml(String(modelo.id))}" title="Excluir modelo">
         <i class="fas fa-times"></i>
@@ -516,6 +519,33 @@ export async function excluirModeloItem(id) {
     console.error('Erro ao excluir modelo do item:', error);
     alert(`Erro ao excluir modelo: ${error.message}`);
     return;
+  }
+
+  await carregarItens();
+  const item = itensCarregamento.find(registro => String(registro.id) === String(itemId));
+  renderizarModelosItem(item);
+}
+
+export async function marcarModeloPadrao(modeloId) {
+  const itemId = document.getElementById('modeloItemId')?.value;
+  if (!itemId || !modeloId) return;
+
+  const modeloAtual = modelosItensCarregamento.find(m => String(m.id) === String(modeloId));
+  if (modeloAtual?.padrao) {
+    // Clicou no padrão atual → remove o padrão
+    const { error } = await supabaseClient
+      .from('item_modelos')
+      .update({ padrao: false })
+      .eq('id', modeloId);
+    if (error) { alert(`Erro: ${error.message}`); return; }
+  } else {
+    // Define o novo padrão: limpa os demais e marca este
+    await supabaseClient.from('item_modelos').update({ padrao: false }).eq('item_id', itemId);
+    const { error } = await supabaseClient
+      .from('item_modelos')
+      .update({ padrao: true })
+      .eq('id', modeloId);
+    if (error) { alert(`Erro: ${error.message}`); return; }
   }
 
   await carregarItens();
@@ -989,11 +1019,13 @@ async function salvarRequisicaoBanco(requisicao) {
     .filter(row => (Number(row[0]) || 0) > 0 && normalizarTexto(row[1]))
     .map(row => {
       const item = encontrarItemRequisicao(row[1], row[2]);
+      const modeloRaw = String(row[2] || '').trim();
+      const modelo = modeloRaw || (item?.modelos?.find(m => m.padrao)?.modelo || '');
       return {
         item_id: item?.id || null,
         item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
         equipamento: String(row[1] || '').trim(),
-        modelo: String(row[2] || '').trim(),
+        modelo,
         quantidade: Number(row[0]) || 0,
         novo: normalizarTexto(row[3]) === 'X',
         usado: normalizarTexto(row[4]) === 'X'
@@ -1238,10 +1270,12 @@ function prepararRascunhoCarregamento() {
         .filter(row => (Number(row[0]) || 0) > 0 && normalizarTexto(row[1]))
         .map(row => {
           const item = encontrarItemRequisicao(row[1], row[2]);
+          const modeloRaw = String(row[2] || '').trim();
+          const modelo = modeloRaw || (item?.modelos?.find(m => m.padrao)?.modelo || '');
           return {
             item_id: item?.id || null,
             item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
-            modelo: String(row[2] || '').trim(),
+            modelo,
             quantidade: Number(row[0]) || 0
           };
         })

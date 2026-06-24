@@ -553,7 +553,7 @@
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, abrirModelosItem, adicionarModeloItem, excluirModeloItem, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260619-3';
+    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, abrirModelosItem, adicionarModeloItem, excluirModeloItem, marcarModeloPadrao, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260624-1';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
@@ -580,8 +580,10 @@
         }
       });
       document.getElementById('listaModelosItem').addEventListener('click', (event) => {
-        const btn = event.target.closest('[data-excluir-modelo-item]');
-        if (btn) window.excluirModeloItem?.(btn.dataset.excluirModeloItem);
+        const btnExcluir = event.target.closest('[data-excluir-modelo-item]');
+        if (btnExcluir) window.excluirModeloItem?.(btnExcluir.dataset.excluirModeloItem);
+        const btnPadrao = event.target.closest('[data-padrao-modelo-item]');
+        if (btnPadrao) marcarModeloPadrao(btnPadrao.dataset.padraoModeloItem);
       });
       document.getElementById('modalModelosItem').addEventListener('click', (event) => {
         if (event.target.id === 'modalModelosItem') document.getElementById('modalModelosItem').classList.add('hidden');

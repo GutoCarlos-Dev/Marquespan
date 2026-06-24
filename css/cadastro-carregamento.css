@@ -887,6 +887,26 @@
   padding: 0;
 }
 
+.btn-modelo-padrao {
+  color: #adb5bd !important;
+  font-size: 0.8rem !important;
+  transition: color 0.15s;
+}
+
+.btn-modelo-padrao:hover {
+  color: #f4a900 !important;
+}
+
+.btn-modelo-padrao.is-padrao {
+  color: #f4a900 !important;
+}
+
+.modelo-tag-padrao {
+  background: rgba(244, 169, 0, 0.12) !important;
+  border-color: rgba(244, 169, 0, 0.45) !important;
+  color: #7a5000 !important;
+}
+
 .modelo-empty {
   color: #6c757d;
   font-size: 0.88rem;

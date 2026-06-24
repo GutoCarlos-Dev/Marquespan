@@ -4,6 +4,7 @@ const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
 const IMPORTACAO_CARREGAMENTO_KEY = 'carregamentoImportadoXlsx';
 let clientesImportacao = [];
 let itensImportacao = [];
+let modelosImportacao = [];
 
 function formatarCliente(cliente) {
     return cliente ? `${cliente.codigo} - ${cliente.nome}` : '';
@@ -181,7 +182,7 @@ async function preencherSupervisores() {
 }
 
 async function carregarCadastrosImportacao() {
-    const [clientesResult, itensResult] = await Promise.all([
+    const [clientesResult, itensResult, modelosResult] = await Promise.all([
         supabaseClient
             .from('clientes')
             .select('id, codigo, nome')
@@ -189,7 +190,11 @@ async function carregarCadastrosImportacao() {
         supabaseClient
             .from('itens')
             .select('id, codigo, nome')
-            .order('nome')
+            .order('nome'),
+        supabaseClient
+            .from('item_modelos')
+            .select('id, item_id, modelo, padrao')
+            .eq('padrao', true)
     ]);
 
     if (clientesResult.error) throw clientesResult.error;
@@ -197,8 +202,13 @@ async function carregarCadastrosImportacao() {
 
     clientesImportacao = clientesResult.data || [];
     itensImportacao = itensResult.data || [];
+    modelosImportacao = modelosResult.data || [];
 
     atualizarDatalistClientes();
+}
+
+function obterModeloPadraoImportacao(itemId) {
+    return modelosImportacao.find(m => String(m.item_id) === String(itemId))?.modelo || '';
 }
 
 function normalizarTexto(value) {
@@ -1093,10 +1103,12 @@ function prepararInicioCarregamento() {
                     erros.add(`Item "${row[1]}"${detalheModelo} não encontrado no cadastro.`);
                 }
 
+                const modeloRaw = String(row[2] || '').trim();
+                const modelo = modeloRaw || (item ? obterModeloPadraoImportacao(item.id) : '');
                 return {
                     item_id: item?.id || null,
                     item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
-                    modelo: String(row[2] || '').trim(),
+                    modelo,
                     novo: normalizarTexto(row[3]) === 'X',
                     usado: normalizarTexto(row[4]) === 'X',
                     quantidade: parseFloat(row[0]) || 0
