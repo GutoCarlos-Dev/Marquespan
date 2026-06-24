@@ -649,20 +649,31 @@ async function consultarHistoricoSystemsat(
     .flatMap((historico: { HistoricoGrupoMapa?: unknown[] }) => (
       Array.isArray(historico?.HistoricoGrupoMapa) ? historico.HistoricoGrupoMapa : []
     ))
-    .map((ponto: Record<string, unknown>) => ({
-      id: ponto.IdPosicao,
-      latitude: Number(ponto.Latitude),
-      longitude: Number(ponto.Longitude),
-      dataInicial: ponto.DataPosicaoInicial || null,
-      dataFinal: ponto.DataPosicaoFinal || null,
-      cidade: obterCidadePonto(ponto),
-      velocidade: Number(ponto.Velocidade) || 0,
-      quantidadePosicoes: Number(ponto.QuantidadePosicoes) || 1,
-      motorista: ponto.Motorista || null,
-      tipo: String(ponto.IconeGrupo || '').toLowerCase().includes('ignicao')
-        ? 'parado'
-        : 'deslocamento'
-    }))
+    .map((ponto: Record<string, unknown>) => {
+      // IconeGrupo retorna nome de arquivo PNG: "DeslocOn_P.png", "ParadoOn_P.png", "ParadoOff_P.png"
+      const icone      = String(ponto.IconeGrupo || '').toLowerCase();
+      const velocidade = Number(ponto.Velocidade) || 0;
+
+      const parado = icone.includes('parad')  // ParadoOn_P.png / ParadoOff_P.png
+        || velocidade === 0;                  // ignição ligada mas sem movimento (DeslocOn_P.png com 0 km/h)
+
+      // "On" no ícone = ignição ligada; "Off" = desligada; ausente = desconhecido
+      const ignicao = icone.includes('off') ? false : (icone.includes('on') ? true : null);
+
+      return {
+        id: ponto.IdPosicao,
+        latitude: Number(ponto.Latitude),
+        longitude: Number(ponto.Longitude),
+        dataInicial: ponto.DataPosicaoInicial || null,
+        dataFinal: ponto.DataPosicaoFinal || null,
+        cidade: obterCidadePonto(ponto),
+        velocidade,
+        quantidadePosicoes: Number(ponto.QuantidadePosicoes) || 1,
+        motorista: ponto.Motorista || null,
+        ignicao,
+        tipo: parado ? 'parado' : 'deslocamento'
+      };
+    })
     .filter((ponto: { latitude: number; longitude: number }) => (
       Number.isFinite(ponto.latitude)
       && Number.isFinite(ponto.longitude)

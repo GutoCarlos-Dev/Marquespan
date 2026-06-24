@@ -589,6 +589,24 @@ async function desenharMapa(pontos) {
     }).bindPopup(popupPonto(ponto, 'Parada')).addTo(camadaPercurso);
   });
 
+  // Marcadores de mudança de ignição: detecta transições on→off e off→on entre pontos consecutivos
+  for (let i = 1; i < pontos.length; i++) {
+    const ant = pontos[i - 1];
+    const cur = pontos[i];
+    if (ant.ignicao === cur.ignicao || ant.ignicao === null || cur.ignicao === null) continue;
+
+    const ligada = cur.ignicao === true;
+    const iconeIgnicao = L.divIcon({
+      html: `<div class="ignicao-marker ${ligada ? 'ignicao-on' : 'ignicao-off'}"><i class="fas fa-key"></i></div>`,
+      className: '',
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+    L.marker([cur.latitude, cur.longitude], { icon: iconeIgnicao })
+      .bindPopup(popupPonto(cur, ligada ? 'Ignição ligada' : 'Ignição desligada'))
+      .addTo(camadaPercurso);
+  }
+
   L.circleMarker([fim.latitude, fim.longitude], {
     color: '#fff',
     fillColor: '#e62f47',

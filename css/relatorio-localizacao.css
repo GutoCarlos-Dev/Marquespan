@@ -220,6 +220,14 @@
   border-radius: 4px;
 }
 
+.legenda-ponto.ignicao-on-legenda {
+  background: #16a34a;
+}
+
+.legenda-ponto.ignicao-off-legenda {
+  background: #4b5563;
+}
+
 .cliente-rota-marker {
   align-items: center;
   background: #2563eb;
@@ -263,6 +271,27 @@
   height: 34px;
   justify-content: center;
   width: 34px;
+}
+
+.ignicao-marker {
+  align-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+  color: #fff;
+  display: flex;
+  font-size: 10px;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+
+.ignicao-on {
+  background: #16a34a;
+}
+
+.ignicao-off {
+  background: #4b5563;
 }
 
 .mapa-rota-wrap {
