@@ -1103,12 +1103,18 @@ function prepararInicioCarregamento() {
                     erros.add(`Item "${row[1]}"${detalheModelo} não encontrado no cadastro.`);
                 }
 
-                const modeloRaw = String(row[2] || '').trim();
-                const modelo = modeloRaw || (item ? obterModeloPadraoImportacao(item.id) : '');
+                const modeloRaw = String(row[2] || '').trim().toUpperCase();
+                const modeloNorm = normalizarBusca(modeloRaw);
+                const PALAVRAS_OBS_SET = new Set(['AUMENTO', 'TROCA', 'NOVO', 'USADO']);
+                const ehObs = PALAVRAS_OBS_SET.has(modeloNorm);
+                const obs = ehObs ? modeloNorm : '';
+                const modeloEfetivo = ehObs ? '' : String(row[2] || '').trim();
+                const modelo = modeloEfetivo || (item ? obterModeloPadraoImportacao(item.id) : '');
                 return {
                     item_id: item?.id || null,
                     item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
                     modelo,
+                    obs,
                     novo: normalizarTexto(row[3]) === 'X',
                     usado: normalizarTexto(row[4]) === 'X',
                     quantidade: parseFloat(row[0]) || 0

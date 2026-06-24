@@ -922,6 +922,51 @@
   font-size: 0.85rem;
 }
 
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.estado-badge-novo {
+  background: rgba(0, 105, 55, 0.1);
+  border: 1px solid rgba(0, 105, 55, 0.35);
+  color: #006937;
+}
+
+.estado-badge-usado {
+  background: rgba(108, 117, 125, 0.1);
+  border: 1px solid rgba(108, 117, 125, 0.35);
+  color: #495057;
+}
+
+.obs-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(108, 117, 125, 0.1);
+  border: 1px solid rgba(108, 117, 125, 0.3);
+  border-radius: 999px;
+  color: #495057;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.obs-badge-aumento {
+  background: rgba(220, 53, 69, 0.12);
+  border-color: rgba(220, 53, 69, 0.45);
+  color: #b02a37;
+}
+
 .btn-modelo-padrao {
   color: #adb5bd !important;
   font-size: 0.8rem !important;

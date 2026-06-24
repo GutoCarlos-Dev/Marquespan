@@ -907,16 +907,23 @@ function renderizarItensRequisicaoDetalhes(req, editando = false) {
           <th>Qtd</th>
           <th>Equipamento</th>
           <th>Modelo</th>
+          <th>Estado</th>
+          <th>OBS</th>
         </tr>
       </thead>
       <tbody>
-        ${itens.map((item, index) => `
+        ${itens.map((item, index) => {
+          const estado = item.novo ? 'NOVO' : item.usado ? 'USADO' : '';
+          const estadoClass = item.novo ? 'estado-badge-novo' : item.usado ? 'estado-badge-usado' : '';
+          return `
           <tr>
             <td>${escapeHtml(item.quantidade || '')}</td>
             <td>${escapeHtml(item.item_nome || item.equipamento || '')}</td>
             <td>${renderizarSelectModeloRequisicao(item, index, editando)}</td>
-          </tr>
-        `).join('')}
+            <td>${estado ? `<span class="estado-badge ${estadoClass}">${estado}</span>` : ''}</td>
+            <td>${item.obs ? `<span class="obs-badge${item.obs === 'AUMENTO' ? ' obs-badge-aumento' : ''}">${escapeHtml(item.obs)}</span>` : ''}</td>
+          </tr>`;
+        }).join('')}
       </tbody>
     </table>
   `;
@@ -1025,13 +1032,17 @@ async function salvarRequisicaoBanco(requisicao) {
     .filter(row => (Number(row[0]) || 0) > 0 && normalizarTexto(row[1]))
     .map(row => {
       const item = encontrarItemRequisicao(row[1], row[2]);
-      const modeloRaw = String(row[2] || '').trim();
-      const modelo = modeloRaw || (item?.modelos?.find(m => m.padrao)?.modelo || '');
+      const modeloRaw = String(row[2] || '').trim().toUpperCase();
+      const ehObs = PALAVRAS_CHAVE_OBS.has(normalizarTexto(modeloRaw));
+      const obs = ehObs ? modeloRaw : '';
+      const modeloExplicito = ehObs ? '' : String(row[2] || '').trim();
+      const modelo = modeloExplicito || (item?.modelos?.find(m => m.padrao)?.modelo || '');
       return {
         item_id: item?.id || null,
         item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
         equipamento: String(row[1] || '').trim(),
         modelo,
+        obs,
         quantidade: Number(row[0]) || 0,
         novo: normalizarTexto(row[3]) === 'X',
         usado: normalizarTexto(row[4]) === 'X'
@@ -1276,12 +1287,16 @@ function prepararRascunhoCarregamento() {
         .filter(row => (Number(row[0]) || 0) > 0 && normalizarTexto(row[1]))
         .map(row => {
           const item = encontrarItemRequisicao(row[1], row[2]);
-          const modeloRaw = String(row[2] || '').trim();
-          const modelo = modeloRaw || (item?.modelos?.find(m => m.padrao)?.modelo || '');
+          const modeloRaw = String(row[2] || '').trim().toUpperCase();
+          const ehObs = PALAVRAS_CHAVE_OBS.has(normalizarTexto(modeloRaw));
+          const obs = ehObs ? modeloRaw : '';
+          const modeloExplicito = ehObs ? '' : String(row[2] || '').trim();
+          const modelo = modeloExplicito || (item?.modelos?.find(m => m.padrao)?.modelo || '');
           return {
             item_id: item?.id || null,
             item_nome: item ? `${item.codigo} - ${item.nome}` : String(row[1] || ''),
             modelo,
+            obs,
             quantidade: Number(row[0]) || 0
           };
         })
@@ -1782,6 +1797,7 @@ async function salvarCarregamento() {
 
 // Motivos que determinam a direção no nível da requisição inteira
 const MOTIVOS_SO_RETORNO = ['Retirada Total', 'Retirada Parcial', 'Retirada de Empréstimo'];
+const PALAVRAS_CHAVE_OBS  = new Set(['AUMENTO', 'TROCA', 'NOVO', 'USADO']);
 
 // Parseia "RETIRAR: 1 CLIMA 20" da célula I11 (campo Observação)
 function parsearItensRetornoObservacao(observacao) {
@@ -1810,14 +1826,15 @@ function direcionarItemCarregamento(item, motivoRequisicao = '', temRetornoObser
   if (MOTIVOS_SO_ENTREGA.some(m => normalizarTexto(m) === motiNorm)) return 'entrega';
 
   const mod = normalizarTexto(item.modelo || '');
-  if (mod === 'TROCA')   return 'troca';   // leva novo E retorna usado
-  if (mod === 'AUMENTO') return 'entrega'; // só leva
+  const obsDir = normalizarTexto(item.obs || '');
+  if (mod === 'TROCA'   || obsDir === 'TROCA')   return 'troca';   // leva novo E retorna usado
+  if (mod === 'AUMENTO' || obsDir === 'AUMENTO') return 'entrega'; // só leva
 
   // TROCA com observação: a tabela só carrega (itens de retorno estão em de_observacao)
   if (motiNorm === 'TROCA' && temRetornoObservacao) return 'entrega';
 
   // TROCA sem observação: swap simples, mesma qtd vai e volta
-  if (!mod && motiNorm === 'TROCA') return 'troca';
+  if (!mod && !obsDir && motiNorm === 'TROCA') return 'troca';
 
   // Fallback: colunas N / U da planilha
   if (item.novo)  return 'entrega';
