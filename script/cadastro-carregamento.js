@@ -1516,9 +1516,280 @@ async function preencherDatalistRequisicao(id, tabela, select, filtro = null) {
   });
 }
 
+// ─── NOVA REQUISIÇÃO ───────────────────────────────────────────────────────────
+
+let itensNovaRequisicao = [];
+
+function abrirModalNovaRequisicao() {
+  itensNovaRequisicao = [];
+
+  document.getElementById('novaReqCliente').value = '';
+  document.getElementById('novaReqSupervisor').value = '';
+  document.getElementById('novaReqMotivo').value = '';
+  document.getElementById('novaReqData').value = new Date().toISOString().split('T')[0];
+  document.getElementById('novaReqQtd').value = '1';
+  document.getElementById('novaReqObs').value = '';
+
+  const datalist = document.getElementById('clientes-nova-req-list');
+  if (datalist) {
+    datalist.innerHTML = clientesCarregamento
+      .map(c => `<option value="${escapeHtml(formatarCliente(c))}">`)
+      .join('');
+  }
+
+  const selectEq = document.getElementById('novaReqEquipamento');
+  if (selectEq) {
+    selectEq.innerHTML = '<option value="">Selecione o equipamento</option>' +
+      itensCarregamento
+        .map(item => `<option value="${escapeHtml(String(item.id))}">${escapeHtml(item.codigo)} - ${escapeHtml(item.nome)}</option>`)
+        .join('');
+  }
+
+  const selectModelo = document.getElementById('novaReqModelo');
+  if (selectModelo) selectModelo.innerHTML = '<option value="">-</option>';
+
+  renderizarItensNovaReq();
+  document.getElementById('modalNovaRequisicao')?.classList.remove('hidden');
+}
+
+function fecharModalNovaRequisicao() {
+  document.getElementById('modalNovaRequisicao')?.classList.add('hidden');
+  itensNovaRequisicao = [];
+}
+
+function renderizarItensNovaReq() {
+  const tbody = document.getElementById('corpoItensNovaReq');
+  if (!tbody) return;
+  if (!itensNovaRequisicao.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#adb5bd;padding:16px">Nenhum item adicionado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = itensNovaRequisicao.map((item, index) => {
+    const estadoHtml = item.novo
+      ? '<span class="estado-badge estado-badge-novo">NOVO</span>'
+      : '<span class="estado-badge estado-badge-usado">USADO</span>';
+    const obsHtml = item.obs
+      ? `<span class="obs-badge${item.obs === 'AUMENTO' ? ' obs-badge-aumento' : ''}">${escapeHtml(item.obs)}</span>`
+      : '';
+    return `<tr>
+      <td style="text-align:center">${item.quantidade}</td>
+      <td>${escapeHtml(item.item_nome)}</td>
+      <td>${escapeHtml(item.modelo || '-')}</td>
+      <td>${estadoHtml}</td>
+      <td>${obsHtml}</td>
+      <td><button type="button" class="btn-nova-req-remover" data-remover-nova-req="${index}" title="Remover"><i class="fas fa-times"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+
+function atualizarModelosNovaReq() {
+  const itemId = document.getElementById('novaReqEquipamento')?.value;
+  const selectModelo = document.getElementById('novaReqModelo');
+  if (!selectModelo) return;
+  const item = itensCarregamento.find(i => String(i.id) === itemId);
+  const modelos = item?.modelos || [];
+  selectModelo.innerHTML = '<option value="">-</option>' +
+    modelos.map(m => `<option value="${escapeHtml(m.modelo)}" ${m.padrao ? 'selected' : ''}>${escapeHtml(m.modelo)}${m.padrao ? ' ★' : ''}</option>`).join('');
+}
+
+function adicionarItemNovaReq() {
+  const itemId = document.getElementById('novaReqEquipamento')?.value;
+  const qtd    = Number(document.getElementById('novaReqQtd')?.value) || 0;
+  const modelo = document.getElementById('novaReqModelo')?.value.trim() || '';
+  const estado = document.getElementById('novaReqEstado')?.value;
+  const obs    = (document.getElementById('novaReqObs')?.value.trim() || '').toUpperCase();
+
+  if (!itemId || qtd <= 0) {
+    alert('Selecione um equipamento e informe a quantidade.');
+    return;
+  }
+  const itemCadastro = itensCarregamento.find(i => String(i.id) === itemId);
+  if (!itemCadastro) return;
+
+  itensNovaRequisicao.push({
+    item_id:   itemCadastro.id,
+    item_nome: `${itemCadastro.codigo} - ${itemCadastro.nome}`,
+    equipamento: itemCadastro.nome,
+    modelo,
+    obs,
+    quantidade: qtd,
+    novo:  estado === 'novo',
+    usado: estado === 'usado'
+  });
+
+  document.getElementById('novaReqQtd').value = '1';
+  document.getElementById('novaReqObs').value = '';
+  renderizarItensNovaReq();
+}
+
+async function gerarPdfNovaRequisicao(req) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(0, 105, 55);
+  doc.text('MARQUESPAN', 105, 18, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(60, 60, 60);
+  doc.text('REQUISIÇÃO DE CARREGAMENTO', 105, 26, { align: 'center' });
+
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(0, 105, 55);
+  doc.line(15, 30, 195, 30);
+
+  const dataFormatada = req.data_requisicao
+    ? new Date(req.data_requisicao + 'T12:00:00').toLocaleDateString('pt-BR')
+    : '-';
+
+  const campos = [
+    ['CLIENTE',        req.cliente_nome || '-', 15,  110],
+    ['SUPERVISOR',     req.supervisor   || '-', 110, 180],
+    ['MOTIVO',         req.motivo       || '-', 15,  110],
+    ['DATA REQUISICAO', dataFormatada,          110, 180],
+  ];
+
+  let y = 40;
+  for (let i = 0; i < campos.length; i += 2) {
+    const [label1, val1, x1] = campos[i];
+    const [label2, val2, x2] = campos[i + 1] || [];
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 105, 55);
+    doc.text(label1 + ':', x1, y);
+    if (label2) doc.text(label2 + ':', x2, y);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(30, 30, 30);
+    doc.text(String(val1), x1, y);
+    if (val2) doc.text(String(val2), x2, y);
+    y += 8;
+  }
+
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(140, 140, 140);
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}  |  Usuário: ${obterUsuarioAtualNome()}`, 15, y + 1);
+
+  doc.autoTable({
+    startY: y + 7,
+    head: [['Qtd', 'Equipamento', 'Modelo', 'Estado', 'OBS']],
+    body: req.itens.map(item => [
+      item.quantidade,
+      item.item_nome || item.equipamento || '-',
+      item.modelo || '-',
+      item.novo ? 'NOVO' : item.usado ? 'USADO' : '-',
+      item.obs || ''
+    ]),
+    styles: { fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 14, halign: 'center' },
+      2: { cellWidth: 32 },
+      3: { cellWidth: 22, halign: 'center' },
+      4: { cellWidth: 25 }
+    },
+    alternateRowStyles: { fillColor: [245, 250, 246] },
+    tableLineColor: [200, 220, 200],
+    tableLineWidth: 0.1
+  });
+
+  return doc.output('blob');
+}
+
+async function salvarNovaRequisicao() {
+  const clienteVal = document.getElementById('novaReqCliente')?.value.trim();
+  const supervisor = document.getElementById('novaReqSupervisor')?.value.trim();
+  const motivo     = document.getElementById('novaReqMotivo')?.value;
+  const dataReq    = document.getElementById('novaReqData')?.value;
+
+  if (!clienteVal)                   { alert('Informe o cliente.');                            return; }
+  if (!motivo)                       { alert('Selecione o motivo.');                           return; }
+  if (!dataReq)                      { alert('Informe a data da requisição.');                 return; }
+  if (!itensNovaRequisicao.length)   { alert('Adicione pelo menos um item antes de salvar.'); return; }
+
+  const clienteCadastro = encontrarCliente(clienteVal);
+  const clienteNome     = clienteCadastro ? formatarCliente(clienteCadastro) : clienteVal;
+  const clienteCodigo   = clienteCadastro?.codigo || null;
+
+  const reqData = { cliente_nome: clienteNome, cliente_codigo: clienteCodigo, supervisor, motivo, data_requisicao: dataReq, itens: itensNovaRequisicao };
+
+  const btn = document.getElementById('btnSalvarNovaRequisicao');
+  const originalHtml = btn?.innerHTML;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando PDF...'; }
+
+  try {
+    const pdfBlob = await gerarPdfNovaRequisicao(reqData);
+
+    const timestamp  = new Date().toISOString().replace(/[:.]/g, '-');
+    const nomeSeguro = (clienteNome + '_' + dataReq)
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .toUpperCase()
+      .slice(0, 80);
+    const path = `${timestamp}_REQ_${nomeSeguro}.pdf`;
+
+    const { error: uploadError } = await supabaseClient.storage
+      .from(REQUISICOES_BUCKET)
+      .upload(path, pdfBlob, { contentType: 'application/pdf', upsert: false });
+    if (uploadError) throw uploadError;
+
+    const payload = {
+      arquivo:         path,
+      supervisor:      reqData.supervisor,
+      cliente_codigo:  reqData.cliente_codigo,
+      cliente_nome:    reqData.cliente_nome,
+      motivo:          reqData.motivo,
+      data_requisicao: reqData.data_requisicao,
+      usuario:         obterUsuarioAtualNome(),
+      arquivo_path:    path,
+      arquivo_tipo:    'application/pdf',
+      arquivo_tamanho: pdfBlob.size,
+      status:          'PENDENTE',
+      itens:           reqData.itens,
+      linhas:          reqData.itens.map(i => [i.quantidade, i.item_nome || i.equipamento, i.modelo, i.novo ? 'X' : '', i.usado ? 'X' : '']),
+      cliente_planilha: {},
+      observacao:       null
+    };
+
+    const { error: dbError } = await supabaseClient.from(REQUISICOES_TABLE).insert([payload]);
+    if (dbError) throw dbError;
+
+    await carregarRequisicoesBanco();
+    fecharModalNovaRequisicao();
+    alert('Requisição criada e PDF anexado com sucesso!');
+  } catch (err) {
+    console.error('Erro ao salvar nova requisição:', err);
+    alert(`Erro ao salvar: ${err.message}`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+
 export async function inicializarRequisicao() {
   if (!document.getElementById('requisicaoFileUpload')) return;
   document.getElementById('btnImportarRequisicao')?.addEventListener('click', abrirModalImportarRequisicao);
+  document.getElementById('btnNovaRequisicao')?.addEventListener('click', abrirModalNovaRequisicao);
+  document.getElementById('btnFecharNovaRequisicao')?.addEventListener('click', fecharModalNovaRequisicao);
+  document.getElementById('btnCancelarNovaRequisicao')?.addEventListener('click', fecharModalNovaRequisicao);
+  document.getElementById('modalNovaRequisicao')?.addEventListener('click', e => {
+    if (e.target.id === 'modalNovaRequisicao') fecharModalNovaRequisicao();
+  });
+  document.getElementById('novaReqEquipamento')?.addEventListener('change', atualizarModelosNovaReq);
+  document.getElementById('btnAdicionarItemNovaReq')?.addEventListener('click', adicionarItemNovaReq);
+  document.getElementById('novaReqQtd')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); adicionarItemNovaReq(); } });
+  document.getElementById('corpoItensNovaReq')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-remover-nova-req]');
+    if (!btn) return;
+    itensNovaRequisicao.splice(Number(btn.dataset.removerNovaReq), 1);
+    renderizarItensNovaReq();
+  });
+  document.getElementById('btnSalvarNovaRequisicao')?.addEventListener('click', salvarNovaRequisicao);
   document.getElementById('btnFecharImportarRequisicao')?.addEventListener('click', fecharModalImportarRequisicao);
   document.getElementById('btnCancelarImportarRequisicao')?.addEventListener('click', fecharModalImportarRequisicao);
   document.getElementById('modalImportarRequisicao')?.addEventListener('click', event => {

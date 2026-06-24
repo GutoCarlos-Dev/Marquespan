@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260618-20">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
   <div id="menu-container"></div>
@@ -64,6 +66,9 @@
             </button>
             <button type="button" class="btn-glass btn-blue" id="btnImportarRequisicao">
               <i class="fas fa-file-import"></i> Importar Requisição
+            </button>
+            <button type="button" class="btn-glass btn-green" id="btnNovaRequisicao">
+              <i class="fas fa-plus"></i> Nova Requisição
             </button>
           </div>
         </div>
@@ -546,6 +551,107 @@
     </div>
   </div>
 
+  <!-- MODAL NOVA REQUISIÇÃO -->
+  <div id="modalNovaRequisicao" class="import-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloModalNovaReq">
+    <div class="import-modal-content modal-nova-requisicao">
+      <div class="import-modal-header">
+        <h3 id="tituloModalNovaReq"><i class="fas fa-plus-circle"></i> Nova Requisição</h3>
+        <button type="button" id="btnFecharNovaRequisicao" class="modal-close" aria-label="Fechar">&times;</button>
+      </div>
+
+      <div class="nova-req-form-grid">
+        <div class="form-group">
+          <label for="novaReqCliente">Cliente *</label>
+          <input type="text" id="novaReqCliente" class="glass-input" placeholder="Código ou nome" list="clientes-nova-req-list" autocomplete="off">
+          <datalist id="clientes-nova-req-list"></datalist>
+        </div>
+        <div class="form-group">
+          <label for="novaReqSupervisor">Supervisor</label>
+          <input type="text" id="novaReqSupervisor" class="glass-input" placeholder="Nome do supervisor" list="supervisores-requisicao-list">
+        </div>
+        <div class="form-group">
+          <label for="novaReqMotivo">Motivo *</label>
+          <select id="novaReqMotivo" class="glass-input">
+            <option value="">Selecione</option>
+            <option>Aumento</option>
+            <option>Troca</option>
+            <option>Aumento+Troca</option>
+            <option>Cliente Novo</option>
+            <option>Retirada de Empréstimo</option>
+            <option>Retirada Parcial</option>
+            <option>Retirada Total</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="novaReqData">Data Requisição *</label>
+          <input type="date" id="novaReqData" class="glass-input">
+        </div>
+      </div>
+
+      <div class="nova-req-add-item">
+        <div class="nova-req-add-row">
+          <div class="form-group nova-req-qtd">
+            <label>Qtd</label>
+            <input type="number" id="novaReqQtd" class="glass-input" min="1" value="1">
+          </div>
+          <div class="form-group nova-req-equip">
+            <label>Equipamento</label>
+            <select id="novaReqEquipamento" class="glass-input">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+          <div class="form-group nova-req-modelo">
+            <label>Modelo</label>
+            <select id="novaReqModelo" class="glass-input">
+              <option value="">-</option>
+            </select>
+          </div>
+          <div class="form-group nova-req-estado">
+            <label>Estado</label>
+            <select id="novaReqEstado" class="glass-input">
+              <option value="novo">NOVO</option>
+              <option value="usado">USADO</option>
+            </select>
+          </div>
+          <div class="form-group nova-req-obs">
+            <label>OBS</label>
+            <input type="text" id="novaReqObs" class="glass-input" placeholder="Opcional">
+          </div>
+          <button type="button" id="btnAdicionarItemNovaReq" class="btn-glass btn-blue nova-req-btn-add" title="Adicionar item">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="nova-req-itens-wrap">
+        <div class="table-responsive nova-req-itens-table">
+          <table class="glass-table data-grid">
+            <thead>
+              <tr>
+                <th style="width:50px">Qtd</th>
+                <th>Equipamento</th>
+                <th style="width:100px">Modelo</th>
+                <th style="width:75px">Estado</th>
+                <th style="width:80px">OBS</th>
+                <th style="width:36px"></th>
+              </tr>
+            </thead>
+            <tbody id="corpoItensNovaReq">
+              <tr><td colspan="6" style="text-align:center;color:#adb5bd;padding:16px">Nenhum item adicionado</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="form-actions" style="margin-top:16px">
+        <button type="button" id="btnSalvarNovaRequisicao" class="btn-glass btn-green">
+          <i class="fas fa-file-pdf"></i> Gerar PDF e Salvar
+        </button>
+        <button type="button" id="btnCancelarNovaRequisicao" class="btn-glass btn-red">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modalModelosItem" class="import-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloModalModelosItem">
     <div class="import-modal-content modal-modelos-item">
       <div class="import-modal-header">
@@ -568,7 +674,7 @@
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, abrirModelosItem, adicionarModeloItem, excluirModeloItem, marcarModeloPadrao, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260624-1';
+    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, abrirModelosItem, adicionarModeloItem, excluirModeloItem, marcarModeloPadrao, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260624-2';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {

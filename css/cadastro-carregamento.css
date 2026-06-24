@@ -1787,6 +1787,83 @@
   width: 100%;
 }
 
+.modal-nova-requisicao {
+  max-width: 900px;
+  width: 100%;
+}
+
+.nova-req-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.nova-req-add-item {
+  background: rgba(0, 105, 55, 0.04);
+  border: 1px solid rgba(0, 105, 55, 0.12);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.nova-req-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.nova-req-add-row .form-group {
+  margin: 0;
+}
+
+.nova-req-add-row .form-group label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary-color);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.nova-req-qtd    { flex: 0 0 60px; }
+.nova-req-equip  { flex: 2 1 200px; }
+.nova-req-modelo { flex: 1 1 120px; }
+.nova-req-estado { flex: 0 0 90px; }
+.nova-req-obs    { flex: 1 1 90px; }
+
+.nova-req-btn-add {
+  flex-shrink: 0;
+  padding: 6px 14px;
+}
+
+.nova-req-itens-wrap {
+  margin-bottom: 4px;
+}
+
+.nova-req-itens-table {
+  max-height: 220px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 8px;
+}
+
+.btn-nova-req-remover {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  transition: background 0.15s;
+}
+
+.btn-nova-req-remover:hover {
+  background: rgba(220, 53, 69, 0.1);
+}
+
 .modal-carregamentos-vinculo {
   max-width: 980px;
   width: 100%;
