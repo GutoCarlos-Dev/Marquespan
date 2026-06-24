@@ -309,12 +309,18 @@ export async function carregarItens() {
 
   itensCarregamento.forEach(item => {
     const modelos = item.modelos || [];
-    const modelosTexto = modelos.length ? modelos.map(modelo => modelo.modelo).join(', ') : '-';
+    const modelosHtml = modelos.length
+      ? modelos.map(m => m.padrao
+          ? `<span class="modelo-chip modelo-chip-padrao"><i class="fas fa-star"></i> ${escapeHtml(m.modelo)}</span>`
+          : `<span class="modelo-chip">${escapeHtml(m.modelo)}</span>`
+        ).join('')
+      : '<span class="modelo-chip-vazio">-</span>';
+    const modelosTitle = modelos.map(m => (m.padrao ? '★ ' : '') + m.modelo).join(', ');
     const linha = document.createElement('tr');
     linha.innerHTML = `
       <td>${escapeHtml(item.codigo)}</td>
       <td>${escapeHtml(item.nome)}</td>
-      <td title="${escapeHtml(modelosTexto)}">${escapeHtml(modelosTexto)}</td>
+      <td title="${escapeHtml(modelosTitle)}" class="col-modelos-chips">${modelosHtml}</td>
       <td>
         <button class="btn-icon edit" onclick="editarItem('${item.id}')" title="Editar"><i class="fas fa-pen"></i></button>
         <button class="btn-icon carregar" onclick="abrirModelosItem('${item.id}')" title="Cadastrar modelos"><i class="fas fa-tags"></i></button>

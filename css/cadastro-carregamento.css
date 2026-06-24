@@ -887,6 +887,41 @@
   padding: 0;
 }
 
+.col-modelos-chips {
+  white-space: normal;
+}
+
+.modelo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 105, 55, 0.08);
+  border: 1px solid rgba(0, 105, 55, 0.2);
+  border-radius: 999px;
+  color: var(--primary-color);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  margin: 2px 3px 2px 0;
+  white-space: nowrap;
+}
+
+.modelo-chip-padrao {
+  background: rgba(244, 169, 0, 0.15);
+  border-color: rgba(244, 169, 0, 0.5);
+  color: #7a5000;
+}
+
+.modelo-chip-padrao .fa-star {
+  color: #f4a900;
+  font-size: 0.7rem;
+}
+
+.modelo-chip-vazio {
+  color: #adb5bd;
+  font-size: 0.85rem;
+}
+
 .btn-modelo-padrao {
   color: #adb5bd !important;
   font-size: 0.8rem !important;
