@@ -45,6 +45,10 @@ function aplicarCorStatus(tr, status) {
         tr.style.backgroundColor = '#d4edda';
         tr.style.color = '#006400';
         tr.style.fontWeight = 'bold';
+    } else if (statusUpper === 'FINALIZADO AGUARDANDO O.S') {
+        tr.style.backgroundColor = '#c8a882';
+        tr.style.color = '#3e1a00';
+        tr.style.fontWeight = 'bold';
     }
 }
 

@@ -1268,9 +1268,13 @@ const ColetarManutencaoUI = {
                 .from('coletas_manutencao')
                 .select('*')
                 .eq('id', id)
-                .single();
-            
+                .maybeSingle();
+
             if (coletaError) throw coletaError;
+            if (!coleta) {
+                alert('Registro não encontrado. Ele pode ter sido excluído ou você não tem permissão para acessá-lo.');
+                return;
+            }
 
             // 2. Buscar itens do checklist
             const { data: checklist, error: checklistError } = await supabaseClient
