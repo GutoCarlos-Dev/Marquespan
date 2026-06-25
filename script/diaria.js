@@ -1082,10 +1082,11 @@ async function gerarPDFJantaPernoiteComDados({ dados, dataRef, filial, totalPaga
     doc.autoTable({
         startY: 38,
         margin: { top: 38, left: 14, right: 14, bottom: 14 },
-        head: [['FUNCIONARIO', 'NOME COMPLETO', 'FUNCAO', 'TIPO', 'ROTA', 'PLACA', 'JANTA', 'PER NOITE', 'DESCONTO', 'VALOR']],
+        head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'TIPO', 'ROTA', 'PLACA', 'JANTA', 'PER NOITE', 'DESCONTO', 'VALOR']],
         body: dadosPagos.map(item => [
             item.nome,
             item.nomeCompleto,
+            item.cpf,
             item.funcao,
             item.tipo,
             item.rota,
