@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="css/index.css"> 
   <link rel="stylesheet" href="css/menu.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260625-4">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260625-5">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -23,7 +23,7 @@
     <nav class="tabs-carregamento" aria-label="Seções do cadastro de carregamento">
       <button type="button" class="tab-button active" data-tab-target="requisicao"><i class="fas fa-file-signature"></i> Requisição</button>
       <button type="button" class="tab-button" data-tab-target="carregamento"><i class="fas fa-truck"></i> Preparar Carregamento</button>
-      <button type="button" class="tab-button" data-tab-target="carregar-veiculo"><i class="fas fa-boxes"></i> Carregar Veículo</button>
+
       <button type="button" class="tab-button" data-tab-target="historico"><i class="fas fa-history"></i> Histórico</button>
       <button type="button" class="tab-button" data-tab-target="itens"><i class="fas fa-boxes"></i> Itens</button>
       <button type="button" class="tab-button" data-tab-target="clientes"><i class="fas fa-users"></i> Clientes</button>
@@ -168,102 +168,6 @@
       </div>
     </section>
 
-    <!-- ===== CARREGAR VEÍCULO ===== -->
-    <section id="carregar-veiculo" class="glass-panel tab-panel hidden">
-      <div class="cv-header">
-        <h3><i class="fas fa-boxes"></i> Carregar Veículo</h3>
-        <button type="button" id="btnModoApp" class="btn-glass btn-blue">
-          <i class="fas fa-mobile-alt"></i> Modo APP
-        </button>
-      </div>
-
-      <!-- Estado vazio: nenhum carregamento preparado -->
-      <div id="cvSemCarregamento" class="cv-empty-state">
-
-        <!-- Fila de conferência -->
-        <div class="cv-fila-section">
-          <h4 class="cv-section-titulo"><i class="fas fa-list-ol"></i> Fila de Conferência</h4>
-          <p id="cvFilaVazia" class="text-muted hidden" style="font-size:13px;margin-bottom:8px;">
-            Nenhum carregamento aguardando conferência.
-          </p>
-          <div class="cv-fila-row">
-            <select id="cvSeletorCarregamento" class="glass-input" style="flex:1">
-              <option value="">Selecione um carregamento...</option>
-            </select>
-            <button type="button" id="btnIniciarConferenciaHistorico" class="btn-glass btn-green">
-              <i class="fas fa-play"></i> Iniciar Conferência
-            </button>
-          </div>
-        </div>
-
-        <!-- Histórico de conferências finalizadas -->
-        <div class="cv-historico-section" style="margin-top:28px">
-          <h4 class="cv-section-titulo"><i class="fas fa-history"></i> Conferências Finalizadas</h4>
-          <div class="table-responsive">
-            <table class="glass-table" style="font-size:12px">
-              <thead><tr>
-                <th>Data Saída</th>
-                <th>Placa</th>
-                <th>Motorista</th>
-                <th>Finalizado em</th>
-                <th class="text-center">OK</th>
-                <th class="text-center">Div.</th>
-                <th class="text-center">Ações</th>
-              </tr></thead>
-              <tbody id="cvHistoricoConferenciasTbody">
-                <tr><td colspan="7" class="text-center text-muted">Carregando...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Conferência ativa -->
-      <div id="cvConferencia" class="hidden">
-
-        <!-- Barra de progresso -->
-        <div class="cv-progresso">
-          <div class="cv-progresso-info">
-            <span id="cvProgressoTexto">Requisição 1 de 1</span>
-            <span id="cvProgressoItens">0 de 0 itens confirmados</span>
-          </div>
-          <div class="cv-barra-progresso">
-            <div id="cvBarraProgresso" class="cv-barra-fill" style="width:0%"></div>
-          </div>
-        </div>
-
-        <!-- Navegação entre requisições -->
-        <div class="cv-navegacao">
-          <button type="button" id="btnCvAnterior" class="btn-glass btn-secondary cv-nav-btn" disabled>
-            <i class="fas fa-chevron-left"></i> Anterior
-          </button>
-          <div class="cv-req-contador">
-            <span id="cvReqNumero" class="cv-req-badge">1</span>
-          </div>
-          <button type="button" id="btnCvProxima" class="btn-glass btn-blue cv-nav-btn">
-            Próxima <i class="fas fa-chevron-right"></i>
-          </button>
-        </div>
-
-        <!-- Card da requisição atual -->
-        <div id="cvRequisicaoCard"></div>
-
-        <!-- Resumo final -->
-        <div id="cvResumo" class="cv-resumo hidden">
-          <h4><i class="fas fa-clipboard-check"></i> Resumo da Conferência</h4>
-          <div id="cvResumoConteudo"></div>
-          <div class="form-actions" style="margin-top:16px; flex-wrap:wrap; gap:10px;">
-            <button type="button" id="btnCvGerarRelatorio" class="btn-glass btn-green">
-              <i class="fas fa-file-pdf"></i> Gerar Relatório PDF
-            </button>
-            <button type="button" id="btnCvReiniciar" class="btn-glass btn-secondary">
-              <i class="fas fa-redo"></i> Reiniciar Conferência
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <section id="historico" class="glass-panel tab-panel hidden">
       <div class="historico-header">
@@ -774,7 +678,7 @@
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, inicializarCarregamento, inicializarCarregarVeiculo, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, abrirModelosItem, adicionarModeloItem, excluirModeloItem, marcarModeloPadrao, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260625-4';
+    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, abrirModelosItem, adicionarModeloItem, excluirModeloItem, marcarModeloPadrao, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260625-5';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
@@ -832,7 +736,6 @@
       ]);
       await inicializarRequisicao();
       await inicializarCarregamento();
-      await inicializarCarregarVeiculo();
       await inicializarHistorico();
     });
   </script>

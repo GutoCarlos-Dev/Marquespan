@@ -1,4 +1,29 @@
-/* css/iniciar-carregamento.css - Estilo Glassmorphism e Layout */
+/* css/iniciar-carregamento.css */
+
+/* ── Página de conferência standalone ── */
+#cvConferenciaPagina {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#cvSemCarregamento {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Modo APP: tela cheia sobre tudo */
+#cvConferenciaPagina.modo-app-ativo {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #fff;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+/* ── Estilo Glassmorphism e Layout */
 
 :root {
     --glass-bg: #ffffff;

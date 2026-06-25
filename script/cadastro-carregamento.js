@@ -4416,25 +4416,3 @@ function toggleModoApp() {
   }
 }
 
-export async function inicializarCarregarVeiculo() {
-  if (!document.getElementById('cvConferencia')) return;
-
-  document.getElementById('btnModoApp')?.addEventListener('click', toggleModoApp);
-  document.getElementById('btnCvAnterior')?.addEventListener('click', () => navegarConferencia(-1));
-  document.getElementById('btnCvProxima')?.addEventListener('click',  () => navegarConferencia(1));
-  document.getElementById('btnIniciarConferenciaHistorico')?.addEventListener('click', carregarConferenciaDoHistorico);
-  document.getElementById('btnCvGerarRelatorio')?.addEventListener('click', gerarRelatorioConferencia);
-  document.getElementById('btnCvReiniciar')?.addEventListener('click', () => {
-    conferenciaAtiva      = null;
-    conferenciaResultados = {};
-    conferenciaIndex      = 0;
-    document.getElementById('cvRequisicaoCard')?.classList.remove('hidden');
-    document.getElementById('cvResumo')?.classList.add('hidden');
-    abrirConferenciaTab();
-  });
-
-  // Ativa a conferência ao entrar na aba
-  document.querySelectorAll('[data-tab-target="carregar-veiculo"]').forEach(btn =>
-    btn.addEventListener('click', () => setTimeout(abrirConferenciaTab, 50))
-  );
-}
