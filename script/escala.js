@@ -5180,6 +5180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let jantaPernoiteEscalaDados = [];
     let jantaPernoiteEscalaValores = { valorJanta: 0, valorPerNoite: 0 };
+    const jantaPernoiteEscalaSort = { key: 'nome', direction: 'asc' };
 
     function ensureModalJantaPernoiteEscala() {
         let modal = document.getElementById('modalJantaPernoiteEscala');
@@ -5221,13 +5222,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <table class="data-grid">
                         <thead>
                             <tr>
-                                <th>FUNCIONARIO</th>
-                                <th>FUNCAO</th>
-                                <th>ROTA</th>
-                                <th>PLACA</th>
+                                <th><button type="button" class="jp-escala-sort-btn" data-jp-escala-sort="nome">FUNCIONARIO <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="jp-escala-sort-btn" data-jp-escala-sort="funcao">FUNCAO <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="jp-escala-sort-btn" data-jp-escala-sort="rota">ROTA <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="jp-escala-sort-btn" data-jp-escala-sort="placa">PLACA <i class="fas fa-sort"></i></button></th>
+                                <th><button type="button" class="jp-escala-sort-btn" data-jp-escala-sort="status">STATUS <i class="fas fa-sort"></i></button></th>
                                 <th>JANTA</th>
                                 <th>PER NOITE</th>
-                                <th>VALOR</th>
+                                <th><button type="button" class="jp-escala-sort-btn" data-jp-escala-sort="valor">VALOR <i class="fas fa-sort"></i></button></th>
                             </tr>
                         </thead>
                         <tbody id="tbodyJantaPernoiteEscala"></tbody>
@@ -5255,6 +5257,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (event.target.closest('#btnSalvarJantaPernoiteEscala')) salvarJantaPernoiteEscala();
+
+            const sortButton = event.target.closest('[data-jp-escala-sort]');
+            if (sortButton) {
+                const key = sortButton.dataset.jpEscalaSort;
+                jantaPernoiteEscalaSort.direction = jantaPernoiteEscalaSort.key === key && jantaPernoiteEscalaSort.direction === 'asc' ? 'desc' : 'asc';
+                jantaPernoiteEscalaSort.key = key;
+                renderJantaPernoiteEscalaTabela();
+            }
         });
 
         modal.addEventListener('change', (event) => {
@@ -5287,25 +5297,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dadosFiltrados = jantaPernoiteEscalaDados.filter(item => !termo
             || normalizeString(item.nome).includes(termo)
             || normalizeString(item.funcao).includes(termo)
+            || normalizeString(item.status).includes(termo)
             || normalizeString(item.rota).includes(termo)
             || normalizeVehiclePlate(item.placa).includes(normalizeVehiclePlate(termo)));
 
         if (!jantaPernoiteEscalaDados.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum motorista ou auxiliar encontrado na escala aberta.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum motorista ou auxiliar encontrado na escala aberta.</td></tr>';
             return;
         }
 
         if (!dadosFiltrados.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum funcionário encontrado para a busca.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum funcionário encontrado para a busca.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = dadosFiltrados.map(item => `
+        const dadosOrdenados = [...dadosFiltrados].sort((a, b) => {
+            const key = jantaPernoiteEscalaSort.key;
+            const direction = jantaPernoiteEscalaSort.direction === 'desc' ? -1 : 1;
+            if (key === 'valor') return (getValorJantaPernoiteEscala(a) - getValorJantaPernoiteEscala(b)) * direction;
+            if (key === 'rota') return String(a.rota || '').localeCompare(String(b.rota || ''), 'pt-BR', { numeric: true, sensitivity: 'base' }) * direction;
+            return String(a[key] || '').localeCompare(String(b[key] || ''), 'pt-BR', { numeric: true, sensitivity: 'base' }) * direction;
+        });
+
+        tbody.innerHTML = dadosOrdenados.map(item => `
             <tr>
                 <td>${escapeAttribute(item.nome)}</td>
                 <td>${escapeAttribute(item.funcao)}</td>
                 <td>${escapeAttribute(item.rota || '')}</td>
                 <td>${escapeAttribute(item.placa || '')}</td>
+                <td>${escapeAttribute(item.status || '')}</td>
                 <td><input type="checkbox" class="jp-escala-check" data-key="${escapeAttribute(item.key)}" data-campo="janta" ${item.pagaJanta ? 'checked' : ''}></td>
                 <td><input type="checkbox" class="jp-escala-check" data-key="${escapeAttribute(item.key)}" data-campo="pernoite" ${item.pagaPerNoite ? 'checked' : ''}></td>
                 <td>${formatMoedaBR(getValorJantaPernoiteEscala(item))}</td>
@@ -5344,6 +5364,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         tipoFuncionario: campo === 'motorista' ? 'MOTORISTA' : 'AUXILIAR',
                         rota: cleanImportValue(tr.querySelector('input[data-key="rota"]')?.value, { keepZero: true }),
                         placa: normalizeVehiclePlate(tr.querySelector('input[data-key="placa"]')?.value),
+                        status: cleanImportValue(tr.querySelector('input[data-key="status"]')?.value),
                         pagaJanta: true,
                         pagaPerNoite: true
                     });
@@ -5352,6 +5373,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         return [...porFuncionario.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+    }
+
+    async function aplicarCadastroFuncionariosJantaPernoiteEscala(itens, filial) {
+        if (!Array.isArray(itens) || itens.length === 0) return itens || [];
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('funcionario')
+                .select('nome, nome_completo, cpf, funcao, status, filial')
+                .eq('filial', filial);
+
+            if (error) throw error;
+
+            const funcionariosPorNome = new Map();
+            (data || [])
+                .filter(funcionario => normalizeString(funcionario.status) === 'ATIVO')
+                .forEach(funcionario => {
+                    [funcionario.nome, funcionario.nome_completo].forEach(nome => {
+                        const key = normalizeString(nome);
+                        if (key && !funcionariosPorNome.has(key)) funcionariosPorNome.set(key, funcionario);
+                    });
+                });
+
+            return itens.map(item => {
+                const cadastro = funcionariosPorNome.get(normalizeString(item.nome));
+                if (!cadastro) return item;
+
+                return {
+                    ...item,
+                    nome: cleanImportValue(cadastro.nome) || item.nome,
+                    nomeCompleto: cleanImportValue(cadastro.nome_completo) || item.nome,
+                    cpf: cleanImportValue(cadastro.cpf),
+                    funcaoCadastro: cleanImportValue(cadastro.funcao)
+                };
+            });
+        } catch (error) {
+            console.warn('Cadastro de funcionarios nao carregado para Janta e Per Noite:', error);
+            return itens;
+        }
     }
 
     async function carregarValoresJantaPernoiteEscala(filial) {
@@ -5379,7 +5439,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             jantaPernoiteEscalaValores = await carregarValoresJantaPernoiteEscala(filial);
-            jantaPernoiteEscalaDados = coletarFuncionariosJantaPernoiteEscala();
+            jantaPernoiteEscalaDados = await aplicarCadastroFuncionariosJantaPernoiteEscala(coletarFuncionariosJantaPernoiteEscala(), filial);
 
             modal.querySelector('#jantaPernoiteEscalaContexto').textContent = `${contexto.dia} - ${contexto.dataBR} | Filial: ${filial}`;
             modal.querySelector('#jantaPernoiteEscalaValorJanta').textContent = formatMoedaBR(jantaPernoiteEscalaValores.valorJanta);
@@ -5398,12 +5458,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const valorPerNoite = item.pagaPerNoite ? Number(jantaPernoiteEscalaValores.valorPerNoite || 0) : 0;
         return comAuditoria({
             funcionario_nome: item.nome,
-            nome_completo: item.nome,
-            funcao: item.funcao,
+            nome_completo: item.nomeCompleto || item.nome,
+            cpf: item.cpf || null,
+            funcao: item.funcaoCadastro || item.funcao,
             tipo_funcionario: item.tipoFuncionario,
             rota: item.rota || null,
             placa: item.placa || null,
             status_lancamento: 'APTO',
+            motivo_desconto: item.status || null,
             faltou: false,
             paga_janta: item.pagaJanta,
             paga_per_noite: item.pagaPerNoite,

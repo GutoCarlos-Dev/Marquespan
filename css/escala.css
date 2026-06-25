@@ -806,6 +806,24 @@ body.escala-menu-oculto .menu-floating-toggle i {
 .janta-pernoite-escala-table-wrap .data-grid th,
 .janta-pernoite-escala-table-wrap .data-grid td {
     white-space: nowrap;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.jp-escala-sort-btn {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 800;
+    text-align: inherit;
+}
+
+.jp-escala-sort-btn i {
+    margin-left: 4px;
+    opacity: 0.75;
 }
 
 /* === MODAL GERAR BOLETA === */
