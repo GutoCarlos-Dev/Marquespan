@@ -17,6 +17,8 @@ let conferenciaResultados  = {};
 let conferenciaEmModoApp   = false;
 let carregamentosSalvos    = [];
 let requisicoesSalvas      = [];
+let conferenciadosIds      = new Set(); // carregamento_ids que já têm conferência registrada
+let conferenciaFinalizando = false; // guarda contra duplo clique/reentrada
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function escapeHtml(value) {
@@ -69,12 +71,14 @@ function direcionarItemCarregamento(item, motivoRequisicao = '', temRetornoObser
 
 // ── Carregamento de dados ─────────────────────────────────────────────────────
 async function carregarDados() {
-  const [{ data: cars }, { data: reqs }] = await Promise.all([
+  const [{ data: cars }, { data: reqs }, { data: confs }] = await Promise.all([
     supabaseClient.from(CARREGAMENTOS_TABLE).select('*').order('data_saida', { ascending: false }).limit(100),
-    supabaseClient.from(REQUISICOES_TABLE).select('id, status, carregamento_id').order('created_at', { ascending: false }).limit(500)
+    supabaseClient.from(REQUISICOES_TABLE).select('id, status, carregamento_id').order('created_at', { ascending: false }).limit(500),
+    supabaseClient.from(CONFERENCIAS_TABLE).select('carregamento_id').not('carregamento_id', 'is', null)
   ]);
   carregamentosSalvos = cars || [];
   requisicoesSalvas   = reqs || [];
+  conferenciadosIds   = new Set((confs || []).map(c => c.carregamento_id));
 }
 
 // ── Inicialização de resultados ───────────────────────────────────────────────
@@ -217,6 +221,52 @@ function renderizarConferenciaAtual() {
   const card = document.getElementById('cvRequisicaoCard');
   if (!card) return;
 
+  const isRetirada = MOTIVOS_SO_RETORNO.includes(req.motivo);
+
+  // ── Card especial para requisições de Retirada ───────────────────────────
+  if (isRetirada) {
+    const todosOk = itens.length > 0 && itens.every((_, idx) => resultados[idx]?.status === 'ok');
+    card.innerHTML = `
+      <div class="cv-retirada-banner">
+        <div class="cv-retirada-banner-icon"><i class="fas fa-arrow-circle-down"></i></div>
+        <div class="cv-retirada-banner-texto">
+          <strong>Requisição de Retirada</strong>
+          <span>Será conferida no <em>Retorno do Veículo</em> — marque como OK para prosseguir</span>
+        </div>
+        <span class="cv-retirada-motivo-badge">${escapeHtml(req.motivo)}</span>
+      </div>
+      <div class="cv-card-header cv-card-header-retirada">
+        <div class="cv-card-meta">
+          <span class="cv-meta-item"><i class="fas fa-user-tie"></i> ${escapeHtml(req.supervisor || '-')}</span>
+          <span class="cv-meta-item"><i class="fas fa-store"></i> ${escapeHtml(req.cliente_nome || '-')}</span>
+        </div>
+        <div class="cv-card-status-bar">
+          ${todosOk ? `<span class="cv-badge-ok"><i class="fas fa-check-double"></i> Confirmada</span>` : ''}
+          <button type="button" class="btn-glass btn-sm btn-orange cv-btn-todos-ok" data-cv-todos-ok>
+            <i class="fas fa-check-double"></i> Todos OK
+          </button>
+        </div>
+      </div>
+      <div class="cv-retirada-itens-lista">
+        ${itens.map((item, idx) => {
+          const res = resultados[idx] || {};
+          const estado = item.novo ? 'NOVO' : item.usado ? 'USADO' : '';
+          const estadoCls = item.novo ? 'estado-badge estado-badge-novo' : item.usado ? 'estado-badge estado-badge-usado' : '';
+          return `
+            <div class="cv-retirada-item ${res.status === 'ok' ? 'cv-retirada-item-ok' : ''}">
+              <span class="cv-ret-qtd">${escapeHtml(String(item.quantidade || ''))}</span>
+              <span class="cv-ret-nome">${escapeHtml(item.item_nome || item.equipamento || '-')}</span>
+              <span class="cv-ret-modelo">${escapeHtml(item.modelo || '-')}</span>
+              ${estado ? `<span class="${estadoCls}">${estado}</span>` : ''}
+              ${res.status === 'ok' ? `<span class="cv-ret-ok-mark"><i class="fas fa-check"></i></span>` : ''}
+            </div>`;
+        }).join('')}
+      </div>`;
+    card.querySelector('[data-cv-todos-ok]')?.addEventListener('click', () => marcarTodosOkConferencia(req.id, itens.length));
+    return;
+  }
+
+  // ── Card normal ───────────────────────────────────────────────────────────
   const cabecalhoCard = `
     <div class="cv-card-header">
       <div class="cv-card-meta">
@@ -419,7 +469,12 @@ function calcularTotalizador() {
 
 // ── Resumo ────────────────────────────────────────────────────────────────────
 async function mostrarResumoConferencia() {
-  if (!conferenciaAtiva) return;
+  if (!conferenciaAtiva || conferenciaFinalizando) return;
+  conferenciaFinalizando = true;
+
+  const btnFinalizar = document.getElementById('btnCvProxima');
+  if (btnFinalizar) { btnFinalizar.disabled = true; btnFinalizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; }
+
   document.getElementById('cvRequisicaoCard')?.classList.add('hidden');
   document.getElementById('cvResumo')?.classList.remove('hidden');
 
@@ -707,7 +762,7 @@ function popularFilaConferencia() {
       .map(r => r.carregamento_id)
   );
   select.innerHTML = '<option value="">Selecione um carregamento...</option>';
-  (carregamentosSalvos || []).filter(c => idsNaFila.has(c.id)).forEach(car => {
+  (carregamentosSalvos || []).filter(c => idsNaFila.has(c.id) && !conferenciadosIds.has(c.id)).forEach(car => {
     const op = document.createElement('option');
     op.value = car.id;
     const data = car.data_saida ? car.data_saida.split('-').reverse().join('/') : '-';
@@ -782,16 +837,28 @@ async function excluirConferencia(confId, placa, dataSaida) {
 
   if (errReqs) { alert('Erro ao reverter status das requisições.'); return; }
 
-  const { error: errDel } = await supabaseClient
+  const { data: delData, error: errDel } = await supabaseClient
     .from(CONFERENCIAS_TABLE)
     .delete()
-    .eq('id', confId);
+    .eq('id', confId)
+    .select();
 
-  if (errDel) { alert('Erro ao excluir conferência.'); return; }
+  if (errDel) {
+    console.error('[excluirConferencia] Erro ao excluir:', errDel);
+    alert(`Erro ao excluir conferência: ${errDel.message}`);
+    return;
+  }
+
+  if (!delData || delData.length === 0) {
+    console.warn('[excluirConferencia] DELETE executou mas nenhuma linha foi removida. Verifique a política RLS de DELETE na tabela conferencias_carregamento.');
+    alert('Sem permissão para excluir. Execute o SQL de política RLS no Supabase (veja o console).');
+    return;
+  }
 
   // Atualiza fila e histórico
   await carregarDados();
   popularFilaConferencia();
+  await popularHistoricoConferencias();
 }
 
 async function carregarConferenciaDoHistorico() {
@@ -811,9 +878,8 @@ async function carregarConferenciaDoHistorico() {
 async function recarregarConferenciaSalva(confId) {
   const { data: conf, error } = await supabaseClient.from(CONFERENCIAS_TABLE).select('*').eq('id', confId).single();
   if (error || !conf) { alert('Erro ao carregar conferência.'); return; }
-  const [{ data: reqs }] = await Promise.all([
-    supabaseClient.from(REQUISICOES_TABLE).select('*').eq('carregamento_id', conf.carregamento_id).order('ordem')
-  ]);
+  const { data: reqs } = await supabaseClient
+    .from(REQUISICOES_TABLE).select('*').eq('carregamento_id', conf.carregamento_id).order('ordem');
   conferenciaAtiva = { requisicoes: reqs || [], placa: conf.placa || '', motorista: conf.motorista || '', dataSaida: conf.data_saida || '' };
   conferenciaIndex = 0;
   inicializarResultadosConferencia(conferenciaAtiva.requisicoes);
@@ -858,13 +924,15 @@ export async function inicializarConferenciaPage() {
   document.getElementById('btnCvProxima')?.addEventListener('click',  () => navegarConferencia(1));
   document.getElementById('btnIniciarConferenciaHistorico')?.addEventListener('click', carregarConferenciaDoHistorico);
   document.getElementById('btnCvGerarRelatorio')?.addEventListener('click', gerarRelatorioConferencia);
-  document.getElementById('btnCvReiniciar')?.addEventListener('click', () => {
-    conferenciaAtiva = null; conferenciaResultados = {}; conferenciaIndex = 0;
+  document.getElementById('btnCvReiniciar')?.addEventListener('click', async () => {
+    conferenciaAtiva = null; conferenciaResultados = {}; conferenciaIndex = 0; conferenciaFinalizando = false;
     document.getElementById('cvRequisicaoCard')?.classList.remove('hidden');
     document.getElementById('cvResumo')?.classList.add('hidden');
     document.getElementById('cvSemCarregamento')?.classList.remove('hidden');
     document.getElementById('cvConferencia')?.classList.add('hidden');
-    carregarDados().then(popularFilaConferencia);
+    await carregarDados();
+    popularFilaConferencia();
+    await popularHistoricoConferencias();
   });
   document.getElementById('btnAtualizarFila')?.addEventListener('click', () => carregarDados().then(popularFilaConferencia));
 }

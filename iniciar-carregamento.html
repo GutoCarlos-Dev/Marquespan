@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/index.css">
   <link rel="stylesheet" href="css/menu.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260625-4">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260625-12">
   <link rel="stylesheet" href="css/iniciar-carregamento.css?v=20260625-1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -106,7 +106,7 @@
               <i class="fas fa-file-pdf"></i> Gerar Relatório PDF
             </button>
             <button type="button" id="btnCvReiniciar" class="btn-glass btn-secondary">
-              <i class="fas fa-redo"></i> Nova Conferência
+              <i class="fas fa-list-ol"></i> Voltar à Fila
             </button>
           </div>
         </div>
@@ -123,7 +123,7 @@
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js"></script>
   <script type="module">
-    import { inicializarConferenciaPage } from './script/conferencia-carregamento.js?v=20260625-1';
+    import { inicializarConferenciaPage } from './script/conferencia-carregamento.js?v=20260625-8';
     document.addEventListener('DOMContentLoaded', inicializarConferenciaPage);
   </script>
 </body>

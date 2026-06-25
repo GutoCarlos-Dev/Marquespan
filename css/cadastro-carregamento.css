@@ -1020,10 +1020,77 @@
 }
 
 .carregamento-table-wrap {
-  max-height: 280px;
+  max-height: 320px;
   margin-top: 0;
-  border: 1px solid rgba(0, 105, 55, 0.12);
-  border-radius: 10px;
+  border: 1px solid rgba(0, 105, 55, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,105,55,0.07);
+}
+
+/* ── Tabela de requisições no Preparar Carregamento ── */
+.carregamento-table-wrap .glass-table th {
+  background: linear-gradient(135deg, #006937 0%, #005a2e 100%);
+  color: #fff;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 11px 14px;
+  border-bottom: none;
+  white-space: nowrap;
+}
+
+.carregamento-table-wrap .glass-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0, 105, 55, 0.1);
+  border-right: 1px solid rgba(0, 105, 55, 0.06);
+  color: #2d3a35;
+  font-size: 0.88rem;
+  vertical-align: middle;
+}
+
+.carregamento-table-wrap .glass-table td:last-child {
+  border-right: none;
+}
+
+.carregamento-table-wrap .glass-table tbody tr:nth-child(even) {
+  background: rgba(0, 105, 55, 0.03);
+}
+
+.carregamento-table-wrap .glass-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.carregamento-table-wrap .glass-table tr:hover {
+  background: rgba(0, 105, 55, 0.08) !important;
+}
+
+/* Badge de motivo */
+.motivo-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.motivo-badge.entrega  { background: #d4edda; color: #155724; }
+.motivo-badge.retirada { background: #f8d7da; color: #721c24; }
+.motivo-badge.troca    { background: #fff3cd; color: #856404; }
+
+/* Badge de contagem de itens */
+.itens-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 12px;
+  background: rgba(0,105,55,0.1);
+  color: var(--primary-color);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .col-ordem-carga {
@@ -1319,6 +1386,196 @@
   padding: 4px 12px;
   border-radius: 20px;
   white-space: nowrap;
+}
+
+/* === TABELA UNIFICADA DO TOTALIZADOR (tela) === */
+
+.tot-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.10);
+  margin-top: 14px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+.tot-tabela-unificada {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+/* ── Cabeçalhos ── */
+.tot-tabela-unificada th {
+  color: #fff;
+  padding: 10px 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  border-right: 1px solid rgba(255,255,255,0.15);
+}
+
+.tot-tabela-unificada th:last-child { border-right: none; }
+
+/* Célula "Equipamento" com rowspan=2 */
+.tot-col-equip {
+  background: #002d16;
+  text-align: left !important;
+  vertical-align: middle;
+  min-width: 160px;
+  border-right: 3px solid rgba(255,255,255,0.12) !important;
+}
+
+/* Linha 1: grupos */
+.tot-th-grupo {
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid rgba(255,255,255,0.18);
+  padding: 11px 14px;
+}
+
+.tot-grupo-carregar { background: #006937; }
+.tot-grupo-retirar  { background: #7a0000; border-left: 3px solid rgba(0,0,0,0.15) !important; }
+
+/* Linha 2: sub-colunas */
+.tot-th-sub {
+  font-size: 0.62rem;
+  text-align: center;
+  padding: 7px 10px;
+}
+
+.tot-sub-carregar       { background: #00823f; }
+.tot-sub-retirar        { background: #900000; }
+
+/* Sub-tipo por grupo — SOMENTE nos <th> */
+th.tot-car-novo  { background: #00703a; }   /* Carregar → Novo:  verde mais escuro  */
+th.tot-car-usado { background: #005230; }   /* Carregar → Usado: verde mais escuro ainda */
+th.tot-ret-usado { background: #6e0000; }   /* Retirar  → Usado: vermelho escuro */
+
+/* Separador visual entre grupos no sub-header */
+th.tot-sub-retirar:first-of-type { border-left: 3px solid rgba(0,0,0,0.15) !important; }
+
+/* ── Células de dados ── */
+.tot-tabela-unificada td {
+  padding: 9px 14px;
+  border-bottom: 1px solid #e8ede9;
+  border-right: 1px solid #e8ede9;
+  color: #1a2620;
+  background: #fff;
+  vertical-align: middle;
+}
+
+.tot-tabela-unificada td:last-child { border-right: none; }
+
+/* Coluna nome */
+.tot-col-nome {
+  text-align: left !important;
+  font-weight: 500;
+  color: #1a2620;
+  background: #fdfdfd !important;
+  border-right: 3px solid #e0e8e2 !important;
+}
+
+/* Valores numéricos */
+.tot-num {
+  text-align: center !important;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* Cor de texto/fundo nas células de dados — por grupo */
+td.tot-car-novo  { color: #006937 !important; background: #f4fbf6 !important; }
+td.tot-car-usado { color: #00522e !important; background: #edf7f1 !important; }
+td.tot-ret-usado { color: #7a0000 !important; background: #fdf4f4 !important; }
+
+/* Separador de grupo Retirar nas linhas de dados */
+.tot-tabela-unificada tbody td:nth-child(5),
+.tot-tabela-unificada tfoot  td:nth-child(5) {
+  border-left: 3px solid #dce8dc;
+}
+
+/* Traço para valores zero */
+.tot-vazio { color: #c8d0ca; font-weight: 400; font-size: 0.85rem; }
+
+/* Zebra discreta */
+.tot-tabela-unificada tbody tr:nth-child(even) td              { background: #f7faf7 !important; }
+.tot-tabela-unificada tbody tr:nth-child(even) td.tot-car-novo  { background: #eef7f1 !important; }
+.tot-tabela-unificada tbody tr:nth-child(even) td.tot-car-usado { background: #e8f5ed !important; }
+.tot-tabela-unificada tbody tr:nth-child(even) td.tot-ret-usado { background: #faf0f0 !important; }
+
+.tot-tabela-unificada tbody tr:hover td               { background: #edf5ef !important; }
+.tot-tabela-unificada tbody tr:hover td.tot-car-novo  { background: #e4f2e7 !important; }
+.tot-tabela-unificada tbody tr:hover td.tot-car-usado { background: #ddf0e5 !important; }
+.tot-tabela-unificada tbody tr:hover td.tot-ret-usado { background: #f5e8e8 !important; }
+
+/* ── Subtotal ── */
+.tot-subtotal-row td {
+  background: #eef6f0 !important;
+  font-style: italic;
+  font-weight: 600;
+  color: #155724;
+  border-top: 1px solid #c8dfc8;
+  border-bottom: 2px solid #b8d4b8;
+}
+
+.tot-subtotal-row td.tot-car-novo  { background: #e4f0e7 !important; color: #006937 !important; }
+.tot-subtotal-row td.tot-car-usado { background: #ddeee5 !important; color: #00522e !important; }
+.tot-subtotal-row td.tot-ret-usado { background: #f0e4e4 !important; color: #7a0000 !important; }
+
+/* ── Separador Esteiras & Formas ── */
+.tot-sep-row td {
+  background: #f0f4f1 !important;
+  color: #3a5c42;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-align: center;
+  padding: 9px 14px;
+  border-top: 2px solid #c8dfc8;
+  border-bottom: 2px solid #c8dfc8;
+}
+
+/* ── TOTAL GERAL ── */
+.tot-total-geral td {
+  background: #006937 !important;
+  color: #fff !important;
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 12px 14px;
+  border: none;
+  border-right: 1px solid rgba(255,255,255,0.15);
+  border-top: 3px solid #004a28;
+}
+
+.tot-total-geral td:last-child { border-right: none; }
+
+.tot-total-geral .tot-col-nome {
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  background: #004a28 !important;
+  border-right: 3px solid rgba(255,255,255,0.1) !important;
+}
+
+.tot-total-geral td:nth-child(5) { border-left: 3px solid rgba(255,255,255,0.12); }
+
+/* Tfoot: manter branco mas levemente diferenciado para Novo/Usado */
+.tot-total-geral td.tot-car-novo  { background: #005a30 !important; }
+.tot-total-geral td.tot-car-usado { background: #004a26 !important; }
+.tot-total-geral td.tot-ret-usado { background: #6e0000 !important; }
+
+.preparar-hist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 32px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(0,105,55,0.12);
 }
 
 /* === HISTÓRICO DE CARREGAMENTOS === */
@@ -2715,4 +2972,117 @@
   .cv-card-meta {
     gap: 6px;
   }
+}
+
+/* ── Card de Requisição de RETIRADA ─────────────────────────────────────────── */
+
+.cv-retirada-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  border: 2px solid #fb8c00;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.cv-retirada-banner-icon {
+  font-size: 2rem;
+  color: #e65100;
+  flex-shrink: 0;
+}
+
+.cv-retirada-banner-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.cv-retirada-banner-texto strong {
+  font-size: 0.95rem;
+  color: #bf360c;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cv-retirada-banner-texto span {
+  font-size: 0.82rem;
+  color: #6d4c41;
+}
+
+.cv-retirada-motivo-badge {
+  display: inline-block;
+  background: #e65100;
+  color: #fff;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cv-card-header-retirada {
+  background: rgba(251, 140, 0, 0.06);
+  border-radius: 10px;
+  border: 1px solid rgba(251, 140, 0, 0.2);
+}
+
+.cv-retirada-itens-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.cv-retirada-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  border-left: 4px solid #e0e0e0;
+  transition: background 0.2s;
+}
+
+.cv-retirada-item-ok {
+  background: #f1f8e9;
+  border-left-color: #7cb342;
+}
+
+.cv-ret-qtd {
+  min-width: 36px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #e65100;
+  background: rgba(230, 81, 0, 0.1);
+  border-radius: 6px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
+.cv-ret-nome {
+  font-weight: 600;
+  color: #212121;
+  flex: 1;
+}
+
+.cv-ret-modelo {
+  font-size: 0.82rem;
+  color: #757575;
+  flex-shrink: 0;
+}
+
+.cv-ret-ok-mark {
+  color: #558b2f;
+  font-size: 1.1rem;
+  flex-shrink: 0;
 }

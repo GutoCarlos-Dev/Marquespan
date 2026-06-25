@@ -2243,70 +2243,104 @@ function renderizarTotalizadorCarregamento() {
   const regular   = [...mapa.values()].filter(e => !isItemEspecial(e.nome));
   const especiais = [...mapa.values()].filter(e =>  isItemEspecial(e.nome));
 
-  function renderBloco(lista) {
-    let te = 0, tr_ = 0, teNovo = 0, teUsado = 0, trNovo = 0, trUsado = 0;
-    lista.forEach(e => {
-      te += e.entrega; tr_ += e.retorno;
-      teNovo += e.entregaNovo; teUsado += e.entregaUsado;
-      trNovo += e.retornoNovo; trUsado += e.retornoUsado;
-    });
-    const linhas = lista.map(e => `<tr>
-      <td>${escapeHtml(e.nome)}</td>
-      <td class="col-num col-entrega">${e.entregaNovo || '-'}</td>
-      <td class="col-num col-entrega-usado">${e.entregaUsado || '-'}</td>
-      <td class="col-num col-retorno-novo">${e.retornoNovo || '-'}</td>
-      <td class="col-num col-retorno">${e.retornoUsado || '-'}</td>
-    </tr>`).join('');
-    return `<div class="totalizador-bloco">
-      <div class="totalizador-cards">
-        <div class="tot-card tot-card-carregar">
-          <div class="tot-card-label"><i class="fas fa-arrow-up"></i> Total a Carregar</div>
-          <div class="tot-card-value">${te}</div>
-          <div class="tot-card-sub">itens</div>
-          <div class="tot-card-breakdown">
-            <span class="tot-breakdown-novo">N: ${teNovo}</span>
-            <span class="tot-breakdown-usado">U: ${teUsado}</span>
-          </div>
-        </div>
-        <div class="tot-card tot-card-retirar">
-          <div class="tot-card-label"><i class="fas fa-arrow-down"></i> Total a Retirar</div>
-          <div class="tot-card-value">${tr_}</div>
-          <div class="tot-card-sub">itens</div>
-          <div class="tot-card-breakdown">
-            <span class="tot-breakdown-novo">N: ${trNovo}</span>
-            <span class="tot-breakdown-usado">U: ${trUsado}</span>
-          </div>
+  const somarBloco = lista => lista.reduce((acc, e) => ({
+    entrega:      acc.entrega      + e.entrega,
+    entregaNovo:  acc.entregaNovo  + e.entregaNovo,
+    entregaUsado: acc.entregaUsado + e.entregaUsado,
+    retorno:      acc.retorno      + e.retorno,
+    retornoUsado: acc.retornoUsado + e.retornoUsado
+  }), { entrega: 0, entregaNovo: 0, entregaUsado: 0, retorno: 0, retornoUsado: 0 });
+
+  const totReg = somarBloco(regular);
+  const totEsp = somarBloco(especiais);
+  const teTotal  = totReg.entrega      + totEsp.entrega;
+  const teNovo   = totReg.entregaNovo  + totEsp.entregaNovo;
+  const teUsado  = totReg.entregaUsado + totEsp.entregaUsado;
+  const trTotal  = totReg.retorno      + totEsp.retorno;
+  const trUsado  = totReg.retornoUsado + totEsp.retornoUsado;
+
+  const n  = v => v > 0 ? `<strong>${v}</strong>` : '<span class="tot-vazio">-</span>';
+  const ns = v => v > 0 ? String(v) : '-';
+
+  const linhasItem = lista => lista.map(e => `<tr>
+    <td class="tot-col-nome">${escapeHtml(e.nome)}</td>
+    <td class="tot-num">${n(e.entrega)}</td>
+    <td class="tot-num tot-car-novo">${n(e.entregaNovo)}</td>
+    <td class="tot-num tot-car-usado">${n(e.entregaUsado)}</td>
+    <td class="tot-num">${n(e.retorno)}</td>
+    <td class="tot-num tot-ret-usado">${n(e.retornoUsado)}</td>
+  </tr>`).join('');
+
+  const linhaSubtotal = (label, tot) => `
+  <tr class="tot-subtotal-row">
+    <td class="tot-col-nome">${label}</td>
+    <td class="tot-num">${ns(tot.entrega)}</td>
+    <td class="tot-num tot-car-novo">${ns(tot.entregaNovo)}</td>
+    <td class="tot-num tot-car-usado">${ns(tot.entregaUsado)}</td>
+    <td class="tot-num">${ns(tot.retorno)}</td>
+    <td class="tot-num tot-ret-usado">${ns(tot.retornoUsado)}</td>
+  </tr>`;
+
+  const blocoEspeciais = especiais.length ? `
+    <tr class="tot-sep-row"><td colspan="6"><i class="fas fa-exchange-alt"></i>&nbsp;Esteiras &amp; Formas</td></tr>
+    ${linhasItem(especiais)}
+    ${linhaSubtotal('Subtotal Esteiras &amp; Formas', totEsp)}` : '';
+
+  conteudo.innerHTML = `
+    <div class="totalizador-cards">
+      <div class="tot-card tot-card-carregar">
+        <div class="tot-card-label"><i class="fas fa-arrow-up"></i> Total a Carregar</div>
+        <div class="tot-card-value">${teTotal}</div>
+        <div class="tot-card-sub">itens</div>
+        <div class="tot-card-breakdown">
+          <span class="tot-breakdown-novo">N: ${teNovo}</span>
+          <span class="tot-breakdown-usado">U: ${teUsado}</span>
         </div>
       </div>
-      <table class="totalizador-detalhe-table">
+      <div class="tot-card tot-card-retirar">
+        <div class="tot-card-label"><i class="fas fa-arrow-down"></i> Total a Retirar</div>
+        <div class="tot-card-value">${trTotal}</div>
+        <div class="tot-card-sub">itens</div>
+        <div class="tot-card-breakdown">
+          <span class="tot-breakdown-novo">N: 0</span>
+          <span class="tot-breakdown-usado">U: ${trUsado}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tot-table-wrap">
+      <table class="tot-tabela-unificada">
         <thead>
           <tr>
-            <th rowspan="2" class="th-equipamento">Equipamento</th>
-            <th colspan="2" class="col-num col-entrega">↑ Carregar</th>
-            <th colspan="2" class="col-num col-retorno">↓ Retirar</th>
+            <th rowspan="2" class="tot-col-equip">Equipamento</th>
+            <th colspan="3" class="tot-th-grupo tot-grupo-carregar">&#8593; Carregar ao Cliente</th>
+            <th colspan="2" class="tot-th-grupo tot-grupo-retirar">&#8595; Retirar do Cliente</th>
           </tr>
           <tr>
-            <th class="col-num col-num-sub col-entrega">Novos</th>
-            <th class="col-num col-num-sub col-entrega-usado">Usados</th>
-            <th class="col-num col-num-sub col-retorno-novo">Novos</th>
-            <th class="col-num col-num-sub col-retorno">Usados</th>
+            <th class="tot-th-sub tot-sub-carregar">Total</th>
+            <th class="tot-th-sub tot-sub-carregar tot-car-novo">Novo</th>
+            <th class="tot-th-sub tot-sub-carregar tot-car-usado">Usado</th>
+            <th class="tot-th-sub tot-sub-retirar">Total</th>
+            <th class="tot-th-sub tot-sub-retirar tot-ret-usado">Usado</th>
           </tr>
         </thead>
-        <tbody>${linhas}</tbody>
+        <tbody>
+          ${linhasItem(regular)}
+          ${linhaSubtotal('Subtotal Equipamentos', totReg)}
+          ${blocoEspeciais}
+        </tbody>
+        <tfoot>
+          <tr class="tot-total-geral">
+            <td class="tot-col-nome">TOTAL GERAL</td>
+            <td class="tot-num">${teTotal || '-'}</td>
+            <td class="tot-num tot-car-novo">${teNovo || '-'}</td>
+            <td class="tot-num tot-car-usado">${teUsado || '-'}</td>
+            <td class="tot-num">${trTotal || '-'}</td>
+            <td class="tot-num tot-ret-usado">${trUsado || '-'}</td>
+          </tr>
+        </tfoot>
       </table>
     </div>`;
-  }
-
-  let html = renderBloco(regular);
-
-  if (especiais.length) {
-    html += `<div class="totalizador-separador-bloco">
-      <span><i class="fas fa-exchange-alt"></i>&nbsp;Esteiras &amp; Formas</span>
-    </div>`;
-    html += renderBloco(especiais);
-  }
-
-  conteudo.innerHTML = html;
 }
 
 function renderizarRequisicoesCarregamento() {
@@ -2326,6 +2360,11 @@ function renderizarRequisicoesCarregamento() {
     const numItens = Array.isArray(req.itens) ? req.itens.filter(i => Number(i.quantidade) > 0).length : 0;
     const idEsc = escapeHtml(String(req.id));
     const ordem = index + 1;
+    const motivo = req.motivo || '-';
+    const motivoNorm = motivo.toLowerCase();
+    const motivoCls = /retirada/.test(motivoNorm) ? 'retirada'
+                    : /troca/.test(motivoNorm)     ? 'troca'
+                    : 'entrega';
     return `<tr>
       <td class="ordem-carga-cell">
         <div class="ordem-carga-control">
@@ -2348,12 +2387,12 @@ function renderizarRequisicoesCarregamento() {
           </div>
         </div>
       </td>
-      <td title="${escapeHtml(req.arquivo)}">${escapeHtml(req.arquivo)}</td>
+      <td title="${escapeHtml(req.arquivo)}" style="font-size:0.82rem;color:#555">${escapeHtml(req.arquivo)}</td>
       <td>${escapeHtml(req.supervisor || '-')}</td>
-      <td title="${escapeHtml(req.cliente_nome || '-')}">${escapeHtml(req.cliente_nome || '-')}</td>
-      <td>${escapeHtml(req.motivo || '-')}</td>
-      <td class="col-num">${numItens}</td>
-      <td><button type="button" class="btn-icon delete" data-remover-req-car="${idEsc}" title="Remover"><i class="fas fa-times"></i></button></td>
+      <td title="${escapeHtml(req.cliente_nome || '-')}"><strong>${escapeHtml(req.cliente_nome || '-')}</strong></td>
+      <td><span class="motivo-badge ${motivoCls}">${escapeHtml(motivo)}</span></td>
+      <td class="col-num"><span class="itens-count-badge">${numItens}</span></td>
+      <td style="text-align:center"><button type="button" class="btn-icon delete" data-remover-req-car="${idEsc}" title="Remover"><i class="fas fa-times"></i></button></td>
     </tr>`;
   }).join('');
 
@@ -2522,6 +2561,22 @@ export async function inicializarCarregamento() {
     const input = e.target.closest('[data-ordem-req-car]');
     if (input) alterarOrdemRequisicaoCarregamento(input.dataset.ordemReqCar, input.value);
   });
+
+  // Mini-histórico na aba Preparar Carregamento
+  await carregarHistoricoCarregamentos();
+
+  document.getElementById('btnRecarregarHistoricoPreparar')?.addEventListener('click', carregarHistoricoCarregamentos);
+
+  document.getElementById('corpoHistoricoPreparar')?.addEventListener('click', async e => {
+    const btnCancelar = e.target.closest('[data-cancelar-carregamento]');
+    if (btnCancelar) { await cancelarCarregamento(btnCancelar.dataset.cancelarCarregamento); return; }
+
+    const btnResumo = e.target.closest('[data-resumo-carregamento]');
+    if (btnResumo) { await gerarResumoCarregamento(btnResumo.dataset.resumoCarregamento); return; }
+
+    const btnEditar = e.target.closest('[data-editar-carregamento]');
+    if (btnEditar) await editarCarregamento(btnEditar.dataset.editarCarregamento);
+  });
 }
 
 // === HISTÓRICO DE CARREGAMENTOS ===
@@ -2530,8 +2585,9 @@ let carregamentosSalvos = [];
 let carregamentoEditandoId = null;
 
 async function carregarHistoricoCarregamentos() {
-  const tbody = document.getElementById('corpoHistoricoCarregamentos');
-  if (!tbody) return;
+  const tbody1 = document.getElementById('corpoHistoricoCarregamentos');
+  const tbody2 = document.getElementById('corpoHistoricoPreparar');
+  if (!tbody1 && !tbody2) return;
 
   const { data, error } = await supabaseClient
     .from(CARREGAMENTOS_TABLE)
@@ -2541,7 +2597,9 @@ async function carregarHistoricoCarregamentos() {
 
   if (error) {
     console.error('Erro ao carregar histórico:', error);
-    tbody.innerHTML = `<tr><td colspan="9" class="historico-loading">Erro ao carregar histórico.</td></tr>`;
+    const msg = `<tr><td colspan="9" class="historico-loading">Erro ao carregar histórico.</td></tr>`;
+    if (tbody1) tbody1.innerHTML = msg;
+    if (tbody2) tbody2.innerHTML = msg;
     return;
   }
 
@@ -2549,16 +2607,11 @@ async function carregarHistoricoCarregamentos() {
   renderizarHistoricoCarregamentos();
 }
 
-function renderizarHistoricoCarregamentos() {
-  const tbody = document.getElementById('corpoHistoricoCarregamentos');
-  if (!tbody) return;
-
+function _htmlLinhasHistorico() {
   if (!carregamentosSalvos.length) {
-    tbody.innerHTML = `<tr><td colspan="9" class="historico-loading">Nenhum carregamento salvo.</td></tr>`;
-    return;
+    return `<tr><td colspan="9" class="historico-loading">Nenhum carregamento salvo.</td></tr>`;
   }
-
-  tbody.innerHTML = carregamentosSalvos.map(car => {
+  return carregamentosSalvos.map(car => {
     const dataFmt = formatarData(car.data_saida);
     const criadoEm = car.created_at ? new Date(car.created_at).toLocaleDateString('pt-BR') : '-';
     const idEsc = escapeHtml(String(car.id));
@@ -2590,6 +2643,14 @@ function renderizarHistoricoCarregamentos() {
       </td>
     </tr>`;
   }).join('');
+}
+
+function renderizarHistoricoCarregamentos() {
+  const html = _htmlLinhasHistorico();
+  const tbody1 = document.getElementById('corpoHistoricoCarregamentos');
+  const tbody2 = document.getElementById('corpoHistoricoPreparar');
+  if (tbody1) tbody1.innerHTML = html;
+  if (tbody2) tbody2.innerHTML = html;
 }
 
 async function gerarResumoCarregamento(id) {
