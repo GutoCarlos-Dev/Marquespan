@@ -3330,8 +3330,113 @@ let conferenciaEmModoApp = false;
 function inicializarResultadosConferencia(requisicoes) {
   conferenciaResultados = {};
   requisicoes.forEach(req => {
-    conferenciaResultados[req.id] = (req.itens || []).map(() => ({ status: null, obs: '' }));
+    conferenciaResultados[req.id] = (req.itens || []).map(() => ({
+      status:        null,
+      obs:           '',
+      wasAutoSet:    false,   // true = status foi gerado automaticamente por edição de campo
+      qtdReal:       null,    // qtd encontrada fisicamente (null = igual à requisição)
+      modeloReal:    null,
+      estadoReal:    null,    // 'novo' | 'usado' | '' | null
+      obsReal:       null,
+      autoObs:       ''       // texto gerado automaticamente descrevendo as modificações
+    }));
   });
+}
+
+function calcularAutoObs(item, res) {
+  const partes = [];
+  if (res.qtdReal !== null && res.qtdReal !== undefined) {
+    const orig = Number(item.quantidade) || 0;
+    const novo = Number(res.qtdReal) || 0;
+    if (orig !== novo) partes.push(`Qtd: ${orig} → ${novo}`);
+  }
+  if (res.modeloReal !== null && res.modeloReal !== undefined) {
+    const orig = (item.modelo || '').trim();
+    const novo = String(res.modeloReal || '').trim();
+    if (orig !== novo) partes.push(`Modelo: "${orig || '-'}" → "${novo || '-'}"`);
+  }
+  if (res.estadoReal !== null && res.estadoReal !== undefined) {
+    const orig = item.novo ? 'NOVO' : item.usado ? 'USADO' : '-';
+    const novoLabel = res.estadoReal === 'novo' ? 'NOVO' : res.estadoReal === 'usado' ? 'USADO' : '-';
+    if (orig !== novoLabel) partes.push(`Estado: ${orig} → ${novoLabel}`);
+  }
+  if (res.obsReal !== null && res.obsReal !== undefined) {
+    const orig = (item.obs || '').trim();
+    const novo = String(res.obsReal || '').trim();
+    if (orig !== novo) partes.push(`OBS: "${orig || '-'}" → "${novo || '-'}"`);
+  }
+  return partes.join(' | ');
+}
+
+function atualizarProgressoConferencia() {
+  const { totalItens, confirmados } = calcularTotaisConferencia();
+  const pct = totalItens > 0 ? Math.round(confirmados / totalItens * 100) : 0;
+  const el = document.getElementById('cvProgressoItens');
+  const bar = document.getElementById('cvBarraProgresso');
+  if (el)  el.textContent   = `${confirmados} de ${totalItens} itens confirmados (${pct}%)`;
+  if (bar) bar.style.width  = `${pct}%`;
+}
+
+function onCampoEditadoConferencia(reqId, itemIdx, campo, valor, item) {
+  if (!conferenciaResultados[reqId]) conferenciaResultados[reqId] = [];
+  if (!conferenciaResultados[reqId][itemIdx]) {
+    conferenciaResultados[reqId][itemIdx] = {
+      status: null, obs: '', wasAutoSet: false,
+      qtdReal: null, modeloReal: null, estadoReal: null, obsReal: null, autoObs: ''
+    };
+  }
+  const res = conferenciaResultados[reqId][itemIdx];
+  res[campo] = valor;
+
+  const autoObs = calcularAutoObs(item, res);
+  res.autoObs = autoObs;
+
+  if (autoObs) {
+    res.status     = 'divergencia';
+    res.wasAutoSet = true;
+  } else if (res.wasAutoSet && !res.obs?.trim()) {
+    res.status     = null;
+    res.wasAutoSet = false;
+  }
+
+  // Atualização parcial do DOM (sem recriar o card todo e preservar o foco)
+  const row = document.querySelector(`[data-cv-item-idx="${itemIdx}"]`);
+  if (row) {
+    row.classList.toggle('cv-row-ok',  res.status === 'ok');
+    row.classList.toggle('cv-row-div', res.status === 'divergencia');
+    row.querySelector('[data-cv-ok]')?.classList.toggle('ativo',  res.status === 'ok');
+    row.querySelector('[data-cv-div]')?.classList.toggle('ativo', res.status === 'divergencia');
+
+    // Badge de status dentro do card APP
+    const badge = row.querySelector('.cv-app-item-status');
+    if (badge) {
+      badge.className = `cv-app-item-status ${res.status === 'ok' ? 'cv-status-ok' : res.status === 'divergencia' ? 'cv-status-div' : ''}`;
+      badge.textContent = res.status === 'ok' ? '✓ OK' : res.status === 'divergencia' ? '⚠ Div.' : '';
+    }
+
+    // Detalhe de divergência
+    let divDetail = row.querySelector('.cv-app-div-detail');
+    if (res.status === 'divergencia') {
+      if (!divDetail) {
+        divDetail = document.createElement('div');
+        divDetail.className = 'cv-app-div-detail';
+        row.appendChild(divDetail);
+      }
+      divDetail.innerHTML = `
+        ${res.autoObs ? `<div class="cv-auto-obs-info"><i class="fas fa-sync-alt"></i> Modificado: ${escapeHtml(res.autoObs)}</div>` : ''}
+        <input type="text" class="glass-input cv-obs-input" placeholder="Descreva o motivo da divergência..."
+          value="${escapeHtml(res.obs || '')}" data-cv-obs="${itemIdx}">`;
+      divDetail.querySelector('[data-cv-obs]')?.addEventListener('input', e => {
+        if (conferenciaResultados[reqId]?.[itemIdx]) {
+          conferenciaResultados[reqId][itemIdx].obs = e.target.value;
+        }
+      });
+    } else {
+      divDetail?.remove();
+    }
+  }
+
+  atualizarProgressoConferencia();
 }
 
 function inicializarConferenciaDoCarregamentoAtual() {
@@ -3354,7 +3459,8 @@ function popularSeletorHistoricoConferencia() {
   (carregamentosSalvos || []).slice(0, 50).forEach(car => {
     const op = document.createElement('option');
     op.value = car.id;
-    op.textContent = `${car.data_saida || '-'} · ${car.placa || '-'} · ${car.motorista || '-'}`;
+    const data = car.data_saida ? car.data_saida.split('-').reverse().join('/') : '-';
+    op.textContent = `${data} · ${car.placa || '-'} · ${car.motorista || '-'}`;
     select.appendChild(op);
   });
 }
@@ -3467,10 +3573,9 @@ function renderizarConferenciaAtual() {
   const card = document.getElementById('cvRequisicaoCard');
   if (!card) return;
 
-  card.innerHTML = `
+  const cabecalhoCard = `
     <div class="cv-card-header">
       <div class="cv-card-meta">
-        <span class="cv-meta-item"><i class="fas fa-file-alt"></i> ${escapeHtml(req.arquivo || '-')}</span>
         <span class="cv-meta-item"><i class="fas fa-user-tie"></i> ${escapeHtml(req.supervisor || '-')}</span>
         <span class="cv-meta-item"><i class="fas fa-store"></i> ${escapeHtml(req.cliente_nome || '-')}</span>
         <span class="cv-meta-item"><i class="fas fa-tag"></i> ${escapeHtml(req.motivo || '-')}</span>
@@ -3482,56 +3587,132 @@ function renderizarConferenciaAtual() {
           <i class="fas fa-check-double"></i> Todos OK
         </button>
       </div>
-    </div>
-    <div class="table-responsive">
-      <table class="glass-table cv-table-conferencia">
-        <thead>
-          <tr>
-            <th class="cv-th-qtd">Qtd</th>
-            <th>Equipamento</th>
-            <th>Modelo</th>
-            <th class="cv-th-estado">Estado</th>
-            <th class="cv-th-obs-req">OBS</th>
-            <th class="cv-th-status">Conferência</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itens.map((item, idx) => {
-            const res = resultados[idx] || { status: null, obs: '' };
-            const estado = item.novo ? 'NOVO' : item.usado ? 'USADO' : '';
-            const estadoCls = item.novo ? 'estado-badge estado-badge-novo' : item.usado ? 'estado-badge estado-badge-usado' : '';
-            const rowCls = res.status === 'ok' ? 'cv-row-ok' : res.status === 'divergencia' ? 'cv-row-div' : '';
-            return `
-              <tr class="${rowCls}" data-cv-item-idx="${idx}">
-                <td class="cv-th-qtd"><strong>${escapeHtml(String(item.quantidade || ''))}</strong></td>
-                <td>${escapeHtml(item.item_nome || item.equipamento || '-')}</td>
-                <td>${escapeHtml(item.modelo || '-')}</td>
-                <td>${estado ? `<span class="${estadoCls}">${estado}</span>` : '-'}</td>
-                <td>${item.obs ? `<span class="obs-badge${item.obs === 'AUMENTO' ? ' obs-badge-aumento' : ''}">${escapeHtml(item.obs)}</span>` : '-'}</td>
-                <td class="cv-td-status">
-                  <div class="cv-status-btns">
-                    <button type="button" class="btn-cv-ok${res.status === 'ok' ? ' ativo' : ''}" data-cv-ok="${idx}" title="Conferido OK">
-                      <i class="fas fa-check"></i><span class="cv-btn-label"> OK</span>
-                    </button>
-                    <button type="button" class="btn-cv-div${res.status === 'divergencia' ? ' ativo' : ''}" data-cv-div="${idx}" title="Divergência encontrada">
-                      <i class="fas fa-exclamation-triangle"></i><span class="cv-btn-label"> Div.</span>
-                    </button>
-                  </div>
-                  ${res.status === 'divergencia' ? `
-                    <input type="text"
-                      class="glass-input cv-obs-input"
-                      placeholder="Descreva a divergência..."
-                      value="${escapeHtml(res.obs || '')}"
-                      data-cv-obs="${idx}">
-                  ` : ''}
-                </td>
-              </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
     </div>`;
 
-  // Eventos do card
+  if (conferenciaEmModoApp) {
+    // ===== MODO APP: cards compactos com campos editáveis =====
+    card.innerHTML = cabecalhoCard + `
+      <div class="cv-items-app">
+        ${itens.map((item, idx) => {
+          const res = resultados[idx] || {};
+          const rowCls = res.status === 'ok' ? 'cv-row-ok' : res.status === 'divergencia' ? 'cv-row-div' : '';
+          const estadoOrig = item.novo ? 'novo' : item.usado ? 'usado' : '';
+          const qtdVal  = res.qtdReal    !== null && res.qtdReal    !== undefined ? res.qtdReal    : (item.quantidade || '');
+          const modVal  = res.modeloReal !== null && res.modeloReal !== undefined ? res.modeloReal : (item.modelo    || '');
+          const estVal  = res.estadoReal !== null && res.estadoReal !== undefined ? res.estadoReal : estadoOrig;
+          const obsVal  = res.obsReal    !== null && res.obsReal    !== undefined ? res.obsReal    : (item.obs       || '');
+          return `
+            <div class="cv-app-item ${rowCls}" data-cv-item-idx="${idx}">
+              <div class="cv-app-item-top">
+                <div class="cv-app-item-equip">
+                  <span class="cv-app-qtd-orig" title="Qtd. requisitada">${escapeHtml(String(item.quantidade || ''))}</span>
+                  <span class="cv-app-item-nome">${escapeHtml(item.item_nome || item.equipamento || '-')}</span>
+                  <span class="cv-app-item-status ${res.status === 'ok' ? 'cv-status-ok' : res.status === 'divergencia' ? 'cv-status-div' : ''}">
+                    ${res.status === 'ok' ? '✓ OK' : res.status === 'divergencia' ? '⚠ Div.' : ''}
+                  </span>
+                </div>
+                <div class="cv-status-btns">
+                  <button type="button" class="btn-cv-ok${res.status === 'ok' ? ' ativo' : ''}" data-cv-ok="${idx}"><i class="fas fa-check"></i> OK</button>
+                  <button type="button" class="btn-cv-div${res.status === 'divergencia' ? ' ativo' : ''}" data-cv-div="${idx}"><i class="fas fa-exclamation-triangle"></i> Div.</button>
+                </div>
+              </div>
+              <div class="cv-app-item-fields">
+                <div class="cv-app-field cv-app-field-qtd">
+                  <label>Qtd</label>
+                  <input type="number" class="glass-input" value="${escapeHtml(String(qtdVal))}" min="0"
+                    data-cv-edit="qtdReal" data-cv-item="${idx}">
+                </div>
+                <div class="cv-app-field cv-app-field-modelo">
+                  <label>Modelo</label>
+                  <input type="text" class="glass-input" value="${escapeHtml(modVal)}"
+                    data-cv-edit="modeloReal" data-cv-item="${idx}">
+                </div>
+                <div class="cv-app-field cv-app-field-estado">
+                  <label>Estado</label>
+                  <select class="glass-input" data-cv-edit="estadoReal" data-cv-item="${idx}">
+                    <option value=""  ${estVal === ''      ? 'selected' : ''}>-</option>
+                    <option value="novo"  ${estVal === 'novo'  ? 'selected' : ''}>NOVO</option>
+                    <option value="usado" ${estVal === 'usado' ? 'selected' : ''}>USADO</option>
+                  </select>
+                </div>
+                <div class="cv-app-field cv-app-field-obs">
+                  <label>OBS</label>
+                  <input type="text" class="glass-input" value="${escapeHtml(obsVal)}" placeholder="OBS do item"
+                    data-cv-edit="obsReal" data-cv-item="${idx}">
+                </div>
+              </div>
+              ${res.status === 'divergencia' ? `
+                <div class="cv-app-div-detail">
+                  ${res.autoObs ? `<div class="cv-auto-obs-info"><i class="fas fa-sync-alt"></i> Modificado: ${escapeHtml(res.autoObs)}</div>` : ''}
+                  <input type="text" class="glass-input cv-obs-input"
+                    placeholder="Descreva o motivo da divergência..."
+                    value="${escapeHtml(res.obs || '')}"
+                    data-cv-obs="${idx}">
+                </div>` : ''}
+            </div>`;
+        }).join('')}
+      </div>`;
+
+    // Eventos — edição de campos (usa 'change' para não re-renderizar a cada tecla)
+    card.querySelectorAll('[data-cv-edit]').forEach(input => {
+      input.addEventListener('change', () => {
+        const idx   = Number(input.dataset.cvItem);
+        const campo = input.dataset.cvEdit;
+        onCampoEditadoConferencia(req.id, idx, campo, input.value, itens[idx]);
+      });
+    });
+
+  } else {
+    // ===== DESKTOP: tabela compacta =====
+    card.innerHTML = cabecalhoCard + `
+      <div class="table-responsive">
+        <table class="glass-table cv-table-conferencia">
+          <thead>
+            <tr>
+              <th class="cv-th-qtd">Qtd</th>
+              <th>Equipamento</th>
+              <th>Modelo</th>
+              <th class="cv-th-estado">Estado</th>
+              <th class="cv-th-obs-req">OBS</th>
+              <th class="cv-th-status">Conferência</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itens.map((item, idx) => {
+              const res = resultados[idx] || { status: null, obs: '' };
+              const estado = item.novo ? 'NOVO' : item.usado ? 'USADO' : '';
+              const estadoCls = item.novo ? 'estado-badge estado-badge-novo' : item.usado ? 'estado-badge estado-badge-usado' : '';
+              const rowCls = res.status === 'ok' ? 'cv-row-ok' : res.status === 'divergencia' ? 'cv-row-div' : '';
+              return `
+                <tr class="${rowCls}" data-cv-item-idx="${idx}">
+                  <td class="cv-th-qtd"><strong>${escapeHtml(String(item.quantidade || ''))}</strong></td>
+                  <td>${escapeHtml(item.item_nome || item.equipamento || '-')}</td>
+                  <td>${escapeHtml(item.modelo || '-')}</td>
+                  <td>${estado ? `<span class="${estadoCls}">${estado}</span>` : '-'}</td>
+                  <td>${item.obs ? `<span class="obs-badge${item.obs === 'AUMENTO' ? ' obs-badge-aumento' : ''}">${escapeHtml(item.obs)}</span>` : '-'}</td>
+                  <td class="cv-td-status">
+                    <div class="cv-status-btns">
+                      <button type="button" class="btn-cv-ok${res.status === 'ok' ? ' ativo' : ''}" data-cv-ok="${idx}" title="Conferido OK">
+                        <i class="fas fa-check"></i><span class="cv-btn-label"> OK</span>
+                      </button>
+                      <button type="button" class="btn-cv-div${res.status === 'divergencia' ? ' ativo' : ''}" data-cv-div="${idx}" title="Divergência encontrada">
+                        <i class="fas fa-exclamation-triangle"></i><span class="cv-btn-label"> Div.</span>
+                      </button>
+                    </div>
+                    ${res.status === 'divergencia' ? `
+                      <input type="text" class="glass-input cv-obs-input"
+                        placeholder="Descreva a divergência..."
+                        value="${escapeHtml(res.obs || '')}" data-cv-obs="${idx}">
+                    ` : ''}
+                  </td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // Eventos comuns (OK, Div, obs, todos-ok)
   card.querySelector('[data-cv-todos-ok]')?.addEventListener('click', () => {
     marcarTodosOkConferencia(req.id, itens.length);
   });
@@ -3552,9 +3733,14 @@ function renderizarConferenciaAtual() {
 
 function marcarItemConferencia(reqId, itemIdx, status) {
   if (!conferenciaResultados[reqId]) conferenciaResultados[reqId] = [];
-  if (!conferenciaResultados[reqId][itemIdx]) conferenciaResultados[reqId][itemIdx] = { status: null, obs: '' };
+  if (!conferenciaResultados[reqId][itemIdx]) {
+    conferenciaResultados[reqId][itemIdx] = {
+      status: null, obs: '', wasAutoSet: false,
+      qtdReal: null, modeloReal: null, estadoReal: null, obsReal: null, autoObs: ''
+    };
+  }
   const cur = conferenciaResultados[reqId][itemIdx];
-  // Toggle: clicar no mesmo status desmarca
+  cur.wasAutoSet = false;
   if (cur.status === status) { cur.status = null; cur.obs = ''; }
   else { cur.status = status; if (status === 'ok') cur.obs = ''; }
   renderizarConferenciaAtual();
@@ -3579,6 +3765,55 @@ function navegarConferencia(delta) {
   renderizarConferenciaAtual();
 }
 
+function calcularTotalizador() {
+  if (!conferenciaAtiva) return [];
+
+  // mapa: { [nomeEquip]: { entrega, retirada } }
+  const mapa = {};
+
+  for (const req of conferenciaAtiva.requisicoes) {
+    const resultados    = conferenciaResultados[req.id] || [];
+    const motivo        = req.motivo || '';
+    const ehRetirada    = /retirada/i.test(motivo);           // Retirada Total/Parcial/Empréstimo
+    const ehTroca       = /troca/i.test(motivo);              // Troca ou Aumento+Troca
+    const ehEntregaPura = !ehRetirada && !ehTroca;            // Aumento / Cliente Novo / outros
+
+    for (const [idx, item] of (req.itens || []).entries()) {
+      const res = resultados[idx] || {};
+      // Usa quantidade efetiva da conferência (se alterada pelo conferente)
+      const qtd = (res.qtdReal !== null && res.qtdReal !== undefined)
+        ? Number(res.qtdReal)
+        : Number(item.quantidade || 0);
+      if (qtd <= 0) continue;
+
+      const key = item.item_nome || item.equipamento || '-';
+      if (!mapa[key]) mapa[key] = { entrega: 0, retirada: 0 };
+
+      if (ehRetirada) {
+        // Retirada Total / Parcial / Empréstimo → só retirada do cliente
+        mapa[key].retirada += qtd;
+      } else if (ehEntregaPura) {
+        // Aumento / Cliente Novo → só entrega ao cliente
+        mapa[key].entrega += qtd;
+      } else {
+        // Troca / Aumento+Troca
+        // Item com obs='AUMENTO' é entrega pura (não há item a retirar correspondente)
+        if (item.obs === 'AUMENTO') {
+          mapa[key].entrega += qtd;
+        } else {
+          // Troca real: entrega o novo E retira o velho de mesma quantidade
+          mapa[key].entrega  += qtd;
+          mapa[key].retirada += qtd;
+        }
+      }
+    }
+  }
+
+  return Object.entries(mapa)
+    .sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
+    .map(([nome, v]) => ({ nome, entrega: v.entrega, retirada: v.retirada }));
+}
+
 function mostrarResumoConferencia() {
   if (!conferenciaAtiva) return;
   document.getElementById('cvRequisicaoCard')?.classList.add('hidden');
@@ -3599,7 +3834,6 @@ function mostrarResumoConferencia() {
     totalOk += ok; totalDiv += div; totalNao += nao;
     const divStyle = div > 0 ? ' style="background:rgba(220,53,69,0.12);font-weight:700;color:#b02a37"' : '';
     return `<tr${divStyle}>
-      <td>${escapeHtml(req.arquivo || '-')}</td>
       <td>${escapeHtml(req.cliente_nome || '-')}</td>
       <td>${escapeHtml(req.motivo || '-')}</td>
       <td class="text-center"><span class="cv-badge-ok">${ok}</span></td>
@@ -3608,22 +3842,61 @@ function mostrarResumoConferencia() {
     </tr>`;
   }).join('');
 
+  const totalizador   = calcularTotalizador();
+  const totalEntregas = totalizador.reduce((s, r) => s + r.entrega,  0);
+  const totalRetiradas= totalizador.reduce((s, r) => s + r.retirada, 0);
+
   document.getElementById('cvResumoConteudo').innerHTML = `
     <div class="cv-resumo-totais">
       <div class="cv-total-card cv-total-ok"><strong>${totalOk}</strong><span>Confirmados OK</span></div>
       <div class="cv-total-card cv-total-div"><strong>${totalDiv}</strong><span>Divergências</span></div>
       <div class="cv-total-card cv-total-nao"><strong>${totalNao}</strong><span>Não conferidos</span></div>
     </div>
+
     <div class="table-responsive" style="margin-top:16px">
       <table class="glass-table">
         <thead><tr>
-          <th>Arquivo</th><th>Cliente</th><th>Motivo</th>
-          <th class="text-center">✓ OK</th>
-          <th class="text-center">⚠ Div.</th>
-          <th class="text-center">— N/C</th>
+          <th>Cliente</th><th>Motivo</th>
+          <th class="text-center">OK</th>
+          <th class="text-center">Div.</th>
+          <th class="text-center">N/C</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
       </table>
+    </div>
+
+    <div class="cv-totalizador">
+      <div class="cv-totalizador-header">
+        <i class="fas fa-boxes"></i> Totalizador Geral de Equipamentos
+        <div class="cv-tot-resumo-chips">
+          <span class="cv-tot-chip cv-tot-chip-entrega"><i class="fas fa-arrow-up"></i> ${totalEntregas} Entrega${totalEntregas !== 1 ? 's' : ''}</span>
+          <span class="cv-tot-chip cv-tot-chip-retirada"><i class="fas fa-arrow-down"></i> ${totalRetiradas} Retirada${totalRetiradas !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="glass-table cv-table-totalizador">
+          <thead><tr>
+            <th>Equipamento</th>
+            <th class="text-center cv-th-entrega">Entrega ao Cliente</th>
+            <th class="text-center cv-th-retirada">Retirada do Cliente</th>
+          </tr></thead>
+          <tbody>
+            ${totalizador.map(row => `
+              <tr>
+                <td>${escapeHtml(row.nome)}</td>
+                <td class="text-center ${row.entrega > 0 ? 'cv-cell-entrega' : 'cv-cell-zero'}">${row.entrega > 0 ? `<strong>${row.entrega}</strong>` : '—'}</td>
+                <td class="text-center ${row.retirada > 0 ? 'cv-cell-retirada' : 'cv-cell-zero'}">${row.retirada > 0 ? `<strong>${row.retirada}</strong>` : '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot>
+            <tr class="cv-tot-total-row">
+              <td><strong>TOTAL GERAL</strong></td>
+              <td class="text-center"><strong>${totalEntregas}</strong></td>
+              <td class="text-center"><strong>${totalRetiradas}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>`;
 }
 
@@ -3632,72 +3905,207 @@ async function gerarRelatorioConferencia() {
   const { jsPDF } = window.jspdf || {};
   if (!jsPDF) { alert('Biblioteca PDF não carregada.'); return; }
 
+  // ── Carregar logo com fundo branco (padrão do projeto) ──────────────────────
+  const logoBase64 = await new Promise(resolve => {
+    const img = new Image();
+    img.src = 'logo.png';
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width  = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg'));
+    };
+    img.onerror = () => resolve(null);
+  });
+
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-  // Cabeçalho
-  doc.setFillColor(0, 105, 55);
-  doc.rect(0, 0, 210, 22, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(13);
+  // ── Cabeçalho padrão Marquespan ──────────────────────────────────────────────
+  if (logoBase64) doc.addImage(logoBase64, 'JPEG', 14, 8, 40, 12);
+
   doc.setFont('helvetica', 'bold');
-  doc.text('RELATÓRIO DE CONFERÊNCIA DE CARREGAMENTO', 105, 13, { align: 'center' });
+  doc.setFontSize(16);
+  doc.setTextColor(0, 105, 55);
+  doc.text('MARQUESPAN', 195, 13, { align: 'right' });
 
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  let y = 30;
-  doc.text(`Placa: ${conferenciaAtiva.placa || '-'}`, 14, y);
-  doc.text(`Motorista: ${conferenciaAtiva.motorista || '-'}`, 70, y);
-  doc.text(`Data Saída: ${conferenciaAtiva.dataSaida || '-'}`, 145, y);
-  y += 5;
-  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, y);
-  y += 8;
+  doc.setFontSize(10);
+  doc.setTextColor(60, 60, 60);
+  doc.text('CONFERÊNCIA DE CARREGAMENTO', 195, 20, { align: 'right' });
 
-  // Sumário
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(0, 105, 55);
+  doc.line(14, 24, 196, 24);
+
+  // ── Dados do carregamento ────────────────────────────────────────────────────
+  let y = 33;
   const { okCount, divCount, totalItens } = calcularTotaisConferencia();
   const naoConf = totalItens - okCount - divCount;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text(`Total: ${totalItens} itens  |  ✓ OK: ${okCount}  |  ⚠ Divergências: ${divCount}  |  — Não conferidos: ${naoConf}`, 14, y);
+
+  const campos = [
+    ['PLACA',       conferenciaAtiva.placa    || '-'],
+    ['MOTORISTA',   conferenciaAtiva.motorista || '-'],
+    ['DATA SAÍDA',  conferenciaAtiva.dataSaida ? conferenciaAtiva.dataSaida.split('-').reverse().join('/') : '-'],
+    ['TOTAL ITENS', `${totalItens} itens  |  OK: ${okCount}  |  Divergencias: ${divCount}  |  Nao conferidos: ${naoConf}`],
+  ];
+
+  // dois campos por linha
+  for (let i = 0; i < campos.length; i += 2) {
+    const [label1, val1] = campos[i];
+    const [label2, val2] = campos[i + 1] || [];
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(0, 105, 55);
+    doc.text(label1 + ':', 14, y);
+    if (label2) doc.text(label2 + ':', 108, y);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(30, 30, 30);
+    doc.text(String(val1), 14, y);
+    if (val2) doc.text(String(val2), 108, y);
+    y += 8;
+  }
+
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(140, 140, 140);
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}  |  Usuario: ${obterUsuarioAtualNome?.() || '-'}`, 14, y);
   y += 8;
 
-  // Por requisição
+  // ── Uma tabela por requisição ────────────────────────────────────────────────
   for (const req of conferenciaAtiva.requisicoes) {
-    if (y > 250) { doc.addPage(); y = 20; }
+    if (y > 255) { doc.addPage(); y = 18; }
+
+    // Faixa verde com info da requisição
+    doc.setFillColor(0, 105, 55);
+    doc.rect(14, y, 182, 6.5, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(0, 100, 50);
-    doc.text(`${req.arquivo || '-'}  |  ${req.cliente_nome || '-'}  |  ${req.motivo || '-'}  |  Supervisor: ${req.supervisor || '-'}`, 14, y);
-    doc.setTextColor(0, 0, 0);
-    y += 3;
+    doc.setFontSize(7.5);
+    doc.setTextColor(255, 255, 255);
+    const labelReq = [req.cliente_nome, req.motivo, req.supervisor ? `Sup.: ${req.supervisor}` : null]
+      .filter(Boolean).join('  |  ');
+    doc.text(labelReq, 16, y + 4.3);
+    doc.setTextColor(30, 30, 30);
+    y += 8;
 
     const resultados = conferenciaResultados[req.id] || [];
-    const itens = req.itens || [];
+    const itens      = req.itens || [];
 
     doc.autoTable({
       startY: y,
-      head: [['Qtd', 'Equipamento', 'Modelo', 'Est.', 'OBS Req', 'Conferência', 'Obs. Divergência']],
+      head: [['Qtd', 'Equipamento', 'Modelo', 'Est.', 'OBS Req', 'Status', 'Modificacoes / Motivo']],
       body: itens.map((item, idx) => {
-        const res = resultados[idx] || {};
+        const res    = resultados[idx] || {};
         const estado = item.novo ? 'NOVO' : item.usado ? 'USADO' : '-';
-        const status = res.status === 'ok' ? '✓ OK' : res.status === 'divergencia' ? '⚠ Div.' : '—';
-        return [item.quantidade, item.item_nome || '-', item.modelo || '-', estado, item.obs || '-', status, res.obs || ''];
+        // Usar texto ASCII puro — helvetica nao suporta Unicode checkmark/warning
+        const status = res.status === 'ok' ? 'OK' : res.status === 'divergencia' ? 'DIV.' : '-';
+        const notas  = [res.autoObs, res.obs].filter(Boolean).join(' | ') || '';
+        return [item.quantidade, item.item_nome || '-', item.modelo || '-', estado, item.obs || '-', status, notas];
       }),
-      styles: { fontSize: 7.5, cellPadding: 2 },
-      headStyles: { fillColor: [0, 105, 55], fontSize: 7.5 },
-      columnStyles: { 5: { fontStyle: 'bold' } },
+      styles:             { fontSize: 8, cellPadding: 2.2, textColor: [30, 30, 30] },
+      headStyles:         { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      alternateRowStyles: { fillColor: [245, 250, 246] },
+      tableLineColor:     [200, 220, 200],
+      tableLineWidth:     0.1,
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 12 },
+        3: { halign: 'center', cellWidth: 16 },
+        5: { halign: 'center', fontStyle: 'bold', cellWidth: 16 },
+        6: { cellWidth: 50 }
+      },
       didParseCell(data) {
         if (data.column.index === 5 && data.section === 'body') {
-          if (data.cell.raw === '✓ OK')   data.cell.styles.textColor = [0, 120, 60];
-          if (data.cell.raw === '⚠ Div.') data.cell.styles.textColor = [180, 30, 30];
+          if (data.cell.raw === 'OK')   data.cell.styles.textColor = [0, 130, 60];
+          if (data.cell.raw === 'DIV.') data.cell.styles.textColor = [190, 30, 30];
         }
       },
       margin: { left: 14, right: 14 }
     });
-    y = doc.lastAutoTable.finalY + 6;
+    y = doc.lastAutoTable.finalY + 8;
   }
 
-  const nomeArq = `conferencia-${conferenciaAtiva.placa || 'carg'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+  // ── Totalizador Geral de Equipamentos ────────────────────────────────────────
+  const totalizador    = calcularTotalizador();
+  const totalEntregas  = totalizador.reduce((s, r) => s + r.entrega,  0);
+  const totalRetiradas = totalizador.reduce((s, r) => s + r.retirada, 0);
+
+  if (totalizador.length > 0) {
+    if (y > 220) { doc.addPage(); y = 18; }
+
+    // Título da seção
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(0, 105, 55);
+    doc.text('TOTALIZADOR GERAL DE EQUIPAMENTOS', 14, y);
+    y += 2;
+    doc.setLineWidth(0.3);
+    doc.setDrawColor(0, 105, 55);
+    doc.line(14, y, 196, y);
+    y += 5;
+
+    doc.autoTable({
+      startY: y,
+      head: [['Equipamento', 'Entrega ao Cliente', 'Retirada do Cliente']],
+      body: [
+        ...totalizador.map(row => [
+          row.nome,
+          row.entrega  > 0 ? String(row.entrega)  : '-',
+          row.retirada > 0 ? String(row.retirada) : '-'
+        ]),
+        // linha de total
+        [
+          { content: 'TOTAL GERAL', styles: { fontStyle: 'bold' } },
+          { content: String(totalEntregas),  styles: { fontStyle: 'bold', halign: 'center' } },
+          { content: String(totalRetiradas), styles: { fontStyle: 'bold', halign: 'center' } }
+        ]
+      ],
+      styles:             { fontSize: 9, cellPadding: 2.5, textColor: [30, 30, 30] },
+      headStyles:         { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+      alternateRowStyles: { fillColor: [245, 250, 246] },
+      tableLineColor:     [200, 220, 200],
+      tableLineWidth:     0.1,
+      columnStyles: {
+        0: { cellWidth: 100 },
+        1: { halign: 'center', cellWidth: 40 },
+        2: { halign: 'center', cellWidth: 40 }
+      },
+      didParseCell(data) {
+        if (data.section === 'body' && data.row.index < totalizador.length) {
+          if (data.column.index === 1 && data.cell.raw !== '-')
+            data.cell.styles.textColor = [0, 130, 60];
+          if (data.column.index === 2 && data.cell.raw !== '-')
+            data.cell.styles.textColor = [190, 30, 30];
+        }
+        // última linha = total
+        if (data.section === 'body' && data.row.index === totalizador.length) {
+          data.cell.styles.fillColor    = [230, 245, 235];
+          data.cell.styles.lineWidth    = 0.3;
+          data.cell.styles.lineColor    = [0, 105, 55];
+        }
+      },
+      margin: { left: 14, right: 14 }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+  }
+
+  // ── Rodapé na última página ──────────────────────────────────────────────────
+  const totalPags = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPags; p++) {
+    doc.setPage(p);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    doc.setTextColor(160, 160, 160);
+    doc.text(`Página ${p} de ${totalPags}`, 195, 290, { align: 'right' });
+    doc.text('Marquespan — Conferência de Carregamento', 15, 290);
+  }
+
+  const nomeArq = `Conferencia_Carregamento_${conferenciaAtiva.placa || 'carg'}_${new Date().toISOString().slice(0, 10)}.pdf`;
   doc.save(nomeArq);
 }
 
@@ -3705,8 +4113,30 @@ function toggleModoApp() {
   conferenciaEmModoApp = !conferenciaEmModoApp;
   const section = document.getElementById('carregar-veiculo');
   const btn     = document.getElementById('btnModoApp');
-  section?.classList.toggle('modo-app-ativo', conferenciaEmModoApp);
-  document.body.classList.toggle('cv-modo-app-body', conferenciaEmModoApp);
+
+  if (conferenciaEmModoApp) {
+    // Move a seção direto para <body> para escapar de qualquer filter/transform
+    // que crie stacking context e quebre o position:fixed (ex: .main-content.expanded com filter:blur)
+    section._cvOriginalParent      = section.parentNode;
+    section._cvOriginalNextSibling = section.nextSibling;
+    document.body.appendChild(section);
+    section.classList.add('modo-app-ativo');
+    document.body.classList.add('cv-modo-app-body');
+  } else {
+    section.classList.remove('modo-app-ativo');
+    document.body.classList.remove('cv-modo-app-body');
+    // Devolve a seção para a posição original
+    if (section._cvOriginalParent) {
+      if (section._cvOriginalNextSibling) {
+        section._cvOriginalParent.insertBefore(section, section._cvOriginalNextSibling);
+      } else {
+        section._cvOriginalParent.appendChild(section);
+      }
+      section._cvOriginalParent = null;
+      section._cvOriginalNextSibling = null;
+    }
+  }
+
   if (btn) {
     btn.innerHTML = conferenciaEmModoApp
       ? '<i class="fas fa-times"></i> Sair do Modo APP'

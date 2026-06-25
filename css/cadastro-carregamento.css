@@ -2352,48 +2352,265 @@
   color: #6c757d;
 }
 
+/* ===== Totalizador Geral ===== */
+.cv-totalizador {
+  margin-top: 24px;
+}
+
+.cv-totalizador-header {
+  align-items: center;
+  border-bottom: 2px solid rgba(0, 105, 55, 0.3);
+  color: #006937;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: .95rem;
+  font-weight: 700;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+}
+
+.cv-tot-resumo-chips {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.cv-tot-chip {
+  border-radius: 20px;
+  font-size: .78rem;
+  font-weight: 700;
+  padding: 3px 12px;
+}
+
+.cv-tot-chip-entrega {
+  background: rgba(0, 105, 55, 0.12);
+  border: 1px solid rgba(0, 105, 55, 0.25);
+  color: #006937;
+}
+
+.cv-tot-chip-retirada {
+  background: rgba(190, 30, 30, 0.1);
+  border: 1px solid rgba(190, 30, 30, 0.25);
+  color: #b02a37;
+}
+
+.cv-table-totalizador .cv-th-entrega { color: #006937; }
+.cv-table-totalizador .cv-th-retirada { color: #b02a37; }
+
+.cv-cell-entrega {
+  color: #006937 !important;
+  font-weight: 700;
+}
+
+.cv-cell-retirada {
+  color: #b02a37 !important;
+  font-weight: 700;
+}
+
+.cv-cell-zero { color: rgba(255,255,255,.3) !important; }
+
+.cv-tot-total-row td {
+  background: rgba(0, 105, 55, 0.08) !important;
+  border-top: 2px solid rgba(0, 105, 55, 0.3) !important;
+  font-size: .95rem;
+}
+
 /* ===== MODO APP ===== */
 .modo-app-ativo {
   background: #fff;
+  border: none !important;
+  border-radius: 0 !important;
   bottom: 0;
+  box-shadow: none !important;
   left: 0;
+  margin: 0 !important;
   overflow-y: auto;
   padding: 16px;
   position: fixed;
   right: 0;
   top: 0;
-  z-index: 9000;
+  -webkit-overflow-scrolling: touch;
+  z-index: 9900;
 }
 
 .cv-modo-app-body {
   overflow: hidden;
 }
 
-.modo-app-ativo .cv-table-conferencia {
-  font-size: 1rem;
-}
+/* Tabela não é usada no Modo APP — oculta para evitar renderização dupla */
+.modo-app-ativo .table-responsive { display: none; }
 
 .modo-app-ativo .btn-cv-ok,
 .modo-app-ativo .btn-cv-div {
-  font-size: 1rem;
-  padding: 10px 16px;
+  font-size: .85rem;
+  padding: 8px 12px;
 }
 
 .modo-app-ativo .cv-req-badge {
-  font-size: 1.4rem;
-  height: 52px;
-  width: 52px;
+  font-size: 1.2rem;
+  height: 46px;
+  width: 46px;
 }
 
 .modo-app-ativo .cv-nav-btn {
-  font-size: 1rem;
-  min-width: 130px;
-  padding: 12px 20px;
+  font-size: .95rem;
+  min-width: 110px;
+  padding: 10px 16px;
 }
 
 .modo-app-ativo .cv-obs-input {
-  font-size: 1rem !important;
-  padding: 10px 12px !important;
+  font-size: .95rem !important;
+  padding: 8px 10px !important;
+}
+
+/* ===== Cards APP ===== */
+.cv-items-app {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.cv-app-item {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.15);
+  border-left: 4px solid rgba(255,255,255,.2);
+  border-radius: 10px;
+  padding: 8px 10px;
+  transition: border-color .2s, background .2s;
+}
+
+.cv-app-item.cv-row-ok {
+  background: rgba(22,163,74,.08);
+  border-left-color: #16a34a;
+}
+
+.cv-app-item.cv-row-div {
+  background: rgba(220,38,38,.08);
+  border-left-color: #dc2626;
+}
+
+.cv-app-item-top {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.cv-app-item-equip {
+  align-items: baseline;
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cv-app-qtd-orig {
+  background: rgba(255,255,255,.15);
+  border-radius: 6px;
+  color: #fff;
+  flex-shrink: 0;
+  font-size: .7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+}
+
+.cv-app-item-nome {
+  font-size: .82rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cv-app-item-status {
+  border-radius: 6px;
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+}
+
+.cv-status-ok  { background: rgba(22,163,74,.25);  color: #16a34a; }
+.cv-status-div { background: rgba(220,38,38,.25);   color: #dc2626; }
+
+/* Botões OK/Div no modo APP — menores */
+.cv-app-item-top .cv-status-btns {
+  flex-shrink: 0;
+}
+
+.cv-app-item-top .cv-status-btns .btn-cv-ok,
+.cv-app-item-top .cv-status-btns .btn-cv-div {
+  font-size: .75rem !important;
+  padding: 5px 9px !important;
+}
+
+/* Grid de campos editáveis */
+.cv-app-item-fields {
+  display: grid;
+  gap: 4px 8px;
+  grid-template-columns: 70px 1fr 90px 1fr;
+  margin-top: 8px;
+}
+
+.cv-app-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cv-app-field label {
+  color: rgba(255,255,255,.55);
+  font-size: .62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.cv-app-field .glass-input {
+  font-size: .8rem !important;
+  padding: 4px 7px !important;
+  min-height: unset !important;
+}
+
+/* Detalhe de divergência */
+.cv-app-div-detail {
+  border-top: 1px solid rgba(220,38,38,.3);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 7px;
+  padding-top: 7px;
+}
+
+.cv-auto-obs-info {
+  background: rgba(220,38,38,.1);
+  border-radius: 6px;
+  color: #fca5a5;
+  font-size: .72rem;
+  padding: 4px 8px;
+}
+
+.cv-auto-obs-info i {
+  margin-right: 4px;
+}
+
+.cv-app-div-detail .cv-obs-input {
+  font-size: .82rem !important;
+  padding: 6px 10px !important;
+}
+
+/* Responsivo: 2 colunas em telas muito estreitas */
+@media (max-width: 420px) {
+  .cv-app-item-fields {
+    grid-template-columns: 60px 1fr;
+  }
+
+  .cv-app-field-modelo,
+  .cv-app-field-obs {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 600px) {
