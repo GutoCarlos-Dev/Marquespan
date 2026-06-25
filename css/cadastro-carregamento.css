@@ -2023,3 +2023,389 @@
         width: 100%;
     }
 }
+
+/* ===== CARREGAR VEÍCULO ===== */
+
+.cv-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.cv-header h3 {
+  margin: 0;
+}
+
+/* Estado vazio */
+.cv-empty-state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.cv-empty-state i {
+  color: var(--primary-color);
+  opacity: 0.4;
+}
+
+.cv-empty-state p {
+  color: #6c757d;
+  font-size: 0.97rem;
+  max-width: 480px;
+}
+
+.cv-empty-select {
+  max-width: 420px;
+  width: 100%;
+}
+
+/* Barra de progresso */
+.cv-progresso {
+  background: rgba(0, 105, 55, 0.05);
+  border: 1px solid rgba(0, 105, 55, 0.15);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+}
+
+.cv-progresso-info {
+  display: flex;
+  font-size: 0.9rem;
+  font-weight: 600;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cv-progresso-info span:first-child {
+  color: var(--primary-color);
+}
+
+.cv-progresso-info span:last-child {
+  color: #6c757d;
+}
+
+.cv-barra-progresso {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.cv-barra-fill {
+  background: linear-gradient(90deg, var(--primary-color), #28a745);
+  border-radius: 6px;
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+/* Navegação */
+.cv-navegacao {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.cv-nav-btn {
+  min-width: 120px;
+}
+
+.cv-req-contador {
+  flex: 1;
+  text-align: center;
+}
+
+.cv-req-badge {
+  background: var(--primary-color);
+  border-radius: 50%;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+  height: 40px;
+  width: 40px;
+}
+
+/* Card da requisição */
+.cv-card-header {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  background: rgba(0, 105, 55, 0.04);
+  border: 1px solid rgba(0, 105, 55, 0.12);
+  border-radius: 10px;
+}
+
+.cv-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cv-meta-item {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 0.83rem;
+  gap: 5px;
+  padding: 4px 9px;
+}
+
+.cv-meta-item i {
+  color: var(--primary-color);
+  font-size: 0.78rem;
+}
+
+.cv-card-status-bar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cv-badge-ok {
+  background: rgba(0, 105, 55, 0.12);
+  border-radius: 20px;
+  color: #006937;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+}
+
+.cv-badge-div {
+  background: rgba(220, 53, 69, 0.12);
+  border-radius: 20px;
+  color: #b02a37;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+}
+
+.cv-badge-nao {
+  background: rgba(108, 117, 125, 0.12);
+  border-radius: 20px;
+  color: #6c757d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+}
+
+/* Tabela de conferência */
+.cv-table-conferencia th.cv-th-qtd,
+.cv-table-conferencia td.cv-th-qtd {
+  text-align: center;
+  width: 50px;
+}
+
+.cv-table-conferencia th.cv-th-estado,
+.cv-table-conferencia td.cv-th-estado {
+  width: 70px;
+}
+
+.cv-table-conferencia th.cv-th-obs-req,
+.cv-table-conferencia td.cv-th-obs-req {
+  width: 80px;
+}
+
+.cv-table-conferencia th.cv-th-status,
+.cv-table-conferencia td.cv-td-status {
+  min-width: 140px;
+}
+
+/* Linhas com status */
+.cv-row-ok {
+  background: rgba(0, 105, 55, 0.06) !important;
+}
+
+.cv-row-div {
+  background: rgba(220, 53, 69, 0.07) !important;
+}
+
+/* Botões OK / Divergência */
+.cv-status-btns {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.btn-cv-ok,
+.btn-cv-div {
+  align-items: center;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 700;
+  gap: 4px;
+  padding: 5px 10px;
+  transition: all 0.15s;
+}
+
+.btn-cv-ok {
+  background: rgba(0, 105, 55, 0.08);
+  border-color: rgba(0, 105, 55, 0.25);
+  color: #006937;
+}
+
+.btn-cv-ok:hover,
+.btn-cv-ok.ativo {
+  background: #006937;
+  border-color: #006937;
+  color: #fff;
+}
+
+.btn-cv-div {
+  background: rgba(220, 53, 69, 0.08);
+  border-color: rgba(220, 53, 69, 0.25);
+  color: #b02a37;
+}
+
+.btn-cv-div:hover,
+.btn-cv-div.ativo {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: #fff;
+}
+
+.cv-obs-input {
+  font-size: 0.82rem !important;
+  margin-top: 4px;
+  padding: 5px 8px !important;
+  width: 100%;
+}
+
+/* Resumo */
+.cv-resumo {
+  background: rgba(0, 105, 55, 0.03);
+  border: 1px solid rgba(0, 105, 55, 0.15);
+  border-radius: 12px;
+  margin-top: 16px;
+  padding: 20px;
+}
+
+.cv-resumo h4 {
+  color: var(--primary-color);
+  margin: 0 0 16px;
+}
+
+.cv-resumo-totais {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.cv-total-card {
+  align-items: center;
+  border-radius: 10px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 100px;
+  padding: 14px;
+  text-align: center;
+}
+
+.cv-total-card strong {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cv-total-card span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cv-total-ok {
+  background: rgba(0, 105, 55, 0.1);
+  border: 1px solid rgba(0, 105, 55, 0.2);
+  color: #006937;
+}
+
+.cv-total-div {
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.2);
+  color: #b02a37;
+}
+
+.cv-total-nao {
+  background: rgba(108, 117, 125, 0.1);
+  border: 1px solid rgba(108, 117, 125, 0.2);
+  color: #6c757d;
+}
+
+/* ===== MODO APP ===== */
+.modo-app-ativo {
+  background: #fff;
+  bottom: 0;
+  left: 0;
+  overflow-y: auto;
+  padding: 16px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 9000;
+}
+
+.cv-modo-app-body {
+  overflow: hidden;
+}
+
+.modo-app-ativo .cv-table-conferencia {
+  font-size: 1rem;
+}
+
+.modo-app-ativo .btn-cv-ok,
+.modo-app-ativo .btn-cv-div {
+  font-size: 1rem;
+  padding: 10px 16px;
+}
+
+.modo-app-ativo .cv-req-badge {
+  font-size: 1.4rem;
+  height: 52px;
+  width: 52px;
+}
+
+.modo-app-ativo .cv-nav-btn {
+  font-size: 1rem;
+  min-width: 130px;
+  padding: 12px 20px;
+}
+
+.modo-app-ativo .cv-obs-input {
+  font-size: 1rem !important;
+  padding: 10px 12px !important;
+}
+
+@media (max-width: 600px) {
+  .cv-btn-label {
+    display: none;
+  }
+
+  .cv-nav-btn {
+    min-width: 90px;
+  }
+
+  .cv-card-meta {
+    gap: 6px;
+  }
+}

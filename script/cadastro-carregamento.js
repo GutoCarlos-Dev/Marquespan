@@ -3319,3 +3319,421 @@ export async function excluirCliente(id) {
 }
 
 // === MOTORISTAS ===
+
+// ===== CARREGAR VEÍCULO (CONFERÊNCIA DE CARREGAMENTO) =====
+
+let conferenciaAtiva = null;   // { requisicoes[], placa, motorista, dataSaida }
+let conferenciaIndex = 0;      // índice da requisição atual
+let conferenciaResultados = {}; // { [reqId]: [{ status: null|'ok'|'divergencia', obs: '' }, ...] }
+let conferenciaEmModoApp = false;
+
+function inicializarResultadosConferencia(requisicoes) {
+  conferenciaResultados = {};
+  requisicoes.forEach(req => {
+    conferenciaResultados[req.id] = (req.itens || []).map(() => ({ status: null, obs: '' }));
+  });
+}
+
+function inicializarConferenciaDoCarregamentoAtual() {
+  if (!carregamentoRequisicoes.length) return false;
+  conferenciaAtiva = {
+    requisicoes: carregamentoRequisicoes.map(r => ({ ...r, itens: Array.isArray(r.itens) ? [...r.itens] : [] })),
+    placa:       document.getElementById('carregamentoPlaca')?.value     || '',
+    motorista:   document.getElementById('carregamentoMotorista')?.value || '',
+    dataSaida:   document.getElementById('carregamentoDataSaida')?.value || ''
+  };
+  conferenciaIndex = 0;
+  inicializarResultadosConferencia(conferenciaAtiva.requisicoes);
+  return true;
+}
+
+function popularSeletorHistoricoConferencia() {
+  const select = document.getElementById('cvSeletorCarregamento');
+  if (!select) return;
+  select.innerHTML = '<option value="">Selecione um carregamento...</option>';
+  (carregamentosSalvos || []).slice(0, 50).forEach(car => {
+    const op = document.createElement('option');
+    op.value = car.id;
+    op.textContent = `${car.data_saida || '-'} · ${car.placa || '-'} · ${car.motorista || '-'}`;
+    select.appendChild(op);
+  });
+}
+
+async function carregarConferenciaDoHistorico() {
+  const id = document.getElementById('cvSeletorCarregamento')?.value;
+  if (!id) { alert('Selecione um carregamento.'); return; }
+
+  const { data: car, error: errCar } = await supabaseClient
+    .from(CARREGAMENTOS_TABLE).select('*').eq('id', id).single();
+  const { data: reqs, error: errReqs } = await supabaseClient
+    .from(REQUISICOES_TABLE).select('*').eq('carregamento_id', id).order('ordem');
+
+  if (errCar || errReqs) { alert('Erro ao carregar carregamento.'); return; }
+
+  conferenciaAtiva = {
+    requisicoes: (reqs || []),
+    placa:       car.placa      || '',
+    motorista:   car.motorista  || '',
+    dataSaida:   car.data_saida || ''
+  };
+  conferenciaIndex = 0;
+  inicializarResultadosConferencia(conferenciaAtiva.requisicoes);
+  renderizarConferenciaUI();
+}
+
+function abrirConferenciaTab() {
+  const emptyEl       = document.getElementById('cvSemCarregamento');
+  const conferenciaEl = document.getElementById('cvConferencia');
+  const resumoEl      = document.getElementById('cvResumo');
+  const cardEl        = document.getElementById('cvRequisicaoCard');
+
+  // Se ainda não há conferência ativa mas há carregamento preparado, inicia automaticamente
+  if (!conferenciaAtiva && carregamentoRequisicoes.length > 0) {
+    inicializarConferenciaDoCarregamentoAtual();
+  }
+
+  if (conferenciaAtiva && conferenciaAtiva.requisicoes.length > 0) {
+    emptyEl?.classList.add('hidden');
+    conferenciaEl?.classList.remove('hidden');
+    resumoEl?.classList.add('hidden');
+    cardEl?.classList.remove('hidden');
+    renderizarConferenciaAtual();
+  } else {
+    emptyEl?.classList.remove('hidden');
+    conferenciaEl?.classList.add('hidden');
+    popularSeletorHistoricoConferencia();
+  }
+}
+
+function renderizarConferenciaUI() {
+  const emptyEl       = document.getElementById('cvSemCarregamento');
+  const conferenciaEl = document.getElementById('cvConferencia');
+  const resumoEl      = document.getElementById('cvResumo');
+  const cardEl        = document.getElementById('cvRequisicaoCard');
+  emptyEl?.classList.add('hidden');
+  conferenciaEl?.classList.remove('hidden');
+  resumoEl?.classList.add('hidden');
+  cardEl?.classList.remove('hidden');
+  renderizarConferenciaAtual();
+}
+
+function calcularTotaisConferencia() {
+  if (!conferenciaAtiva) return { totalItens: 0, confirmados: 0, okCount: 0, divCount: 0 };
+  let totalItens = 0, confirmados = 0, okCount = 0, divCount = 0;
+  conferenciaAtiva.requisicoes.forEach(req => {
+    const resultados = conferenciaResultados[req.id] || [];
+    (req.itens || []).forEach((_, idx) => {
+      totalItens++;
+      const r = resultados[idx];
+      if (r?.status === 'ok')         { confirmados++; okCount++; }
+      else if (r?.status === 'divergencia') { confirmados++; divCount++; }
+    });
+  });
+  return { totalItens, confirmados, okCount, divCount };
+}
+
+function renderizarConferenciaAtual() {
+  if (!conferenciaAtiva) return;
+  const reqs = conferenciaAtiva.requisicoes;
+  const req  = reqs[conferenciaIndex];
+  if (!req) return;
+
+  // Progresso global
+  const { totalItens, confirmados } = calcularTotaisConferencia();
+  const pct = totalItens > 0 ? Math.round(confirmados / totalItens * 100) : 0;
+  document.getElementById('cvProgressoTexto').textContent  = `Requisição ${conferenciaIndex + 1} de ${reqs.length}`;
+  document.getElementById('cvProgressoItens').textContent  = `${confirmados} de ${totalItens} itens confirmados (${pct}%)`;
+  document.getElementById('cvBarraProgresso').style.width  = `${pct}%`;
+  document.getElementById('cvReqNumero').textContent       = conferenciaIndex + 1;
+
+  // Botões de navegação
+  const btnAnt = document.getElementById('btnCvAnterior');
+  const btnPro = document.getElementById('btnCvProxima');
+  if (btnAnt) btnAnt.disabled = conferenciaIndex === 0;
+  if (btnPro) {
+    const isUltimo = conferenciaIndex === reqs.length - 1;
+    btnPro.innerHTML = isUltimo
+      ? '<i class="fas fa-flag-checkered"></i> Finalizar'
+      : 'Próxima <i class="fas fa-chevron-right"></i>';
+    btnPro.className = `btn-glass cv-nav-btn ${isUltimo ? 'btn-green' : 'btn-blue'}`;
+  }
+
+  // Card da requisição
+  const itens     = req.itens || [];
+  const resultados = conferenciaResultados[req.id] || [];
+  const itensOkCount = resultados.filter(r => r?.status === 'ok').length;
+  const itensDivCount = resultados.filter(r => r?.status === 'divergencia').length;
+
+  const card = document.getElementById('cvRequisicaoCard');
+  if (!card) return;
+
+  card.innerHTML = `
+    <div class="cv-card-header">
+      <div class="cv-card-meta">
+        <span class="cv-meta-item"><i class="fas fa-file-alt"></i> ${escapeHtml(req.arquivo || '-')}</span>
+        <span class="cv-meta-item"><i class="fas fa-user-tie"></i> ${escapeHtml(req.supervisor || '-')}</span>
+        <span class="cv-meta-item"><i class="fas fa-store"></i> ${escapeHtml(req.cliente_nome || '-')}</span>
+        <span class="cv-meta-item"><i class="fas fa-tag"></i> ${escapeHtml(req.motivo || '-')}</span>
+      </div>
+      <div class="cv-card-status-bar">
+        <span class="cv-badge-ok"><i class="fas fa-check"></i> ${itensOkCount} OK</span>
+        ${itensDivCount > 0 ? `<span class="cv-badge-div"><i class="fas fa-exclamation-triangle"></i> ${itensDivCount} Div.</span>` : ''}
+        <button type="button" class="btn-glass btn-sm btn-green cv-btn-todos-ok" data-cv-todos-ok title="Marcar todos como OK">
+          <i class="fas fa-check-double"></i> Todos OK
+        </button>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="glass-table cv-table-conferencia">
+        <thead>
+          <tr>
+            <th class="cv-th-qtd">Qtd</th>
+            <th>Equipamento</th>
+            <th>Modelo</th>
+            <th class="cv-th-estado">Estado</th>
+            <th class="cv-th-obs-req">OBS</th>
+            <th class="cv-th-status">Conferência</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itens.map((item, idx) => {
+            const res = resultados[idx] || { status: null, obs: '' };
+            const estado = item.novo ? 'NOVO' : item.usado ? 'USADO' : '';
+            const estadoCls = item.novo ? 'estado-badge estado-badge-novo' : item.usado ? 'estado-badge estado-badge-usado' : '';
+            const rowCls = res.status === 'ok' ? 'cv-row-ok' : res.status === 'divergencia' ? 'cv-row-div' : '';
+            return `
+              <tr class="${rowCls}" data-cv-item-idx="${idx}">
+                <td class="cv-th-qtd"><strong>${escapeHtml(String(item.quantidade || ''))}</strong></td>
+                <td>${escapeHtml(item.item_nome || item.equipamento || '-')}</td>
+                <td>${escapeHtml(item.modelo || '-')}</td>
+                <td>${estado ? `<span class="${estadoCls}">${estado}</span>` : '-'}</td>
+                <td>${item.obs ? `<span class="obs-badge${item.obs === 'AUMENTO' ? ' obs-badge-aumento' : ''}">${escapeHtml(item.obs)}</span>` : '-'}</td>
+                <td class="cv-td-status">
+                  <div class="cv-status-btns">
+                    <button type="button" class="btn-cv-ok${res.status === 'ok' ? ' ativo' : ''}" data-cv-ok="${idx}" title="Conferido OK">
+                      <i class="fas fa-check"></i><span class="cv-btn-label"> OK</span>
+                    </button>
+                    <button type="button" class="btn-cv-div${res.status === 'divergencia' ? ' ativo' : ''}" data-cv-div="${idx}" title="Divergência encontrada">
+                      <i class="fas fa-exclamation-triangle"></i><span class="cv-btn-label"> Div.</span>
+                    </button>
+                  </div>
+                  ${res.status === 'divergencia' ? `
+                    <input type="text"
+                      class="glass-input cv-obs-input"
+                      placeholder="Descreva a divergência..."
+                      value="${escapeHtml(res.obs || '')}"
+                      data-cv-obs="${idx}">
+                  ` : ''}
+                </td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  // Eventos do card
+  card.querySelector('[data-cv-todos-ok]')?.addEventListener('click', () => {
+    marcarTodosOkConferencia(req.id, itens.length);
+  });
+  card.querySelectorAll('[data-cv-ok]').forEach(btn => {
+    btn.addEventListener('click', () => marcarItemConferencia(req.id, Number(btn.dataset.cvOk), 'ok'));
+  });
+  card.querySelectorAll('[data-cv-div]').forEach(btn => {
+    btn.addEventListener('click', () => marcarItemConferencia(req.id, Number(btn.dataset.cvDiv), 'divergencia'));
+  });
+  card.querySelectorAll('[data-cv-obs]').forEach(input => {
+    input.addEventListener('input', () => {
+      const idx = Number(input.dataset.cvObs);
+      if (!conferenciaResultados[req.id]?.[idx]) return;
+      conferenciaResultados[req.id][idx].obs = input.value;
+    });
+  });
+}
+
+function marcarItemConferencia(reqId, itemIdx, status) {
+  if (!conferenciaResultados[reqId]) conferenciaResultados[reqId] = [];
+  if (!conferenciaResultados[reqId][itemIdx]) conferenciaResultados[reqId][itemIdx] = { status: null, obs: '' };
+  const cur = conferenciaResultados[reqId][itemIdx];
+  // Toggle: clicar no mesmo status desmarca
+  if (cur.status === status) { cur.status = null; cur.obs = ''; }
+  else { cur.status = status; if (status === 'ok') cur.obs = ''; }
+  renderizarConferenciaAtual();
+}
+
+function marcarTodosOkConferencia(reqId, count) {
+  if (!conferenciaResultados[reqId]) conferenciaResultados[reqId] = [];
+  for (let i = 0; i < count; i++) {
+    conferenciaResultados[reqId][i] = { status: 'ok', obs: '' };
+  }
+  renderizarConferenciaAtual();
+}
+
+function navegarConferencia(delta) {
+  if (!conferenciaAtiva) return;
+  const reqs = conferenciaAtiva.requisicoes;
+  if (delta > 0 && conferenciaIndex >= reqs.length - 1) {
+    mostrarResumoConferencia();
+    return;
+  }
+  conferenciaIndex = Math.max(0, Math.min(reqs.length - 1, conferenciaIndex + delta));
+  renderizarConferenciaAtual();
+}
+
+function mostrarResumoConferencia() {
+  if (!conferenciaAtiva) return;
+  document.getElementById('cvRequisicaoCard')?.classList.add('hidden');
+  document.getElementById('cvResumo')?.classList.remove('hidden');
+
+  const reqs = conferenciaAtiva.requisicoes;
+  let totalOk = 0, totalDiv = 0, totalNao = 0;
+
+  const linhas = reqs.map(req => {
+    const resultados = conferenciaResultados[req.id] || [];
+    let ok = 0, div = 0, nao = 0;
+    (req.itens || []).forEach((_, idx) => {
+      const r = resultados[idx];
+      if      (r?.status === 'ok')          ok++;
+      else if (r?.status === 'divergencia') div++;
+      else                                  nao++;
+    });
+    totalOk += ok; totalDiv += div; totalNao += nao;
+    const divStyle = div > 0 ? ' style="background:rgba(220,53,69,0.12);font-weight:700;color:#b02a37"' : '';
+    return `<tr${divStyle}>
+      <td>${escapeHtml(req.arquivo || '-')}</td>
+      <td>${escapeHtml(req.cliente_nome || '-')}</td>
+      <td>${escapeHtml(req.motivo || '-')}</td>
+      <td class="text-center"><span class="cv-badge-ok">${ok}</span></td>
+      <td class="text-center">${div > 0 ? `<span class="cv-badge-div">${div}</span>` : '<span class="cv-badge-nao">0</span>'}</td>
+      <td class="text-center">${nao > 0 ? `<span class="cv-badge-nao">${nao}</span>` : '-'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('cvResumoConteudo').innerHTML = `
+    <div class="cv-resumo-totais">
+      <div class="cv-total-card cv-total-ok"><strong>${totalOk}</strong><span>Confirmados OK</span></div>
+      <div class="cv-total-card cv-total-div"><strong>${totalDiv}</strong><span>Divergências</span></div>
+      <div class="cv-total-card cv-total-nao"><strong>${totalNao}</strong><span>Não conferidos</span></div>
+    </div>
+    <div class="table-responsive" style="margin-top:16px">
+      <table class="glass-table">
+        <thead><tr>
+          <th>Arquivo</th><th>Cliente</th><th>Motivo</th>
+          <th class="text-center">✓ OK</th>
+          <th class="text-center">⚠ Div.</th>
+          <th class="text-center">— N/C</th>
+        </tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>`;
+}
+
+async function gerarRelatorioConferencia() {
+  if (!conferenciaAtiva) return;
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) { alert('Biblioteca PDF não carregada.'); return; }
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  // Cabeçalho
+  doc.setFillColor(0, 105, 55);
+  doc.rect(0, 0, 210, 22, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text('RELATÓRIO DE CONFERÊNCIA DE CARREGAMENTO', 105, 13, { align: 'center' });
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  let y = 30;
+  doc.text(`Placa: ${conferenciaAtiva.placa || '-'}`, 14, y);
+  doc.text(`Motorista: ${conferenciaAtiva.motorista || '-'}`, 70, y);
+  doc.text(`Data Saída: ${conferenciaAtiva.dataSaida || '-'}`, 145, y);
+  y += 5;
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, y);
+  y += 8;
+
+  // Sumário
+  const { okCount, divCount, totalItens } = calcularTotaisConferencia();
+  const naoConf = totalItens - okCount - divCount;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text(`Total: ${totalItens} itens  |  ✓ OK: ${okCount}  |  ⚠ Divergências: ${divCount}  |  — Não conferidos: ${naoConf}`, 14, y);
+  y += 8;
+
+  // Por requisição
+  for (const req of conferenciaAtiva.requisicoes) {
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(0, 100, 50);
+    doc.text(`${req.arquivo || '-'}  |  ${req.cliente_nome || '-'}  |  ${req.motivo || '-'}  |  Supervisor: ${req.supervisor || '-'}`, 14, y);
+    doc.setTextColor(0, 0, 0);
+    y += 3;
+
+    const resultados = conferenciaResultados[req.id] || [];
+    const itens = req.itens || [];
+
+    doc.autoTable({
+      startY: y,
+      head: [['Qtd', 'Equipamento', 'Modelo', 'Est.', 'OBS Req', 'Conferência', 'Obs. Divergência']],
+      body: itens.map((item, idx) => {
+        const res = resultados[idx] || {};
+        const estado = item.novo ? 'NOVO' : item.usado ? 'USADO' : '-';
+        const status = res.status === 'ok' ? '✓ OK' : res.status === 'divergencia' ? '⚠ Div.' : '—';
+        return [item.quantidade, item.item_nome || '-', item.modelo || '-', estado, item.obs || '-', status, res.obs || ''];
+      }),
+      styles: { fontSize: 7.5, cellPadding: 2 },
+      headStyles: { fillColor: [0, 105, 55], fontSize: 7.5 },
+      columnStyles: { 5: { fontStyle: 'bold' } },
+      didParseCell(data) {
+        if (data.column.index === 5 && data.section === 'body') {
+          if (data.cell.raw === '✓ OK')   data.cell.styles.textColor = [0, 120, 60];
+          if (data.cell.raw === '⚠ Div.') data.cell.styles.textColor = [180, 30, 30];
+        }
+      },
+      margin: { left: 14, right: 14 }
+    });
+    y = doc.lastAutoTable.finalY + 6;
+  }
+
+  const nomeArq = `conferencia-${conferenciaAtiva.placa || 'carg'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+  doc.save(nomeArq);
+}
+
+function toggleModoApp() {
+  conferenciaEmModoApp = !conferenciaEmModoApp;
+  const section = document.getElementById('carregar-veiculo');
+  const btn     = document.getElementById('btnModoApp');
+  section?.classList.toggle('modo-app-ativo', conferenciaEmModoApp);
+  document.body.classList.toggle('cv-modo-app-body', conferenciaEmModoApp);
+  if (btn) {
+    btn.innerHTML = conferenciaEmModoApp
+      ? '<i class="fas fa-times"></i> Sair do Modo APP'
+      : '<i class="fas fa-mobile-alt"></i> Modo APP';
+    btn.className = `btn-glass ${conferenciaEmModoApp ? 'btn-red' : 'btn-blue'}`;
+  }
+}
+
+export async function inicializarCarregarVeiculo() {
+  if (!document.getElementById('cvConferencia')) return;
+
+  document.getElementById('btnModoApp')?.addEventListener('click', toggleModoApp);
+  document.getElementById('btnCvAnterior')?.addEventListener('click', () => navegarConferencia(-1));
+  document.getElementById('btnCvProxima')?.addEventListener('click',  () => navegarConferencia(1));
+  document.getElementById('btnIniciarConferenciaHistorico')?.addEventListener('click', carregarConferenciaDoHistorico);
+  document.getElementById('btnCvGerarRelatorio')?.addEventListener('click', gerarRelatorioConferencia);
+  document.getElementById('btnCvReiniciar')?.addEventListener('click', () => {
+    conferenciaAtiva      = null;
+    conferenciaResultados = {};
+    conferenciaIndex      = 0;
+    document.getElementById('cvRequisicaoCard')?.classList.remove('hidden');
+    document.getElementById('cvResumo')?.classList.add('hidden');
+    abrirConferenciaTab();
+  });
+
+  // Ativa a conferência ao entrar na aba
+  document.querySelectorAll('[data-tab-target="carregar-veiculo"]').forEach(btn =>
+    btn.addEventListener('click', () => setTimeout(abrirConferenciaTab, 50))
+  );
+}
