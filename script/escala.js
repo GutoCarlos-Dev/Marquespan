@@ -21,7 +21,8 @@ const ESCALA_NIVEIS_GERENCIAMENTO = new Set([
     'balanca',
     'equipe_noturno',
     'adm_logistica',
-    'logistica'
+    'logistica',
+    'lider_balanca'
 ]);
 const DIARIA_NIVEIS_PERMITIDOS = new Set([
     'administrador',
@@ -43,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Removido: Injeção de estilos via JavaScript (centralizado no escala.css)
 
     const nivelUsuarioEscala = String(usuarioLogado.nivel || '').trim().toLowerCase();
-    const isAdministradorEscala = nivelUsuarioEscala === 'administrador';
+    const isAdministradorEscala = nivelUsuarioEscala === 'administrador' || nivelUsuarioEscala === 'lider_balanca';
     const podeGerenciarEscala = ESCALA_NIVEIS_GERENCIAMENTO.has(nivelUsuarioEscala);
     const podeAcessarDiaria = DIARIA_NIVEIS_PERMITIDOS.has(nivelUsuarioEscala);
     const isAdmPedidoEscala = nivelUsuarioEscala === 'adm_pedido';
