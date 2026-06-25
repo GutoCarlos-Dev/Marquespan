@@ -747,6 +747,10 @@
     color: #dc3545;
 }
 
+.btn-icon.edit {
+    color: #007bff;
+}
+
 .btn-icon.edit:hover {
     color: #0056b3;
 }

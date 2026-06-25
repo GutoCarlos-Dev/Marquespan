@@ -19,6 +19,7 @@ let carregamentosSalvos    = [];
 let requisicoesSalvas      = [];
 let conferenciadosIds      = new Set(); // carregamento_ids que já têm conferência registrada
 let conferenciaFinalizando = false; // guarda contra duplo clique/reentrada
+let conferenciaEmVisualizacao = false; // modo somente leitura (visualizar conferência salva)
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function escapeHtml(value) {
@@ -509,6 +510,10 @@ async function mostrarResumoConferencia() {
     }]);
   } catch (e) { console.error('Erro ao salvar conferência:', e); }
 
+  _renderizarConteudoResumo();
+}
+
+function _renderizarConteudoResumo() {
   const reqs = conferenciaAtiva.requisicoes;
   let totalOk = 0, totalDiv = 0, totalNao = 0;
   const linhas = reqs.map(req => {
@@ -557,6 +562,63 @@ async function mostrarResumoConferencia() {
       </div>
       ${renderTotalizadorHTML(totalizador)}
     </div>`;
+}
+
+// ── Visualizar conferência salva (somente leitura) ────────────────────────────
+async function visualizarConferenciaSalva(confId) {
+  const { data: conf, error } = await supabaseClient.from(CONFERENCIAS_TABLE).select('*').eq('id', confId).single();
+  if (error || !conf) { alert('Erro ao carregar conferência.'); return; }
+  const { data: reqs } = await supabaseClient
+    .from(REQUISICOES_TABLE).select('*').eq('carregamento_id', conf.carregamento_id).order('ordem');
+
+  conferenciaAtiva       = { requisicoes: reqs || [], placa: conf.placa || '', motorista: conf.motorista || '', dataSaida: conf.data_saida || '' };
+  conferenciaResultados  = conf.resultados || {};
+  conferenciaFinalizando = true;
+  conferenciaEmVisualizacao = true;
+
+  document.getElementById('cvSemCarregamento')?.classList.add('hidden');
+  document.getElementById('cvConferencia')?.classList.remove('hidden');
+  document.getElementById('cvRequisicaoCard')?.classList.add('hidden');
+  document.getElementById('cvResumo')?.classList.remove('hidden');
+
+  _renderizarConteudoResumo();
+
+  const btnVoltar = document.getElementById('btnCvReiniciar');
+  if (btnVoltar) { btnVoltar.innerHTML = '<i class="fas fa-arrow-left"></i> Fechar Visualização'; }
+}
+
+// ── Reabrir conferência para edição ──────────────────────────────────────────
+async function reabrirConferenciaParaEdicao(confId, placa, dataSaida) {
+  if (!confirm(`Reabrir a conferência da placa ${placa} (${dataSaida}) para edição?\n\nA conferência atual será descartada e você poderá refazê-la.`)) return;
+
+  const { data: conf, error } = await supabaseClient.from(CONFERENCIAS_TABLE).select('*').eq('id', confId).single();
+  if (error || !conf) { alert('Erro ao carregar conferência.'); return; }
+
+  await supabaseClient.from(CONFERENCIAS_TABLE).delete().eq('id', confId);
+
+  const { data: reqs } = await supabaseClient
+    .from(REQUISICOES_TABLE).select('*').eq('carregamento_id', conf.carregamento_id).order('ordem');
+  const ids = (reqs || []).map(r => r.id).filter(Boolean);
+  if (ids.length) {
+    await supabaseClient.from(REQUISICOES_TABLE).update({ status: 'AGUARDANDO CONFERENCIA' }).in('id', ids);
+  }
+
+  conferenciadosIds.delete(conf.carregamento_id);
+  conferenciaAtiva       = { requisicoes: reqs || [], placa: conf.placa || '', motorista: conf.motorista || '', dataSaida: conf.data_saida || '' };
+  conferenciaIndex       = 0;
+  conferenciaFinalizando = false;
+  conferenciaEmVisualizacao = false;
+  inicializarResultadosConferencia(conferenciaAtiva.requisicoes);
+  if (conf.resultados) Object.assign(conferenciaResultados, conf.resultados);
+
+  const btnFinalizar = document.getElementById('btnCvProxima');
+  if (btnFinalizar) { btnFinalizar.disabled = false; btnFinalizar.innerHTML = 'Próxima <i class="fas fa-chevron-right"></i>'; }
+
+  const btnVoltar = document.getElementById('btnCvReiniciar');
+  if (btnVoltar) { btnVoltar.innerHTML = '<i class="fas fa-list-ol"></i> Voltar à Fila'; }
+
+  renderizarConferenciaUI();
+  await popularHistoricoConferencias();
 }
 
 function renderTotalizadorHTML(totalizador) {
@@ -797,13 +859,21 @@ async function popularHistoricoConferencias() {
       <td class="text-center"><span class="cv-badge-ok">${c.total_ok}</span></td>
       <td class="text-center">${c.total_divergencias > 0 ? `<span class="cv-badge-div">${c.total_divergencias}</span>` : '<span class="cv-badge-ok">0</span>'}</td>
       <td class="text-center" style="white-space:nowrap">
-        <button type="button" class="btn-icon view"   data-carregar-conferencia="${escapeHtml(c.id)}" title="Reabrir conferência"><i class="fas fa-eye"></i></button>
+        <button type="button" class="btn-icon view"   data-visualizar-conferencia="${escapeHtml(c.id)}" title="Visualizar conferência"><i class="fas fa-eye"></i></button>
+        <button type="button" class="btn-icon edit"   data-editar-conferencia="${escapeHtml(c.id)}" data-conf-placa="${escapeHtml(c.placa || '-')}" data-conf-data="${dataSaida}" title="Reabrir para edição"><i class="fas fa-edit"></i></button>
         <button type="button" class="btn-icon delete" data-excluir-conferencia="${escapeHtml(c.id)}"  data-conf-placa="${escapeHtml(c.placa || '-')}" data-conf-data="${dataSaida}" title="Excluir conferência"><i class="fas fa-trash"></i></button>
       </td>
     </tr>`;
   }).join('');
-  tbody.querySelectorAll('[data-carregar-conferencia]').forEach(btn => {
-    btn.addEventListener('click', () => recarregarConferenciaSalva(btn.dataset.carregarConferencia));
+  tbody.querySelectorAll('[data-visualizar-conferencia]').forEach(btn => {
+    btn.addEventListener('click', () => visualizarConferenciaSalva(btn.dataset.visualizarConferencia));
+  });
+  tbody.querySelectorAll('[data-editar-conferencia]').forEach(btn => {
+    btn.addEventListener('click', () => reabrirConferenciaParaEdicao(
+      btn.dataset.editarConferencia,
+      btn.dataset.confPlaca,
+      btn.dataset.confData
+    ));
   });
   tbody.querySelectorAll('[data-excluir-conferencia]').forEach(btn => {
     btn.addEventListener('click', () => excluirConferencia(
@@ -925,7 +995,11 @@ export async function inicializarConferenciaPage() {
   document.getElementById('btnIniciarConferenciaHistorico')?.addEventListener('click', carregarConferenciaDoHistorico);
   document.getElementById('btnCvGerarRelatorio')?.addEventListener('click', gerarRelatorioConferencia);
   document.getElementById('btnCvReiniciar')?.addEventListener('click', async () => {
-    conferenciaAtiva = null; conferenciaResultados = {}; conferenciaIndex = 0; conferenciaFinalizando = false;
+    conferenciaAtiva = null; conferenciaResultados = {}; conferenciaIndex = 0; conferenciaFinalizando = false; conferenciaEmVisualizacao = false;
+    const btnVoltar = document.getElementById('btnCvReiniciar');
+    if (btnVoltar) { btnVoltar.innerHTML = '<i class="fas fa-list-ol"></i> Voltar à Fila'; }
+    const btnFinalizar = document.getElementById('btnCvProxima');
+    if (btnFinalizar) { btnFinalizar.disabled = false; btnFinalizar.innerHTML = 'Próxima <i class="fas fa-chevron-right"></i>'; }
     document.getElementById('cvRequisicaoCard')?.classList.remove('hidden');
     document.getElementById('cvResumo')?.classList.add('hidden');
     document.getElementById('cvSemCarregamento')?.classList.remove('hidden');
