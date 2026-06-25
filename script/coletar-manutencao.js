@@ -1430,11 +1430,37 @@ const ColetarManutencaoUI = {
 
         if (!confirm('Deseja realmente excluir este lançamento?')) return;
         try {
+            // Obtém a placa antes de deletar para atualizar situação do veículo depois
+            const { data: coletaDados } = await supabaseClient
+                .from('coletas_manutencao')
+                .select('placa')
+                .eq('id', id)
+                .single();
+            const placaExcluida = coletaDados?.placa || null;
+
             // Supabase deve estar configurado com ON DELETE CASCADE, mas por segurança deletamos os itens primeiro se necessário
             await supabaseClient.from('coletas_manutencao_checklist').delete().eq('coleta_id', id);
-            
+
             const { error } = await supabaseClient.from('coletas_manutencao').delete().eq('id', id);
             if (error) throw error;
+
+            // Recalcula situação do veículo: se não resta nenhum item INTERNADO, volta para 'ativo'
+            if (placaExcluida) {
+                const { count: qtdInternados } = await supabaseClient
+                    .from('coletas_manutencao_checklist')
+                    .select('id, coletas_manutencao!inner(placa)', { count: 'exact', head: true })
+                    .eq('status', 'INTERNADO')
+                    .eq('coletas_manutencao.placa', placaExcluida);
+
+                if (!qtdInternados || qtdInternados === 0) {
+                    await supabaseClient
+                        .from('veiculos')
+                        .update({ situacao: 'ativo' })
+                        .eq('placa', placaExcluida)
+                        .eq('situacao', 'INTERNADO');
+                }
+            }
+
             registrarAuditoria('EXCLUIR', MODULO_AUDITORIA, `Exclusão de coleta ID ${id}`);
             this.carregarLancamentos();
 

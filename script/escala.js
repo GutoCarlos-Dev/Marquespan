@@ -8851,12 +8851,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Função para destacar veículos com status INTERNADO
     async function destacarVeiculosInternados() {
         try {
-            // Busca todas as placas com situação INTERNADO
-            const [{ data: veiculos, error }, veiculosOficina] = await Promise.all([
+            // Fonte de verdade: registros ativos no checklist, não veiculos.situacao (que pode ficar desatualizado após exclusões)
+            const [{ data: itensInternados, error }, veiculosOficina] = await Promise.all([
                 supabaseClient
-                    .from('veiculos')
-                    .select('placa')
-                    .eq('situacao', 'INTERNADO'),
+                    .from('coletas_manutencao_checklist')
+                    .select('coletas_manutencao!inner(placa)')
+                    .eq('status', 'INTERNADO'),
                 listarVeiculosOficinaTroca().catch(err => {
                     console.warn('Oficinas dos veiculos internados nao carregadas:', err);
                     return [];
@@ -8868,7 +8868,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const placasInternadas = new Set((veiculos || []).map(v => normalizeVehiclePlate(v.placa)));
+            const placasInternadas = new Set(
+                (itensInternados || [])
+                    .map(item => normalizeVehiclePlate(item.coletas_manutencao?.placa))
+                    .filter(Boolean)
+            );
             const oficinasPorPlaca = new Map((veiculosOficina || []).map(item => [normalizeVehiclePlate(item.placa), item.oficina || 'Oficina nao informada']));
             const corFundoInternado = '#004085'; // Cor do fundo INTERNADO (azul escuro)
             const corTextoInternado = '#FFFFFF'; // Cor do texto INTERNADO (branco)
