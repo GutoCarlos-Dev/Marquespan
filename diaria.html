@@ -24,6 +24,16 @@
         </header>
 
         <section class="content-section diaria-page">
+            <nav class="tabs-container diaria-tabs" aria-label="Seções de diária">
+                <button type="button" class="tab-btn active" data-diaria-tab="calculo">
+                    <i class="fas fa-calculator"></i> Calcular Diaria
+                </button>
+                <button type="button" class="tab-btn" data-diaria-tab="cadastro-financeiro">
+                    <i class="fas fa-file-invoice-dollar"></i> Cadastro Financeiro
+                </button>
+            </nav>
+
+            <div id="diariaTabCalculo" class="diaria-tab-panel active" data-diaria-panel="calculo">
             <div class="filters-actions-container">
                 <div class="filter-card">
                     <h3><i class="fas fa-filter"></i> Selecao da Diaria</h3>
@@ -137,6 +147,66 @@
                             <tr><td colspan="9" style="text-align:center;">Nenhum calculo carregado.</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+            </div>
+
+            <div id="diariaTabCadastroFinanceiro" class="diaria-tab-panel" data-diaria-panel="cadastro-financeiro">
+                <div class="glass-panel diaria-financeiro-panel">
+                    <div class="diaria-financeiro-header">
+                        <h3><i class="fas fa-file-invoice-dollar"></i> Cadastro Financeiro</h3>
+                        <span id="diariaFinanceiroStatus">Cadastre os valores por filial.</span>
+                    </div>
+
+                    <form id="formCadastroFinanceiroDiaria" class="diaria-financeiro-form">
+                        <input type="hidden" id="financeiroDiariaId">
+                        <div class="form-grid diaria-financeiro-grid">
+                            <div class="form-group">
+                                <label for="financeiroDiariaFilial">Filial</label>
+                                <select id="financeiroDiariaFilial" class="glass-input" required>
+                                    <option value="">Selecione a Filial</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="financeiroDiariaValor">Diaria (Valor)</label>
+                                <input type="text" id="financeiroDiariaValor" class="glass-input" placeholder="Ex: 195,00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="financeiroJantaValor">Janta (Valor)</label>
+                                <input type="text" id="financeiroJantaValor" class="glass-input" placeholder="Ex: 25,00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="financeiroPernoiteValor">Per Noite (Valor)</label>
+                                <input type="text" id="financeiroPernoiteValor" class="glass-input" placeholder="Ex: 80,00" required>
+                            </div>
+                            <div class="form-group diaria-financeiro-actions">
+                                <button type="submit" class="btn-glass btn-blue">
+                                    <i class="fas fa-save"></i> Salvar
+                                </button>
+                                <button type="button" id="btnLimparFinanceiroDiaria" class="btn-glass">
+                                    <i class="fas fa-eraser"></i> Limpar
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="terceiro-table-wrap diaria-financeiro-table-wrap">
+                        <table class="data-grid diaria-financeiro-table">
+                            <thead>
+                                <tr>
+                                    <th>FILIAL</th>
+                                    <th>DIARIA</th>
+                                    <th>JANTA</th>
+                                    <th>PER NOITE</th>
+                                    <th>ULTIMA ALTERACAO</th>
+                                    <th>ACOES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyCadastroFinanceiroDiaria">
+                                <tr><td colspan="6" style="text-align:center;">Nenhum cadastro carregado.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </section>

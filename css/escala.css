@@ -1550,6 +1550,100 @@ body.escala-menu-oculto .menu-floating-toggle i {
     margin: 0 18px;
 }
 
+.diaria-tabs {
+    margin-bottom: 14px;
+}
+
+.diaria-tab-panel {
+    display: none;
+}
+
+.diaria-tab-panel.active {
+    display: block;
+}
+
+.diaria-financeiro-panel {
+    padding: 18px;
+}
+
+.diaria-financeiro-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.diaria-financeiro-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 18px;
+}
+
+.diaria-financeiro-header span {
+    color: #66736b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.diaria-financeiro-grid {
+    grid-template-columns: minmax(160px, 1fr) repeat(3, minmax(140px, 0.8fr)) auto;
+    align-items: end;
+    gap: 12px;
+}
+
+.diaria-financeiro-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 0;
+}
+
+.diaria-financeiro-actions .btn-glass {
+    min-height: 42px;
+    white-space: nowrap;
+}
+
+.diaria-financeiro-table-wrap {
+    margin-top: 18px;
+}
+
+.diaria-financeiro-table {
+    min-width: 900px;
+}
+
+.diaria-financeiro-table th:last-child,
+.diaria-financeiro-table td:last-child {
+    text-align: center;
+    width: 150px;
+}
+
+.diaria-financeiro-row-actions {
+    display: inline-flex;
+    justify-content: center;
+    gap: 6px;
+}
+
+.diaria-financeiro-row-actions button {
+    width: 34px;
+    height: 32px;
+    border: 1px solid #dfe8e2;
+    border-radius: 6px;
+    background: #fff;
+    color: #006937;
+    cursor: pointer;
+}
+
+.diaria-financeiro-row-actions button:hover {
+    background: #e8f4ec;
+}
+
+.diaria-financeiro-row-actions button[data-financeiro-action="delete"] {
+    color: #a71d2a;
+}
+
 @media (max-width: 1180px) {
     .diaria-toolbar {
         grid-template-columns: 1fr;
@@ -1557,6 +1651,14 @@ body.escala-menu-oculto .menu-floating-toggle i {
 
     .diaria-card-grid {
         grid-template-columns: minmax(180px, 0.7fr) minmax(340px, 1.2fr);
+    }
+
+    .diaria-financeiro-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .diaria-financeiro-actions {
+        grid-column: 1 / -1;
     }
 
     .diaria-card-filtros {

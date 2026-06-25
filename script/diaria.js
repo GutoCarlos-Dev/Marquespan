@@ -22,6 +22,7 @@ let usuarioLogado = null;
 let diariaDadosAtual = [];
 let diariaFuncoesCadastroCache = [];
 let filiaisCache = [];
+let cadastroFinanceiroDiariaCache = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -40,8 +41,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     preencherCacheDatas();
     carregarSemanas();
     await carregarFiliais();
+    await carregarCadastroFinanceiroDiaria();
     configurarEventos();
     atualizarContextoDiaria();
+    aplicarCadastroFinanceiroNaDiaria();
 });
 
 function getNivelUsuario() {
@@ -67,7 +70,22 @@ function configurarEventos() {
     document.getElementById('diariaFiltroFuncao')?.addEventListener('change', renderDiariaTabela);
     document.getElementById('diariaBuscaGrid')?.addEventListener('input', renderDiariaTabela);
     document.getElementById('escalaSemana')?.addEventListener('change', atualizarContextoDiaria);
-    document.getElementById('escalaFilial')?.addEventListener('change', atualizarContextoDiaria);
+    document.getElementById('escalaFilial')?.addEventListener('change', () => {
+        atualizarContextoDiaria();
+        aplicarCadastroFinanceiroNaDiaria();
+    });
+    document.querySelectorAll('[data-diaria-tab]')?.forEach(button => {
+        button.addEventListener('click', () => trocarAbaDiaria(button.dataset.diariaTab));
+    });
+    document.getElementById('formCadastroFinanceiroDiaria')?.addEventListener('submit', salvarCadastroFinanceiroDiaria);
+    document.getElementById('btnLimparFinanceiroDiaria')?.addEventListener('click', limparFormularioFinanceiroDiaria);
+    document.getElementById('tbodyCadastroFinanceiroDiaria')?.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-financeiro-action]');
+        if (!button) return;
+        const id = button.dataset.financeiroId;
+        if (button.dataset.financeiroAction === 'edit') editarCadastroFinanceiroDiaria(id);
+        if (button.dataset.financeiroAction === 'delete') excluirCadastroFinanceiroDiaria(id);
+    });
 
     document.querySelector('.diaria-table')?.addEventListener('click', (event) => {
         const sortButton = event.target.closest('[data-diaria-sort]');
@@ -189,12 +207,200 @@ async function carregarFiliais() {
         const label = filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome;
         return `<option value="${escapeAttribute(value)}">${escapeAttribute(label)}</option>`;
     }).join('');
+    preencherSelectFinanceiroFilial();
 
     const filialUsuario = usuarioLogado?.filial || '';
     if (filialUsuario && Array.from(selectFilial.options).some(opt => opt.value === filialUsuario)) {
         selectFilial.value = filialUsuario;
     }
     selectFilial.disabled = !podeGerenciar() && Boolean(filialUsuario);
+}
+
+function preencherSelectFinanceiroFilial() {
+    const select = document.getElementById('financeiroDiariaFilial');
+    if (!select) return;
+
+    const valorAtual = select.value;
+    select.innerHTML = '<option value="">Selecione a Filial</option>' + filiaisCache.map(filial => {
+        const value = filial.sigla || filial.nome || '';
+        const label = filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome;
+        return `<option value="${escapeAttribute(value)}">${escapeAttribute(label)}</option>`;
+    }).join('');
+
+    if (valorAtual && Array.from(select.options).some(opt => opt.value === valorAtual)) {
+        select.value = valorAtual;
+    } else if (!podeGerenciar() && usuarioLogado?.filial) {
+        select.value = usuarioLogado.filial;
+    }
+    select.disabled = !podeGerenciar() && Boolean(usuarioLogado?.filial);
+}
+
+function trocarAbaDiaria(tabId) {
+    document.querySelectorAll('[data-diaria-tab]').forEach(button => {
+        button.classList.toggle('active', button.dataset.diariaTab === tabId);
+    });
+    document.querySelectorAll('[data-diaria-panel]').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.diariaPanel === tabId);
+    });
+}
+
+async function carregarCadastroFinanceiroDiaria() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('diaria_cadastro_financeiro')
+            .select('id, filial, valor_diaria, valor_janta, valor_per_noite, ultima_alteracao_por, ultima_alteracao_em, created_at')
+            .order('filial');
+
+        if (error) throw error;
+        cadastroFinanceiroDiariaCache = data || [];
+        renderCadastroFinanceiroDiaria();
+    } catch (error) {
+        cadastroFinanceiroDiariaCache = [];
+        renderCadastroFinanceiroDiaria();
+        setText('diariaFinanceiroStatus', 'Tabela de cadastro financeiro indisponivel. Aplique o SQL em supabase/2026-06-25_create_diaria_cadastro_financeiro.sql.');
+        console.warn('Cadastro financeiro de diaria nao carregado:', error);
+    }
+}
+
+function getCadastroFinanceiroPorFilial(filial = getFilial()) {
+    const filialNormalizada = normalizeString(filial);
+    if (!filialNormalizada) return null;
+    return cadastroFinanceiroDiariaCache.find(item => normalizeString(item.filial) === filialNormalizada) || null;
+}
+
+function aplicarCadastroFinanceiroNaDiaria() {
+    const cadastro = getCadastroFinanceiroPorFilial();
+    const inputValor = document.getElementById('diariaValorSemana');
+    if (!cadastro || !inputValor) return;
+    inputValor.value = formatNumeroMoedaInput(cadastro.valor_diaria);
+    recalcularDiariaComValorAtual();
+}
+
+function renderCadastroFinanceiroDiaria() {
+    const tbody = document.getElementById('tbodyCadastroFinanceiroDiaria');
+    if (!tbody) return;
+
+    if (cadastroFinanceiroDiariaCache.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum cadastro financeiro encontrado.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = cadastroFinanceiroDiariaCache.map(item => `
+        <tr>
+            <td>${escapeAttribute(item.filial)}</td>
+            <td>${formatMoedaBR(item.valor_diaria)}</td>
+            <td>${formatMoedaBR(item.valor_janta)}</td>
+            <td>${formatMoedaBR(item.valor_per_noite)}</td>
+            <td>${formatCadastroFinanceiroAlteracao(item)}</td>
+            <td>
+                <div class="diaria-financeiro-row-actions">
+                    <button type="button" data-financeiro-action="edit" data-financeiro-id="${escapeAttribute(item.id)}" title="Editar">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button type="button" data-financeiro-action="delete" data-financeiro-id="${escapeAttribute(item.id)}" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function formatCadastroFinanceiroAlteracao(item) {
+    const data = item.ultima_alteracao_em || item.created_at;
+    const usuario = item.ultima_alteracao_por || '-';
+    if (!data) return escapeAttribute(usuario);
+    return `${formatDataHoraBR(data)}<br><small>${escapeAttribute(usuario)}</small>`;
+}
+
+async function salvarCadastroFinanceiroDiaria(event) {
+    event.preventDefault();
+
+    const id = document.getElementById('financeiroDiariaId')?.value || '';
+    const filial = document.getElementById('financeiroDiariaFilial')?.value || '';
+    const valorDiaria = parseMoedaBR(document.getElementById('financeiroDiariaValor')?.value);
+    const valorJanta = parseMoedaBR(document.getElementById('financeiroJantaValor')?.value);
+    const valorPerNoite = parseMoedaBR(document.getElementById('financeiroPernoiteValor')?.value);
+
+    if (!filial) return alert('Selecione a filial.');
+    if (valorDiaria <= 0) return alert('Informe o valor da diaria.');
+    if (valorJanta < 0 || valorPerNoite < 0) return alert('Os valores de janta e per noite nao podem ser negativos.');
+
+    const existente = id ? null : getCadastroFinanceiroPorFilial(filial);
+    const payload = comAuditoria({
+        filial,
+        valor_diaria: valorDiaria,
+        valor_janta: valorJanta,
+        valor_per_noite: valorPerNoite
+    });
+
+    try {
+        if (id || existente?.id) {
+            const { error } = await supabaseClient
+                .from('diaria_cadastro_financeiro')
+                .update(payload)
+                .eq('id', id || existente.id);
+            if (error) throw error;
+        } else {
+            const { error } = await supabaseClient
+                .from('diaria_cadastro_financeiro')
+                .insert(payload);
+            if (error) throw error;
+        }
+
+        registrarAuditoria('INCLUIR', 'Diaria', `Cadastro financeiro de diaria - Filial: ${filial}`);
+        await carregarCadastroFinanceiroDiaria();
+        limparFormularioFinanceiroDiaria();
+        aplicarCadastroFinanceiroNaDiaria();
+        setText('diariaFinanceiroStatus', 'Cadastro financeiro salvo com sucesso.');
+    } catch (error) {
+        console.error('Erro ao salvar cadastro financeiro da diaria:', error);
+        alert('Erro ao salvar cadastro financeiro. Detalhe: ' + error.message);
+    }
+}
+
+function editarCadastroFinanceiroDiaria(id) {
+    const item = cadastroFinanceiroDiariaCache.find(row => row.id === id);
+    if (!item) return;
+
+    setValue('financeiroDiariaId', item.id);
+    setValue('financeiroDiariaFilial', item.filial);
+    setValue('financeiroDiariaValor', formatNumeroMoedaInput(item.valor_diaria));
+    setValue('financeiroJantaValor', formatNumeroMoedaInput(item.valor_janta));
+    setValue('financeiroPernoiteValor', formatNumeroMoedaInput(item.valor_per_noite));
+    setText('diariaFinanceiroStatus', `Editando cadastro financeiro da filial ${item.filial}.`);
+    trocarAbaDiaria('cadastro-financeiro');
+}
+
+async function excluirCadastroFinanceiroDiaria(id) {
+    const item = cadastroFinanceiroDiariaCache.find(row => row.id === id);
+    if (!item) return;
+    if (!confirm(`Excluir cadastro financeiro da filial ${item.filial}?`)) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('diaria_cadastro_financeiro')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+
+        registrarAuditoria('EXCLUIR', 'Diaria', `Cadastro financeiro de diaria - Filial: ${item.filial}`);
+        await carregarCadastroFinanceiroDiaria();
+        limparFormularioFinanceiroDiaria();
+        setText('diariaFinanceiroStatus', 'Cadastro financeiro excluido com sucesso.');
+    } catch (error) {
+        console.error('Erro ao excluir cadastro financeiro da diaria:', error);
+        alert('Erro ao excluir cadastro financeiro. Detalhe: ' + error.message);
+    }
+}
+
+function limparFormularioFinanceiroDiaria() {
+    setValue('financeiroDiariaId', '');
+    setValue('financeiroDiariaFilial', !podeGerenciar() ? (usuarioLogado?.filial || '') : '');
+    setValue('financeiroDiariaValor', '');
+    setValue('financeiroJantaValor', '');
+    setValue('financeiroPernoiteValor', '');
+    setText('diariaFinanceiroStatus', 'Cadastre os valores por filial.');
 }
 
 function atualizarContextoDiaria() {
@@ -635,6 +841,11 @@ function setText(id, text) {
     if (el) el.textContent = text;
 }
 
+function setValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value ?? '';
+}
+
 function getDiariaFuncoesSelecionadas() {
     const select = document.getElementById('diariaFiltroFuncao');
     if (!select) return [];
@@ -942,11 +1153,27 @@ function formatMoedaBR(value) {
     return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function formatNumeroMoedaInput(value) {
+    return Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function formatDataISOBR(dataISO) {
     const value = String(dataISO || '').slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
     const [year, month, day] = value.split('-');
     return `${day}/${month}/${year}`;
+}
+
+function formatDataHoraBR(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return escapeAttribute(value);
+    return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 function cleanImportValue(value, { keepZero = false } = {}) {
