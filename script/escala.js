@@ -5181,6 +5181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let jantaPernoiteEscalaDados = [];
     let jantaPernoiteEscalaValores = { valorJanta: 0, valorPerNoite: 0 };
     const jantaPernoiteEscalaSort = { key: 'nome', direction: 'asc' };
+    const jantaPernoiteEscalaUltimoCheck = { janta: null, pernoite: null };
 
     function ensureModalJantaPernoiteEscala() {
         let modal = document.getElementById('modalJantaPernoiteEscala');
@@ -5258,6 +5259,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (event.target.closest('#btnSalvarJantaPernoiteEscala')) salvarJantaPernoiteEscala();
 
+            const checkJantaPernoite = event.target.closest('.jp-escala-check');
+            if (checkJantaPernoite) {
+                aplicarCliqueCheckboxJantaPernoiteEscala(event, checkJantaPernoite);
+                return;
+            }
+
             const sortButton = event.target.closest('[data-jp-escala-sort]');
             if (sortButton) {
                 const key = sortButton.dataset.jpEscalaSort;
@@ -5289,10 +5296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             + (item.pagaPerNoite ? Number(jantaPernoiteEscalaValores.valorPerNoite || 0) : 0);
     }
 
-    function renderJantaPernoiteEscalaTabela() {
-        const tbody = document.getElementById('tbodyJantaPernoiteEscala');
-        if (!tbody) return;
-
+    function getDadosVisiveisJantaPernoiteEscala() {
         const termo = normalizeString(document.getElementById('jantaPernoiteEscalaBusca')?.value);
         const dadosFiltrados = jantaPernoiteEscalaDados.filter(item => !termo
             || normalizeString(item.nome).includes(termo)
@@ -5301,23 +5305,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             || normalizeString(item.rota).includes(termo)
             || normalizeVehiclePlate(item.placa).includes(normalizeVehiclePlate(termo)));
 
-        if (!jantaPernoiteEscalaDados.length) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum motorista ou auxiliar encontrado na escala aberta.</td></tr>';
-            return;
-        }
-
-        if (!dadosFiltrados.length) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum funcionário encontrado para a busca.</td></tr>';
-            return;
-        }
-
-        const dadosOrdenados = [...dadosFiltrados].sort((a, b) => {
+        return [...dadosFiltrados].sort((a, b) => {
             const key = jantaPernoiteEscalaSort.key;
             const direction = jantaPernoiteEscalaSort.direction === 'desc' ? -1 : 1;
             if (key === 'valor') return (getValorJantaPernoiteEscala(a) - getValorJantaPernoiteEscala(b)) * direction;
             if (key === 'rota') return String(a.rota || '').localeCompare(String(b.rota || ''), 'pt-BR', { numeric: true, sensitivity: 'base' }) * direction;
             return String(a[key] || '').localeCompare(String(b[key] || ''), 'pt-BR', { numeric: true, sensitivity: 'base' }) * direction;
         });
+    }
+
+    function renderJantaPernoiteEscalaTabela() {
+        const tbody = document.getElementById('tbodyJantaPernoiteEscala');
+        if (!tbody) return;
+
+        const dadosOrdenados = getDadosVisiveisJantaPernoiteEscala();
+
+        if (!jantaPernoiteEscalaDados.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum motorista ou auxiliar encontrado na escala aberta.</td></tr>';
+            return;
+        }
+
+        if (!dadosOrdenados.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum funcionário encontrado para a busca.</td></tr>';
+            return;
+        }
 
         tbody.innerHTML = dadosOrdenados.map(item => `
             <tr>
@@ -5331,6 +5342,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${formatMoedaBR(getValorJantaPernoiteEscala(item))}</td>
             </tr>
         `).join('');
+    }
+
+    function aplicarCliqueCheckboxJantaPernoiteEscala(event, checkbox) {
+        const campo = checkbox.dataset.campo;
+        const key = checkbox.dataset.key;
+        const checked = checkbox.checked;
+        const propriedade = campo === 'janta' ? 'pagaJanta' : 'pagaPerNoite';
+        if (!campo || !key || !propriedade) return;
+
+        const dadosVisiveis = getDadosVisiveisJantaPernoiteEscala();
+        const ultimoKey = jantaPernoiteEscalaUltimoCheck[campo];
+        const atualIndex = dadosVisiveis.findIndex(item => item.key === key);
+        const ultimoIndex = dadosVisiveis.findIndex(item => item.key === ultimoKey);
+
+        if (event.shiftKey && ultimoKey && atualIndex >= 0 && ultimoIndex >= 0 && atualIndex !== ultimoIndex) {
+            const [from, to] = atualIndex < ultimoIndex ? [atualIndex, ultimoIndex] : [ultimoIndex, atualIndex];
+            for (let index = from; index <= to; index++) {
+                dadosVisiveis[index][propriedade] = checked;
+            }
+        } else {
+            const item = jantaPernoiteEscalaDados.find(row => row.key === key);
+            if (item) item[propriedade] = checked;
+        }
+
+        jantaPernoiteEscalaUltimoCheck[campo] = key;
+        window.setTimeout(renderJantaPernoiteEscalaTabela, 0);
     }
 
     function aplicarSelecaoLoteJantaPernoiteEscala(campo, acao) {
@@ -5440,6 +5477,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             jantaPernoiteEscalaValores = await carregarValoresJantaPernoiteEscala(filial);
             jantaPernoiteEscalaDados = await aplicarCadastroFuncionariosJantaPernoiteEscala(coletarFuncionariosJantaPernoiteEscala(), filial);
+            jantaPernoiteEscalaUltimoCheck.janta = null;
+            jantaPernoiteEscalaUltimoCheck.pernoite = null;
 
             modal.querySelector('#jantaPernoiteEscalaContexto').textContent = `${contexto.dia} - ${contexto.dataBR} | Filial: ${filial}`;
             modal.querySelector('#jantaPernoiteEscalaValorJanta').textContent = formatMoedaBR(jantaPernoiteEscalaValores.valorJanta);
