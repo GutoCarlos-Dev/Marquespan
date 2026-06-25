@@ -3008,19 +3008,21 @@ function imprimirResumo() {
 
 export async function carregarClientes() {
   const corpoTabela = document.getElementById('corpoTabelaClientes');
-  corpoTabela.innerHTML = '';
+  if (corpoTabela) corpoTabela.innerHTML = '';
 
   try {
     clientesCarregamento = await buscarTodosClientesCarregamento();
   } catch (error) {
-    corpoTabela.innerHTML = '<tr><td colspan="7">Erro ao carregar clientes.</td></tr>';
+    if (corpoTabela) corpoTabela.innerHTML = '<tr><td colspan="7">Erro ao carregar clientes.</td></tr>';
     console.error(error);
     return;
   }
 
-  atualizarContadorClientesAtivos();
   atualizarDatalistRequisicaoClientes();
-  renderizarClientes(clientesCarregamento);
+  if (corpoTabela) {
+    atualizarContadorClientesAtivos();
+    renderizarClientes(clientesCarregamento);
+  }
 }
 
 async function buscarTodosClientesCarregamento() {
