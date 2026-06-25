@@ -1644,6 +1644,53 @@ body.escala-menu-oculto .menu-floating-toggle i {
     color: #a71d2a;
 }
 
+.diaria-jp-selection {
+    grid-template-columns: minmax(130px, 180px) minmax(150px, 180px) minmax(380px, auto);
+    align-items: end;
+    gap: 12px;
+}
+
+.diaria-jp-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 0;
+}
+
+.diaria-jp-actions .btn-glass,
+.diaria-jp-actions .pdf-expedicao-btn {
+    min-height: 42px;
+    white-space: nowrap;
+}
+
+.diaria-jp-toolbar {
+    grid-template-columns: 1fr;
+}
+
+.diaria-jp-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.diaria-jp-table {
+    min-width: 1240px;
+}
+
+.diaria-jp-table th:nth-child(n+8),
+.diaria-jp-table td:nth-child(n+8) {
+    text-align: center;
+}
+
+.diaria-jp-toggle {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #006937;
+}
+
+.diaria-jp-toggle[data-jp-field="desconto"] {
+    accent-color: #a71d2a;
+}
+
 @media (max-width: 1180px) {
     .diaria-toolbar {
         grid-template-columns: 1fr;
@@ -1658,6 +1705,15 @@ body.escala-menu-oculto .menu-floating-toggle i {
     }
 
     .diaria-financeiro-actions {
+        grid-column: 1 / -1;
+    }
+
+    .diaria-jp-selection,
+    .diaria-jp-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .diaria-jp-actions {
         grid-column: 1 / -1;
     }
 
