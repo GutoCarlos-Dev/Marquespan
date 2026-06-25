@@ -678,6 +678,13 @@ body.escala-menu-oculto .menu-floating-toggle i {
     background: linear-gradient(135deg, #6f42c1, #45247a);
 }
 
+.floating-janta-pernoite-btn {
+    right: 100px;
+    bottom: 262px;
+    min-width: 180px;
+    background: linear-gradient(135deg, #f59f00, #b86b00);
+}
+
 /* === MODAL TERCEIRO POR ROTA === */
 .terceiro-modal {
     position: fixed;
@@ -733,6 +740,72 @@ body.escala-menu-oculto .menu-floating-toggle i {
     padding: 8px 18px 0;
     color: #666;
     font-size: 12px;
+}
+
+.janta-pernoite-escala-modal-content {
+    width: min(1040px, 96vw);
+}
+
+.janta-pernoite-escala-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(140px, 180px)) minmax(260px, 1fr);
+    gap: 12px;
+    padding: 14px 18px;
+    align-items: stretch;
+}
+
+.janta-pernoite-escala-metric {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #f8fafc;
+}
+
+.janta-pernoite-escala-metric span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.janta-pernoite-escala-metric strong {
+    display: block;
+    margin-top: 4px;
+    color: #0f5132;
+    font-size: 16px;
+}
+
+.janta-pernoite-escala-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.janta-pernoite-escala-actions .pdf-expedicao-btn {
+    min-height: 34px;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.janta-pernoite-escala-search {
+    padding: 0 18px 12px;
+}
+
+.janta-pernoite-escala-search .form-group {
+    width: min(380px, 100%);
+    margin-bottom: 0;
+}
+
+.janta-pernoite-escala-table-wrap {
+    margin: 0 18px 16px;
+}
+
+.janta-pernoite-escala-table-wrap .data-grid th,
+.janta-pernoite-escala-table-wrap .data-grid td {
+    white-space: nowrap;
 }
 
 /* === MODAL GERAR BOLETA === */
@@ -1645,26 +1718,24 @@ body.escala-menu-oculto .menu-floating-toggle i {
 }
 
 .diaria-jp-selection {
-    grid-template-columns: minmax(130px, 180px) minmax(150px, 180px) minmax(380px, auto);
+    grid-template-columns: minmax(150px, 220px) minmax(150px, 200px) auto;
     align-items: end;
     gap: 12px;
 }
 
 .diaria-jp-actions {
     display: flex;
-    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 0;
 }
 
-.diaria-jp-actions .btn-glass,
-.diaria-jp-actions .pdf-expedicao-btn {
+.diaria-jp-actions .btn-glass {
     min-height: 42px;
     white-space: nowrap;
 }
 
 .diaria-jp-toolbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
 }
 
 .diaria-jp-summary {
@@ -1673,6 +1744,107 @@ body.escala-menu-oculto .menu-floating-toggle i {
 
 .diaria-jp-table {
     min-width: 1240px;
+}
+
+.diaria-jp-actions-card .diaria-actions-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.diaria-jp-historico {
+    margin: 0 18px 12px;
+    border: 1px solid #dfe8e2;
+    border-radius: 8px;
+    background: #f7fbf8;
+    padding: 12px;
+}
+
+.diaria-jp-historico-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.diaria-jp-historico-header h4 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: #006937;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.diaria-jp-historico-header .btn-glass {
+    min-height: 34px;
+    padding: 0 12px;
+}
+
+.diaria-jp-historico-wrap {
+    max-height: 220px;
+    overflow: auto;
+}
+
+.diaria-jp-historico-table {
+    min-width: 980px;
+}
+
+.diaria-jp-historico-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.diaria-jp-historico-table th:last-child,
+.diaria-jp-historico-table td:last-child {
+    text-align: center;
+    width: 150px;
+}
+
+.diaria-jp-grid-tools {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 18px 10px;
+}
+
+.diaria-jp-grid-tools .form-group {
+    width: min(360px, 100%);
+    margin-bottom: 0;
+}
+
+.diaria-jp-th-actions {
+    display: grid;
+    gap: 5px;
+    justify-items: center;
+    min-width: 120px;
+}
+
+.diaria-jp-th-actions > span {
+    font-weight: 800;
+}
+
+.diaria-jp-th-actions > div {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+}
+
+.diaria-jp-th-actions button {
+    border: 1px solid #006937;
+    border-radius: 5px;
+    background: #e8f4ec;
+    color: #006937;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 6px;
+}
+
+.diaria-jp-th-actions button:hover {
+    background: #006937;
+    color: #fff;
 }
 
 .diaria-jp-table th:nth-child(n+8),
@@ -1738,6 +1910,11 @@ body.escala-menu-oculto .menu-floating-toggle i {
         bottom: 204px;
     }
 
+    .floating-janta-pernoite-btn {
+        right: 100px;
+        bottom: 262px;
+    }
+
     .terceiro-form-grid,
     .troca-funcionario-form-grid,
     .boleta-form-grid,
@@ -1773,6 +1950,18 @@ body.escala-menu-oculto .menu-floating-toggle i {
     .faltas-form-grid,
     .faltas-modal-grid {
         grid-template-columns: 1fr;
+    }
+
+    .janta-pernoite-escala-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .janta-pernoite-escala-actions {
+        justify-content: stretch;
+    }
+
+    .janta-pernoite-escala-actions .pdf-expedicao-btn {
+        flex: 1 1 140px;
     }
 
     .faltas-aplicar-btn {

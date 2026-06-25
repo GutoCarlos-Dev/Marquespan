@@ -24,6 +24,7 @@ let diariaFuncoesCadastroCache = [];
 let filiaisCache = [];
 let cadastroFinanceiroDiariaCache = [];
 let jantaPernoiteDadosAtual = [];
+let historicoJantaPernoiteCache = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -85,8 +86,13 @@ function configurarEventos() {
     document.getElementById('btnSalvarJantaPernoite')?.addEventListener('click', salvarJantaPernoite);
     document.getElementById('btnXLSXJantaPernoite')?.addEventListener('click', gerarXLSXJantaPernoite);
     document.getElementById('btnPDFJantaPernoite')?.addEventListener('click', gerarPDFJantaPernoite);
-    document.getElementById('jpFilial')?.addEventListener('change', atualizarContextoJantaPernoite);
+    document.getElementById('btnAtualizarHistoricoJantaPernoite')?.addEventListener('click', carregarHistoricoJantaPernoite);
+    document.getElementById('jpFilial')?.addEventListener('change', () => {
+        atualizarContextoJantaPernoite();
+        carregarHistoricoJantaPernoite();
+    });
     document.getElementById('jpData')?.addEventListener('change', atualizarContextoJantaPernoite);
+    document.getElementById('jpBuscaFuncionario')?.addEventListener('input', renderJantaPernoiteTabela);
     document.getElementById('tbodyCadastroFinanceiroDiaria')?.addEventListener('click', (event) => {
         const button = event.target.closest('[data-financeiro-action]');
         if (!button) return;
@@ -98,6 +104,21 @@ function configurarEventos() {
         const toggle = event.target.closest('[data-jp-field]');
         if (!toggle) return;
         atualizarJantaPernoiteManual(toggle.dataset.jpKey, toggle.dataset.jpField, toggle.checked);
+    });
+    document.querySelectorAll('[data-jp-bulk-field]').forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            aplicarSelecaoJantaPernoiteEmMassa(button.dataset.jpBulkField, button.dataset.jpBulkAction === 'select');
+        });
+    });
+    document.getElementById('tbodyHistoricoJantaPernoite')?.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-jp-historico-action]');
+        if (!button) return;
+        const id = button.dataset.jpHistoricoId;
+        if (button.dataset.jpHistoricoAction === 'edit') abrirHistoricoJantaPernoite(id);
+        if (button.dataset.jpHistoricoAction === 'pdf') gerarPDFHistoricoJantaPernoite(id);
+        if (button.dataset.jpHistoricoAction === 'delete') excluirHistoricoJantaPernoite(id);
     });
 
     document.querySelector('.diaria-table')?.addEventListener('click', (event) => {
@@ -442,6 +463,7 @@ function inicializarJantaPernoite() {
         inputData.value = new Date().toISOString().slice(0, 10);
     }
     atualizarContextoJantaPernoite();
+    carregarHistoricoJantaPernoite();
 }
 
 function getJantaPernoiteFilial() {
@@ -474,6 +496,159 @@ function atualizarContextoJantaPernoite() {
     setText('jpValorJanta', formatMoedaBR(cadastro?.valor_janta || 0));
     setText('jpValorPernoite', formatMoedaBR(cadastro?.valor_per_noite || 0));
     atualizarResumoJantaPernoite();
+}
+
+async function carregarHistoricoJantaPernoite() {
+    const tbody = document.getElementById('tbodyHistoricoJantaPernoite');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando historico...</td></tr>';
+
+    try {
+        let query = supabaseClient
+            .from('diaria_janta_pernoite')
+            .select('id, data_ref, filial, total_funcionarios, total_janta, total_per_noite, total_desconto, total_pagar, ultima_alteracao_por, ultima_alteracao_em, created_at')
+            .order('data_ref', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(80);
+
+        const filial = getJantaPernoiteFilial();
+        if (filial) query = query.eq('filial', filial);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        historicoJantaPernoiteCache = data || [];
+        renderHistoricoJantaPernoite();
+    } catch (error) {
+        historicoJantaPernoiteCache = [];
+        console.warn('Historico de janta e pernoite nao carregado:', error);
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#dc3545;">Erro ao carregar historico.</td></tr>';
+    }
+}
+
+function renderHistoricoJantaPernoite() {
+    const tbody = document.getElementById('tbodyHistoricoJantaPernoite');
+    if (!tbody) return;
+
+    if (historicoJantaPernoiteCache.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum historico salvo encontrado.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = historicoJantaPernoiteCache.map(item => `
+        <tr>
+            <td>${formatDataISOBR(item.data_ref)}</td>
+            <td>${escapeAttribute(item.filial)}</td>
+            <td>${Number(item.total_funcionarios || 0)}</td>
+            <td>${formatMoedaBR(item.total_janta)}</td>
+            <td>${formatMoedaBR(item.total_per_noite)}</td>
+            <td>${formatMoedaBR(item.total_desconto)}</td>
+            <td>${formatMoedaBR(item.total_pagar)}</td>
+            <td>${formatCadastroFinanceiroAlteracao(item)}</td>
+            <td>
+                <div class="diaria-financeiro-row-actions">
+                    <button type="button" data-jp-historico-action="edit" data-jp-historico-id="${escapeAttribute(item.id)}" title="Abrir para editar">
+                        <i class="fas fa-folder-open"></i>
+                    </button>
+                    <button type="button" data-jp-historico-action="pdf" data-jp-historico-id="${escapeAttribute(item.id)}" title="Gerar PDF">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                    <button type="button" data-jp-historico-action="delete" data-jp-historico-id="${escapeAttribute(item.id)}" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function buscarLancamentoJantaPernoite(id) {
+    const { data, error } = await supabaseClient
+        .from('diaria_janta_pernoite')
+        .select('*, diaria_janta_pernoite_itens(*)')
+        .eq('id', id)
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+function mapearItensHistoricoJantaPernoite(lancamento) {
+    return (lancamento?.diaria_janta_pernoite_itens || []).map(item => recalcularItemJantaPernoite({
+        key: normalizeString(item.funcionario_nome || item.nome_completo || item.cpf),
+        nome: cleanImportValue(item.funcionario_nome),
+        nomeCompleto: cleanImportValue(item.nome_completo),
+        cpf: cleanImportValue(item.cpf),
+        funcao: cleanImportValue(item.funcao),
+        tipo: cleanImportValue(item.tipo_funcionario),
+        rota: cleanImportValue(item.rota),
+        placa: cleanImportValue(item.placa),
+        motivoFalta: cleanImportValue(item.motivo_desconto),
+        faltou: Boolean(item.faltou),
+        pagaJanta: Boolean(item.paga_janta),
+        pagaPerNoite: Boolean(item.paga_per_noite),
+        desconto: Boolean(item.desconto),
+        valorJanta: Number(lancamento.valor_janta || item.valor_janta || 0),
+        valorPerNoite: Number(lancamento.valor_per_noite || item.valor_per_noite || 0)
+    })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+async function abrirHistoricoJantaPernoite(id) {
+    try {
+        const lancamento = await buscarLancamentoJantaPernoite(id);
+        setValue('jpFilial', lancamento.filial || '');
+        setValue('jpData', String(lancamento.data_ref || '').slice(0, 10));
+        setValue('jpBuscaFuncionario', '');
+
+        jantaPernoiteDadosAtual = mapearItensHistoricoJantaPernoite(lancamento);
+        renderJantaPernoiteTabela();
+        atualizarContextoJantaPernoite();
+        setText('jpContexto', `Historico aberto para edicao: ${formatDataISOBR(lancamento.data_ref)} - ${lancamento.filial}`);
+    } catch (error) {
+        console.error('Erro ao abrir historico de janta e pernoite:', error);
+        alert('Erro ao abrir historico. Detalhe: ' + error.message);
+    }
+}
+
+async function gerarPDFHistoricoJantaPernoite(id) {
+    try {
+        const lancamento = await buscarLancamentoJantaPernoite(id);
+        const dados = mapearItensHistoricoJantaPernoite(lancamento);
+        await gerarPDFJantaPernoiteComDados({
+            dados,
+            dataRef: lancamento.data_ref,
+            filial: lancamento.filial,
+            totalPagar: Number(lancamento.total_pagar || 0),
+            totalDesconto: Number(lancamento.total_desconto || 0),
+            nomeArquivo: `Janta_Pernoite_${lancamento.data_ref}_${lancamento.filial}`.replace(/[^a-z0-9_-]+/gi, '_').replace(/_+/g, '_') + '.pdf'
+        });
+    } catch (error) {
+        console.error('Erro ao gerar PDF do historico de janta e pernoite:', error);
+        alert('Erro ao gerar PDF do historico. Detalhe: ' + error.message);
+    }
+}
+
+async function excluirHistoricoJantaPernoite(id) {
+    const item = historicoJantaPernoiteCache.find(row => row.id === id);
+    if (!item) return;
+    if (!confirm(`Excluir o historico de ${formatDataISOBR(item.data_ref)} - ${item.filial}?`)) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('diaria_janta_pernoite')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        registrarAuditoria('EXCLUIR', 'Diaria', `Janta e pernoite - Data: ${formatDataISOBR(item.data_ref)}, Filial: ${item.filial}`);
+        await carregarHistoricoJantaPernoite();
+        alert('Historico excluido com sucesso.');
+    } catch (error) {
+        console.error('Erro ao excluir historico de janta e pernoite:', error);
+        alert('Erro ao excluir historico. Detalhe: ' + error.message);
+    }
 }
 
 async function carregarJantaPernoite() {
@@ -638,17 +813,52 @@ function atualizarJantaPernoiteManual(key, field, checked) {
     renderJantaPernoiteTabela();
 }
 
+function getJantaPernoiteTermoBusca() {
+    return normalizeString(document.getElementById('jpBuscaFuncionario')?.value || '');
+}
+
+function getJantaPernoiteDadosFiltrados() {
+    const termo = getJantaPernoiteTermoBusca();
+    if (!termo) return jantaPernoiteDadosAtual;
+
+    return jantaPernoiteDadosAtual.filter(item => [
+        item.nome,
+        item.nomeCompleto,
+        item.cpf,
+        item.funcao,
+        item.tipo,
+        item.rota,
+        item.placa
+    ].some(value => normalizeString(value).includes(termo)));
+}
+
+function aplicarSelecaoJantaPernoiteEmMassa(field, checked) {
+    const keysVisiveis = new Set(getJantaPernoiteDadosFiltrados().map(item => item.key));
+    if (keysVisiveis.size === 0) return;
+
+    jantaPernoiteDadosAtual.forEach(item => {
+        if (!keysVisiveis.has(item.key)) return;
+        if (field === 'janta') item.pagaJanta = checked;
+        if (field === 'pernoite') item.pagaPerNoite = checked;
+        if (checked) item.desconto = false;
+        recalcularItemJantaPernoite(item);
+    });
+    renderJantaPernoiteTabela();
+}
+
 function renderJantaPernoiteTabela() {
     const tbody = document.getElementById('tbodyJantaPernoite');
     if (!tbody) return;
 
-    if (jantaPernoiteDadosAtual.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Nenhum funcionario ativo escalado para os filtros selecionados.</td></tr>';
+    const dadosFiltrados = getJantaPernoiteDadosFiltrados();
+
+    if (jantaPernoiteDadosAtual.length === 0 || dadosFiltrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">${jantaPernoiteDadosAtual.length === 0 ? 'Nenhum funcionario ativo escalado para os filtros selecionados.' : 'Nenhum funcionario encontrado para a busca.'}</td></tr>`;
         atualizarResumoJantaPernoite();
         return;
     }
 
-    tbody.innerHTML = jantaPernoiteDadosAtual.map(item => `
+    tbody.innerHTML = dadosFiltrados.map(item => `
         <tr>
             <td>${escapeAttribute(item.nome)}</td>
             <td>${escapeAttribute(item.nomeCompleto)}</td>
@@ -684,6 +894,9 @@ async function salvarJantaPernoite() {
     const filial = getJantaPernoiteFilial();
     const dataRef = getJantaPernoiteData();
     const cadastro = getCadastroFinanceiroPorFilial(filial);
+
+    await atualizarPlacaRotaJantaPernoiteDaEscala(filial, dataRef);
+
     const itens = jantaPernoiteDadosAtual.map(item => ({
         funcionario_nome: item.nome,
         nome_completo: item.nomeCompleto,
@@ -759,10 +972,51 @@ async function salvarJantaPernoite() {
         if (insertError) throw insertError;
 
         registrarAuditoria('INCLUIR', 'Diaria', `Janta e pernoite - Data: ${formatDataISOBR(dataRef)}, Filial: ${filial}`);
+        await carregarHistoricoJantaPernoite();
         alert('Janta e pernoite salvos com sucesso.');
     } catch (error) {
         console.error('Erro ao salvar janta e pernoite:', error);
         alert('Erro ao salvar janta e pernoite. Detalhe: ' + error.message);
+    }
+}
+
+async function atualizarPlacaRotaJantaPernoiteDaEscala(filial, dataRef) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('escala')
+            .select('rota, placa, motorista, auxiliar')
+            .eq('filial', filial)
+            .eq('data_escala', dataRef);
+
+        if (error) throw error;
+
+        const escalaPorFuncionario = new Map();
+        (data || []).forEach(row => {
+            [
+                { nome: row.motorista, tipo: 'MOTORISTA' },
+                { nome: row.auxiliar, tipo: 'AUXILIAR' }
+            ].forEach(pessoa => {
+                const key = normalizeString(pessoa.nome);
+                if (!key || escalaPorFuncionario.has(key)) return;
+                escalaPorFuncionario.set(key, {
+                    rota: cleanImportValue(row.rota),
+                    placa: cleanImportValue(row.placa),
+                    tipo: pessoa.tipo
+                });
+            });
+        });
+
+        jantaPernoiteDadosAtual.forEach(item => {
+            const escala = escalaPorFuncionario.get(item.key)
+                || escalaPorFuncionario.get(normalizeString(item.nomeCompleto))
+                || escalaPorFuncionario.get(normalizeString(item.nome));
+            if (!escala) return;
+            item.rota = escala.rota || item.rota;
+            item.placa = escala.placa || item.placa;
+            item.tipo = escala.tipo || item.tipo;
+        });
+    } catch (error) {
+        console.warn('Nao foi possivel atualizar placa/rota pela escala antes de salvar:', error);
     }
 }
 
@@ -793,26 +1047,43 @@ function gerarXLSXJantaPernoite() {
     XLSX.writeFile(wb, getJantaPernoiteNomeArquivo('xlsx'));
 }
 
-function gerarPDFJantaPernoite() {
+async function gerarPDFJantaPernoite() {
     if (jantaPernoiteDadosAtual.length === 0) return alert('Nenhum dado para gerar PDF.');
     if (!window.jspdf?.jsPDF) return alert('Biblioteca jsPDF nao carregada.');
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const filial = getJantaPernoiteFilial();
-    const dataRef = getJantaPernoiteData();
     const totalPagar = jantaPernoiteDadosAtual.reduce((sum, item) => sum + Number(item.valorPagar || 0), 0);
     const totalDesconto = jantaPernoiteDadosAtual.reduce((sum, item) => sum + Number(item.valorDesconto || 0), 0);
+    await gerarPDFJantaPernoiteComDados({
+        dados: jantaPernoiteDadosAtual,
+        dataRef: getJantaPernoiteData(),
+        filial: getJantaPernoiteFilial(),
+        totalPagar,
+        totalDesconto,
+        nomeArquivo: getJantaPernoiteNomeArquivo('pdf')
+    });
+}
 
-    doc.setFontSize(15);
-    doc.text(`Janta e Pernoite - ${formatDataISOBR(dataRef)} - ${filial}`, 14, 14);
-    doc.setFontSize(9);
-    doc.text(`Total a pagar: ${formatMoedaBR(totalPagar)} | Descontos: ${formatMoedaBR(totalDesconto)}`, 14, 21);
+async function gerarPDFJantaPernoiteComDados({ dados, dataRef, filial, totalPagar, totalDesconto, nomeArquivo }) {
+    if (!dados || dados.length === 0) return alert('Nenhum dado para gerar PDF.');
+    if (!window.jspdf?.jsPDF) return alert('Biblioteca jsPDF nao carregada.');
+
+    const dadosPagos = dados.filter(item => Number(item.valorPagar || 0) > 0);
+    if (dadosPagos.length === 0) return alert('Nenhum funcionario com valor a pagar para gerar PDF.');
+
+    const totalPagarPDF = dadosPagos.reduce((sum, item) => sum + Number(item.valorPagar || 0), 0);
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getLogoBase64DiariaPDF();
+    const nomeUsuario = getUsuarioAuditoria();
+    const titulo = `Janta e Pernoite - ${formatDataISOBR(dataRef)} - ${filial}`;
+    const subtitulo = `Total a pagar: ${formatMoedaBR(totalPagarPDF)} | Registros pagos: ${dadosPagos.length}`;
 
     doc.autoTable({
-        startY: 27,
+        startY: 38,
+        margin: { top: 38, left: 14, right: 14, bottom: 14 },
         head: [['FUNCIONARIO', 'NOME COMPLETO', 'FUNCAO', 'TIPO', 'ROTA', 'PLACA', 'JANTA', 'PER NOITE', 'DESCONTO', 'VALOR']],
-        body: jantaPernoiteDadosAtual.map(item => [
+        body: dadosPagos.map(item => [
             item.nome,
             item.nomeCompleto,
             item.funcao,
@@ -825,10 +1096,68 @@ function gerarPDFJantaPernoite() {
             formatMoedaBR(item.valorPagar)
         ]),
         styles: { fontSize: 7, cellPadding: 1.5 },
-        headStyles: { fillColor: [0, 105, 55] }
+        headStyles: { fillColor: [0, 105, 55] },
+        didDrawPage: () => {
+            desenharCabecalhoJantaPernoitePDF(doc, { logoBase64, titulo, subtitulo, nomeUsuario });
+        }
     });
 
-    doc.save(getJantaPernoiteNomeArquivo('pdf'));
+    doc.save(nomeArquivo || getJantaPernoiteNomeArquivo('pdf'));
+}
+
+async function getLogoBase64DiariaPDF() {
+    const caminhos = ['logo.png', 'img/logonavegador.png'];
+    for (const caminho of caminhos) {
+        try {
+            const response = await fetch(caminho);
+            if (!response.ok) continue;
+            const blob = await response.blob();
+            return await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(blob);
+            });
+        } catch {
+            // Tenta o proximo caminho.
+        }
+    }
+    return null;
+}
+
+function getFormatoImagemPDF(base64) {
+    const value = String(base64 || '');
+    if (value.startsWith('data:image/png')) return 'PNG';
+    if (value.startsWith('data:image/webp')) return 'WEBP';
+    return 'JPEG';
+}
+
+function desenharCabecalhoJantaPernoitePDF(doc, { logoBase64, titulo, subtitulo, nomeUsuario }) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
+
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, 34, 'F');
+    doc.setDrawColor(220, 232, 226);
+    doc.line(14, 32, pageWidth - 14, 32);
+
+    if (logoBase64) {
+        doc.addImage(logoBase64, getFormatoImagemPDF(logoBase64), 14, 8, 38, 12);
+    }
+
+    doc.setTextColor(31, 51, 40);
+    doc.setFontSize(15);
+    doc.text(titulo, 60, 13);
+    doc.setFontSize(9);
+    doc.text(subtitulo, 60, 20);
+    doc.text(`Gerado por: ${nomeUsuario}`, 60, 26);
+
+    doc.setFontSize(8);
+    doc.setTextColor(100, 115, 107);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 8);
+    doc.text(`Pagina ${pageNumber}`, pageWidth - 14, pageHeight - 8, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
 }
 
 function getJantaPernoiteNomeArquivo(ext) {
