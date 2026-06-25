@@ -1768,9 +1768,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 if (confirm('Deseja remover esta linha?')) {
                     try {
+                        if (tabela !== 'faltas_afastamentos' && tabela !== 'escala') throw new Error('Tabela inválida: ' + tabela);
                         const { error } = await supabaseClient.from(tabela).delete().eq('id', id);
                         if (error) throw error;
                         tr.remove();
+                        // Limpa seleções para evitar exclusões acidentais em outras seções
+                        document.querySelectorAll('.selected-cell').forEach(el => el.classList.remove('selected-cell'));
+                        // Recarrega se for linha de FALTAS para manter a escala sincronizada
+                        if (tabela === 'faltas_afastamentos') {
+                            const ctx = getDataEscalaAberta();
+                            if (ctx) carregarDadosDia(ctx.dia, ctx.semana);
+                        }
                     } catch (err) {
                         console.error('Erro ao excluir:', err);
                         alert('Erro ao excluir linha.');
@@ -3753,8 +3761,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return alert('Selecione pelo menos uma célula para excluir.');
         }
 
-        if (!confirm('Tem certeza que deseja excluir as linhas selecionadas?')) return;
-
         const toDelete = { escala: [], faltas_afastamentos: [] };
 
         selectedCells.forEach(el => {
@@ -3765,6 +3771,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         });
+
+        const temEscala  = toDelete.escala.length > 0;
+        const temFaltas  = toDelete.faltas_afastamentos.length > 0;
+
+        // Quando há seleção em ambas as seções, confirmar separadamente para evitar
+        // exclusão acidental de dados de PADRÃO/TRANSFERÊNCIA/EQUIPAMENTO/RESERVAS
+        if (temEscala && temFaltas) {
+            const msgEscala  = `${toDelete.escala.length} linha(s) de PADRÃO / TRANSFERÊNCIA CD / EQUIPAMENTO / RESERVAS`;
+            const msgFaltas  = `${toDelete.faltas_afastamentos.length} linha(s) de FALTAS / FÉRIAS / AFASTADOS`;
+            const msg = `Atenção: há linhas selecionadas em seções diferentes:\n\n• ${msgEscala}\n• ${msgFaltas}\n\nDeseja excluir TODAS?`;
+            if (!confirm(msg)) return;
+        } else if (temEscala) {
+            if (!confirm(`Excluir ${toDelete.escala.length} linha(s) selecionada(s)?`)) return;
+        } else if (temFaltas) {
+            if (!confirm(`Excluir ${toDelete.faltas_afastamentos.length} linha(s) de FALTAS/FÉRIAS/AFASTADOS?`)) return;
+        } else {
+            return;
+        }
 
         try {
             for (const table in toDelete) {
