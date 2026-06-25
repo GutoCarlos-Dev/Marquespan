@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="css/index.css"> 
   <link rel="stylesheet" href="css/menu.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260625-5">
+  <link rel="stylesheet" href="css/cadastro-carregamento.css?v=20260625-6">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -26,7 +26,6 @@
 
       <button type="button" class="tab-button" data-tab-target="historico"><i class="fas fa-history"></i> Histórico</button>
       <button type="button" class="tab-button" data-tab-target="itens"><i class="fas fa-boxes"></i> Itens</button>
-      <button type="button" class="tab-button" data-tab-target="clientes"><i class="fas fa-users"></i> Clientes</button>
     </nav>
 
     <section id="requisicao" class="glass-panel tab-panel active">
@@ -236,140 +235,6 @@
       </div>
     </section>
 
-    <section id="clientes" class="glass-panel tab-panel hidden">
-      <div class="panel-title-row">
-        <h3><i class="fas fa-users"></i> Clientes (<span id="contadorClientesAtivos">0</span> ativos)</h3>
-        <button type="button" id="btnAbrirModalCliente" class="btn-glass btn-blue">Incluir Cliente</button>
-      </div>
-      <div class="grid-toolbar">
-        <div class="form-group search-group">
-          <label for="buscaClientesCarregamento">Buscar cliente</label>
-          <input type="search" id="buscaClientesCarregamento" placeholder="Codigo, nome, fantasia ou CPF/CNPJ" class="glass-input">
-        </div>
-      </div>
-      <form id="formCliente" class="modal-overlay hidden" aria-hidden="true">
-        <div class="modal-card">
-          <div class="modal-header">
-            <h3 id="tituloModalCliente"><i class="fas fa-user-plus"></i> Cadastro de Cliente</h3>
-            <button type="button" id="btnFecharModalCliente" class="btn-icon delete" title="Fechar"><i class="fas fa-times"></i></button>
-          </div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="clienteCodigo">Codigo</label>
-            <input type="text" id="clienteCodigo" name="codigo" class="glass-input" required readonly>
-          </div>
-          <div class="form-group">
-            <label for="clienteFantasia">Fantasia</label>
-            <input type="text" id="clienteFantasia" name="fantasia" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteNome">Nome</label>
-            <input type="text" id="clienteNome" name="nome" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteTipoPessoa">Fis/Jur</label>
-            <input type="text" id="clienteTipoPessoa" name="tipo_pessoa" class="glass-input" maxlength="1">
-          </div>
-          <div class="form-group">
-            <label for="clienteUf">UF</label>
-            <input type="text" id="clienteUf" name="uf" class="glass-input" maxlength="2">
-          </div>
-          <div class="form-group">
-            <label for="clienteMunicipio">Municipio</label>
-            <input type="text" id="clienteMunicipio" name="municipio" class="glass-input">
-          </div>
-          <div class="form-group cliente-field-wide">
-            <label for="clienteEndereco">Endereco</label>
-            <input type="text" id="clienteEndereco" name="endereco" class="glass-input">
-          </div>
-          <div class="form-group cliente-field-wide">
-            <label for="clienteGeolocalizacao">Geolocalizacao</label>
-            <input type="text" id="clienteGeolocalizacao" name="geolocalizacao" class="glass-input" placeholder="-23.330692, -47.851799" title="Informe latitude e longitude separadas por virgula. Exemplo: -23.330692, -47.851799">
-          </div>
-          <div class="form-group">
-            <label for="clienteBairro">Bairro</label>
-            <input type="text" id="clienteBairro" name="bairro" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteCep">CEP</label>
-            <input type="text" id="clienteCep" name="cep" class="glass-input">
-          </div>
-          <div class="form-group cliente-field-wide">
-            <label for="clienteEmail">Email</label>
-            <input type="email" id="clienteEmail" name="email" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteCnpjCpf">CNPJ/CPF</label>
-            <input type="text" id="clienteCnpjCpf" name="cnpj_cpf" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteIeRg">IE/RG</label>
-            <input type="text" id="clienteIeRg" name="ie_rg" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteCondPagto">Cond Pagto</label>
-            <input type="text" id="clienteCondPagto" name="cond_pagto" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteFormaCob">Forma Cob</label>
-            <input type="text" id="clienteFormaCob" name="forma_cob" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteAtivo">Ativo</label>
-            <select id="clienteAtivo" name="ativo" class="glass-input">
-              <option value="A">A - Ativo</option>
-              <option value="I">I - Inativo</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="clienteSupervisor">Supervisor</label>
-            <input type="text" id="clienteSupervisor" name="supervisor" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteRota">Rota</label>
-            <input type="text" id="clienteRota" name="rota" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteConsultor">Consultor</label>
-            <input type="text" id="clienteConsultor" name="consultor" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteTabelaPreco">Tab Prc</label>
-            <input type="text" id="clienteTabelaPreco" name="tabela_preco" class="glass-input">
-          </div>
-          <div class="form-group">
-            <label for="clienteCategoria">Categoria</label>
-            <input type="text" id="clienteCategoria" name="categoria" class="glass-input">
-          </div>
-        </div>
-        <div class="form-actions-inline modal-actions">
-          <button type="button" id="btnCancelarCliente" class="btn-glass btn-red">Cancelar</button>
-          <button type="button" id="btnClearClienteForm" class="btn-glass btn-secondary">
-            <i class="fas fa-eraser"></i> Limpar
-          </button>
-          <button type="submit" id="btnSalvarCliente" class="btn-glass btn-green">
-            <i class="fas fa-save"></i> Salvar Registro
-          </button>
-        </div>
-        </div>
-      </form>
-      <div class="table-responsive">
-        <table id="tabelaClientes" class="glass-table data-grid">
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Nome</th>
-              <th>Fantasia</th>
-              <th>CPF/CNPJ</th>
-              <th>Cidade</th>
-              <th>Estado</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="corpoTabelaClientes"></tbody>
-        </table>
-      </div>
-    </section>
 
 
     <footer class="footer">
@@ -678,7 +543,7 @@
   <script type="module" src="./script/auth-guard.js"></script>
 
   <script type="module">
-    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, abrirModelosItem, adicionarModeloItem, excluirModeloItem, marcarModeloPadrao, carregarClientes, salvarClienteCompleto, editarCliente, excluirCliente, abrirModalCliente, fecharModalCliente, limparFormularioCliente, filtrarClientes } from './script/cadastro-carregamento.js?v=20260625-5';
+    import { inicializarRequisicao, inicializarCarregamento, inicializarHistorico, carregarItens, salvarItem, editarItem, excluirItem, incluirItem, abrirModelosItem, adicionarModeloItem, excluirModeloItem, marcarModeloPadrao, carregarClientes } from './script/cadastro-carregamento.js?v=20260625-6';
 
     window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.tab-button').forEach((button) => {
@@ -713,23 +578,12 @@
       document.getElementById('modalModelosItem').addEventListener('click', (event) => {
         if (event.target.id === 'modalModelosItem') document.getElementById('modalModelosItem').classList.add('hidden');
       });
-      document.getElementById('formCliente').addEventListener('submit', salvarClienteCompleto);
-      document.getElementById('btnAbrirModalCliente').addEventListener('click', () => abrirModalCliente());
-      document.getElementById('btnFecharModalCliente').addEventListener('click', fecharModalCliente);
-      document.getElementById('btnCancelarCliente').addEventListener('click', fecharModalCliente);
-      document.getElementById('btnClearClienteForm').addEventListener('click', limparFormularioCliente);
-      document.getElementById('buscaClientesCarregamento').addEventListener('input', filtrarClientes);
-      document.getElementById('formCliente').addEventListener('click', (event) => {
-        if (event.target.id === 'formCliente') fecharModalCliente();
-      });
       document.getElementById('btnIncluirItem').addEventListener('click', incluirItem);
       window.editarItem = editarItem;
       window.excluirItem = excluirItem;
       window.abrirModelosItem = abrirModelosItem;
       window.adicionarModeloItem = adicionarModeloItem;
       window.excluirModeloItem = excluirModeloItem;
-      window.editarCliente = editarCliente;
-      window.excluirCliente = excluirCliente;
       await Promise.all([
         carregarItens(),
         carregarClientes()

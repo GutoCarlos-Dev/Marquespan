@@ -66,9 +66,8 @@ const MODULOS = [
   {
     grupo: 'Carregamento', cor: 'orange',
     itens: [
-      { label: 'Cadastro',          desc: 'Novo carregamento',   pagina: 'cadastro-carregamento.html', icon: 'fa-plus' },
+      { label: 'Requisição',        desc: 'Novo carregamento',   pagina: 'cadastro-carregamento.html', icon: 'fa-plus' },
       { label: 'Iniciar',           desc: 'Operação de carga',   pagina: 'iniciar-carregamento.html',  icon: 'fa-play' },
-      { label: 'Importar XLSX',     desc: 'Importar planilha',   pagina: 'importar-xlsx.html',         icon: 'fa-file-excel' },
       { label: 'Buscar',            desc: 'Consultar registros', pagina: 'buscar-carregamento.html',   icon: 'fa-magnifying-glass' },
     ]
   },
