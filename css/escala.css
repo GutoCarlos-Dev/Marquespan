@@ -1679,6 +1679,17 @@ body.escala-menu-oculto .menu-floating-toggle i {
     white-space: nowrap;
 }
 
+.diaria-financeiro-actions .btn-financeiro-limpar {
+    background: #f8fafc;
+    border: 1px solid #006937;
+    color: #006937;
+}
+
+.diaria-financeiro-actions .btn-financeiro-limpar:hover {
+    background: #e8f4ec;
+    color: #004d28;
+}
+
 .diaria-financeiro-table-wrap {
     margin-top: 18px;
 }
