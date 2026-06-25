@@ -1,8 +1,9 @@
 import { supabaseClient } from './supabase.js';
 
 const MOTIVOS_QUE_ADICIONAM = ['Aumento', 'Aumento+Troca', 'Cliente Novo'];
-const REQUISICOES_TABLE = 'requisicoes_carregamento';
-const REQUISICOES_BUCKET = 'requisicoes-carregamento';
+const REQUISICOES_TABLE   = 'requisicoes_carregamento';
+const CONFERENCIAS_TABLE  = 'conferencias_carregamento';
+const REQUISICOES_BUCKET  = 'requisicoes-carregamento';
 
 let clientesCarregamento = [];
 let itensCarregamento = [];
@@ -587,15 +588,19 @@ function encontrarItemRequisicao(nomeEquipamento, modeloEsperado = '') {
 }
 
 function renderizarBadgeStatus(req) {
-  if (req.status === 'CARREGADO' && req.carregamento_placa) {
+  const s = req.status || 'PENDENTE';
+  if (s === 'CARREGADO' && req.carregamento_placa) {
     return `<span class="status-badge carregado car-tooltip-trigger"
       data-car-placa="${escapeHtml(req.carregamento_placa)}"
       data-car-modelo="${escapeHtml(req.carregamento_modelo || '-')}"
       data-car-motorista="${escapeHtml(req.carregamento_motorista || '-')}"
       data-car-saida="${escapeHtml(formatarData(req.carregamento_data_saida))}"
-      style="cursor:help;">${escapeHtml(req.status)}</span>`;
+      style="cursor:help;">${escapeHtml(s)}</span>`;
   }
-  return `<span class="status-badge ${req.status === 'CARREGADO' ? 'carregado' : 'pendente'}">${escapeHtml(req.status || 'PENDENTE')}</span>`;
+  const cls = s === 'CARREGADO'              ? 'carregado'
+            : s === 'AGUARDANDO CONFERENCIA' ? 'aguardando-conf'
+            : 'pendente';
+  return `<span class="status-badge ${cls}">${escapeHtml(s)}</span>`;
 }
 
 function renderizarTabelaStatusRequisicoesLegado() {
@@ -618,9 +623,9 @@ function renderizarTabelaStatusRequisicoesLegado() {
       <td>${escapeHtml(req.motivo)}</td>
       <td>${renderizarBadgeStatus(req)}</td>
       <td>
-        ${req.status === 'CARREGADO'
-          ? '<span class="text-muted">Carregado</span>'
-          : `<button type="button" class="btn-icon edit" data-carregar-requisicao="${escapeHtml(req.id)}" title="Carregar"><i class="fas fa-truck-loading"></i></button>`}
+        ${req.status === 'PENDENTE'
+          ? `<button type="button" class="btn-icon edit" data-carregar-requisicao="${escapeHtml(req.id)}" title="Carregar"><i class="fas fa-truck-loading"></i></button>`
+          : '<span class="text-muted">Vinculado</span>'}
       </td>
     </tr>
   `).join('');
@@ -657,9 +662,9 @@ function renderizarTabelaStatusRequisicoes() {
         <button type="button" class="btn-icon view" data-visualizar-requisicao="${escapeHtml(req.id)}" title="Visualizar"><i class="fas fa-eye"></i></button>
         <button type="button" class="btn-icon edit" data-editar-requisicao="${escapeHtml(req.id)}" title="Editar"><i class="fas fa-pen"></i></button>
         <button type="button" class="btn-icon delete" data-excluir-requisicao="${escapeHtml(req.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
-        ${req.status === 'CARREGADO'
-          ? `<button type="button" class="btn-icon revert" data-reverter-requisicao="${escapeHtml(req.id)}" title="Reverter para Pendente"><i class="fas fa-rotate-left"></i></button>`
-          : `<button type="button" class="btn-icon carregar" data-carregar-requisicao="${escapeHtml(req.id)}" title="Vincular a carregamento existente"><i class="fas fa-truck-loading"></i></button>`}
+        ${req.status === 'PENDENTE'
+          ? `<button type="button" class="btn-icon carregar" data-carregar-requisicao="${escapeHtml(req.id)}" title="Vincular a carregamento existente"><i class="fas fa-truck-loading"></i></button>`
+          : `<button type="button" class="btn-icon revert" data-reverter-requisicao="${escapeHtml(req.id)}" title="Reverter para Pendente"><i class="fas fa-rotate-left"></i></button>`}
       </td>
     </tr>
   `).join('');
@@ -2027,7 +2032,7 @@ async function salvarCarregamento() {
       supabaseClient
         .from(REQUISICOES_TABLE)
         .update({
-          status: 'CARREGADO',
+          status: 'AGUARDANDO CONFERENCIA',
           ordem: req.ordem || null,
           carregado_em: agora,
           carregamento_id: carregamentoId,
@@ -2055,7 +2060,7 @@ async function salvarCarregamento() {
     await carregarRequisicoesBanco();
     const msg = modoEdicao
       ? `Carregamento atualizado! ${updates.length} requisição(ões) vinculadas.`
-      : `Carregamento salvo com sucesso! ${updates.length} requisição(ões) marcadas como CARREGADO.`;
+      : `Carregamento salvo! ${updates.length} requisição(ões) marcadas como AGUARDANDO CONFERENCIA.`;
     atualizarStatusCarregamento(msg, false, carregamentoId);
   } catch (error) {
     console.error('Erro ao salvar carregamento:', error);
@@ -2618,12 +2623,22 @@ async function gerarResumoCarregamento(id) {
         const qtd = Number(item.quantidade) || 0;
         if (qtd <= 0) return;
         const key = item.item_nome || item.equipamento || '?';
-        if (!mapaItens.has(key)) mapaItens.set(key, { nome: key, entrega: 0, retorno: 0 });
-        const e = mapaItens.get(key);
+        if (!mapaItens.has(key)) mapaItens.set(key, {
+          nome: key, entrega: 0, entregaNovo: 0, entregaUsado: 0,
+          retorno: 0, retornoUsado: 0  // retirada é sempre USADO
+        });
+        const e   = mapaItens.get(key);
         const dir = direcionarItemCarregamento(item, req.motivo, temRetornoObs);
-        if (dir === 'troca')        { e.entrega += qtd; e.retorno += qtd; }
-        else if (dir === 'entrega')   e.entrega += qtd;
-        else                          e.retorno += qtd;
+        if (dir === 'troca') {
+          e.entrega += qtd; e.entregaNovo += qtd;   // troca entrega como NOVO
+          e.retorno += qtd; e.retornoUsado += qtd;  // retira como USADO
+        } else if (dir === 'entrega') {
+          e.entrega += qtd;
+          if (item.usado) e.entregaUsado += qtd; else e.entregaNovo += qtd;
+        } else {
+          e.retorno += qtd;
+          e.retornoUsado += qtd; // retirada do cliente: sempre USADO
+        }
       });
     });
 
@@ -2653,24 +2668,45 @@ function renderResumoHTML(car, reqs, mapaItens) {
 
   const regular   = [...mapaItens.values()].filter(e => !isItemEspecial(e.nome));
   const especiais = [...mapaItens.values()].filter(e =>  isItemEspecial(e.nome));
-  let teReg = 0, trReg = 0, teEsp = 0, trEsp = 0;
-  regular.forEach(e  => { teReg += e.entrega; trReg += e.retorno; });
-  especiais.forEach(e => { teEsp += e.entrega; trEsp += e.retorno; });
+
+  const somarBloco = lista => lista.reduce((acc, e) => ({
+    entrega:      acc.entrega      + e.entrega,
+    entregaNovo:  acc.entregaNovo  + e.entregaNovo,
+    entregaUsado: acc.entregaUsado + e.entregaUsado,
+    retorno:      acc.retorno      + e.retorno,
+    retornoUsado: acc.retornoUsado + e.retornoUsado
+  }), { entrega: 0, entregaNovo: 0, entregaUsado: 0, retorno: 0, retornoUsado: 0 });
+
+  const totReg = somarBloco(regular);
+  const totEsp = somarBloco(especiais);
+  const teReg = totReg.entrega, trReg = totReg.retorno;
+  const teEsp = totEsp.entrega, trEsp = totEsp.retorno;
+
+  const n = v => v > 0 ? v : '-';
 
   const linhasItem = lista => lista.map(e => `<tr>
     <td>${escapeHtml(e.nome)}</td>
-    <td class="resumo-num-cel col-entrega">${e.entrega || '-'}</td>
-    <td class="resumo-num-cel col-retorno">${e.retorno || '-'}</td>
+    <td class="resumo-num-cel col-entrega">${n(e.entrega)}</td>
+    <td class="resumo-num-cel col-entrega resumo-sub-novo">${n(e.entregaNovo)}</td>
+    <td class="resumo-num-cel col-entrega resumo-sub-usado">${n(e.entregaUsado)}</td>
+    <td class="resumo-num-cel col-retorno">${n(e.retorno)}</td>
+    <td class="resumo-num-cel col-retorno resumo-sub-usado">${n(e.retornoUsado)}</td>
   </tr>`).join('');
 
-  const blocoEspeciais = especiais.length ? `
-    <tr class="resumo-sep-row"><td colspan="3"><i class="fas fa-exchange-alt"></i> Esteiras &amp; Formas</td></tr>
-    ${linhasItem(especiais)}
+  const linhaSubtotal = (label, tot, colspan = 1) => `
     <tr class="resumo-subtotal-row">
-      <td>Subtotal Esteiras &amp; Formas</td>
-      <td class="resumo-num-cel col-entrega">${teEsp || '-'}</td>
-      <td class="resumo-num-cel col-retorno">${trEsp || '-'}</td>
-    </tr>` : '';
+      <td colspan="${colspan}">${label}</td>
+      <td class="resumo-num-cel col-entrega">${n(tot.entrega)}</td>
+      <td class="resumo-num-cel col-entrega resumo-sub-novo">${n(tot.entregaNovo)}</td>
+      <td class="resumo-num-cel col-entrega resumo-sub-usado">${n(tot.entregaUsado)}</td>
+      <td class="resumo-num-cel col-retorno">${n(tot.retorno)}</td>
+      <td class="resumo-num-cel col-retorno resumo-sub-usado">${n(tot.retornoUsado)}</td>
+    </tr>`;
+
+  const blocoEspeciais = especiais.length ? `
+    <tr class="resumo-sep-row"><td colspan="6"><i class="fas fa-exchange-alt"></i> Esteiras &amp; Formas</td></tr>
+    ${linhasItem(especiais)}
+    ${linhaSubtotal('Subtotal Esteiras &amp; Formas', totEsp)}` : '';
 
   return `<div class="resumo-print-area">
 
@@ -2731,26 +2767,34 @@ function renderResumoHTML(car, reqs, mapaItens) {
     </table>
 
     <h4 class="resumo-section-h"><i class="fas fa-boxes"></i> Totalizador de Equipamentos</h4>
-    <table class="resumo-table">
-      <thead><tr>
-        <th>Equipamento</th>
-        <th class="resumo-num-cel">Carregar</th>
-        <th class="resumo-num-cel">Retirar</th>
-      </tr></thead>
+    <table class="resumo-table resumo-table-totalizador">
+      <thead>
+        <tr>
+          <th rowspan="2" class="resumo-th-equip">Equipamento</th>
+          <th colspan="3" class="resumo-num-cel col-entrega resumo-th-grupo">↑ Carregar ao Cliente</th>
+          <th colspan="2" class="resumo-num-cel col-retorno resumo-th-grupo">↓ Retirar do Cliente</th>
+        </tr>
+        <tr>
+          <th class="resumo-num-cel col-entrega resumo-th-sub">Total</th>
+          <th class="resumo-num-cel col-entrega resumo-th-sub resumo-sub-novo">Novo</th>
+          <th class="resumo-num-cel col-entrega resumo-th-sub resumo-sub-usado">Usado</th>
+          <th class="resumo-num-cel col-retorno resumo-th-sub">Total</th>
+          <th class="resumo-num-cel col-retorno resumo-th-sub resumo-sub-usado">Usado</th>
+        </tr>
+      </thead>
       <tbody>
         ${linhasItem(regular)}
-        <tr class="resumo-subtotal-row">
-          <td>Subtotal Equipamentos</td>
-          <td class="resumo-num-cel col-entrega">${teReg || '-'}</td>
-          <td class="resumo-num-cel col-retorno">${trReg || '-'}</td>
-        </tr>
+        ${linhaSubtotal('Subtotal Equipamentos', totReg)}
         ${blocoEspeciais}
       </tbody>
       <tfoot>
         <tr class="resumo-total-final">
           <td><strong>TOTAL GERAL</strong></td>
-          <td class="resumo-num-cel col-entrega"><strong>${(teReg + teEsp) || '-'}</strong></td>
-          <td class="resumo-num-cel col-retorno"><strong>${(trReg + trEsp) || '-'}</strong></td>
+          <td class="resumo-num-cel col-entrega"><strong>${n(totReg.entrega + totEsp.entrega)}</strong></td>
+          <td class="resumo-num-cel col-entrega resumo-sub-novo"><strong>${n(totReg.entregaNovo + totEsp.entregaNovo)}</strong></td>
+          <td class="resumo-num-cel col-entrega resumo-sub-usado"><strong>${n(totReg.entregaUsado + totEsp.entregaUsado)}</strong></td>
+          <td class="resumo-num-cel col-retorno"><strong>${n(totReg.retorno + totEsp.retorno)}</strong></td>
+          <td class="resumo-num-cel col-retorno resumo-sub-usado"><strong>${n(totReg.retornoUsado + totEsp.retornoUsado)}</strong></td>
         </tr>
       </tfoot>
     </table>
@@ -3455,14 +3499,97 @@ function inicializarConferenciaDoCarregamentoAtual() {
 function popularSeletorHistoricoConferencia() {
   const select = document.getElementById('cvSeletorCarregamento');
   if (!select) return;
+
+  // Apenas carregamentos com pelo menos uma req AGUARDANDO CONFERENCIA
+  const idsNaFila = new Set(
+    (requisicoesSalvas || [])
+      .filter(r => r.status === 'AGUARDANDO CONFERENCIA' && r.carregamento_id)
+      .map(r => r.carregamento_id)
+  );
+
   select.innerHTML = '<option value="">Selecione um carregamento...</option>';
-  (carregamentosSalvos || []).slice(0, 50).forEach(car => {
-    const op = document.createElement('option');
-    op.value = car.id;
-    const data = car.data_saida ? car.data_saida.split('-').reverse().join('/') : '-';
-    op.textContent = `${data} · ${car.placa || '-'} · ${car.motorista || '-'}`;
-    select.appendChild(op);
+  (carregamentosSalvos || [])
+    .filter(c => idsNaFila.has(c.id))
+    .forEach(car => {
+      const op = document.createElement('option');
+      op.value = car.id;
+      const data = car.data_saida ? car.data_saida.split('-').reverse().join('/') : '-';
+      op.textContent = `${data} · ${car.placa || '-'} · ${car.motorista || '-'}`;
+      select.appendChild(op);
+    });
+
+  // Exibe aviso se fila vazia
+  const aviso = document.getElementById('cvFilaVazia');
+  if (aviso) aviso.classList.toggle('hidden', idsNaFila.size > 0);
+
+  popularHistoricoConferencias();
+}
+
+async function popularHistoricoConferencias() {
+  const tbody = document.getElementById('cvHistoricoConferenciasTbody');
+  if (!tbody) return;
+
+  const { data, error } = await supabaseClient
+    .from(CONFERENCIAS_TABLE)
+    .select('id, placa, motorista, data_saida, finalizado_em, finalizado_por, total_ok, total_divergencias, total_nao_conferidos')
+    .order('finalizado_em', { ascending: false })
+    .limit(30);
+
+  if (error || !data?.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhuma conferência finalizada.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(c => {
+    const data_saida = c.data_saida ? c.data_saida.split('-').reverse().join('/') : '-';
+    const fin_em     = c.finalizado_em ? new Date(c.finalizado_em).toLocaleString('pt-BR') : '-';
+    const temDiv     = c.total_divergencias > 0;
+    return `<tr>
+      <td>${data_saida}</td>
+      <td>${escapeHtml(c.placa || '-')}</td>
+      <td>${escapeHtml(c.motorista || '-')}</td>
+      <td>${fin_em}</td>
+      <td class="text-center"><span class="cv-badge-ok">${c.total_ok}</span></td>
+      <td class="text-center">${temDiv ? `<span class="cv-badge-div">${c.total_divergencias}</span>` : '<span class="cv-badge-ok">0</span>'}</td>
+      <td class="text-center">
+        <button type="button" class="btn-icon view" data-carregar-conferencia="${escapeHtml(c.id)}" title="Reabrir conferência"><i class="fas fa-eye"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('[data-carregar-conferencia]').forEach(btn => {
+    btn.addEventListener('click', () => recarregarConferenciaSalva(btn.dataset.carregarConferencia));
   });
+}
+
+async function recarregarConferenciaSalva(confId) {
+  const { data: conf, error } = await supabaseClient
+    .from(CONFERENCIAS_TABLE)
+    .select('*, carregamento_id')
+    .eq('id', confId)
+    .single();
+  if (error || !conf) { alert('Erro ao carregar conferência.'); return; }
+
+  const { data: car } = await supabaseClient
+    .from(CARREGAMENTOS_TABLE).select('*').eq('id', conf.carregamento_id).single();
+  const { data: reqs } = await supabaseClient
+    .from(REQUISICOES_TABLE).select('*').eq('carregamento_id', conf.carregamento_id).order('ordem');
+
+  conferenciaAtiva = {
+    requisicoes: reqs || [],
+    placa:       conf.placa     || '',
+    motorista:   conf.motorista || '',
+    dataSaida:   conf.data_saida || ''
+  };
+  conferenciaIndex = 0;
+  inicializarResultadosConferencia(conferenciaAtiva.requisicoes);
+
+  // Restaura os resultados salvos
+  if (conf.resultados) {
+    Object.assign(conferenciaResultados, conf.resultados);
+  }
+
+  renderizarConferenciaUI();
 }
 
 async function carregarConferenciaDoHistorico() {
@@ -3768,42 +3895,66 @@ function navegarConferencia(delta) {
 function calcularTotalizador() {
   if (!conferenciaAtiva) return [];
 
-  // mapa: { [nomeEquip]: { entrega, retirada } }
+  // mapa: { [nomeEquip]: { entrega, entregaNovo, entregaUsado, retirada, retiradaUsado } }
+  // Retirada do cliente é SEMPRE considerada USADO (nunca NOVO)
   const mapa = {};
 
   for (const req of conferenciaAtiva.requisicoes) {
     const resultados    = conferenciaResultados[req.id] || [];
     const motivo        = req.motivo || '';
-    const ehRetirada    = /retirada/i.test(motivo);           // Retirada Total/Parcial/Empréstimo
-    const ehTroca       = /troca/i.test(motivo);              // Troca ou Aumento+Troca
-    const ehEntregaPura = !ehRetirada && !ehTroca;            // Aumento / Cliente Novo / outros
+    const ehRetirada    = /retirada/i.test(motivo);
+    const ehTroca       = /troca/i.test(motivo);
+    const ehEntregaPura = !ehRetirada && !ehTroca;
 
     for (const [idx, item] of (req.itens || []).entries()) {
       const res = resultados[idx] || {};
-      // Usa quantidade efetiva da conferência (se alterada pelo conferente)
+
+      // Quantidade efetiva (usa modificação do conferente se houver)
       const qtd = (res.qtdReal !== null && res.qtdReal !== undefined)
         ? Number(res.qtdReal)
         : Number(item.quantidade || 0);
       if (qtd <= 0) continue;
 
+      // Estado efetivo da ENTREGA (respeita alteração feita durante a conferência)
+      let estadoEfetivo;
+      if (res.estadoReal !== null && res.estadoReal !== undefined && res.estadoReal !== '') {
+        estadoEfetivo = res.estadoReal;
+      } else {
+        estadoEfetivo = item.novo ? 'novo' : item.usado ? 'usado' : null;
+      }
+      const isNovo  = estadoEfetivo === 'novo';
+      const isUsado = estadoEfetivo === 'usado';
+
       const key = item.item_nome || item.equipamento || '-';
-      if (!mapa[key]) mapa[key] = { entrega: 0, retirada: 0 };
+      if (!mapa[key]) mapa[key] = {
+        entrega: 0, entregaNovo: 0, entregaUsado: 0,
+        retirada: 0, retiradaUsado: 0  // retirada é sempre USADO
+      };
+
+      const somarEntrega = () => {
+        mapa[key].entrega     += qtd;
+        mapa[key].entregaNovo  += isNovo  ? qtd : 0;
+        mapa[key].entregaUsado += isUsado ? qtd : 0;
+      };
+
+      const somarRetirada = () => {
+        // Sempre USADO — equipamento retirado do cliente nunca é NOVO
+        mapa[key].retirada      += qtd;
+        mapa[key].retiradaUsado += qtd;
+      };
 
       if (ehRetirada) {
-        // Retirada Total / Parcial / Empréstimo → só retirada do cliente
-        mapa[key].retirada += qtd;
+        somarRetirada();
       } else if (ehEntregaPura) {
-        // Aumento / Cliente Novo → só entrega ao cliente
-        mapa[key].entrega += qtd;
+        somarEntrega();
       } else {
         // Troca / Aumento+Troca
-        // Item com obs='AUMENTO' é entrega pura (não há item a retirar correspondente)
         if (item.obs === 'AUMENTO') {
-          mapa[key].entrega += qtd;
+          somarEntrega();
         } else {
-          // Troca real: entrega o novo E retira o velho de mesma quantidade
-          mapa[key].entrega  += qtd;
-          mapa[key].retirada += qtd;
+          // Entrega o novo E retira o velho (sempre USADO)
+          somarEntrega();
+          somarRetirada();
         }
       }
     }
@@ -3811,13 +3962,52 @@ function calcularTotalizador() {
 
   return Object.entries(mapa)
     .sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
-    .map(([nome, v]) => ({ nome, entrega: v.entrega, retirada: v.retirada }));
+    .map(([nome, v]) => ({ nome, ...v }));
 }
 
-function mostrarResumoConferencia() {
+async function mostrarResumoConferencia() {
   if (!conferenciaAtiva) return;
   document.getElementById('cvRequisicaoCard')?.classList.add('hidden');
   document.getElementById('cvResumo')?.classList.remove('hidden');
+
+  // Marca todas as requisições da conferência como CARREGADO e salva a conferência
+  try {
+    const ids = (conferenciaAtiva.requisicoes || []).map(r => r.id).filter(Boolean);
+    if (ids.length) {
+      await supabaseClient
+        .from(REQUISICOES_TABLE)
+        .update({ status: 'CARREGADO' })
+        .in('id', ids);
+    }
+
+    // Calcula totais para snapshot
+    const reqs = conferenciaAtiva.requisicoes;
+    let totalOk = 0, totalDiv = 0, totalNao = 0;
+    reqs.forEach(req => {
+      (req.itens || []).forEach((_, idx) => {
+        const r = (conferenciaResultados[req.id] || [])[idx];
+        if      (r?.status === 'ok')          totalOk++;
+        else if (r?.status === 'divergencia') totalDiv++;
+        else                                  totalNao++;
+      });
+    });
+
+    const carId = reqs[0]?.carregamento_id || null;
+    await supabaseClient.from(CONFERENCIAS_TABLE).insert([{
+      carregamento_id:      carId,
+      placa:                conferenciaAtiva.placa,
+      motorista:            conferenciaAtiva.motorista,
+      data_saida:           conferenciaAtiva.dataSaida || null,
+      finalizado_por:       obterUsuarioAtualNome(),
+      total_ok:             totalOk,
+      total_divergencias:   totalDiv,
+      total_nao_conferidos: totalNao,
+      resultados:           conferenciaResultados,
+      totalizador:          calcularTotalizador()
+    }]);
+  } catch (e) {
+    console.error('Erro ao salvar conferência:', e);
+  }
 
   const reqs = conferenciaAtiva.requisicoes;
   let totalOk = 0, totalDiv = 0, totalNao = 0;
@@ -3873,30 +4063,67 @@ function mostrarResumoConferencia() {
           <span class="cv-tot-chip cv-tot-chip-retirada"><i class="fas fa-arrow-down"></i> ${totalRetiradas} Retirada${totalRetiradas !== 1 ? 's' : ''}</span>
         </div>
       </div>
-      <div class="table-responsive">
-        <table class="glass-table cv-table-totalizador">
-          <thead><tr>
-            <th>Equipamento</th>
-            <th class="text-center cv-th-entrega">Entrega ao Cliente</th>
-            <th class="text-center cv-th-retirada">Retirada do Cliente</th>
-          </tr></thead>
-          <tbody>
-            ${totalizador.map(row => `
-              <tr>
-                <td>${escapeHtml(row.nome)}</td>
-                <td class="text-center ${row.entrega > 0 ? 'cv-cell-entrega' : 'cv-cell-zero'}">${row.entrega > 0 ? `<strong>${row.entrega}</strong>` : '—'}</td>
-                <td class="text-center ${row.retirada > 0 ? 'cv-cell-retirada' : 'cv-cell-zero'}">${row.retirada > 0 ? `<strong>${row.retirada}</strong>` : '—'}</td>
-              </tr>`).join('')}
-          </tbody>
-          <tfoot>
-            <tr class="cv-tot-total-row">
-              <td><strong>TOTAL GERAL</strong></td>
-              <td class="text-center"><strong>${totalEntregas}</strong></td>
-              <td class="text-center"><strong>${totalRetiradas}</strong></td>
+      ${(()=>{
+        const regular   = totalizador.filter(r => !isItemEspecial(r.nome));
+        const especiais = totalizador.filter(r =>  isItemEspecial(r.nome));
+
+        const thead = `
+          <thead>
+            <tr>
+              <th rowspan="2" class="cv-th-equip-nome">Equipamento</th>
+              <th colspan="3" class="text-center cv-th-entrega cv-th-grupo">Entrega ao Cliente</th>
+              <th colspan="2" class="text-center cv-th-retirada cv-th-grupo">Retirada do Cliente</th>
             </tr>
-          </tfoot>
-        </table>
-      </div>
+            <tr>
+              <th class="text-center cv-th-entrega cv-th-sub">Total</th>
+              <th class="text-center cv-th-entrega cv-th-sub">Novo</th>
+              <th class="text-center cv-th-entrega cv-th-sub">Usado</th>
+              <th class="text-center cv-th-retirada cv-th-sub">Total</th>
+              <th class="text-center cv-th-retirada cv-th-sub">Usado</th>
+            </tr>
+          </thead>`;
+
+        const cel = (val, cls) => val > 0
+          ? `<td class="text-center ${cls}"><strong>${val}</strong></td>`
+          : `<td class="text-center cv-cell-zero">—</td>`;
+
+        const renderLinhas = lista => lista.map(row => {
+          const eTotal = row.entrega  > 0;
+          const rTotal = row.retirada > 0;
+          return `<tr>
+            <td>${escapeHtml(row.nome)}</td>
+            ${cel(row.entrega,       eTotal ? 'cv-cell-entrega'  : '')}
+            ${cel(row.entregaNovo,   eTotal ? 'cv-cell-entrega'  : '')}
+            ${cel(row.entregaUsado,  eTotal ? 'cv-cell-entrega'  : '')}
+            ${cel(row.retirada,      rTotal ? 'cv-cell-retirada' : '')}
+            ${cel(row.retiradaUsado, rTotal ? 'cv-cell-retirada' : '')}
+          </tr>`;
+        }).join('');
+
+        const renderSubtotal = lista => `
+          <tr class="cv-tot-total-row">
+            <td><strong>SUBTOTAL</strong></td>
+            <td class="text-center"><strong>${lista.reduce((s,r)=>s+r.entrega,0)}</strong></td>
+            <td class="text-center"><strong>${lista.reduce((s,r)=>s+r.entregaNovo,0)}</strong></td>
+            <td class="text-center"><strong>${lista.reduce((s,r)=>s+r.entregaUsado,0)}</strong></td>
+            <td class="text-center"><strong>${lista.reduce((s,r)=>s+r.retirada,0)}</strong></td>
+            <td class="text-center"><strong>${lista.reduce((s,r)=>s+r.retiradaUsado,0)}</strong></td>
+          </tr>`;
+
+        const renderTabela = (lista, titulo) => `
+          ${titulo ? `<div class="cv-tot-separador"><i class="fas fa-exchange-alt"></i> ${titulo}</div>` : ''}
+          <div class="table-responsive">
+            <table class="glass-table cv-table-totalizador">
+              ${thead}
+              <tbody>${renderLinhas(lista)}</tbody>
+              <tfoot>${renderSubtotal(lista)}</tfoot>
+            </table>
+          </div>`;
+
+        let html = regular.length ? renderTabela(regular, '') : '';
+        if (especiais.length) html += renderTabela(especiais, 'Esteiras &amp; Formas');
+        return html;
+      })()}
     </div>`;
 }
 
@@ -4031,14 +4258,11 @@ async function gerarRelatorioConferencia() {
   }
 
   // ── Totalizador Geral de Equipamentos ────────────────────────────────────────
-  const totalizador    = calcularTotalizador();
-  const totalEntregas  = totalizador.reduce((s, r) => s + r.entrega,  0);
-  const totalRetiradas = totalizador.reduce((s, r) => s + r.retirada, 0);
+  const totalizador = calcularTotalizador();
 
   if (totalizador.length > 0) {
     if (y > 220) { doc.addPage(); y = 18; }
 
-    // Título da seção
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(0, 105, 55);
@@ -4049,49 +4273,96 @@ async function gerarRelatorioConferencia() {
     doc.line(14, y, 196, y);
     y += 5;
 
-    doc.autoTable({
-      startY: y,
-      head: [['Equipamento', 'Entrega ao Cliente', 'Retirada do Cliente']],
-      body: [
-        ...totalizador.map(row => [
-          row.nome,
-          row.entrega  > 0 ? String(row.entrega)  : '-',
-          row.retirada > 0 ? String(row.retirada) : '-'
-        ]),
-        // linha de total
-        [
-          { content: 'TOTAL GERAL', styles: { fontStyle: 'bold' } },
-          { content: String(totalEntregas),  styles: { fontStyle: 'bold', halign: 'center' } },
-          { content: String(totalRetiradas), styles: { fontStyle: 'bold', halign: 'center' } }
-        ]
+    const regular   = totalizador.filter(r => !isItemEspecial(r.nome));
+    const especiais = totalizador.filter(r =>  isItemEspecial(r.nome));
+
+    // Cabeçalho reutilizável
+    const headTot = [
+      [
+        { content: 'Equipamento',         rowSpan: 2, styles: { valign: 'middle' } },
+        { content: 'Entrega ao Cliente',  colSpan: 3, styles: { halign: 'center', fillColor: [0, 130, 60] } },
+        { content: 'Retirada do Cliente', colSpan: 2, styles: { halign: 'center', fillColor: [160, 30, 30] } }
       ],
-      styles:             { fontSize: 9, cellPadding: 2.5, textColor: [30, 30, 30] },
-      headStyles:         { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 9 },
-      alternateRowStyles: { fillColor: [245, 250, 246] },
-      tableLineColor:     [200, 220, 200],
-      tableLineWidth:     0.1,
-      columnStyles: {
-        0: { cellWidth: 100 },
-        1: { halign: 'center', cellWidth: 40 },
-        2: { halign: 'center', cellWidth: 40 }
-      },
-      didParseCell(data) {
-        if (data.section === 'body' && data.row.index < totalizador.length) {
-          if (data.column.index === 1 && data.cell.raw !== '-')
-            data.cell.styles.textColor = [0, 130, 60];
-          if (data.column.index === 2 && data.cell.raw !== '-')
-            data.cell.styles.textColor = [190, 30, 30];
-        }
-        // última linha = total
-        if (data.section === 'body' && data.row.index === totalizador.length) {
-          data.cell.styles.fillColor    = [230, 245, 235];
-          data.cell.styles.lineWidth    = 0.3;
-          data.cell.styles.lineColor    = [0, 105, 55];
-        }
-      },
-      margin: { left: 14, right: 14 }
-    });
-    y = doc.lastAutoTable.finalY + 8;
+      [
+        { content: 'Total', styles: { halign: 'center', fillColor: [0, 130, 60] } },
+        { content: 'Novo',  styles: { halign: 'center', fillColor: [0, 130, 60] } },
+        { content: 'Usado', styles: { halign: 'center', fillColor: [0, 130, 60] } },
+        { content: 'Total', styles: { halign: 'center', fillColor: [160, 30, 30] } },
+        { content: 'Usado', styles: { halign: 'center', fillColor: [160, 30, 30] } }
+      ]
+    ];
+
+    const colStyles = {
+      0: { cellWidth: 80 },
+      1: { halign: 'center', cellWidth: 20 },
+      2: { halign: 'center', cellWidth: 20 },
+      3: { halign: 'center', cellWidth: 20 },
+      4: { halign: 'center', cellWidth: 20 },
+      5: { halign: 'center', cellWidth: 20 }
+    };
+
+    const buildBody = lista => [
+      ...lista.map(row => [
+        row.nome,
+        row.entrega      > 0 ? row.entrega      : '-',
+        row.entregaNovo  > 0 ? row.entregaNovo  : '-',
+        row.entregaUsado > 0 ? row.entregaUsado : '-',
+        row.retirada      > 0 ? row.retirada      : '-',
+        row.retiradaUsado > 0 ? row.retiradaUsado : '-'
+      ]),
+      [
+        { content: 'SUBTOTAL', styles: { fontStyle: 'bold' } },
+        { content: lista.reduce((s,r)=>s+r.entrega,0)      || '-', styles: { fontStyle: 'bold', halign: 'center' } },
+        { content: lista.reduce((s,r)=>s+r.entregaNovo,0)  || '-', styles: { fontStyle: 'bold', halign: 'center' } },
+        { content: lista.reduce((s,r)=>s+r.entregaUsado,0) || '-', styles: { fontStyle: 'bold', halign: 'center' } },
+        { content: lista.reduce((s,r)=>s+r.retirada,0)      || '-', styles: { fontStyle: 'bold', halign: 'center' } },
+        { content: lista.reduce((s,r)=>s+r.retiradaUsado,0) || '-', styles: { fontStyle: 'bold', halign: 'center' } }
+      ]
+    ];
+
+    const didParseCell = lista => data => {
+      if (data.section !== 'body') return;
+      const isSub = data.row.index === lista.length;
+      if (isSub) {
+        data.cell.styles.fillColor = [230, 245, 235];
+        data.cell.styles.lineWidth = 0.3;
+        data.cell.styles.lineColor = [0, 105, 55];
+      }
+      if (!isSub) {
+        if ([1,2,3].includes(data.column.index) && data.cell.raw !== '-')
+          data.cell.styles.textColor = [0, 130, 60];
+        if ([4,5].includes(data.column.index) && data.cell.raw !== '-')
+          data.cell.styles.textColor = [190, 30, 30];
+      }
+    };
+
+    const autoTabTot = (lista) => {
+      doc.autoTable({
+        startY: y, head: headTot, body: buildBody(lista),
+        styles: { fontSize: 8, cellPadding: 2, textColor: [30, 30, 30] },
+        headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        alternateRowStyles: { fillColor: [245, 250, 246] },
+        tableLineColor: [200, 220, 200], tableLineWidth: 0.1,
+        columnStyles: colStyles, didParseCell: didParseCell(lista),
+        margin: { left: 14, right: 14 }
+      });
+      y = doc.lastAutoTable.finalY + 6;
+    };
+
+    if (regular.length) autoTabTot(regular);
+
+    if (especiais.length) {
+      if (y > 240) { doc.addPage(); y = 18; }
+      // Separador Esteiras & Formas
+      doc.setFillColor(240, 240, 240);
+      doc.rect(14, y, 182, 6, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text('Esteiras & Formas', 17, y + 4.2);
+      y += 8;
+      autoTabTot(especiais);
+    }
   }
 
   // ── Rodapé na última página ──────────────────────────────────────────────────

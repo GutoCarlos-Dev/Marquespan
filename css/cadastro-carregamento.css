@@ -465,6 +465,11 @@
     color: #856404;
 }
 
+.status-badge.aguardando-conf {
+    background: #cce5ff;
+    color: #004085;
+}
+
 .status-badge.carregado {
     background: #d4edda;
     color: #155724;
@@ -1677,6 +1682,36 @@
   color: #000 !important;
 }
 
+/* Totalizador com Novo/Usado */
+.resumo-table-totalizador .resumo-th-equip { min-width: 120px; vertical-align: middle; }
+
+.resumo-table-totalizador .resumo-th-grupo {
+  text-align: center;
+  font-size: 7px;
+  letter-spacing: .06em;
+  border-bottom: 2px solid rgba(255,255,255,.3);
+}
+
+.resumo-table-totalizador .resumo-th-sub {
+  font-size: 6.5px;
+  text-align: center;
+  opacity: .9;
+}
+
+.resumo-table-totalizador .resumo-th-grupo.col-entrega,
+.resumo-table-totalizador .resumo-th-sub.col-entrega  { background: #006937; }
+
+.resumo-table-totalizador .resumo-th-grupo.col-retorno,
+.resumo-table-totalizador .resumo-th-sub.col-retorno  { background: #8b0000; }
+
+/* Sub-colunas Novo/Usado nas células */
+.resumo-sub-novo  { color: #006937; font-weight: 700; }
+.resumo-sub-usado { color: #8b0000; font-weight: 700; }
+
+/* No tfoot as cores são brancas */
+.resumo-total-final .resumo-sub-novo,
+.resumo-total-final .resumo-sub-usado { color: #fff; }
+
 .resumo-num-cel {
   text-align: center !important;
   font-weight: 600;
@@ -2040,23 +2075,41 @@
 
 /* Estado vazio */
 .cv-empty-state {
-  align-items: center;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 40px 20px;
-  text-align: center;
+  gap: 0;
+  padding: 24px 16px;
 }
 
-.cv-empty-state i {
-  color: var(--primary-color);
-  opacity: 0.4;
+.cv-section-titulo {
+  font-size: 14px;
+  font-weight: 700;
+  color: #006937;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.cv-empty-state p {
-  color: #6c757d;
-  font-size: 0.97rem;
-  max-width: 480px;
+.cv-fila-section {
+  background: rgba(0,105,55,0.04);
+  border: 1px solid rgba(0,105,55,0.15);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.cv-fila-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.cv-historico-section {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 16px;
 }
 
 .cv-empty-select {
@@ -2395,8 +2448,45 @@
   color: #b02a37;
 }
 
-.cv-table-totalizador .cv-th-entrega { color: #006937; }
+.cv-table-totalizador .cv-th-entrega  { color: #006937; }
 .cv-table-totalizador .cv-th-retirada { color: #b02a37; }
+
+/* Cabeçalho agrupado */
+.cv-table-totalizador .cv-th-grupo {
+  border-bottom: 2px solid rgba(255,255,255,.2);
+  font-size: .8rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.cv-table-totalizador .cv-th-sub {
+  font-size: .72rem;
+  font-weight: 600;
+  opacity: .9;
+}
+
+.cv-th-grupo.cv-th-entrega  { background: rgba(0,105,55,.18) !important; }
+.cv-th-grupo.cv-th-retirada { background: rgba(190,30,30,.15) !important; }
+.cv-th-sub.cv-th-entrega    { background: rgba(0,105,55,.10) !important; }
+.cv-th-sub.cv-th-retirada   { background: rgba(190,30,30,.08) !important; }
+
+.cv-th-equip-nome { min-width: 140px; }
+
+.cv-tot-separador {
+  align-items: center;
+  background: rgba(255,255,255,.06);
+  border-left: 3px solid rgba(255,255,255,.25);
+  border-radius: 6px;
+  color: rgba(255,255,255,.7);
+  display: flex;
+  font-size: .8rem;
+  font-weight: 700;
+  gap: 8px;
+  letter-spacing: .05em;
+  margin: 14px 0 6px;
+  padding: 6px 12px;
+  text-transform: uppercase;
+}
 
 .cv-cell-entrega {
   color: #006937 !important;
