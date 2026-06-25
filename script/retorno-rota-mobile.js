@@ -262,13 +262,49 @@ function getDevolucoesExtrasPayload(rowData) {
 }
 
 function getCurrentUserName() {
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const usuario = getCurrentUser();
     return usuario ? usuario.nome : null;
 }
 
 function getCurrentUserFilial() {
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+    const usuario = getCurrentUser();
     return usuario ? (usuario.filial || null) : null;
+}
+
+function getCurrentUser() {
+    try {
+        return JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+    } catch {
+        return null;
+    }
+}
+
+async function sincronizarUsuarioLogado() {
+    try {
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError || !session?.user?.id) return getCurrentUser();
+
+        const { data, error } = await supabaseClient
+            .from('usuarios')
+            .select('id, auth_user_id, nome, nomecompleto, email, nivel, filial, status')
+            .eq('auth_user_id', session.user.id)
+            .maybeSingle();
+
+        if (error || !data) return getCurrentUser();
+
+        const usuarioAtual = getCurrentUser() || {};
+        const usuarioSincronizado = {
+            ...usuarioAtual,
+            ...data,
+            nome: data.nomecompleto || data.nome || usuarioAtual.nome
+        };
+
+        localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSincronizado));
+        return usuarioSincronizado;
+    } catch (error) {
+        console.warn('Nao foi possivel sincronizar os dados do usuario logado.', error);
+        return getCurrentUser();
+    }
 }
 
 function escapeHtml(value) {
@@ -395,11 +431,17 @@ async function carregarSupervisores() {
 
 async function carregarMotoristas() {
     try {
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('funcionario')
             .select('nome')
             .eq('funcao', 'Motorista')
             .eq('status', 'Ativo');
+
+        const filialUsuario = getCurrentUserFilial();
+        if (filialUsuario) query = query.eq('filial', filialUsuario);
+
+        const { data, error } = await query;
+
         if (error) throw error;
         motoristasCache = data.map(item => item.nome).filter(Boolean).sort();
     } catch (err) {
@@ -472,11 +514,12 @@ function preencherDatalistRotas() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    await sincronizarUsuarioLogado();
+
     // Define a data de hoje e carrega os dados
     const dataInput = document.getElementById('dataRetornoMobile');
     dataInput.value = getDataSaoPaulo();
     let dataRetornoSelecionada = dataInput.value;
-    loadRetornos();
 
     // Listeners
     dataInput.addEventListener('change', () => {
@@ -548,6 +591,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await carregarSupervisores();
     await carregarPlacas();
     await carregarRotas();
+    await loadRetornos();
 
     // Listener para o modal de materiais (paletes) na versão mobile
     document.getElementById('matTemPaletes').addEventListener('change', (e) => {
@@ -591,6 +635,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadRetornos() {
     const data = document.getElementById('dataRetornoMobile').value;
+    const filialUsuario = getCurrentUserFilial();
     const container = document.getElementById('listaRetornoMobile');
     container.innerHTML = `<div class="loading-placeholder"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>`;
 
@@ -599,11 +644,22 @@ async function loadRetornos() {
         return;
     }
 
+    if (!filialUsuario) {
+        allData = [];
+        ['count-retornaram', 'count-todos', 'count-aguardando'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '0';
+        });
+        container.innerHTML = `<div class="loading-placeholder" style="color: red;">Filial do usuario nao encontrada. Atualize o cadastro do usuario.</div>`;
+        return;
+    }
+
     try {
         const { data: retornos, error } = await supabaseClient
             .from('retorno_rota')
             .select('*')
-            .eq('data_retorno', data);
+            .eq('data_retorno', data)
+            .eq('filial', filialUsuario);
 
         if (error) throw error;
 
@@ -899,9 +955,17 @@ async function saveRetorno() {
     const motorista = document.getElementById('modalMotorista').value;
     const horaMotorista = document.getElementById('modalHoraMotorista').value;
     const obs = document.getElementById('modalObs').value;
+    const filialUsuario = getCurrentUserFilial();
 
     if (!placa) {
         alert('Informe a placa para salvar o lançamento.');
+        btn.disabled = false;
+        btn.textContent = 'Salvar';
+        return;
+    }
+
+    if (!filialUsuario) {
+        alert('Filial do usuario nao encontrada. Atualize o cadastro do usuario antes de salvar.');
         btn.disabled = false;
         btn.textContent = 'Salvar';
         return;
@@ -941,7 +1005,7 @@ async function saveRetorno() {
 
     const updateData = {
         data_retorno: currentItem.data_retorno || document.getElementById('dataRetornoMobile').value,
-        filial: currentItem.filial || getCurrentUserFilial() || null,
+        filial: filialUsuario,
         placa,
         rota: rota || null,
         nome_mot: motorista || null,

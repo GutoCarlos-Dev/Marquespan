@@ -115,7 +115,10 @@ function getUserLevel() {
 //**Liberação para editar o Grid da Pagina */
 function canManageGrid() {
     const nivel = getUserLevel();
-    return nivel === 'administrador' || nivel === 'gerencia' || nivel === 'adm_logistica';
+    return nivel === 'administrador'
+        || nivel === 'gerencia'
+        || nivel === 'adm_logistica'
+        || nivel === 'pr_encarregado';
 }
 
 function canImportarEscalaOnline() {
@@ -123,11 +126,22 @@ function canImportarEscalaOnline() {
     return canManageGrid() || nivel === 'pr_encarregado' || nivel === 'pr_lider';
 }
 
+function isPrEncarregado() {
+    return getUserLevel() === 'pr_encarregado';
+}
+
 function canDelete() {
     return canManageGrid();
 }
 
 function applyGridPermissionUI() {
+    if (isPrEncarregado()) {
+        ['btnAdicionarLinha', 'btnFabAdicionarLinha', 'btnImportarRoteiro'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.style.display = 'none';
+        });
+    }
+
     if (canManageGrid()) return;
 
     ['btnAdicionarLinha', 'btnFabAdicionarLinha', 'btnSalvarTudo', 'btnExcluirSelecionados', 'btnFabExcluirSelecionados', 'btnIncluirSelecionadosDiaSeguinte', 'btnFabIncluirSelecionadosDiaSeguinte', 'btnImportarRoteiro'].forEach(id => {
@@ -502,7 +516,7 @@ async function importarEscalaOnline() {
 }
 
 function incluirLinhaVazia() {
-    if (!canManageGrid()) return;
+    if (!canManageGrid() || isPrEncarregado()) return;
 
     addEmptyRow();
     renderGrid();
@@ -1866,7 +1880,7 @@ function criarLinhaRetornoImportada({ placa, rota, stat, motorista, auxiliar, da
 }
 
 async function importarRoteiroExcel(event) {
-    if (!canManageGrid()) {
+    if (!canManageGrid() || isPrEncarregado()) {
         event.target.value = '';
         alert('Você não tem permissão para importar lançamentos no grid.');
         return;
