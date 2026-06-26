@@ -5459,6 +5459,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <label for="jantaPernoiteEscalaBusca">Buscar Funcionário</label>
                         <input type="search" id="jantaPernoiteEscalaBusca" class="glass-input" placeholder="Digite o nome do funcionário">
                     </div>
+                    <div class="form-group janta-pernoite-escala-status-filter">
+                        <label>Status</label>
+                        <div id="jantaPernoiteEscalaStatusFiltro" class="janta-pernoite-escala-status-options"></div>
+                    </div>
                     <div class="form-group">
                         <label for="jantaPernoiteEscalaDataDesconto">Data do valor a descontar</label>
                         <input type="date" id="jantaPernoiteEscalaDataDesconto" class="glass-input">
@@ -5526,6 +5530,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         modal.addEventListener('change', (event) => {
+            if (event.target.closest('.jp-escala-status-filter')) {
+                renderJantaPernoiteEscalaTabela();
+                return;
+            }
+
             const checkbox = event.target.closest('.jp-escala-check');
             if (!checkbox) return;
 
@@ -5543,6 +5552,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         return modal;
     }
 
+    function getStatusFiltroJantaPernoiteEscala(item) {
+        return cleanImportValue(item?.status) || 'SEM STATUS';
+    }
+
+    function atualizarFiltroStatusJantaPernoiteEscala() {
+        const container = document.getElementById('jantaPernoiteEscalaStatusFiltro');
+        if (!container) return;
+
+        const statuses = [...new Set(jantaPernoiteEscalaDados.map(getStatusFiltroJantaPernoiteEscala))]
+            .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+        if (!statuses.length) {
+            container.innerHTML = '<span class="janta-pernoite-escala-status-empty">Sem status</span>';
+            return;
+        }
+
+        container.innerHTML = statuses.map(status => `
+            <label class="janta-pernoite-escala-status-option">
+                <input type="checkbox" class="jp-escala-status-filter" value="${escapeAttribute(status)}" checked>
+                <span>${escapeAttribute(status)}</span>
+            </label>
+        `).join('');
+    }
+
+    function getStatusSelecionadosJantaPernoiteEscala() {
+        const checkboxes = Array.from(document.querySelectorAll('#jantaPernoiteEscalaStatusFiltro .jp-escala-status-filter'));
+        if (!checkboxes.length) return null;
+
+        return new Set(checkboxes
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => normalizeString(checkbox.value)));
+    }
+
     function getValorJantaPernoiteEscala(item) {
         if (item.desconto) return 0;
         return (item.pagaJanta ? Number(jantaPernoiteEscalaValores.valorJanta || 0) : 0)
@@ -5557,12 +5599,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function getDadosVisiveisJantaPernoiteEscala() {
         const termo = normalizeString(document.getElementById('jantaPernoiteEscalaBusca')?.value);
-        const dadosFiltrados = jantaPernoiteEscalaDados.filter(item => !termo
-            || normalizeString(item.nome).includes(termo)
-            || normalizeString(item.funcao).includes(termo)
-            || normalizeString(item.status).includes(termo)
-            || normalizeString(item.rota).includes(termo)
-            || normalizeVehiclePlate(item.placa).includes(normalizeVehiclePlate(termo)));
+        const statusSelecionados = getStatusSelecionadosJantaPernoiteEscala();
+        const dadosFiltrados = jantaPernoiteEscalaDados.filter(item => {
+            const statusOk = !statusSelecionados || statusSelecionados.has(normalizeString(getStatusFiltroJantaPernoiteEscala(item)));
+            const termoOk = !termo
+                || normalizeString(item.nome).includes(termo)
+                || normalizeString(item.funcao).includes(termo)
+                || normalizeString(item.status).includes(termo)
+                || normalizeString(item.rota).includes(termo)
+                || normalizeVehiclePlate(item.placa).includes(normalizeVehiclePlate(termo));
+
+            return statusOk && termoOk;
+        });
 
         return [...dadosFiltrados].sort((a, b) => {
             const key = jantaPernoiteEscalaSort.key;
@@ -5585,7 +5633,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (!dadosOrdenados.length) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum funcionário encontrado para a busca.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum funcionário encontrado para os filtros.</td></tr>';
             return;
         }
 
@@ -5750,6 +5798,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             modal.querySelector('#jantaPernoiteEscalaBusca').value = '';
             modal.querySelector('#jantaPernoiteEscalaDataDesconto').value = contexto.dataISO;
             modal.querySelector('#jantaPernoiteEscalaMotivoDesconto').value = 'Retornou sem utilizar Janta/Per Noite';
+            atualizarFiltroStatusJantaPernoiteEscala();
             renderJantaPernoiteEscalaTabela();
             modal.classList.remove('hidden');
         } catch (error) {
