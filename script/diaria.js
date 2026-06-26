@@ -595,24 +595,29 @@ async function buscarLancamentoJantaPernoite(id) {
 }
 
 function mapearItensHistoricoJantaPernoite(lancamento) {
-    return (lancamento?.diaria_janta_pernoite_itens || []).map(item => recalcularItemJantaPernoite({
-        key: normalizeString(item.funcionario_nome || item.nome_completo || item.cpf),
-        nome: cleanImportValue(item.funcionario_nome),
-        nomeCompleto: cleanImportValue(item.nome_completo),
-        cpf: cleanImportValue(item.cpf),
-        funcao: cleanImportValue(item.funcao),
-        tipo: cleanImportValue(item.tipo_funcionario),
-        rota: cleanImportValue(item.rota),
-        placa: cleanImportValue(item.placa),
-        motivoFalta: cleanImportValue(item.motivo_desconto),
-        faltou: Boolean(item.faltou),
-        pagaJanta: Boolean(item.paga_janta),
-        pagaPerNoite: Boolean(item.paga_per_noite),
-        desconto: Boolean(item.desconto),
-        valorJanta: Number(lancamento.valor_janta || item.valor_janta || 0),
-        valorPerNoite: Number(lancamento.valor_per_noite || item.valor_per_noite || 0),
-        valorDescontoSalvo: Number(item.valor_desconto || 0)
-    })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    return (lancamento?.diaria_janta_pernoite_itens || []).map(item => {
+        const descontoInfo = getDescontoJantaPernoitePorMotivo(item.motivo_desconto);
+        return recalcularItemJantaPernoite({
+            key: normalizeString(item.funcionario_nome || item.nome_completo || item.cpf),
+            nome: cleanImportValue(item.funcionario_nome),
+            nomeCompleto: cleanImportValue(item.nome_completo),
+            cpf: cleanImportValue(item.cpf),
+            funcao: cleanImportValue(item.funcao),
+            tipo: cleanImportValue(item.tipo_funcionario),
+            rota: cleanImportValue(item.rota),
+            placa: cleanImportValue(item.placa),
+            motivoFalta: cleanImportValue(item.motivo_desconto),
+            faltou: Boolean(item.faltou),
+            pagaJanta: Boolean(item.paga_janta),
+            pagaPerNoite: Boolean(item.paga_per_noite),
+            desconto: Boolean(item.desconto),
+            descontaJanta: Boolean(item.desconto) && descontoInfo.descontaJanta,
+            descontaPerNoite: Boolean(item.desconto) && descontoInfo.descontaPerNoite,
+            valorJanta: Number(lancamento.valor_janta || item.valor_janta || 0),
+            valorPerNoite: Number(lancamento.valor_per_noite || item.valor_per_noite || 0),
+            valorDescontoSalvo: Number(item.valor_desconto || 0)
+        });
+    }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
 async function abrirHistoricoJantaPernoite(id) {
@@ -759,10 +764,31 @@ function criarMapaFaltasJantaPernoite(rows) {
             { nome: row.auxiliar_ausente, motivo: row.motivo_auxiliar }
         ].forEach(item => {
             const key = normalizeString(item.nome);
-            if (key) map.set(key, cleanImportValue(item.motivo) || 'FALTA');
+            if (key) map.set(key, getDescontoJantaPernoitePorMotivo(item.motivo));
         });
     });
     return map;
+}
+
+function getDescontoJantaPernoitePorMotivo(motivo) {
+    const motivoLimpo = cleanImportValue(motivo) || 'FALTA';
+    const motivoNormalizado = normalizeString(motivoLimpo);
+    const temJanta = motivoNormalizado.includes('JANTA');
+    const temPerNoite = motivoNormalizado.includes('PERNOITE') || motivoNormalizado.includes('PER NOITE');
+
+    return {
+        motivo: motivoLimpo,
+        descontaJanta: temJanta || (!temJanta && !temPerNoite),
+        descontaPerNoite: temPerNoite || (!temJanta && !temPerNoite)
+    };
+}
+
+function getStatusDescontoJantaPernoite(item) {
+    if (!item?.desconto) return 'APTO';
+    if (item.descontaJanta && item.descontaPerNoite) return 'DESCONTO JANTA/PERNOITE';
+    if (item.descontaJanta) return 'DESCONTO JANTA';
+    if (item.descontaPerNoite) return 'DESCONTO PERNOITE';
+    return 'DESCONTO';
 }
 
 function montarItensJantaPernoite({ escala, funcionariosAtivos, faltas, salvos, valorJanta, valorPerNoite }) {
@@ -781,8 +807,10 @@ function montarItensJantaPernoite({ escala, funcionariosAtivos, faltas, salvos, 
             if (!funcionario) return;
 
             const salvo = salvos.get(key);
-            const motivoFalta = cleanImportValue(salvo?.motivo_desconto) || faltas.get(key) || '';
+            const faltaInfo = faltas.get(key);
+            const motivoFalta = cleanImportValue(salvo?.motivo_desconto) || faltaInfo?.motivo || '';
             const desconto = salvo ? Boolean(salvo.desconto) : Boolean(motivoFalta);
+            const descontoAuto = motivoFalta ? getDescontoJantaPernoitePorMotivo(motivoFalta) : null;
             const item = recalcularItemJantaPernoite({
                 key,
                 nome: cleanImportValue(funcionario.nome) || nomeEscala,
@@ -797,6 +825,8 @@ function montarItensJantaPernoite({ escala, funcionariosAtivos, faltas, salvos, 
                 pagaJanta: salvo ? Boolean(salvo.paga_janta) : !desconto,
                 pagaPerNoite: salvo ? Boolean(salvo.paga_per_noite) : !desconto,
                 desconto,
+                descontaJanta: descontoAuto ? Boolean(descontoAuto.descontaJanta) : Boolean(salvo?.desconto),
+                descontaPerNoite: descontoAuto ? Boolean(descontoAuto.descontaPerNoite) : Boolean(salvo?.desconto),
                 valorJanta,
                 valorPerNoite,
                 valorDescontoSalvo: salvo ? Number(salvo.valor_desconto || 0) : null
@@ -814,11 +844,13 @@ function recalcularItemJantaPernoite(item) {
     item.valorJantaPagar = item.pagaJanta ? Number(item.valorJanta || 0) : 0;
     item.valorPerNoitePagar = item.pagaPerNoite ? Number(item.valorPerNoite || 0) : 0;
     const valorDescontoSalvo = Number(item.valorDescontoSalvo || 0);
+    const descontaJanta = item.desconto && item.descontaJanta !== false;
+    const descontaPerNoite = item.desconto && item.descontaPerNoite !== false;
     item.valorDesconto = item.desconto
-        ? (valorDescontoSalvo > 0 ? valorDescontoSalvo : Number(item.valorJanta || 0) + Number(item.valorPerNoite || 0))
+        ? (valorDescontoSalvo > 0 ? valorDescontoSalvo : (descontaJanta ? Number(item.valorJanta || 0) : 0) + (descontaPerNoite ? Number(item.valorPerNoite || 0) : 0))
         : 0;
     item.valorPagar = item.valorJantaPagar + item.valorPerNoitePagar;
-    item.status = item.desconto ? 'DESCONTO' : 'APTO';
+    item.status = getStatusDescontoJantaPernoite(item);
     return item;
 }
 
@@ -832,8 +864,13 @@ function atualizarJantaPernoiteManual(key, field, checked) {
         item.desconto = checked;
         item.valorDescontoSalvo = null;
         if (checked) {
+            item.descontaJanta = true;
+            item.descontaPerNoite = true;
             item.pagaJanta = false;
             item.pagaPerNoite = false;
+        } else {
+            item.descontaJanta = false;
+            item.descontaPerNoite = false;
         }
     }
 

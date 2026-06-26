@@ -6283,7 +6283,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         carregarDadosDia(contexto.dia, contexto.semana);
     }
 
-    const FALTAS_MOTIVOS_PADRAO = ['FALTA', 'FERIAS', 'AFASTADO', 'ATESTADO', 'SUSPENSAO', 'FOLGA', 'OUTROS'];
+    const FALTAS_MOTIVOS_PADRAO = ['FALTA', 'FERIAS', 'AFASTADO', 'ATESTADO', 'SUSPENSAO', 'FOLGA', 'JANTA', 'JANTA/PERNOITE', 'PERNOITE', 'OUTROS'];
     const TROCA_FUNCIONARIO_MOTIVOS = ['FALTA', 'RESERVA', 'FERIAS', 'AFASTADO', 'ATESTADO', 'SUSPENSAO', 'FOLGA', 'OUTROS'];
 
     function ensureModalFaltasFuncionarios() {
