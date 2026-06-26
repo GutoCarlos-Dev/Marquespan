@@ -130,6 +130,33 @@
                     </div>
                 </div>
 
+                <div class="diaria-historico">
+                    <div class="diaria-historico-header">
+                        <h4><i class="fas fa-clock-rotate-left"></i> Historico de Diarias</h4>
+                        <button type="button" id="btnAtualizarHistoricoDiaria" class="btn-glass btn-blue">
+                            <i class="fas fa-rotate"></i> Atualizar
+                        </button>
+                    </div>
+                    <div class="terceiro-table-wrap diaria-historico-wrap">
+                        <table class="data-grid diaria-historico-table">
+                            <thead>
+                                <tr>
+                                    <th>SEMANA</th>
+                                    <th>FILIAL</th>
+                                    <th>FUNC.</th>
+                                    <th>DESCONTO</th>
+                                    <th>TOTAL</th>
+                                    <th>ULTIMA ALTERACAO</th>
+                                    <th>ACOES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyHistoricoDiaria">
+                                <tr><td colspan="7" style="text-align:center;">Nenhum historico carregado.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="diaria-meta" id="diariaContexto">Selecione a semana e a filial para calcular.</div>
                 <div class="terceiro-table-wrap diaria-table-wrap">
                     <table class="data-grid diaria-table">
@@ -360,7 +387,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="script/supabase.js"></script>
     <script type="module" src="script/menu.js?v=20260609-1" defer></script>
-    <script type="module" src="script/diaria.js?v=20260626-6"></script>
+    <script type="module" src="script/diaria.js?v=20260626-8"></script>
     <footer class="footer">
         &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>

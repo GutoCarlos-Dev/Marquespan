@@ -1837,7 +1837,8 @@ body.escala-menu-oculto .menu-floating-toggle i {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.diaria-jp-historico {
+.diaria-jp-historico,
+.diaria-historico {
     margin: 0 18px 12px;
     border: 1px solid #dfe8e2;
     border-radius: 8px;
@@ -1845,7 +1846,8 @@ body.escala-menu-oculto .menu-floating-toggle i {
     padding: 12px;
 }
 
-.diaria-jp-historico-header {
+.diaria-jp-historico-header,
+.diaria-historico-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1853,7 +1855,8 @@ body.escala-menu-oculto .menu-floating-toggle i {
     margin-bottom: 10px;
 }
 
-.diaria-jp-historico-header h4 {
+.diaria-jp-historico-header h4,
+.diaria-historico-header h4 {
     display: flex;
     align-items: center;
     gap: 7px;
@@ -1864,28 +1867,34 @@ body.escala-menu-oculto .menu-floating-toggle i {
     text-transform: uppercase;
 }
 
-.diaria-jp-historico-header .btn-glass {
+.diaria-jp-historico-header .btn-glass,
+.diaria-historico-header .btn-glass {
     min-height: 34px;
     padding: 0 12px;
 }
 
-.diaria-jp-historico-wrap {
+.diaria-jp-historico-wrap,
+.diaria-historico-wrap {
     max-height: 220px;
     overflow: auto;
 }
 
-.diaria-jp-historico-table {
+.diaria-jp-historico-table,
+.diaria-historico-table {
     min-width: 980px;
 }
 
-.diaria-jp-historico-table th {
+.diaria-jp-historico-table th,
+.diaria-historico-table th {
     position: sticky;
     top: 0;
     z-index: 2;
 }
 
 .diaria-jp-historico-table th:last-child,
-.diaria-jp-historico-table td:last-child {
+.diaria-jp-historico-table td:last-child,
+.diaria-historico-table th:last-child,
+.diaria-historico-table td:last-child {
     text-align: center;
     width: 150px;
 }

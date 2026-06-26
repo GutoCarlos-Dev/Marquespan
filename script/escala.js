@@ -5349,7 +5349,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert('Diaria registrada com sucesso.');
         } catch (error) {
             console.error('Erro ao salvar diaria:', error);
-            alert('Erro ao salvar diaria. Verifique se o script SQL da tabela escala_diarias foi aplicado. Detalhe: ' + error.message);
+            const detalhe = String(error?.message || error || '');
+            const sqlCorrecao = detalhe.toLowerCase().includes('row-level security')
+                ? 'supabase/2026-06-26_fix_lider_balanca_diaria_rls.sql'
+                : 'supabase/2026-06-26_fix_escala_diarias_totais.sql';
+            alert(`Erro ao salvar diaria. Aplique o SQL ${sqlCorrecao} e tente novamente. Detalhe: ${detalhe}`);
         }
     }
 

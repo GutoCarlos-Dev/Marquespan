@@ -25,6 +25,7 @@ let filiaisCache = [];
 let cadastroFinanceiroDiariaCache = [];
 let jantaPernoiteDadosAtual = [];
 let historicoJantaPernoiteCache = [];
+let historicoDiariaCache = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -48,6 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     atualizarContextoDiaria();
     aplicarCadastroFinanceiroNaDiaria();
     inicializarJantaPernoite();
+    carregarHistoricoDiaria();
 });
 
 function getNivelUsuario() {
@@ -77,6 +79,7 @@ function configurarEventos() {
     document.getElementById('btnSalvarDiaria')?.addEventListener('click', salvarDiariaSemana);
     document.getElementById('btnXLSXDiaria')?.addEventListener('click', gerarXLSXDiaria);
     document.getElementById('btnPDFDiaria')?.addEventListener('click', gerarPDFDiaria);
+    document.getElementById('btnAtualizarHistoricoDiaria')?.addEventListener('click', carregarHistoricoDiaria);
     document.getElementById('diariaValorSemana')?.addEventListener('input', recalcularDiariaComValorAtual);
     document.getElementById('diariaFiltroStatus')?.addEventListener('change', renderDiariaTabela);
     document.getElementById('diariaFiltroFuncao')?.addEventListener('change', renderDiariaTabela);
@@ -85,6 +88,7 @@ function configurarEventos() {
     document.getElementById('escalaFilial')?.addEventListener('change', () => {
         atualizarContextoDiaria();
         aplicarCadastroFinanceiroNaDiaria();
+        carregarHistoricoDiaria();
     });
     document.querySelectorAll('[data-diaria-tab]')?.forEach(button => {
         button.addEventListener('click', () => trocarAbaDiaria(button.dataset.diariaTab));
@@ -108,6 +112,13 @@ function configurarEventos() {
         const id = button.dataset.financeiroId;
         if (button.dataset.financeiroAction === 'edit') editarCadastroFinanceiroDiaria(id);
         if (button.dataset.financeiroAction === 'delete') excluirCadastroFinanceiroDiaria(id);
+    });
+    document.getElementById('tbodyHistoricoDiaria')?.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-diaria-historico-action]');
+        if (!button) return;
+        const id = button.dataset.diariaHistoricoId;
+        if (button.dataset.diariaHistoricoAction === 'open') abrirHistoricoDiaria(id);
+        if (button.dataset.diariaHistoricoAction === 'delete') excluirHistoricoDiaria(id);
     });
     document.getElementById('tbodyJantaPernoite')?.addEventListener('change', (event) => {
         const toggle = event.target.closest('[data-jp-field]');
@@ -1807,7 +1818,11 @@ async function salvarDiariaSemana() {
         alert('Diaria registrada com sucesso.');
     } catch (error) {
         console.error('Erro ao salvar diaria:', error);
-        alert('Erro ao salvar diaria. Verifique se o script SQL da tabela escala_diarias foi aplicado. Detalhe: ' + error.message);
+        const detalhe = String(error?.message || error || '');
+        const sqlCorrecao = detalhe.toLowerCase().includes('row-level security')
+            ? 'supabase/2026-06-26_fix_lider_balanca_diaria_rls.sql'
+            : 'supabase/2026-06-26_fix_escala_diarias_totais.sql';
+        alert(`Erro ao salvar diaria. Aplique o SQL ${sqlCorrecao} e tente novamente. Detalhe: ${detalhe}`);
     }
 }
 

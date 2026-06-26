@@ -1,7 +1,7 @@
 -- Protecao de dados da pagina escala.html.
 -- Regra:
 -- - acesso de leitura depende de nivel_permissoes.paginas_permitidas conter escala.html;
--- - administrador e gerencia podem gerenciar todas as filiais;
+-- - administrador, gerencia e lider_balanca podem gerenciar todas as filiais;
 -- - balanca, equipe_noturno, adm_logistica e logistica podem editar a propria filial;
 -- - outros niveis com acesso a pagina leem apenas a propria filial;
 -- - escrita fica restrita aos niveis de gerenciamento definidos abaixo.
@@ -39,7 +39,7 @@ as $$
     from public.usuarios u
     where u.auth_user_id = auth.uid()
       and coalesce(u.status, 'ATIVO') <> 'INATIVO'
-      and lower(u.nivel) in ('administrador', 'gerencia', 'balanca', 'equipe_noturno', 'adm_logistica', 'logistica')
+      and lower(u.nivel) in ('administrador', 'gerencia', 'balanca', 'equipe_noturno', 'adm_logistica', 'logistica', 'lider_balanca')
   );
 $$;
 
@@ -58,11 +58,14 @@ as $$
     where u.auth_user_id = auth.uid()
       and coalesce(u.status, 'ATIVO') <> 'INATIVO'
       and (
-        lower(u.nivel) = 'administrador'
+        lower(u.nivel) in ('administrador', 'lider_balanca')
         or 'escala.html' = any(coalesce(np.paginas_permitidas, array[]::text[]))
+        or 'diaria.html' = any(coalesce(np.paginas_permitidas, array[]::text[]))
+        or 'controle-de-jornada.html' = any(coalesce(np.paginas_permitidas, array[]::text[]))
+        or 'monitoramento-frota.html' = any(coalesce(np.paginas_permitidas, array[]::text[]))
       )
       and (
-        lower(u.nivel) in ('administrador', 'gerencia')
+        lower(u.nivel) in ('administrador', 'gerencia', 'lider_balanca')
         or coalesce(p_filial, '') = coalesce(u.filial, '')
       )
   );
@@ -80,9 +83,9 @@ as $$
     from public.usuarios u
     where u.auth_user_id = auth.uid()
       and coalesce(u.status, 'ATIVO') <> 'INATIVO'
-      and lower(u.nivel) in ('administrador', 'gerencia', 'balanca', 'equipe_noturno', 'adm_logistica', 'logistica')
+      and lower(u.nivel) in ('administrador', 'gerencia', 'balanca', 'equipe_noturno', 'adm_logistica', 'logistica', 'lider_balanca')
       and (
-        lower(u.nivel) in ('administrador', 'gerencia')
+        lower(u.nivel) in ('administrador', 'gerencia', 'lider_balanca')
         or coalesce(p_filial, '') = coalesce(u.filial, '')
       )
   );
