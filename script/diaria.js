@@ -1336,12 +1336,114 @@ async function buscarHistoricoDiaria(id) {
     return data;
 }
 
+async function carregarAusenciasHistoricoDiaria(semana, filial) {
+    const semanaReferencia = getSemanaAnteriorNome(semana);
+    const datasSemanaAtual = getDatasSemanaISO(semana);
+    const datasSemanaAnterior = getDatasSemanaISO(semanaReferencia);
+    const ausencias = new Map();
+
+    const consultas = [];
+    if (datasSemanaAtual.length) {
+        consultas.push(
+            supabaseClient
+                .from('faltas_afastamentos')
+                .select('motorista_ausente, motivo_motorista, auxiliar_ausente, motivo_auxiliar, data_escala')
+                .eq('filial', filial)
+                .in('data_escala', datasSemanaAtual)
+        );
+    }
+
+    if (datasSemanaAnterior.length) {
+        consultas.push(
+            supabaseClient
+                .from('faltas_afastamentos')
+                .select('motorista_ausente, motivo_motorista, auxiliar_ausente, motivo_auxiliar, data_escala')
+                .eq('filial', filial)
+                .in('data_escala', datasSemanaAnterior)
+        );
+    }
+
+    if (!consultas.length) return ausencias;
+
+    const resultados = await Promise.all(consultas);
+    resultados.forEach((resultado, index) => {
+        if (resultado.error) throw resultado.error;
+        const deveRegistrar = index === 0 ? isStatusAtualDiaria : isFaltaSemanaAnteriorDiaria;
+        registrarAusenciasDiaria(
+            resultado.data || [],
+            ausencias,
+            nome => cleanImportValue(nome),
+            nome => getPessoaDiariaKeys(nome),
+            deveRegistrar
+        );
+    });
+
+    return ausencias;
+}
+
+async function carregarCadastroFuncionariosHistoricoDiaria(filial) {
+    if (!filial) return new Map();
+
+    const { data, error } = await supabaseClient
+        .from('funcionario')
+        .select('nome, nome_completo, cpf, funcao, filial')
+        .eq('filial', filial);
+
+    if (error) throw error;
+
+    const map = new Map();
+    (data || []).forEach(funcionario => {
+        [funcionario.nome, funcionario.nome_completo].forEach(nome => {
+            const key = normalizeString(nome);
+            if (key && !map.has(key)) map.set(key, funcionario);
+        });
+    });
+    return map;
+}
+
+function aplicarCadastroHistoricoDiaria(item, cadastroFuncionarios) {
+    const cadastro = cadastroFuncionarios.get(normalizeString(item.nome))
+        || cadastroFuncionarios.get(normalizeString(item.nomeCompleto));
+    if (!cadastro) return item;
+
+    item.nomeCompleto = cleanImportValue(cadastro.nome_completo) || item.nomeCompleto;
+    item.cpf = cleanImportValue(cadastro.cpf) || item.cpf;
+    item.funcao = cleanImportValue(cadastro.funcao) || item.funcao;
+    return item;
+}
+
+function aplicarDescricaoHistoricoDiaria(item, ausencias) {
+    const ausencia = mergeAusenciasDiaria(getPessoaDiariaKeys(item.nome, item.nomeCompleto, item.cpf), ausencias);
+    if (!ausencia) return item;
+
+    item.datasFalta = [...ausencia.dias].sort().map(formatDataISOBR);
+    item.motivosAusencia = [...ausencia.motivos];
+
+    const status = item.status || getPrimaryMotivoAusencia(item.motivosAusencia, item.diasDesconto);
+    const referencia = getReferenciaStatusDiaria(status);
+    if (Number(item.diasDesconto || 0) > 0) {
+        item.descricaoStatus = item.datasFalta.length
+            ? `Desconto ${referencia} por ${item.motivosAusencia.length ? item.motivosAusencia.join(', ') : status}: ${item.datasFalta.join(', ')}`
+            : `Desconto ${referencia}: ${status}`;
+    } else {
+        item.descricaoStatus = item.datasFalta.length
+            ? `${status} ${referencia}: ${item.datasFalta.join(', ')}`
+            : item.descricaoStatus;
+    }
+
+    return item;
+}
+
 async function abrirHistoricoDiaria(id) {
     try {
         const diaria = await buscarHistoricoDiaria(id);
         setValue('escalaFilial', diaria.filial || '');
         setValue('escalaSemana', diaria.semana_nome || '');
         setValue('diariaValorSemana', formatNumeroMoedaInput(diaria.valor_diaria));
+        const [ausenciasHistorico, cadastroFuncionarios] = await Promise.all([
+            carregarAusenciasHistoricoDiaria(diaria.semana_nome, diaria.filial),
+            carregarCadastroFuncionariosHistoricoDiaria(diaria.filial)
+        ]);
 
         diariaDadosAtual = (diaria.escala_diaria_itens || []).map(item => ({
             key: normalizeString(item.funcionario_nome),
@@ -1361,7 +1463,9 @@ async function abrirHistoricoDiaria(id) {
             datasFalta: [],
             motivosAusencia: [],
             statusCadastro: ''
-        })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        })).map(item => aplicarCadastroHistoricoDiaria(item, cadastroFuncionarios))
+            .map(item => aplicarDescricaoHistoricoDiaria(item, ausenciasHistorico))
+            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
         atualizarFiltroFuncaoDiaria();
         renderDiariaTabela();
