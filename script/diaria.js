@@ -326,7 +326,7 @@ function aplicarCadastroFinanceiroNaDiaria() {
     const cadastro = getCadastroFinanceiroPorFilial();
     const inputValor = document.getElementById('diariaValorSemana');
     if (!cadastro || !inputValor) return;
-    inputValor.value = formatNumeroMoedaInput(cadastro.valor_diaria);
+    inputValor.value = formatNumeroMoedaInput(Number(cadastro.valor_diaria || 0) * 5);
     recalcularDiariaComValorAtual();
 }
 
@@ -693,7 +693,9 @@ async function carregarJantaPernoite() {
         if (resFuncionarios.error) throw resFuncionarios.error;
         if (resLancamento.error) throw resLancamento.error;
 
-        const funcionariosAtivos = criarMapaFuncionariosAtivos((resFuncionarios.data || []).filter(funcionario => isFuncionarioAtivoDiaria(funcionario.status)));
+        const funcionariosAtivos = criarMapaFuncionariosAtivos(
+            (resFuncionarios.data || []).filter(funcionario => isFuncionarioElegivelDiaria(funcionario, filial))
+        );
         const faltas = criarMapaFaltasJantaPernoite(resFaltas.data || []);
         const salvos = new Map((resLancamento.data?.diaria_janta_pernoite_itens || [])
             .map(item => [normalizeString(item.funcionario_nome), item]));
@@ -1240,6 +1242,7 @@ async function carregarDiaria() {
             supabaseClient
                 .from('funcionario')
                 .select('nome, nome_completo, cpf, funcao, status, filial, recebe_diaria')
+                .eq('filial', getFilial())
                 .neq('recebe_diaria', false)
                 .order('nome'),
             aplicarFiltroFilial(supabaseClient
@@ -1270,7 +1273,9 @@ async function carregarDiaria() {
 
         const nomeDiariaMap = new Map();
         const funcionarioKeysMap = new Map();
-        const funcionariosAtivos = (resFuncionarios.data || []).filter(funcionario => isFuncionarioAtivoDiaria(funcionario.status));
+        const filialSelecionada = getFilial();
+        const funcionariosAtivos = (resFuncionarios.data || [])
+            .filter(funcionario => isFuncionarioElegivelDiaria(funcionario, filialSelecionada));
 
         funcionariosAtivos.forEach(funcionario => {
             const nomeCurto = cleanImportValue(funcionario.nome) || cleanImportValue(funcionario.nome_completo);
@@ -1322,9 +1327,7 @@ async function carregarDiaria() {
             });
         });
 
-        const filialSelecionada = normalizeString(getFilial());
         const funcionarios = funcionariosAtivos
-            .filter(funcionario => !filialSelecionada || normalizeString(funcionario.filial || getFilial()) === filialSelecionada)
             .map(funcionario => {
                 const nome = getNomeDiaria(funcionario.nome || funcionario.nome_completo);
                 return {
@@ -1355,7 +1358,7 @@ async function carregarDiaria() {
             const estaEmReserva = !estaEscalado && keysFuncionario.some(keyItem => funcionariosReserva.has(keyItem));
             const estaEmRestricao = !estaEscalado && !estaEmReserva && keysFuncionario.some(keyItem => funcionariosRestricao.has(keyItem));
             const foraEscala = !temAusenciaReferencia && datasSemanaAtual.length > 0 && !estaEscalado && !estaEmReserva && !estaEmRestricao;
-            const diasDesconto = foraEscala ? 5 : (ausencia ? Math.min(5, ausencia.dias.size) : 0);
+            const diasDesconto = ausencia ? Math.min(5, ausencia.dias.size) : 0;
             const descontoAnterior = 0;
             const datasFalta = ausencia ? [...ausencia.dias].sort().map(formatDataISOBR) : [];
             const motivosAusencia = ausencia ? [...ausencia.motivos] : [];
@@ -1380,7 +1383,7 @@ async function carregarDiaria() {
                 foraEscala,
                 estaEmReserva,
                 estaEmRestricao,
-                pagarManual: true,
+                pagarManual: !foraEscala,
                 semanaReferencia
             }, valorSemana);
         });
@@ -1905,6 +1908,13 @@ function isStatusAusenciaDiaria(value) {
 
 function isFuncionarioAtivoDiaria(status) {
     return normalizeString(status) === 'ATIVO';
+}
+
+function isFuncionarioElegivelDiaria(funcionario, filial) {
+    if (!funcionario || !isFuncionarioAtivoDiaria(funcionario.status)) return false;
+    const filialSelecionada = normalizeString(filial);
+    if (!filialSelecionada) return true;
+    return normalizeString(funcionario.filial) === filialSelecionada;
 }
 
 function parseMoedaBR(value) {
