@@ -7825,7 +7825,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function carregarListasAuxiliares() {
         // Veículos
         let queryVeiculos = supabaseClient.from('veiculos').select('placa, modelo, tipo, filial, situacao').order('placa');
-        const filial = getFilialEscala();
+        const filialSelecionadaEscala = (selectFilial?.value || '').trim();
+        const filial = filialSelecionadaEscala || (usuarioLogado?.filial || '').trim();
         if (filial) queryVeiculos = queryVeiculos.eq('filial', filial);
 
         const { data: veiculos } = await queryVeiculos;
@@ -7848,10 +7849,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (dlRotas && rotas) dlRotas.innerHTML = [...new Set(rotas.map(r => r.numero))].map(r => `<option value="${r}">`).join('');
 
         // Funcionários
-        const { data: funcs } = await supabaseClient.from('funcionario').select('nome, nome_completo, funcao, status');
         const dlMot = document.getElementById('listaMotoristas');
         const dlAux = document.getElementById('listaAuxiliares');
         const dlTer = document.getElementById('listaTerceiros');
+        if (!filial) {
+            mapaNomesFuncionarios = new Map();
+            if (dlMot) dlMot.innerHTML = '';
+            if (dlAux) dlAux.innerHTML = '';
+            if (dlTer) dlTer.innerHTML = '';
+        }
+
+        const { data: funcs } = filial
+            ? await supabaseClient
+                .from('funcionario')
+                .select('nome, nome_completo, funcao, status, filial')
+                .eq('filial', filial)
+            : { data: [] };
         if (funcs) {
             const funcionariosAtivos = funcs.filter(f => normalizeString(f.status) === 'ATIVO');
             mapaNomesFuncionarios = new Map();
