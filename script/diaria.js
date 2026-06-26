@@ -1584,8 +1584,8 @@ function renderDiariaTabela() {
             <td style="text-align:center;"><input type="checkbox" class="diaria-pagar-toggle" data-diaria-key="${escapeAttribute(item.key)}" ${item.recebe ? 'checked' : ''} ${item.bloqueioStatus ? 'disabled' : ''} title="${item.bloqueioStatus ? 'Bloqueado por falta, afastamento, ferias ou fora da escala na semana anterior' : 'Marcar para pagar diaria'}"></td>
             <td><span class="diaria-status ${statusClass}" title="${escapeAttribute(item.descricaoStatus || item.status)}">${escapeAttribute(item.status)}</span></td>
             <td>${item.diasDesconto}</td>
-            <td>${formatMoedaBR(item.valorPagar)}</td>
             <td class="${temDescontoSemanaAnterior ? 'diaria-desconto-alerta' : ''}">${formatMoedaBR(item.valorDesconto)}</td>
+            <td>${formatMoedaBR(item.valorPagar)}</td>
         </tr>
     `;
     }).join('');
@@ -1803,7 +1803,7 @@ function gerarXLSXDiaria() {
         [`DIARIA - ${semana} - ${filial}`],
         [`Valor semanal: ${formatMoedaBR(resumo.valorSemana)}`, `Valor por dia: ${formatMoedaBR(resumo.valorDia)}`, `Total a pagar: ${formatMoedaBR(resumo.totalPagar)}`, `Desconto sem. anterior: ${formatMoedaBR(resumo.totalDesconto)}`],
         [],
-        ['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'VALOR A PAGAR', 'DESC. SEM. ANTERIOR'],
+        ['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. SEM. ANTERIOR', 'VALOR A PAGAR'],
         ...dados.map(item => [
             item.nome,
             item.nomeCompleto,
@@ -1813,8 +1813,8 @@ function gerarXLSXDiaria() {
             item.status,
             item.descricaoStatus,
             item.diasDesconto,
-            item.valorPagar,
-            item.valorDesconto
+            item.valorDesconto,
+            item.valorPagar
         ])
     ];
 
@@ -1824,8 +1824,23 @@ function gerarXLSXDiaria() {
         { wch: 24 }, { wch: 34 }, { wch: 16 }, { wch: 30 }, { wch: 10 },
         { wch: 18 }, { wch: 42 }, { wch: 12 }, { wch: 16 }, { wch: 18 }
     ];
+    aplicarEstiloDescontoSemAnteriorXLSX(ws, wsData.length);
     XLSX.utils.book_append_sheet(wb, ws, 'Diaria');
     XLSX.writeFile(wb, getDiariaNomeArquivo('xlsx'));
+}
+
+function aplicarEstiloDescontoSemAnteriorXLSX(ws, totalRows) {
+    if (!ws || !window.XLSX?.utils?.encode_cell) return;
+    const descontoCol = 8;
+    for (let row = 3; row < totalRows; row += 1) {
+        const ref = XLSX.utils.encode_cell({ r: row, c: descontoCol });
+        if (!ws[ref]) continue;
+        ws[ref].s = {
+            ...(ws[ref].s || {}),
+            font: { ...(ws[ref].s?.font || {}), color: { rgb: 'DC3545' }, bold: row === 3 },
+            fill: row === 3 ? { fgColor: { rgb: 'F8D7DA' } } : ws[ref].s?.fill
+        };
+    }
 }
 
 function gerarPDFDiaria() {
@@ -1846,7 +1861,7 @@ function gerarPDFDiaria() {
 
     doc.autoTable({
         startY: 27,
-        head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'VALOR A PAGAR', 'DESC. SEM. ANTERIOR']],
+        head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. SEM. ANTERIOR', 'VALOR A PAGAR']],
         body: dados.map(item => [
             item.nome,
             item.nomeCompleto,
@@ -1856,8 +1871,8 @@ function gerarPDFDiaria() {
             item.status,
             item.descricaoStatus,
             item.diasDesconto,
-            formatMoedaBR(item.valorPagar),
-            formatMoedaBR(item.valorDesconto)
+            formatMoedaBR(item.valorDesconto),
+            formatMoedaBR(item.valorPagar)
         ]),
         styles: { fontSize: 7, cellPadding: 1.5 },
         headStyles: { fillColor: [0, 105, 55] },
@@ -1867,6 +1882,11 @@ function gerarPDFDiaria() {
             3: { cellWidth: 34 },
             5: { cellWidth: 23 },
             6: { cellWidth: 48 }
+        },
+        didParseCell: (data) => {
+            if (data.section !== 'body' || data.column.index !== 8) return;
+            const valor = parseMoedaBR(data.cell.raw);
+            if (valor > 0) data.cell.styles.textColor = [220, 53, 69];
         }
     });
 
