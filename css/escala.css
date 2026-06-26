@@ -791,6 +791,10 @@ body.escala-menu-oculto .menu-floating-toggle i {
     font-size: 12px;
 }
 
+.escala-importar-semana-oculto {
+    display: none !important;
+}
+
 .janta-pernoite-escala-modal-content {
     width: min(1180px, 96vw);
 }

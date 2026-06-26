@@ -7,7 +7,7 @@
     <!-- Estilos Globais -->
     <link rel="stylesheet" href="css/index.css">
     <!-- Estilos Específicos da Página -->
-    <link rel="stylesheet" href="css/escala.css?v=20260626-2">
+    <link rel="stylesheet" href="css/escala.css?v=20260626-3">
     <!-- Font Awesome para Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS para Importar/Exportar Excel -->
@@ -67,7 +67,7 @@
                             <button id="btnPDFExpedicaoModelo" class="btn-glass btn-red"><i class="fa-solid fa-truck-fast"></i> PDF Expedição</button>
                             <button id="btnXLSX" class="btn-glass btn-green"><i class="fa-solid fa-file-excel"></i> XLSX</button>
                             <button id="btnCalculoPeso" class="btn-glass btn-blue"><i class="fa-solid fa-weight-hanging"></i> Cálculo de Peso</button>
-                            <button id="btnImportarSemana" class="btn-glass btn-blue"><i class="fa-solid fa-file-import"></i> Importar Semana</button>
+                            <button id="btnImportarSemana" class="btn-glass btn-blue escala-importar-semana-oculto" hidden><i class="fa-solid fa-file-import"></i> Importar Semana</button>
                         </div>
                         <input type="file" id="fileImportar" accept=".xlsx, .xls" style="display: none;">
                         <input type="file" id="fileImportarDia" accept=".xlsx, .xls" style="display: none;">
@@ -513,7 +513,7 @@
     <!-- Assumindo que os scripts principais são carregados por um loader ou estão no menu -->
     <script type="module" src="script/supabase.js"></script>
     <script type="module" src="script/menu.js?v=20260609-1" defer></script>
-    <script type="module" src="script/escala.js?v=20260626-10"></script>
+    <script type="module" src="script/escala.js?v=20260626-11"></script>
     <footer class="footer">
         &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>

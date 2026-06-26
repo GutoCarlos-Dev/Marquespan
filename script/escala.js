@@ -161,8 +161,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnDiaria.disabled = !podeAcessarDiaria;
         }
 
+        if (btnImportarSemana) {
+            btnImportarSemana.disabled = true;
+            btnImportarSemana.classList.add('hidden', 'escala-importar-semana-oculto');
+            btnImportarSemana.hidden = true;
+        }
+
         if (!isAdministradorEscala) {
-            [btnImportarSemana, fileImportarSemana].forEach(element => {
+            [fileImportarSemana].forEach(element => {
                 if (!element) return;
                 element.disabled = true;
                 element.classList.add('hidden');
