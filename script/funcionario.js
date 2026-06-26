@@ -60,6 +60,16 @@ function maskPhone(value) {
     return v;
 }
 
+function formatDateBR(value) {
+    return value ? new Date(value + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+}
+
+function isDateBeforeToday(value) {
+    if (!value) return false;
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    return String(value).slice(0, 10) < today;
+}
+
 const FuncionarioUI = {
     currentFuncaoBeforeEdit: null,
     sortConfig: { column: 'nome', direction: 'asc' }, // Estado inicial da ordenação
@@ -583,6 +593,9 @@ const FuncionarioUI = {
             nome_completo: document.getElementById('funcNomeCompleto').value,
             data_nascimento: document.getElementById('funcDataNascimento').value || null, // Adiciona data de nascimento
             cpf: document.getElementById('funcCPF').value,
+            cnh_numero: document.getElementById('funcCNHNumero').value || null,
+            cnh_categoria: document.getElementById('funcCNHCategoria').value || null,
+            cnh_vencimento: document.getElementById('funcCNHVencimento').value || null,
             data_admissao: document.getElementById('funcAdmissao').value,
             filial: document.getElementById('funcFilial').value || 'SP',
             funcao: novaFuncao,
@@ -649,7 +662,7 @@ const FuncionarioUI = {
         try {
             let query = supabaseClient
                 .from('funcionario')
-                .select('id, rh_registro, filial, nome, nome_completo, cpf, data_nascimento, funcao, data_admissao, contato_corp, contato_pessoal, status, recebe_diaria, data_desligamento, funcao_anterior, data_alteracao_funcao');
+                .select('id, rh_registro, filial, nome, nome_completo, cpf, cnh_numero, cnh_categoria, cnh_vencimento, data_nascimento, funcao, data_admissao, contato_corp, contato_pessoal, status, recebe_diaria, data_desligamento, funcao_anterior, data_alteracao_funcao');
             
             if (selectedStatuses.length > 0) {
                 query = query.in('status', selectedStatuses);
@@ -704,22 +717,29 @@ const FuncionarioUI = {
                 this.filterCount.textContent = `Quantidade listada: ${list.length}`;
             }
             
-            this.tableBody.innerHTML = list.map(f => `
-                <tr>
-                    <td><strong>${escapeHtml(f.rh_registro)}</strong></td>
-                    <td>${escapeHtml(f.filial || 'SP')}</td>
-                    <td title="${escapeHtml(f.nome_completo || '')}">${escapeHtml(f.nome)}</td>
-                    <td>${f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
-                    <td>${escapeHtml(f.funcao)}</td>
-                    <td title="${f.data_admissao ? this.calculateTenure(f.data_admissao) : ''}">${f.data_admissao ? new Date(f.data_admissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
-                    <td>${escapeHtml(f.contato_corp || '-')}</td>
-                    <td><span class="status-badge status-${statusClass(f.status)}">${escapeHtml(f.status)}</span></td>
-                    <td>
-                        <button class="btn-icon edit btn-edit" data-id="${escapeHtml(f.id)}" title="Editar"><i class="fas fa-edit"></i></button>
-                        <button class="btn-icon delete btn-delete" data-id="${escapeHtml(f.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
+            this.tableBody.innerHTML = list.map(f => {
+                const cnhVencida = isDateBeforeToday(f.cnh_vencimento);
+                const cnhVencimentoTexto = formatDateBR(f.cnh_vencimento);
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(f.rh_registro)}</strong></td>
+                        <td>${escapeHtml(f.filial || 'SP')}</td>
+                        <td title="${escapeHtml(f.nome_completo || '')}">${escapeHtml(f.nome)}</td>
+                        <td>${formatDateBR(f.data_nascimento)}</td>
+                        <td>${escapeHtml(f.funcao)}</td>
+                        <td>${escapeHtml(f.cnh_numero || '-')}</td>
+                        <td>${escapeHtml(f.cnh_categoria || '-')}</td>
+                        <td class="${cnhVencida ? 'func-cnh-vencida' : ''}" title="${cnhVencida ? 'CNH vencida' : ''}">${escapeHtml(cnhVencimentoTexto)}</td>
+                        <td title="${f.data_admissao ? this.calculateTenure(f.data_admissao) : ''}">${formatDateBR(f.data_admissao)}</td>
+                        <td>${escapeHtml(f.contato_corp || '-')}</td>
+                        <td><span class="status-badge status-${statusClass(f.status)}">${escapeHtml(f.status)}</span></td>
+                        <td>
+                            <button class="btn-icon edit btn-edit" data-id="${escapeHtml(f.id)}" title="Editar"><i class="fas fa-edit"></i></button>
+                            <button class="btn-icon delete btn-delete" data-id="${escapeHtml(f.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
             this.renderSummary(list);
             this.updateSortIcons(); // Atualiza os ícones após renderizar
         } catch (e) { console.error('Erro ao carregar grid:', e); }
@@ -932,6 +952,9 @@ const FuncionarioUI = {
         document.getElementById('funcNomeCompleto').value = f.nome_completo || '';
         document.getElementById('funcDataNascimento').value = f.data_nascimento || ''; // Preenche data de nascimento
         document.getElementById('funcCPF').value = f.cpf || '';
+        document.getElementById('funcCNHNumero').value = f.cnh_numero || '';
+        document.getElementById('funcCNHCategoria').value = f.cnh_categoria || '';
+        document.getElementById('funcCNHVencimento').value = f.cnh_vencimento || '';
         document.getElementById('funcAdmissao').value = f.data_admissao;
         document.getElementById('funcFilial').value = f.filial || 'SP';
         document.getElementById('funcFuncao').value = f.funcao;
@@ -970,16 +993,19 @@ const FuncionarioUI = {
             'Nome': f.nome,
             'Nome Completo': f.nome_completo,
             'CPF': f.cpf || '-',
-            'Data Nascimento': f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
-            'Data Admissão': f.data_admissao ? new Date(f.data_admissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            'Nº CNH': f.cnh_numero || '-',
+            'Categoria CNH': f.cnh_categoria || '-',
+            'Vencimento CNH': formatDateBR(f.cnh_vencimento),
+            'Data Nascimento': formatDateBR(f.data_nascimento),
+            'Data Admissão': formatDateBR(f.data_admissao),
             'Função': f.funcao,
             'Contato Corp': f.contato_corp || '-',
             'Contato Pessoal': f.contato_pessoal || '-',
             'Status': f.status,
             'Diária': f.recebe_diaria !== false ? 'SIM' : 'NÃO',
-            'Data Desligamento': f.data_desligamento ? new Date(f.data_desligamento + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            'Data Desligamento': formatDateBR(f.data_desligamento),
             'Função Anterior': f.funcao_anterior || '-',
-            'Data Alt. Função': f.data_alteracao_funcao ? new Date(f.data_alteracao_funcao + 'T00:00:00').toLocaleDateString('pt-BR') : '-'
+            'Data Alt. Função': formatDateBR(f.data_alteracao_funcao)
         }));
 
         const wb = XLSX.utils.book_new();
@@ -1027,16 +1053,18 @@ const FuncionarioUI = {
         doc.setTextColor(100);
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 196, 18, { align: 'right' }); // Ajustado para margem da folha vertical
 
-        const headers = [['RH', 'Filial', 'Nome', 'Nasc.', 'Admissão', 'Função', 'Status', 'Contato']];
+        const headers = [['RH', 'Filial', 'Nome', 'Nasc.', 'CNH', 'Cat.', 'Venc. CNH', 'Admissão', 'Função', 'Status']];
         const rows = this.listData.map(f => [
             f.rh_registro,
             f.filial || 'SP',
             f.nome,
             f.data_nascimento ? new Date(f.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}) : '-',
-            f.data_admissao ? new Date(f.data_admissao + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+            f.cnh_numero || '-',
+            f.cnh_categoria || '-',
+            formatDateBR(f.cnh_vencimento),
+            formatDateBR(f.data_admissao),
             f.funcao,
-            f.status,
-            f.contato_corp || f.contato_pessoal || '-'
+            f.status
         ]);
 
         doc.autoTable({
@@ -1048,7 +1076,11 @@ const FuncionarioUI = {
             styles: { fontSize: 6, cellPadding: 1.5 }, // Fonte reduzida e menos padding no corpo
             alternateRowStyles: { fillColor: [245, 245, 245] },
             didParseCell: (data) => {
-                if (data.section === 'body' && data.column.index === 5) { // Coluna Status
+                if (data.section === 'body' && data.column.index === 6 && isDateBeforeToday(this.listData[data.row.index]?.cnh_vencimento)) {
+                    data.cell.styles.textColor = [220, 53, 69];
+                    data.cell.styles.fontStyle = 'bold';
+                }
+                if (data.section === 'body' && data.column.index === 9) { // Coluna Status
                     const status = data.cell.raw;
                     if (status === 'Ativo') data.cell.styles.textColor = [40, 167, 69];
                     if (status === 'Desligado') data.cell.styles.textColor = [220, 53, 69];
