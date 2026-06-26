@@ -587,15 +587,20 @@ const FuncionarioUI = {
             document.getElementById('funcDataPromocao').value = dataHoje;
         }
 
+        const cnhNumero = document.getElementById('funcCNHNumero').value.trim();
+        const cnhCategoria = document.getElementById('funcCNHCategoria').value.trim();
+        const cnhVencimento = document.getElementById('funcCNHVencimento').value;
+        const temDadosCNH = Boolean(cnhNumero || cnhCategoria || cnhVencimento);
+
         const payload = {
             rh_registro: rh,
             nome: document.getElementById('funcNome').value,
             nome_completo: document.getElementById('funcNomeCompleto').value,
             data_nascimento: document.getElementById('funcDataNascimento').value || null, // Adiciona data de nascimento
             cpf: document.getElementById('funcCPF').value,
-            cnh_numero: document.getElementById('funcCNHNumero').value || null,
-            cnh_categoria: document.getElementById('funcCNHCategoria').value || null,
-            cnh_vencimento: document.getElementById('funcCNHVencimento').value || null,
+            cnh_numero: cnhNumero || null,
+            cnh_categoria: cnhCategoria || null,
+            cnh_vencimento: cnhVencimento || null,
             data_admissao: document.getElementById('funcAdmissao').value,
             filial: document.getElementById('funcFilial').value || 'SP',
             funcao: novaFuncao,
@@ -613,7 +618,15 @@ const FuncionarioUI = {
             // Se temos um ID, o upsert resolve pelo ID (padrão). 
             // Se não temos, usamos o rh_registro para evitar duplicidade de matrícula.
             const options = this.editingIdInput.value ? {} : { onConflict: 'rh_registro' };
-            const { error } = await supabaseClient.from('funcionario').upsert(payload, options);
+            let { error } = await supabaseClient.from('funcionario').upsert(payload, options);
+            const erroCNHSchema = error && /cnh_|schema cache|column/i.test(String(error.message || error));
+            if (erroCNHSchema && !temDadosCNH) {
+                const payloadSemCNH = { ...payload };
+                delete payloadSemCNH.cnh_numero;
+                delete payloadSemCNH.cnh_categoria;
+                delete payloadSemCNH.cnh_vencimento;
+                ({ error } = await supabaseClient.from('funcionario').upsert(payloadSemCNH, options));
+            }
             if (error) throw error;
 
             if (this.editingIdInput.value) await this.carregarHistoricoFuncao(rh);
@@ -629,7 +642,11 @@ const FuncionarioUI = {
             this.renderGrid();
         } catch (err) {
             console.error('Erro ao salvar funcionário:', err);
-            alert(`❌ Erro ao salvar registro: ${err.message}`);
+            const detalhe = String(err?.message || err || '');
+            const complemento = /cnh_|schema cache|column/i.test(detalhe)
+                ? '\n\nAplique o SQL supabase/2026-06-26_add_funcionario_cnh.sql e recarregue o schema do Supabase.'
+                : '';
+            alert(`❌ Erro ao salvar registro: ${detalhe}${complemento}`);
         }
     },
 
