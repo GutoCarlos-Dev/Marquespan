@@ -70,6 +70,102 @@ function isDateBeforeToday(value) {
     return String(value).slice(0, 10) < today;
 }
 
+function normalizeImportKey(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Z0-9]+/gi, '_')
+        .replace(/^_+|_+$/g, '')
+        .toUpperCase();
+}
+
+function cleanImportText(value) {
+    if (value === null || value === undefined) return '';
+    return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function normalizeImportRow(row) {
+    const normalized = {};
+    Object.entries(row || {}).forEach(([key, value]) => {
+        normalized[normalizeImportKey(key)] = value;
+    });
+    return normalized;
+}
+
+function getImportValue(row, keys) {
+    for (const key of keys) {
+        const value = row[normalizeImportKey(key)];
+        if (value !== null && value !== undefined && String(value).trim() !== '') return value;
+    }
+    return '';
+}
+
+function parseImportDate(value) {
+    if (!value) return null;
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return value.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    }
+    if (typeof value === 'number' && window.XLSX?.SSF?.parse_date_code) {
+        const parsed = XLSX.SSF.parse_date_code(value);
+        if (parsed) {
+            const month = String(parsed.m).padStart(2, '0');
+            const day = String(parsed.d).padStart(2, '0');
+            return `${parsed.y}-${month}-${day}`;
+        }
+    }
+    const text = cleanImportText(value);
+    if (!text) return null;
+    const br = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (br) return `${br[3]}-${br[2].padStart(2, '0')}-${br[1].padStart(2, '0')}`;
+    const iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`;
+    return null;
+}
+
+function parseImportBoolean(value, defaultValue = true) {
+    const text = normalizeImportKey(value);
+    if (!text) return defaultValue;
+    if (['SIM', 'S', 'TRUE', 'VERDADEIRO', '1', 'YES'].includes(text)) return true;
+    if (['NAO', 'N', 'FALSE', 'FALSO', '0', 'NO'].includes(text)) return false;
+    return defaultValue;
+}
+
+function lerFuncionarioXlsx(file) {
+    return new Promise((resolve, reject) => {
+        if (typeof XLSX === 'undefined') {
+            reject(new Error('Biblioteca XLSX nao carregada.'));
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = event => {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                resolve(rows.map(normalizeImportRow));
+            } catch (error) {
+                reject(error);
+            }
+        };
+        reader.onerror = () => reject(new Error('Nao foi possivel ler o arquivo.'));
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+function baixarRelatorioImportacaoFuncionario(linhas) {
+    const blob = new Blob([linhas.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `relatorio_importacao_funcionarios_${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
+
 const FuncionarioUI = {
     currentFuncaoBeforeEdit: null,
     sortConfig: { column: 'nome', direction: 'asc' }, // Estado inicial da ordenação
@@ -122,6 +218,9 @@ const FuncionarioUI = {
         this.funcaoSelect = document.getElementById('funcFuncao');
         this.btnExportXLSX = document.getElementById('btnExportXLSX');
         this.btnExportPDF = document.getElementById('btnExportPDF');
+        this.btnDownloadModeloImportacao = document.getElementById('btnDownloadModeloImportacao');
+        this.btnImportXLSX = document.getElementById('btnImportXLSX');
+        this.fileImportFuncionarioXLSX = document.getElementById('fileImportFuncionarioXLSX');
         this.diariaSelect = document.getElementById('funcDiaria');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
         this.gridCount = document.getElementById('countFuncGrid');
@@ -210,6 +309,13 @@ const FuncionarioUI = {
         }
         if (this.btnExportPDF) {
             this.btnExportPDF.addEventListener('click', () => this.exportToPDF());
+        }
+        if (this.btnDownloadModeloImportacao) {
+            this.btnDownloadModeloImportacao.addEventListener('click', () => this.downloadModeloImportacao());
+        }
+        if (this.btnImportXLSX && this.fileImportFuncionarioXLSX) {
+            this.btnImportXLSX.addEventListener('click', () => this.fileImportFuncionarioXLSX.click());
+            this.fileImportFuncionarioXLSX.addEventListener('change', event => this.importFromXLSX(event));
         }
         
         // Listeners para o filtro de status
@@ -1007,6 +1113,215 @@ const FuncionarioUI = {
             registrarAuditoria('EXCLUIR', 'Funcionário', `Exclusão do colaborador ${nomeFuncionario}`);
             await this.renderGrid();
         }
+    },
+
+    getPayloadImportacaoFuncionario(row, { existente = false } = {}) {
+        const rh = cleanImportText(getImportValue(row, ['RH Registro', 'RH', 'Nº Identificador (RH)', 'N Identificador RH', 'RH_REGISTRO']));
+        const filialPadrao = this.usuarioAtual?.filial || 'SP';
+        const payload = { rh_registro: rh };
+
+        const textFields = [
+            ['nome', ['Nome', 'Nome Curto', 'Nome Curto (Exibição)']],
+            ['nome_completo', ['Nome Completo']],
+            ['cpf', ['CPF']],
+            ['filial', ['Filial']],
+            ['funcao', ['Função', 'Funcao', 'Função Atual']],
+            ['contato_corp', ['Contato Corp', 'Contato Corporativo']],
+            ['contato_pessoal', ['Contato Pessoal']],
+            ['status', ['Status']],
+            ['funcao_anterior', ['Função Anterior', 'Funcao Anterior']],
+            ['cnh_numero', ['Nº CNH', 'Numero CNH', 'CNH']],
+            ['cnh_categoria', ['Categoria CNH', 'Categoria', 'Cat.']]
+        ];
+
+        textFields.forEach(([field, keys]) => {
+            const value = cleanImportText(getImportValue(row, keys));
+            if (value) payload[field] = value;
+        });
+
+        const dateFields = [
+            ['data_nascimento', ['Data Nascimento', 'Nascimento']],
+            ['data_admissao', ['Data Admissão', 'Data Admissao', 'Admissão', 'Admissao']],
+            ['data_desligamento', ['Data Desligamento', 'Desligamento']],
+            ['data_alteracao_funcao', ['Data Alt. Função', 'Data Alt Funcao', 'Data Alteracao Funcao']],
+            ['cnh_vencimento', ['Vencimento CNH', 'Venc. CNH', 'Venc CNH', 'CNH Vencimento']]
+        ];
+
+        dateFields.forEach(([field, keys]) => {
+            const raw = getImportValue(row, keys);
+            if (raw) {
+                const parsedDate = parseImportDate(raw);
+                if (!parsedDate) throw new Error(`Data invalida no campo ${keys[0]}.`);
+                payload[field] = parsedDate;
+            }
+        });
+
+        const diariaRaw = getImportValue(row, ['Diária', 'Diaria', 'Recebe Diaria', 'Recebe Diária']);
+        if (diariaRaw !== '') payload.recebe_diaria = parseImportBoolean(diariaRaw, true);
+
+        if (!payload.rh_registro) throw new Error('Campo RH Registro/Nº Identificador (RH) nao informado.');
+
+        if (!existente) {
+            payload.filial = payload.filial || filialPadrao;
+            payload.status = payload.status || 'Ativo';
+            payload.recebe_diaria = payload.recebe_diaria ?? true;
+            if (!payload.nome) throw new Error('Campo Nome nao informado.');
+            if (!payload.nome_completo) payload.nome_completo = payload.nome;
+            if (!payload.funcao) throw new Error('Campo Funcao nao informado.');
+            if (!payload.data_admissao) throw new Error('Campo Data Admissao nao informado ou invalido.');
+        }
+
+        if (payload.status) {
+            const statusMap = {
+                ATIVO: 'Ativo',
+                DESLIGADO: 'Desligado',
+                TRANSFERIDO: 'Transferido',
+                FERIAS: 'Ferias',
+                AFASTADO: 'Afastado'
+            };
+            payload.status = statusMap[normalizeImportKey(payload.status)] || payload.status;
+        }
+
+        Object.keys(payload).forEach(key => {
+            if (payload[key] === '') delete payload[key];
+        });
+
+        return payload;
+    },
+
+    async importFromXLSX(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const startedAt = new Date();
+        const report = [
+            'RELATORIO DE IMPORTACAO DE FUNCIONARIOS',
+            `Arquivo: ${file.name}`,
+            `Data/Hora: ${startedAt.toLocaleString('pt-BR')}`,
+            '',
+            'Campos aceitos: RH Registro/RH/Nº Identificador (RH), Filial, Nome, Nome Completo, CPF, Nº CNH, Categoria CNH, Vencimento CNH, Data Nascimento, Data Admissao, Funcao, Contato Corp, Contato Pessoal, Status, Diaria, Data Desligamento, Funcao Anterior, Data Alt. Funcao.',
+            ''
+        ];
+
+        let incluidos = 0;
+        let atualizados = 0;
+        let rejeitados = 0;
+
+        try {
+            const rows = await lerFuncionarioXlsx(file);
+            if (!rows.length) throw new Error('Arquivo vazio.');
+
+            const rhsArquivo = new Set();
+            const { data: existentes, error: buscaError } = await supabaseClient
+                .from('funcionario')
+                .select('rh_registro');
+            if (buscaError) throw buscaError;
+
+            const rhsExistentes = new Set((existentes || []).map(item => cleanImportText(item.rh_registro)).filter(Boolean));
+
+            for (let index = 0; index < rows.length; index += 1) {
+                const rowNumber = index + 2;
+                const row = rows[index];
+                const rh = cleanImportText(getImportValue(row, ['RH Registro', 'RH', 'Nº Identificador (RH)', 'N Identificador RH', 'RH_REGISTRO']));
+
+                try {
+                    if (!rh) throw new Error('Campo RH Registro/Nº Identificador (RH) nao informado.');
+                    if (rhsArquivo.has(rh)) throw new Error(`RH ${rh} duplicado no arquivo.`);
+                    rhsArquivo.add(rh);
+
+                    const existente = rhsExistentes.has(rh);
+                    const payload = this.getPayloadImportacaoFuncionario(row, { existente });
+
+                    if (existente) {
+                        const payloadUpdate = { ...payload };
+                        delete payloadUpdate.rh_registro;
+                        if (Object.keys(payloadUpdate).length === 0) throw new Error('Nenhum campo para atualizar.');
+                        const { error } = await supabaseClient.from('funcionario').update(payloadUpdate).eq('rh_registro', rh);
+                        if (error) throw error;
+                        atualizados += 1;
+                        report.push(`LINHA ${rowNumber} | RH ${rh} | ATUALIZADO`);
+                    } else {
+                        const { error } = await supabaseClient.from('funcionario').insert(payload);
+                        if (error) throw error;
+                        incluidos += 1;
+                        rhsExistentes.add(rh);
+                        report.push(`LINHA ${rowNumber} | RH ${rh} | INCLUIDO`);
+                    }
+                } catch (error) {
+                    rejeitados += 1;
+                    report.push(`LINHA ${rowNumber} | RH ${rh || '-'} | NAO IMPORTADO | Motivo: ${error.message || error}`);
+                }
+            }
+
+            report.push('');
+            report.push(`Resumo: ${incluidos} incluido(s), ${atualizados} atualizado(s), ${rejeitados} nao importado(s).`);
+            baixarRelatorioImportacaoFuncionario(report);
+            registrarAuditoria('IMPORTAR', 'Funcionário', `Importacao XLSX de funcionarios: ${incluidos} incluidos, ${atualizados} atualizados, ${rejeitados} rejeitados.`);
+            alert(`Importacao concluida.\nIncluidos: ${incluidos}\nAtualizados: ${atualizados}\nNao importados: ${rejeitados}`);
+            await this.renderSummary();
+            await this.renderGrid();
+        } catch (error) {
+            report.push(`ERRO GERAL: ${error.message || error}`);
+            baixarRelatorioImportacaoFuncionario(report);
+            alert('Erro ao importar funcionarios. O relatorio TXT foi gerado com o detalhe.');
+        } finally {
+            event.target.value = '';
+        }
+    },
+
+    downloadModeloImportacao() {
+        if (typeof XLSX === 'undefined') {
+            alert('Biblioteca XLSX nao carregada.');
+            return;
+        }
+
+        const headers = [
+            'RH Registro',
+            'Filial',
+            'Nome',
+            'Nome Completo',
+            'CPF',
+            'Nº CNH',
+            'Categoria CNH',
+            'Vencimento CNH',
+            'Data Nascimento',
+            'Data Admissão',
+            'Função',
+            'Contato Corp',
+            'Contato Pessoal',
+            'Status',
+            'Diária',
+            'Data Desligamento',
+            'Função Anterior',
+            'Data Alt. Função'
+        ];
+
+        const exemplo = {
+            'RH Registro': '123456',
+            'Filial': this.usuarioAtual?.filial || 'SP',
+            'Nome': 'NOME CURTO',
+            'Nome Completo': 'NOME COMPLETO DO FUNCIONARIO',
+            'CPF': '000.000.000-00',
+            'Nº CNH': '00000000000',
+            'Categoria CNH': 'AB',
+            'Vencimento CNH': '31/12/2026',
+            'Data Nascimento': '01/01/1990',
+            'Data Admissão': '01/01/2026',
+            'Função': 'Motorista',
+            'Contato Corp': '(00)00000-0000',
+            'Contato Pessoal': '(00)00000-0000',
+            'Status': 'Ativo',
+            'Diária': 'SIM',
+            'Data Desligamento': '',
+            'Função Anterior': '',
+            'Data Alt. Função': ''
+        };
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet([exemplo], { header: headers });
+        ws['!cols'] = headers.map(header => ({ wch: Math.max(header.length + 4, 16) }));
+        XLSX.utils.book_append_sheet(wb, ws, 'Modelo Funcionarios');
+        XLSX.writeFile(wb, `modelo_importacao_funcionarios_${new Date().toISOString().slice(0, 10)}.xlsx`);
     },
 
     /**
