@@ -1213,6 +1213,142 @@ function atualizarContextoDiaria() {
     }
 }
 
+async function carregarHistoricoDiaria() {
+    const tbody = document.getElementById('tbodyHistoricoDiaria');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando historico...</td></tr>';
+
+    try {
+        let query = supabaseClient
+            .from('escala_diarias')
+            .select('id, semana_nome, filial, total_funcionarios, total_pagar, total_desconto, total_desconto_anterior, ultima_alteracao_por, ultima_alteracao_em, created_at')
+            .order('created_at', { ascending: false })
+            .limit(30);
+
+        const filial = getFilial();
+        if (filial) query = query.eq('filial', filial);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        historicoDiariaCache = data || [];
+        renderHistoricoDiaria();
+    } catch (error) {
+        historicoDiariaCache = [];
+        console.warn('Historico de diaria nao carregado:', error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#dc3545;">Erro ao carregar historico.</td></tr>';
+    }
+}
+
+function renderHistoricoDiaria() {
+    const tbody = document.getElementById('tbodyHistoricoDiaria');
+    if (!tbody) return;
+
+    if (historicoDiariaCache.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum historico salvo encontrado.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = historicoDiariaCache.map(item => `
+        <tr>
+            <td>${escapeAttribute(item.semana_nome)}</td>
+            <td>${escapeAttribute(item.filial)}</td>
+            <td>${Number(item.total_funcionarios || 0)}</td>
+            <td>${formatMoedaBR(Number(item.total_desconto || 0) + Number(item.total_desconto_anterior || 0))}</td>
+            <td>${formatMoedaBR(item.total_pagar)}</td>
+            <td>${formatDiariaHistoricoAlteracao(item)}</td>
+            <td>
+                <div class="diaria-financeiro-row-actions">
+                    <button type="button" data-diaria-historico-action="open" data-diaria-historico-id="${escapeAttribute(item.id)}" title="Abrir historico">
+                        <i class="fas fa-folder-open"></i>
+                    </button>
+                    <button type="button" data-diaria-historico-action="delete" data-diaria-historico-id="${escapeAttribute(item.id)}" title="Excluir historico">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function formatDiariaHistoricoAlteracao(item) {
+    const data = item.ultima_alteracao_em || item.created_at;
+    const usuario = item.ultima_alteracao_por || '-';
+    if (!data) return escapeAttribute(usuario);
+    return `${formatDataHoraBR(data)}<br><small>${escapeAttribute(usuario)}</small>`;
+}
+
+async function buscarHistoricoDiaria(id) {
+    const { data, error } = await supabaseClient
+        .from('escala_diarias')
+        .select('*, escala_diaria_itens(*)')
+        .eq('id', id)
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+async function abrirHistoricoDiaria(id) {
+    try {
+        const diaria = await buscarHistoricoDiaria(id);
+        setValue('escalaFilial', diaria.filial || '');
+        setValue('escalaSemana', diaria.semana_nome || '');
+        setValue('diariaValorSemana', formatNumeroMoedaInput(diaria.valor_diaria));
+
+        diariaDadosAtual = (diaria.escala_diaria_itens || []).map(item => ({
+            key: normalizeString(item.funcionario_nome),
+            nome: cleanImportValue(item.funcionario_nome),
+            nomeCompleto: '',
+            cpf: '',
+            funcao: cleanImportValue(item.funcao),
+            status: cleanImportValue(item.status_diaria) || 'APTO',
+            descricaoStatus: cleanImportValue(item.status_diaria) || 'Historico salvo.',
+            diasDesconto: Number(item.dias_desconto || 0),
+            descontoAnterior: Number(item.desconto_anterior || 0),
+            valorPagar: Number(item.valor_pagar || 0),
+            valorDesconto: Number(item.valor_desconto || 0),
+            recebe: Boolean(item.recebe_diaria),
+            bloqueioStatus: false,
+            pagarManual: Boolean(item.recebe_diaria),
+            datasFalta: [],
+            motivosAusencia: [],
+            statusCadastro: ''
+        })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+        atualizarFiltroFuncaoDiaria();
+        renderDiariaTabela();
+        atualizarContextoDiaria();
+        setText('diariaContexto', `Historico aberto para edicao: ${diaria.semana_nome} - ${diaria.filial}`);
+    } catch (error) {
+        console.error('Erro ao abrir historico de diaria:', error);
+        alert('Erro ao abrir historico. Detalhe: ' + error.message);
+    }
+}
+
+async function excluirHistoricoDiaria(id) {
+    const item = historicoDiariaCache.find(row => row.id === id);
+    if (!item) return;
+    if (!confirm(`Excluir o historico de ${item.semana_nome} - ${item.filial}?`)) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('escala_diarias')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        registrarAuditoria('EXCLUIR', 'Diaria', `Historico de diaria - Semana: ${item.semana_nome}, Filial: ${item.filial}`);
+        await carregarHistoricoDiaria();
+        alert('Historico excluido com sucesso.');
+    } catch (error) {
+        console.error('Erro ao excluir historico de diaria:', error);
+        alert('Erro ao excluir historico. Detalhe: ' + error.message);
+    }
+}
+
 async function carregarFuncoesCadastroDiaria() {
     try {
         const { data, error } = await supabaseClient
@@ -1666,6 +1802,7 @@ function getDiariaDadosExportacao() {
         const statusOk = statusSelecionados.length === 0 || statusSelecionados.some(status => statusItem.includes(status));
         const funcaoOk = funcoesSelecionadas.length === 0 || funcoesSelecionadas.includes(normalizeString(item.funcao));
         const buscaOk = !termoBusca || [
+            item.nome,
             item.nomeCompleto,
             item.cpf,
             item.funcao
@@ -1815,6 +1952,7 @@ async function salvarDiariaSemana() {
         if (insertError) throw insertError;
 
         registrarAuditoria('INCLUIR', 'Diária', `Registro de diária - Semana: ${semana}, Filial: ${getFilial()}`);
+        await carregarHistoricoDiaria();
         alert('Diaria registrada com sucesso.');
     } catch (error) {
         console.error('Erro ao salvar diaria:', error);
