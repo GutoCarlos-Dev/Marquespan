@@ -1525,21 +1525,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (funcionariosError) throw funcionariosError;
 
+        const chavesFuncionarioPorNome = new Map();
+        (funcionarios || []).forEach(funcionario => {
+            const chaves = [funcionario.nome, funcionario.nome_completo]
+                .map(nome => normalizeString(nome))
+                .filter(Boolean);
+            const unicas = [...new Set(chaves)];
+            unicas.forEach(chave => chavesFuncionarioPorNome.set(chave, unicas));
+        });
+        const adicionarIndisponivel = (nome) => {
+            const chave = normalizeString(getNomeFuncionarioExibicao(nome));
+            if (!chave) return;
+            const aliases = chavesFuncionarioPorNome.get(chave) || [chave];
+            aliases.forEach(alias => indisponiveis.add(alias));
+        };
+        const estaIndisponivel = (nome) => {
+            const chave = normalizeString(getNomeFuncionarioExibicao(nome));
+            if (!chave) return false;
+            const aliases = chavesFuncionarioPorNome.get(chave) || [chave];
+            return aliases.some(alias => indisponiveis.has(alias));
+        };
+        const getChaveDesejadaReserva = (campo, nome) => {
+            const chave = normalizeString(getNomeFuncionarioExibicao(nome));
+            if (!chave) return '';
+            const aliases = chavesFuncionarioPorNome.get(chave) || [chave];
+            return aliases.find(alias => desejados[campo].has(alias)) || '';
+        };
+
         const indisponiveis = new Set();
         dadosEscala
             .filter(item => item.tipo_escala !== 'RESERVA')
             .forEach(item => {
-                [item.motorista, item.auxiliar, item.terceiro].forEach(nome => {
-                    const chave = normalizeString(getNomeFuncionarioExibicao(nome));
-                    if (chave) indisponiveis.add(chave);
-                });
+                [item.motorista, item.auxiliar, item.terceiro].forEach(adicionarIndisponivel);
             });
 
         (dadosFaltas || []).forEach(item => {
-            [item.motorista_ausente, item.auxiliar_ausente].forEach(nome => {
-                const chave = normalizeString(getNomeFuncionarioExibicao(nome));
-                if (chave) indisponiveis.add(chave);
-            });
+            [item.motorista_ausente, item.auxiliar_ausente].forEach(adicionarIndisponivel);
         });
 
         const desejados = { motorista: new Map(), auxiliar: new Map() };
@@ -1549,7 +1570,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const campo = getFuncaoReservaAutomatica(funcionario.funcao);
                 const nome = getNomeFuncionarioExibicao(funcionario.nome || funcionario.nome_completo);
                 const chave = normalizeString(nome);
-                if (!campo || !chave || indisponiveis.has(chave)) return;
+                if (!campo || !chave || estaIndisponivel(nome)) return;
                 desejados[campo].set(chave, nome);
             });
 
@@ -1563,10 +1584,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             ['motorista', 'auxiliar'].forEach(campo => {
                 const nome = getNomeFuncionarioExibicao(item[campo]);
-                const chave = normalizeString(nome);
-                if (!chave) return;
+                const chave = getChaveDesejadaReserva(campo, nome);
+                if (!normalizeString(nome)) return;
 
-                if (!desejados[campo].has(chave) || encontrados[campo].has(chave)) {
+                if (!chave || encontrados[campo].has(chave)) {
                     payload[campo] = null;
                     return;
                 }
