@@ -650,7 +650,9 @@ body.escala-menu-oculto .menu-floating-toggle i {
     position: fixed;
     right: 100px;
     bottom: 30px;
-    min-width: 138px;
+    width: max-content;
+    min-width: 48px;
+    max-width: 48px;
     height: 48px;
     border: 0;
     border-radius: 24px;
@@ -664,8 +666,39 @@ body.escala-menu-oculto .menu-floating-toggle i {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 0 16px;
+    overflow: hidden;
+    padding: 0;
+    white-space: nowrap;
+    transition: max-width 0.22s ease, padding 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
     z-index: 9999;
+}
+
+.floating-terceiro-btn:hover,
+.floating-terceiro-btn:focus-visible {
+    max-width: 220px;
+    padding: 0 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+    transform: translateY(-2px);
+}
+
+.floating-terceiro-btn i {
+    flex: 0 0 auto;
+    width: 18px;
+    text-align: center;
+}
+
+.floating-terceiro-btn span {
+    display: inline-block;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-width 0.22s ease, opacity 0.14s ease;
+}
+
+.floating-terceiro-btn:hover span,
+.floating-terceiro-btn:focus-visible span {
+    max-width: 160px;
+    opacity: 1;
 }
 
 .floating-terceiro-btn.hidden {
@@ -680,28 +713,24 @@ body.escala-menu-oculto .menu-floating-toggle i {
 .floating-troca-veiculo-btn {
     right: 100px;
     bottom: 88px;
-    min-width: 176px;
     background: linear-gradient(135deg, #198754, #0f5132);
 }
 
 .floating-faltas-btn {
     right: 100px;
     bottom: 146px;
-    min-width: 150px;
     background: linear-gradient(135deg, #dc3545, #8f1722);
 }
 
 .floating-troca-funcionario-btn {
     right: 100px;
     bottom: 204px;
-    min-width: 168px;
     background: linear-gradient(135deg, #6f42c1, #45247a);
 }
 
 .floating-janta-pernoite-btn {
     right: 100px;
     bottom: 262px;
-    min-width: 180px;
     background: linear-gradient(135deg, #f59f00, #b86b00);
 }
 
