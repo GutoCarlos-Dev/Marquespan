@@ -316,8 +316,8 @@ body.funcionario-modal-open {
     border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
-.func-cnh-vencida {
-    color: #dc3545;
+.glass-table td.func-cnh-vencida {
+    color: #dc3545 !important;
     font-weight: 800;
 }
 
@@ -455,7 +455,7 @@ body.funcionario-modal-open {
 
 .funcionario-filters-grid {
     display: grid;
-    grid-template-columns: 140px minmax(220px, 1fr) 180px 180px 180px 250px;
+    grid-template-columns: 120px minmax(220px, 1fr) 150px 160px 160px 130px 220px;
     gap: 15px;
     margin-bottom: 8px;
     align-items: end;

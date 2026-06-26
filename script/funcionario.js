@@ -116,6 +116,7 @@ const FuncionarioUI = {
         this.monthFilter = document.getElementById('monthFilter');
         this.admissaoMonthYearFilter = document.getElementById('admissaoMonthYearFilter');
         this.demissaoMonthYearFilter = document.getElementById('demissaoMonthYearFilter');
+        this.cnhVencFilter = document.getElementById('cnhVencFilter');
         this.filialSelect = document.getElementById('funcFilial');
         this.filialFilter = document.getElementById('filialFilter');
         this.funcaoSelect = document.getElementById('funcFuncao');
@@ -190,6 +191,9 @@ const FuncionarioUI = {
         }
         if (this.demissaoMonthYearFilter) {
             this.demissaoMonthYearFilter.addEventListener('change', () => this.renderGrid());
+        }
+        if (this.cnhVencFilter) {
+            this.cnhVencFilter.addEventListener('change', () => this.renderGrid());
         }
         if (this.filialFilter) {
             this.filialFilter.addEventListener('change', () => this.renderGrid());
@@ -674,6 +678,7 @@ const FuncionarioUI = {
         const selectedMonth = this.monthFilter?.value || '';
         const selectedAdmissaoMonthYear = this.admissaoMonthYearFilter?.value || '';
         const selectedDemissaoMonthYear = this.demissaoMonthYearFilter?.value || '';
+        const selectedCnhVenc = this.cnhVencFilter?.value || '';
         const selectedFilial = this.filialFilter?.value || '';
 
         try {
@@ -724,6 +729,12 @@ const FuncionarioUI = {
                     if (!f.data_desligamento) return false;
                     return f.data_desligamento.slice(0, 7) === selectedDemissaoMonthYear;
                 });
+            }
+
+            if (selectedCnhVenc === 'vencida') {
+                list = list.filter(f => isDateBeforeToday(f.cnh_vencimento));
+            } else if (selectedCnhVenc === 'em_dia') {
+                list = list.filter(f => !isDateBeforeToday(f.cnh_vencimento));
             }
 
             this.listData = list; // Atualiza cache para exportação
