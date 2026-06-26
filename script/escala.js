@@ -1215,6 +1215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         'Reservas': { tabela: 'escala', tipo: 'RESERVA' },
         'Faltas': { tabela: 'faltas_afastamentos', tipo: null }
     };
+    let linhaEscalaCopiada = null;
 
     // --- INJEÇÃO DE BOTÕES "ADICIONAR LINHA" ---
     Object.keys(SECAO_PARA_DB).forEach(sec => {
@@ -1329,6 +1330,180 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Erro ao adicionar linha:', err);
             alert('Erro ao adicionar linha: ' + err.message);
         }
+    }
+
+    function getSectionByTipoEscala(tipoEscala) {
+        const tipoNormalizado = normalizeString(tipoEscala);
+        return Object.keys(SECAO_PARA_DB).find(section => normalizeString(SECAO_PARA_DB[section].tipo) === tipoNormalizado) || 'Padrao';
+    }
+
+    function getSectionByRow(tr) {
+        if (!tr) return null;
+        const tbodyId = tr.closest('tbody')?.id || '';
+        if (tbodyId.startsWith('tbody')) return tbodyId.replace('tbody', '');
+        if (tr.dataset.tabela === 'faltas_afastamentos') return 'Faltas';
+        if (tr.dataset.tabela === 'escala') return getSectionByTipoEscala(tr.dataset.tipoEscala);
+        return null;
+    }
+
+    function getLinhaSelecionadaParaCopia() {
+        const checkboxMarcado = document.querySelector('#conteudoDias .row-selector-dia:checked');
+        if (checkboxMarcado) return checkboxMarcado.closest('tr');
+
+        const celulaSelecionada = document.querySelector('#conteudoDias .selected-cell');
+        if (celulaSelecionada) return celulaSelecionada.closest('tr');
+
+        const ativo = document.activeElement;
+        if (ativo?.matches?.('#conteudoDias input.table-input, #conteudoDias [contenteditable="true"]')) {
+            return ativo.closest('tr');
+        }
+
+        return null;
+    }
+
+    function isTextoSelecionadoNoCampo(element) {
+        if (!element || !['INPUT', 'TEXTAREA'].includes(element.tagName)) return false;
+        return typeof element.selectionStart === 'number'
+            && typeof element.selectionEnd === 'number'
+            && element.selectionEnd > element.selectionStart;
+    }
+
+    function extrairLinhaEscalaParaCopia(tr) {
+        if (!tr || !tr.dataset.tabela || !tr.dataset.id) return null;
+
+        const tabela = tr.dataset.tabela;
+        const section = getSectionByRow(tr);
+        if (!section || !SECAO_PARA_DB[section]) return null;
+
+        if (tabela === 'faltas_afastamentos') {
+            return {
+                tabela,
+                section,
+                dados: {
+                    motorista_ausente: tr.querySelector('input[data-key="motorista_ausente"]')?.value || '',
+                    motivo_motorista: tr.querySelector('[data-key="motivo_motorista"]')?.innerText || '',
+                    auxiliar_ausente: tr.querySelector('input[data-key="auxiliar_ausente"]')?.value || '',
+                    motivo_auxiliar: tr.querySelector('[data-key="motivo_auxiliar"]')?.innerText || ''
+                }
+            };
+        }
+
+        return {
+            tabela,
+            section,
+            dados: {
+                tipo_escala: SECAO_PARA_DB[section].tipo,
+                placa: tr.querySelector('input[data-key="placa"]')?.value || '',
+                modelo: tr.querySelector('input[data-key="modelo"]')?.value || '',
+                rota: tr.querySelector('input[data-key="rota"]')?.value || '',
+                status: tr.querySelector('input[data-key="status"]')?.value || '',
+                motorista: tr.querySelector('input[data-key="motorista"]')?.value || '',
+                auxiliar: tr.querySelector('input[data-key="auxiliar"]')?.value || '',
+                terceiro: tr.querySelector('input[data-key="terceiro"]')?.value || ''
+            }
+        };
+    }
+
+    function getResumoLinhaCopiada(linha) {
+        if (!linha) return '';
+        if (linha.tabela === 'faltas_afastamentos') {
+            return [
+                linha.dados.motorista_ausente,
+                linha.dados.motivo_motorista,
+                linha.dados.auxiliar_ausente,
+                linha.dados.motivo_auxiliar
+            ].filter(Boolean).join('\t');
+        }
+
+        return [
+            linha.dados.placa,
+            linha.dados.modelo,
+            linha.dados.rota,
+            linha.dados.status,
+            linha.dados.motorista,
+            linha.dados.auxiliar,
+            linha.dados.terceiro
+        ].filter(Boolean).join('\t');
+    }
+
+    async function copiarLinhaEscalaSelecionada(event) {
+        const tr = getLinhaSelecionadaParaCopia();
+        const linha = extrairLinhaEscalaParaCopia(tr);
+        if (!linha) return false;
+
+        event?.preventDefault();
+        linhaEscalaCopiada = linha;
+        document.querySelectorAll('#conteudoDias tr.copied-row').forEach(row => row.classList.remove('copied-row'));
+        tr.classList.add('copied-row');
+
+        const resumo = getResumoLinhaCopiada(linha);
+        if (navigator.clipboard?.writeText && resumo) {
+            try {
+                await navigator.clipboard.writeText(resumo);
+            } catch (error) {
+                console.warn('Nao foi possivel copiar a linha para a area de transferencia:', error);
+            }
+        }
+
+        return true;
+    }
+
+    async function colarLinhaEscalaCopiada(event) {
+        if (!linhaEscalaCopiada) return false;
+        if (!exigirGerenciamentoEscala()) return true;
+
+        const semana = selectSemana.value;
+        const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
+        if (!semana || !dia) return false;
+        if (!exigirFilialEscala()) return true;
+
+        const config = SECAO_PARA_DB[linhaEscalaCopiada.section];
+        if (!config) return false;
+
+        const dataISO = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
+        const payload = comAuditoria({
+            ...linhaEscalaCopiada.dados,
+            semana_nome: semana,
+            data_escala: dataISO,
+            filial: getFilialEscala()
+        });
+
+        if (config.tabela === 'escala') {
+            payload.tipo_escala = config.tipo;
+            if (payload.placa) {
+                payload.placa = normalizeVehiclePlate(payload.placa);
+                payload.modelo = payload.modelo || getModeloVisualByPlaca(payload.placa);
+            }
+            if (payload.rota) payload.rota = normalizarRotaImportada(payload.rota);
+        }
+
+        event?.preventDefault();
+
+        try {
+            const { data, error } = await supabaseClient
+                .from(config.tabela)
+                .insert([payload])
+                .select('id')
+                .single();
+            if (error) throw error;
+
+            registrarAuditoria('INCLUIR', 'Escala', `Linha copiada para ${dia} - ${linhaEscalaCopiada.section}`);
+            await carregarDadosDia(dia, semana);
+
+            if (data?.id) {
+                const row = document.querySelector(`#conteudoDias tr[data-tabela="${config.tabela}"][data-id="${CSS.escape(String(data.id))}"]`);
+                if (row) {
+                    row.classList.add('pasted-row');
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => row.classList.remove('pasted-row'), 1800);
+                }
+            }
+        } catch (err) {
+            console.error('Erro ao colar linha:', err);
+            alert('Erro ao colar linha: ' + err.message);
+        }
+
+        return true;
     }
 
     // Mantem a secao RESERVAS alinhada ao cadastro e a escala do dia.
@@ -7807,6 +7982,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- LISTENERS GERAIS ---
+    document.addEventListener('keydown', (e) => {
+        const key = String(e.key || '').toLowerCase();
+        if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+
+        const painelDias = document.getElementById('conteudoDias');
+        if (!painelDias || painelDias.classList.contains('hidden')) return;
+
+        if (key === 'c') {
+            if (isTextoSelecionadoNoCampo(e.target)) return;
+            copiarLinhaEscalaSelecionada(e);
+            return;
+        }
+
+        if (key === 'v') {
+            colarLinhaEscalaCopiada(e);
+        }
+    });
+
     const btnAdicionarLinhaPlanejamento = document.getElementById('btnAdicionarLinhaPlanejamento');
     if (btnAdicionarLinhaPlanejamento) {
         btnAdicionarLinhaPlanejamento.addEventListener('click', adicionarLinhaPlanejamento);
