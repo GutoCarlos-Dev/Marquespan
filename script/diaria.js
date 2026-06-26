@@ -1183,12 +1183,21 @@ async function getLogoBase64DiariaPDF() {
             const response = await fetch(caminho);
             if (!response.ok) continue;
             const blob = await response.blob();
-            return await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = () => resolve(null);
-                reader.readAsDataURL(blob);
+            const image = await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = URL.createObjectURL(blob);
             });
+            const canvas = document.createElement('canvas');
+            canvas.width = image.naturalWidth || image.width;
+            canvas.height = image.naturalHeight || image.height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(image, 0, 0);
+            URL.revokeObjectURL(image.src);
+            return canvas.toDataURL('image/png');
         } catch {
             // Tenta o proximo caminho.
         }
@@ -1222,7 +1231,7 @@ function desenharCabecalhoJantaPernoitePDF(doc, { logoBase64, titulo, subtitulo,
     doc.text(titulo, 60, 13);
     doc.setFontSize(9);
     doc.text(subtitulo, 60, 20);
-    doc.text(`Gerado por: ${nomeUsuario}`, 60, 26);
+    doc.text(`Usuario: ${nomeUsuario} | Nivel: ${usuarioLogado?.nivel || '-'} | Filial usuario: ${usuarioLogado?.filial || '-'}`, 60, 26);
 
     doc.setFontSize(8);
     doc.setTextColor(100, 115, 107);
@@ -2053,7 +2062,7 @@ function aplicarEstiloDescontoSemAnteriorXLSX(ws, totalRows) {
     }
 }
 
-function gerarPDFDiaria() {
+async function gerarPDFDiaria() {
     const dados = getDiariaDadosExportacao();
     if (dados.length === 0) return alert('Nenhum dado para gerar PDF.');
     if (!window.jspdf?.jsPDF) return alert('Biblioteca jsPDF nao carregada.');
@@ -2063,14 +2072,13 @@ function gerarPDFDiaria() {
     const resumo = getDiariaResumoExportacao(dados);
     const semana = document.getElementById('escalaSemana')?.value || '';
     const filial = getFilial();
-
-    doc.setFontSize(15);
-    doc.text(`Diaria - ${semana} - ${filial}`, 14, 14);
-    doc.setFontSize(9);
-    doc.text(`Valor semanal: ${formatMoedaBR(resumo.valorSemana)} | Valor por dia: ${formatMoedaBR(resumo.valorDia)} | Total a pagar: ${formatMoedaBR(resumo.totalPagar)} | Desconto sem. anterior: ${formatMoedaBR(resumo.totalDesconto)}`, 14, 21);
+    const logoBase64 = await getLogoBase64DiariaPDF();
+    const titulo = `Diaria - ${semana} - ${filial}`;
+    const subtitulo = `Valor semanal: ${formatMoedaBR(resumo.valorSemana)} | Valor por dia: ${formatMoedaBR(resumo.valorDia)} | Total a pagar: ${formatMoedaBR(resumo.totalPagar)} | Desconto sem. anterior: ${formatMoedaBR(resumo.totalDesconto)} | Registros: ${dados.length}`;
 
     doc.autoTable({
-        startY: 27,
+        startY: 38,
+        margin: { top: 38, left: 14, right: 14, bottom: 14 },
         head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. SEM. ANTERIOR', 'VALOR A PAGAR']],
         body: dados.map(item => [
             item.nome,
@@ -2097,6 +2105,14 @@ function gerarPDFDiaria() {
             if (data.section !== 'body' || data.column.index !== 8) return;
             const valor = parseMoedaBR(data.cell.raw);
             if (valor > 0) data.cell.styles.textColor = [220, 53, 69];
+        },
+        didDrawPage: () => {
+            desenharCabecalhoJantaPernoitePDF(doc, {
+                logoBase64,
+                titulo,
+                subtitulo,
+                nomeUsuario: getUsuarioAuditoria()
+            });
         }
     });
 
