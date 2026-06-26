@@ -58,6 +58,15 @@ function podeGerenciar() {
     return NIVEIS_GERENCIAMENTO.has(getNivelUsuario());
 }
 
+function podeVerTodasFiliais() {
+    const nivel = getNivelUsuario();
+    const filialUsuario = usuarioLogado?.filial || '';
+    return nivel === 'administrador'
+        || nivel === 'lider_balanca'
+        || !filialUsuario
+        || (podeGerenciar() && filialUsuario === 'SP');
+}
+
 async function verificarPermissaoPagina() {
     return DIARIA_NIVEIS_PERMITIDOS.has(getNivelUsuario());
 }
@@ -232,7 +241,7 @@ async function carregarFiliais() {
         return;
     }
 
-    filiaisCache = podeGerenciar()
+    filiaisCache = podeVerTodasFiliais()
         ? (data || [])
         : (data || []).filter(filial => (filial.sigla || filial.nome || '') === (usuarioLogado?.filial || ''));
 
@@ -248,7 +257,7 @@ async function carregarFiliais() {
     if (filialUsuario && Array.from(selectFilial.options).some(opt => opt.value === filialUsuario)) {
         selectFilial.value = filialUsuario;
     }
-    selectFilial.disabled = !podeGerenciar() && Boolean(filialUsuario);
+    selectFilial.disabled = !podeVerTodasFiliais() && Boolean(filialUsuario);
 }
 
 function preencherSelectJantaPernoiteFilial() {
@@ -267,7 +276,7 @@ function preencherSelectJantaPernoiteFilial() {
     } else if (usuarioLogado?.filial && Array.from(select.options).some(opt => opt.value === usuarioLogado.filial)) {
         select.value = usuarioLogado.filial;
     }
-    select.disabled = !podeGerenciar() && Boolean(usuarioLogado?.filial);
+    select.disabled = !podeVerTodasFiliais() && Boolean(usuarioLogado?.filial);
 }
 
 function preencherSelectFinanceiroFilial() {
@@ -283,10 +292,10 @@ function preencherSelectFinanceiroFilial() {
 
     if (valorAtual && Array.from(select.options).some(opt => opt.value === valorAtual)) {
         select.value = valorAtual;
-    } else if (!podeGerenciar() && usuarioLogado?.filial) {
+    } else if (!podeVerTodasFiliais() && usuarioLogado?.filial) {
         select.value = usuarioLogado.filial;
     }
-    select.disabled = !podeGerenciar() && Boolean(usuarioLogado?.filial);
+    select.disabled = !podeVerTodasFiliais() && Boolean(usuarioLogado?.filial);
 }
 
 function trocarAbaDiaria(tabId) {
@@ -450,7 +459,7 @@ async function excluirCadastroFinanceiroDiaria(id) {
 
 function limparFormularioFinanceiroDiaria() {
     setValue('financeiroDiariaId', '');
-    setValue('financeiroDiariaFilial', !podeGerenciar() ? (usuarioLogado?.filial || '') : '');
+    setValue('financeiroDiariaFilial', !podeVerTodasFiliais() ? (usuarioLogado?.filial || '') : '');
     setValue('financeiroDiariaValor', '');
     setValue('financeiroJantaValor', '');
     setValue('financeiroPernoiteValor', '');
@@ -590,7 +599,8 @@ function mapearItensHistoricoJantaPernoite(lancamento) {
         pagaPerNoite: Boolean(item.paga_per_noite),
         desconto: Boolean(item.desconto),
         valorJanta: Number(lancamento.valor_janta || item.valor_janta || 0),
-        valorPerNoite: Number(lancamento.valor_per_noite || item.valor_per_noite || 0)
+        valorPerNoite: Number(lancamento.valor_per_noite || item.valor_per_noite || 0),
+        valorDescontoSalvo: Number(item.valor_desconto || 0)
     })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
@@ -655,7 +665,7 @@ async function carregarJantaPernoite() {
     if (!exigirFiltroJantaPernoite()) return;
 
     const tbody = document.getElementById('tbodyJantaPernoite');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Carregando escala...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">Carregando escala...</td></tr>';
 
     const filial = getJantaPernoiteFilial();
     const dataRef = getJantaPernoiteData();
@@ -714,7 +724,7 @@ async function carregarJantaPernoite() {
     } catch (error) {
         console.error('Erro ao carregar janta e pernoite:', error);
         jantaPernoiteDadosAtual = [];
-        if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:#dc3545;">Erro ao carregar janta e pernoite. Verifique se o SQL da tabela foi aplicado.</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; color:#dc3545;">Erro ao carregar janta e pernoite. Verifique se o SQL da tabela foi aplicado.</td></tr>';
         atualizarResumoJantaPernoite();
     }
 }
@@ -760,7 +770,7 @@ function montarItensJantaPernoite({ escala, funcionariosAtivos, faltas, salvos, 
             if (!funcionario) return;
 
             const salvo = salvos.get(key);
-            const motivoFalta = faltas.get(key) || '';
+            const motivoFalta = cleanImportValue(salvo?.motivo_desconto) || faltas.get(key) || '';
             const desconto = salvo ? Boolean(salvo.desconto) : Boolean(motivoFalta);
             const item = recalcularItemJantaPernoite({
                 key,
@@ -777,7 +787,8 @@ function montarItensJantaPernoite({ escala, funcionariosAtivos, faltas, salvos, 
                 pagaPerNoite: salvo ? Boolean(salvo.paga_per_noite) : !desconto,
                 desconto,
                 valorJanta,
-                valorPerNoite
+                valorPerNoite,
+                valorDescontoSalvo: salvo ? Number(salvo.valor_desconto || 0) : null
             });
             itens.set(key, item);
         });
@@ -791,7 +802,10 @@ function recalcularItemJantaPernoite(item) {
     item.pagaPerNoite = Boolean(item.pagaPerNoite) && !item.desconto;
     item.valorJantaPagar = item.pagaJanta ? Number(item.valorJanta || 0) : 0;
     item.valorPerNoitePagar = item.pagaPerNoite ? Number(item.valorPerNoite || 0) : 0;
-    item.valorDesconto = item.desconto ? Number(item.valorJanta || 0) + Number(item.valorPerNoite || 0) : 0;
+    const valorDescontoSalvo = Number(item.valorDescontoSalvo || 0);
+    item.valorDesconto = item.desconto
+        ? (valorDescontoSalvo > 0 ? valorDescontoSalvo : Number(item.valorJanta || 0) + Number(item.valorPerNoite || 0))
+        : 0;
     item.valorPagar = item.valorJantaPagar + item.valorPerNoitePagar;
     item.status = item.desconto ? 'DESCONTO' : 'APTO';
     return item;
@@ -805,6 +819,7 @@ function atualizarJantaPernoiteManual(key, field, checked) {
     if (field === 'pernoite') item.pagaPerNoite = checked;
     if (field === 'desconto') {
         item.desconto = checked;
+        item.valorDescontoSalvo = null;
         if (checked) {
             item.pagaJanta = false;
             item.pagaPerNoite = false;
@@ -855,7 +870,7 @@ function renderJantaPernoiteTabela() {
     const dadosFiltrados = getJantaPernoiteDadosFiltrados();
 
     if (jantaPernoiteDadosAtual.length === 0 || dadosFiltrados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">${jantaPernoiteDadosAtual.length === 0 ? 'Nenhum funcionario ativo escalado para os filtros selecionados.' : 'Nenhum funcionario encontrado para a busca.'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">${jantaPernoiteDadosAtual.length === 0 ? 'Nenhum funcionario ativo escalado para os filtros selecionados.' : 'Nenhum funcionario encontrado para a busca.'}</td></tr>`;
         atualizarResumoJantaPernoite();
         return;
     }
@@ -875,6 +890,7 @@ function renderJantaPernoiteTabela() {
                 <input type="checkbox" class="diaria-jp-toggle" data-jp-key="${escapeAttribute(item.key)}" data-jp-field="desconto" ${item.desconto ? 'checked' : ''} title="${escapeAttribute(item.motivoFalta || 'Marcar desconto')}">
                 <span class="diaria-status ${item.desconto ? 'bloqueado' : 'apto'}">${escapeAttribute(item.status)}</span>
             </td>
+            <td>${escapeAttribute(item.motivoFalta || '')}</td>
             <td>${formatMoedaBR(item.valorPagar)}</td>
         </tr>
     `).join('');
@@ -1035,6 +1051,7 @@ function getJantaPernoiteExportRows() {
         'PER NOITE': item.pagaPerNoite ? 'SIM' : 'NAO',
         DESCONTO: item.desconto ? 'SIM' : 'NAO',
         MOTIVO: item.motivoFalta,
+        'VALOR DESCONTO': item.valorDesconto,
         'VALOR A PAGAR': item.valorPagar
     }));
 }
@@ -1069,22 +1086,23 @@ async function gerarPDFJantaPernoiteComDados({ dados, dataRef, filial, totalPaga
     if (!dados || dados.length === 0) return alert('Nenhum dado para gerar PDF.');
     if (!window.jspdf?.jsPDF) return alert('Biblioteca jsPDF nao carregada.');
 
-    const dadosPagos = dados.filter(item => Number(item.valorPagar || 0) > 0);
-    if (dadosPagos.length === 0) return alert('Nenhum funcionario com valor a pagar para gerar PDF.');
+    const dadosPagos = dados.filter(item => Number(item.valorPagar || 0) > 0 || Number(item.valorDesconto || 0) > 0);
+    if (dadosPagos.length === 0) return alert('Nenhum funcionario com valor a pagar ou desconto para gerar PDF.');
 
     const totalPagarPDF = dadosPagos.reduce((sum, item) => sum + Number(item.valorPagar || 0), 0);
+    const totalDescontoPDF = dadosPagos.reduce((sum, item) => sum + Number(item.valorDesconto || 0), 0);
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const logoBase64 = await getLogoBase64DiariaPDF();
     const nomeUsuario = getUsuarioAuditoria();
     const titulo = `Janta e Pernoite - ${formatDataISOBR(dataRef)} - ${filial}`;
-    const subtitulo = `Total a pagar: ${formatMoedaBR(totalPagarPDF)} | Registros pagos: ${dadosPagos.length}`;
+    const subtitulo = `Total a pagar: ${formatMoedaBR(totalPagarPDF)} | Descontos: ${formatMoedaBR(totalDescontoPDF)} | Registros: ${dadosPagos.length}`;
 
     doc.autoTable({
         startY: 38,
         margin: { top: 38, left: 14, right: 14, bottom: 14 },
-        head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'TIPO', 'ROTA', 'PLACA', 'JANTA', 'PER NOITE', 'DESCONTO', 'VALOR']],
+        head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'TIPO', 'ROTA', 'PLACA', 'JANTA', 'PER NOITE', 'DESCONTO', 'MOTIVO/DATA', 'VALOR DESC.', 'VALOR']],
         body: dadosPagos.map(item => [
             item.nome,
             item.nomeCompleto,
@@ -1096,9 +1114,11 @@ async function gerarPDFJantaPernoiteComDados({ dados, dataRef, filial, totalPaga
             item.pagaJanta ? 'SIM' : 'NAO',
             item.pagaPerNoite ? 'SIM' : 'NAO',
             item.desconto ? 'SIM' : 'NAO',
+            item.motivoFalta || '',
+            formatMoedaBR(item.valorDesconto),
             formatMoedaBR(item.valorPagar)
         ]),
-        styles: { fontSize: 7, cellPadding: 1.5 },
+        styles: { fontSize: 6.3, cellPadding: 1.2 },
         headStyles: { fillColor: [0, 105, 55] },
         didDrawPage: () => {
             desenharCabecalhoJantaPernoitePDF(doc, { logoBase64, titulo, subtitulo, nomeUsuario });

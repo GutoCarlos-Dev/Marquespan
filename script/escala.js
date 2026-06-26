@@ -5356,7 +5356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let jantaPernoiteEscalaDados = [];
     let jantaPernoiteEscalaValores = { valorJanta: 0, valorPerNoite: 0 };
     const jantaPernoiteEscalaSort = { key: 'nome', direction: 'asc' };
-    const jantaPernoiteEscalaUltimoCheck = { janta: null, pernoite: null };
+    const jantaPernoiteEscalaUltimoCheck = { janta: null, pernoite: null, desconto: null };
 
     function ensureModalJantaPernoiteEscala() {
         let modal = document.getElementById('modalJantaPernoiteEscala');
@@ -5386,12 +5386,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button type="button" class="pdf-expedicao-btn secondary" data-jp-escala-bulk="janta" data-acao="limpar">Limpar Janta</button>
                         <button type="button" class="pdf-expedicao-btn secondary" data-jp-escala-bulk="pernoite" data-acao="selecionar">Selecionar Per Noite</button>
                         <button type="button" class="pdf-expedicao-btn secondary" data-jp-escala-bulk="pernoite" data-acao="limpar">Limpar Per Noite</button>
+                        <button type="button" class="pdf-expedicao-btn danger" data-jp-escala-bulk="desconto" data-acao="limpar">Limpar Desconto</button>
                     </div>
                 </div>
                 <div class="janta-pernoite-escala-search">
                     <div class="form-group">
                         <label for="jantaPernoiteEscalaBusca">Buscar Funcionário</label>
                         <input type="search" id="jantaPernoiteEscalaBusca" class="glass-input" placeholder="Digite o nome do funcionário">
+                    </div>
+                    <div class="form-group">
+                        <label for="jantaPernoiteEscalaDataDesconto">Data do valor a descontar</label>
+                        <input type="date" id="jantaPernoiteEscalaDataDesconto" class="glass-input">
+                    </div>
+                    <div class="form-group janta-pernoite-escala-motivo">
+                        <label for="jantaPernoiteEscalaMotivoDesconto">Motivo do desconto</label>
+                        <input type="text" id="jantaPernoiteEscalaMotivoDesconto" class="glass-input" value="Retornou sem utilizar Janta/Per Noite">
                     </div>
                 </div>
                 <div class="terceiro-table-wrap janta-pernoite-escala-table-wrap">
@@ -5405,6 +5414,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <th><button type="button" class="jp-escala-sort-btn" data-jp-escala-sort="status">STATUS <i class="fas fa-sort"></i></button></th>
                                 <th>JANTA</th>
                                 <th>PER NOITE</th>
+                                <th>DESCONTO</th>
+                                <th>VALOR DESC.</th>
                                 <th><button type="button" class="jp-escala-sort-btn" data-jp-escala-sort="valor">VALOR <i class="fas fa-sort"></i></button></th>
                             </tr>
                         </thead>
@@ -5458,6 +5469,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (checkbox.dataset.campo === 'janta') item.pagaJanta = checkbox.checked;
             if (checkbox.dataset.campo === 'pernoite') item.pagaPerNoite = checkbox.checked;
+            if (checkbox.dataset.campo === 'desconto') item.desconto = checkbox.checked;
             renderJantaPernoiteEscalaTabela();
         });
 
@@ -5467,6 +5479,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function getValorJantaPernoiteEscala(item) {
+        if (item.desconto) return 0;
+        return (item.pagaJanta ? Number(jantaPernoiteEscalaValores.valorJanta || 0) : 0)
+            + (item.pagaPerNoite ? Number(jantaPernoiteEscalaValores.valorPerNoite || 0) : 0);
+    }
+
+    function getValorDescontoJantaPernoiteEscala(item) {
+        if (!item.desconto) return 0;
         return (item.pagaJanta ? Number(jantaPernoiteEscalaValores.valorJanta || 0) : 0)
             + (item.pagaPerNoite ? Number(jantaPernoiteEscalaValores.valorPerNoite || 0) : 0);
     }
@@ -5496,12 +5515,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dadosOrdenados = getDadosVisiveisJantaPernoiteEscala();
 
         if (!jantaPernoiteEscalaDados.length) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum motorista ou auxiliar encontrado na escala aberta.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum motorista ou auxiliar encontrado na escala aberta.</td></tr>';
             return;
         }
 
         if (!dadosOrdenados.length) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum funcionário encontrado para a busca.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum funcionário encontrado para a busca.</td></tr>';
             return;
         }
 
@@ -5514,6 +5533,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${escapeAttribute(item.status || '')}</td>
                 <td><input type="checkbox" class="jp-escala-check" data-key="${escapeAttribute(item.key)}" data-campo="janta" ${item.pagaJanta ? 'checked' : ''}></td>
                 <td><input type="checkbox" class="jp-escala-check" data-key="${escapeAttribute(item.key)}" data-campo="pernoite" ${item.pagaPerNoite ? 'checked' : ''}></td>
+                <td><input type="checkbox" class="jp-escala-check" data-key="${escapeAttribute(item.key)}" data-campo="desconto" ${item.desconto ? 'checked' : ''}></td>
+                <td>${formatMoedaBR(getValorDescontoJantaPernoiteEscala(item))}</td>
                 <td>${formatMoedaBR(getValorJantaPernoiteEscala(item))}</td>
             </tr>
         `).join('');
@@ -5523,7 +5544,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const campo = checkbox.dataset.campo;
         const key = checkbox.dataset.key;
         const checked = checkbox.checked;
-        const propriedade = campo === 'janta' ? 'pagaJanta' : 'pagaPerNoite';
+        const propriedade = campo === 'janta' ? 'pagaJanta' : (campo === 'pernoite' ? 'pagaPerNoite' : 'desconto');
         if (!campo || !key || !propriedade) return;
 
         const dadosVisiveis = getDadosVisiveisJantaPernoiteEscala();
@@ -5550,6 +5571,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         jantaPernoiteEscalaDados.forEach(item => {
             if (campo === 'janta') item.pagaJanta = checked;
             if (campo === 'pernoite') item.pagaPerNoite = checked;
+            if (campo === 'desconto') item.desconto = checked;
         });
         renderJantaPernoiteEscalaTabela();
     }
@@ -5578,7 +5600,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         placa: normalizeVehiclePlate(tr.querySelector('input[data-key="placa"]')?.value),
                         status: cleanImportValue(tr.querySelector('input[data-key="status"]')?.value),
                         pagaJanta: true,
-                        pagaPerNoite: true
+                        pagaPerNoite: true,
+                        desconto: false
                     });
                 });
             });
@@ -5654,11 +5677,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             jantaPernoiteEscalaDados = await aplicarCadastroFuncionariosJantaPernoiteEscala(coletarFuncionariosJantaPernoiteEscala(), filial);
             jantaPernoiteEscalaUltimoCheck.janta = null;
             jantaPernoiteEscalaUltimoCheck.pernoite = null;
+            jantaPernoiteEscalaUltimoCheck.desconto = null;
 
             modal.querySelector('#jantaPernoiteEscalaContexto').textContent = `${contexto.dia} - ${contexto.dataBR} | Filial: ${filial}`;
             modal.querySelector('#jantaPernoiteEscalaValorJanta').textContent = formatMoedaBR(jantaPernoiteEscalaValores.valorJanta);
             modal.querySelector('#jantaPernoiteEscalaValorPerNoite').textContent = formatMoedaBR(jantaPernoiteEscalaValores.valorPerNoite);
             modal.querySelector('#jantaPernoiteEscalaBusca').value = '';
+            modal.querySelector('#jantaPernoiteEscalaDataDesconto').value = contexto.dataISO;
+            modal.querySelector('#jantaPernoiteEscalaMotivoDesconto').value = 'Retornou sem utilizar Janta/Per Noite';
             renderJantaPernoiteEscalaTabela();
             modal.classList.remove('hidden');
         } catch (error) {
@@ -5668,8 +5694,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function montarPayloadItemJantaPernoiteEscala(item) {
-        const valorJanta = item.pagaJanta ? Number(jantaPernoiteEscalaValores.valorJanta || 0) : 0;
-        const valorPerNoite = item.pagaPerNoite ? Number(jantaPernoiteEscalaValores.valorPerNoite || 0) : 0;
+        const valorJanta = !item.desconto && item.pagaJanta ? Number(jantaPernoiteEscalaValores.valorJanta || 0) : 0;
+        const valorPerNoite = !item.desconto && item.pagaPerNoite ? Number(jantaPernoiteEscalaValores.valorPerNoite || 0) : 0;
+        const valorDesconto = getValorDescontoJantaPernoiteEscala(item);
+        const dataDesconto = document.getElementById('jantaPernoiteEscalaDataDesconto')?.value || '';
+        const motivoDesconto = cleanImportValue(document.getElementById('jantaPernoiteEscalaMotivoDesconto')?.value) || 'Retornou sem utilizar Janta/Per Noite';
+        const motivo = item.desconto
+            ? `${motivoDesconto}${dataDesconto ? ` | Data origem: ${formatDataISOBR(dataDesconto)}` : ''}`
+            : (item.status || null);
         return comAuditoria({
             funcionario_nome: item.nome,
             nome_completo: item.nomeCompleto || item.nome,
@@ -5678,15 +5710,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             tipo_funcionario: item.tipoFuncionario,
             rota: item.rota || null,
             placa: item.placa || null,
-            status_lancamento: 'APTO',
-            motivo_desconto: item.status || null,
+            status_lancamento: item.desconto ? 'DESCONTO' : 'APTO',
+            motivo_desconto: motivo,
             faltou: false,
-            paga_janta: item.pagaJanta,
-            paga_per_noite: item.pagaPerNoite,
-            desconto: false,
+            paga_janta: !item.desconto && item.pagaJanta,
+            paga_per_noite: !item.desconto && item.pagaPerNoite,
+            desconto: Boolean(item.desconto),
             valor_janta: valorJanta,
             valor_per_noite: valorPerNoite,
-            valor_desconto: 0,
+            valor_desconto: valorDesconto,
             valor_total: valorJanta + valorPerNoite
         });
     }
@@ -5705,12 +5737,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const contexto = getDataEscalaAberta();
         const filial = getFilialEscala();
         if (!contexto || !filial) return alert('Abra uma escala com filial e data antes de salvar.');
+        const possuiDesconto = jantaPernoiteEscalaDados.some(item => item.desconto);
+        if (possuiDesconto && !document.getElementById('jantaPernoiteEscalaDataDesconto')?.value) {
+            return alert('Informe a data do valor a descontar.');
+        }
+        if (jantaPernoiteEscalaDados.some(item => item.desconto && getValorDescontoJantaPernoiteEscala(item) <= 0)) {
+            return alert('Para desconto, marque Janta, Per Noite ou ambos no funcionario.');
+        }
 
         const itensSelecionados = jantaPernoiteEscalaDados
-            .filter(item => item.pagaJanta || item.pagaPerNoite)
+            .filter(item => item.pagaJanta || item.pagaPerNoite || item.desconto)
             .map(montarPayloadItemJantaPernoiteEscala);
 
-        if (!itensSelecionados.length) return alert('Selecione pelo menos um funcionario para Janta ou Per Noite.');
+        if (!itensSelecionados.length) return alert('Selecione pelo menos um funcionario para Janta, Per Noite ou Desconto.');
 
         try {
             let { data: lancamento, error: lancamentoError } = await supabaseClient

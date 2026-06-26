@@ -792,7 +792,7 @@ body.escala-menu-oculto .menu-floating-toggle i {
 }
 
 .janta-pernoite-escala-modal-content {
-    width: min(1040px, 96vw);
+    width: min(1180px, 96vw);
 }
 
 .janta-pernoite-escala-toolbar {
@@ -839,12 +839,21 @@ body.escala-menu-oculto .menu-floating-toggle i {
     font-size: 12px;
 }
 
+.janta-pernoite-escala-actions .pdf-expedicao-btn.danger {
+    background: linear-gradient(135deg, #dc3545, #8f1722);
+    color: #fff;
+}
+
 .janta-pernoite-escala-search {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(180px, 220px) minmax(260px, 1.2fr);
+    gap: 12px;
+    align-items: end;
     padding: 0 18px 12px;
 }
 
 .janta-pernoite-escala-search .form-group {
-    width: min(380px, 100%);
+    width: 100%;
     margin-bottom: 0;
 }
 
@@ -1969,6 +1978,10 @@ body.escala-menu-oculto .menu-floating-toggle i {
 
     .diaria-card-filtros {
         grid-column: 1 / -1;
+    }
+
+    .janta-pernoite-escala-search {
+        grid-template-columns: 1fr;
     }
 }
 
