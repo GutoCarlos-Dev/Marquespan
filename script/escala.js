@@ -1216,6 +1216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         'Faltas': { tabela: 'faltas_afastamentos', tipo: null }
     };
     let linhaEscalaCopiada = null;
+    let linhasEscalaCopiadas = [];
 
     // --- INJEÇÃO DE BOTÕES "ADICIONAR LINHA" ---
     Object.keys(SECAO_PARA_DB).forEach(sec => {
@@ -1361,6 +1362,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         return null;
     }
 
+    function getLinhasSelecionadasParaCopia() {
+        return Array.from(document.querySelectorAll('#conteudoDias .row-selector-dia:checked'))
+            .map(checkbox => checkbox.closest('tr'))
+            .filter(tr => tr?.dataset?.tabela && tr?.dataset?.id);
+    }
+
     function isTextoSelecionadoNoCampo(element) {
         if (!element || !['INPUT', 'TEXTAREA'].includes(element.tagName)) return false;
         return typeof element.selectionStart === 'number'
@@ -1427,16 +1434,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function copiarLinhaEscalaSelecionada(event) {
-        const tr = getLinhaSelecionadaParaCopia();
-        const linha = extrairLinhaEscalaParaCopia(tr);
-        if (!linha) return false;
+        const linhasSelecionadas = getLinhasSelecionadasParaCopia();
+        const rowsParaCopiar = linhasSelecionadas.length > 0 ? linhasSelecionadas : [getLinhaSelecionadaParaCopia()].filter(Boolean);
+        const linhas = rowsParaCopiar
+            .map(tr => ({ tr, linha: extrairLinhaEscalaParaCopia(tr) }))
+            .filter(item => item.linha);
+
+        if (linhas.length === 0) return false;
 
         event?.preventDefault();
-        linhaEscalaCopiada = linha;
+        linhasEscalaCopiadas = linhas.map(item => item.linha);
+        linhaEscalaCopiada = linhasEscalaCopiadas[0] || null;
         document.querySelectorAll('#conteudoDias tr.copied-row').forEach(row => row.classList.remove('copied-row'));
-        tr.classList.add('copied-row');
+        linhas.forEach(item => item.tr.classList.add('copied-row'));
 
-        const resumo = getResumoLinhaCopiada(linha);
+        const resumo = linhasEscalaCopiadas.map(getResumoLinhaCopiada).filter(Boolean).join('\n');
         if (navigator.clipboard?.writeText && resumo) {
             try {
                 await navigator.clipboard.writeText(resumo);
@@ -1445,11 +1457,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        if (event?.type === 'click') {
+            alert(`${linhasEscalaCopiadas.length} linha(s) copiadas. Abra a data de destino e use Ctrl+V para colar.`);
+        }
+
         return true;
     }
 
     async function colarLinhaEscalaCopiada(event) {
-        if (!linhaEscalaCopiada) return false;
+        const linhasParaColar = linhasEscalaCopiadas.length > 0
+            ? linhasEscalaCopiadas
+            : (linhaEscalaCopiada ? [linhaEscalaCopiada] : []);
+        if (linhasParaColar.length === 0) return false;
         if (!exigirGerenciamentoEscala()) return true;
 
         const semana = selectSemana.value;
@@ -1457,46 +1476,67 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!semana || !dia) return false;
         if (!exigirFilialEscala()) return true;
 
-        const config = SECAO_PARA_DB[linhaEscalaCopiada.section];
-        if (!config) return false;
-
         const dataISO = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
-        const payload = comAuditoria({
-            ...linhaEscalaCopiada.dados,
-            semana_nome: semana,
-            data_escala: dataISO,
-            filial: getFilialEscala()
+        const insertsPorTabela = { escala: [], faltas_afastamentos: [] };
+
+        linhasParaColar.forEach(linha => {
+            const config = SECAO_PARA_DB[linha.section];
+            if (!config) return;
+
+            const payload = comAuditoria({
+                ...linha.dados,
+                semana_nome: semana,
+                data_escala: dataISO,
+                filial: getFilialEscala()
+            });
+
+            if (config.tabela === 'escala') {
+                payload.tipo_escala = config.tipo;
+                if (payload.placa) {
+                    payload.placa = normalizeVehiclePlate(payload.placa);
+                    payload.modelo = payload.modelo || getModeloVisualByPlaca(payload.placa);
+                }
+                if (payload.rota) payload.rota = normalizarRotaImportada(payload.rota);
+            }
+
+            insertsPorTabela[config.tabela].push(payload);
         });
 
-        if (config.tabela === 'escala') {
-            payload.tipo_escala = config.tipo;
-            if (payload.placa) {
-                payload.placa = normalizeVehiclePlate(payload.placa);
-                payload.modelo = payload.modelo || getModeloVisualByPlaca(payload.placa);
-            }
-            if (payload.rota) payload.rota = normalizarRotaImportada(payload.rota);
-        }
+        const totalParaColar = insertsPorTabela.escala.length + insertsPorTabela.faltas_afastamentos.length;
+        if (totalParaColar === 0) return false;
 
         event?.preventDefault();
 
         try {
-            const { data, error } = await supabaseClient
-                .from(config.tabela)
-                .insert([payload])
-                .select('id')
-                .single();
-            if (error) throw error;
+            const idsInseridos = [];
+            for (const tabela of Object.keys(insertsPorTabela)) {
+                const payloads = insertsPorTabela[tabela];
+                if (payloads.length === 0) continue;
 
-            registrarAuditoria('INCLUIR', 'Escala', `Linha copiada para ${dia} - ${linhaEscalaCopiada.section}`);
+                const { data, error } = await supabaseClient
+                    .from(tabela)
+                    .insert(payloads)
+                    .select('id');
+                if (error) throw error;
+
+                (data || []).forEach(item => idsInseridos.push({ tabela, id: item.id }));
+            }
+
+            registrarAuditoria('INCLUIR', 'Escala', `${totalParaColar} linha(s) copiadas para ${dia}`);
             await carregarDadosDia(dia, semana);
 
-            if (data?.id) {
-                const row = document.querySelector(`#conteudoDias tr[data-tabela="${config.tabela}"][data-id="${CSS.escape(String(data.id))}"]`);
+            let primeiraLinha = null;
+            idsInseridos.forEach(item => {
+                const row = document.querySelector(`#conteudoDias tr[data-tabela="${item.tabela}"][data-id="${CSS.escape(String(item.id))}"]`);
                 if (row) {
                     row.classList.add('pasted-row');
-                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     setTimeout(() => row.classList.remove('pasted-row'), 1800);
+                    if (!primeiraLinha) primeiraLinha = row;
                 }
+            });
+
+            if (primeiraLinha) {
+                primeiraLinha.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         } catch (err) {
             console.error('Erro ao colar linha:', err);
@@ -8276,7 +8316,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (target.id === 'btnModeloDia') baixarModeloDia();
             if (target.id === 'btnImportarDia') tituloDia.querySelector('#fileImportarDia')?.click();
-            if (target.id === 'btnCopiarDia') copiarDia();
+            if (target.id === 'btnCopiarDia') {
+                if (getLinhasSelecionadasParaCopia().length > 0) {
+                    copiarLinhaEscalaSelecionada(e);
+                } else {
+                    copiarDia();
+                }
+            }
             if (target.id === 'btnAtualizarDiaSemana') tituloDia.querySelector('#fileAtualizarDiaSemana')?.click();
             if (target.id === 'btnExcluirSelecionadosDia') excluirSelecionadosDia();
         });
