@@ -4217,6 +4217,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 theme: 'grid',
                 styles: { fontSize: 8, cellPadding: 1 },
                 headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+                columnStyles: getColumnStylesPDF(columns, orientation),
                 alternateRowStyles: { fillColor: [220, 220, 220] },
                 didDrawPage: (data) => { finalY = data.cursor.y; },
                 didParseCell: function(data) {
@@ -4246,6 +4247,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         doc.save(`Escala_${semana}_${dia}.pdf`);
+    }
+
+    function getColumnStylesPDF(columns, orientation) {
+        if (orientation !== 'portrait') return {};
+
+        const styles = {};
+        const widths = {
+            PLACA: 16,
+            MODELO: 18,
+            ROTA: 13,
+            STATUS: 14,
+            MOTORISTA: 30,
+            AUXILIAR: 27,
+            TERCEIRO: 27,
+            ASSINATURA: 46
+        };
+        const reducedFontColumns = new Set(['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO', 'ASSINATURA']);
+
+        columns.forEach((column, index) => {
+            if (widths[column]) {
+                styles[index] = { ...(styles[index] || {}), cellWidth: widths[column] };
+            }
+            if (reducedFontColumns.has(column)) {
+                styles[index] = { ...(styles[index] || {}), fontSize: 6.5 };
+            }
+        });
+
+        return styles;
     }
 
     function isVeiculoDisponivelPDF(veiculo) {
