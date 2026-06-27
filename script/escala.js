@@ -4179,13 +4179,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (sec.id === 'VEICULOS') {
                 try {
-                    itens = await buscarVeiculosDisponiveisPDF(dadosEscala || []);
+                    itens = await buscarVeiculosDisponiveisPDF(dadosEscala || [], semana);
                 } catch (error) {
                     console.error('Erro ao buscar veiculos disponiveis:', error);
                     return alert('Erro ao carregar veiculos disponiveis para o PDF.');
                 }
-                columns = ['PLACA', 'MODELO', 'TIPO', 'ASSINATURA'];
-                body = itens.map(i => [normalizeVehiclePlate(i.placa) || i.placa || '', i.modelo || '', i.tipo || '', '']);
+                columns = ['PLACA', 'MODELO', 'TIPO', 'DIA ESCALADO'];
+                body = itens.map(i => [normalizeVehiclePlate(i.placa) || i.placa || '', i.modelo || '', i.tipo || '', i.diasEscalados || '']);
             } else if (sec.id === 'FALTAS') {
                 itens = dadosFaltas || [];
                 columns = ['MOTORISTA', 'MOTIVO MOTORISTA', 'AUXILIAR', 'MOTIVO AUXILIAR', 'ASSINATURA'];
@@ -4255,15 +4255,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const styles = {};
         const widths = {
             PLACA: 16,
-            MODELO: 18,
+            MODELO: 19,
             ROTA: 13,
             STATUS: 14,
+            TIPO: 20,
+            'DIA ESCALADO': 146,
             MOTORISTA: 30,
             AUXILIAR: 27,
             TERCEIRO: 27,
-            ASSINATURA: 46
+            ASSINATURA: 55
         };
-        const reducedFontColumns = new Set(['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO', 'ASSINATURA']);
+        const reducedFontColumns = new Set(['PLACA', 'MODELO', 'ROTA', 'STATUS', 'TIPO', 'DIA ESCALADO', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO', 'ASSINATURA']);
 
         columns.forEach((column, index) => {
             if (widths[column]) {
@@ -4282,10 +4284,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return situacao === 'ATIVO' && !isTipoVeiculoOcultoEscala(veiculo?.tipo);
     }
 
-    async function buscarVeiculosDisponiveisPDF(dadosEscala) {
+    async function buscarVeiculosDisponiveisPDF(dadosEscala, semana) {
         const placasUsadas = new Set((dadosEscala || [])
             .map(item => normalizeVehiclePlate(item.placa))
             .filter(Boolean));
+        const planejamentoPorPlaca = await buscarDiasEscaladosPlanejamentoPDF(semana);
 
         let query = supabaseClient
             .from('veiculos')
@@ -4299,9 +4302,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (error) throw error;
 
         return (data || [])
-            .filter(isVeiculoDisponivelPDF)
-            .filter(veiculo => !placasUsadas.has(normalizeVehiclePlate(veiculo.placa)))
-            .sort((a, b) => normalizeVehiclePlate(a.placa).localeCompare(normalizeVehiclePlate(b.placa), 'pt-BR'));
+                .filter(isVeiculoDisponivelPDF)
+                .filter(veiculo => !placasUsadas.has(normalizeVehiclePlate(veiculo.placa)))
+                .map(veiculo => ({
+                    ...veiculo,
+                    diasEscalados: planejamentoPorPlaca.get(normalizeVehiclePlate(veiculo.placa)) || 'NAO ESCALADO'
+                }))
+            .sort((a, b) => {
+                const modeloCompare = cleanImportValue(a.modelo).localeCompare(cleanImportValue(b.modelo), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                if (modeloCompare !== 0) return modeloCompare;
+                return normalizeVehiclePlate(a.placa).localeCompare(normalizeVehiclePlate(b.placa), 'pt-BR', { numeric: true, sensitivity: 'base' });
+            });
+    }
+
+    async function buscarDiasEscaladosPlanejamentoPDF(semana) {
+        if (!semana) return new Map();
+
+        const camposDias = IMPORT_DAYS.flatMap(dia => {
+            const diaKey = DIA_KEY_MAP[dia];
+            return [`${diaKey}_rota`, `${diaKey}_status`];
+        });
+
+        const { data, error } = await aplicarFiltroFilial(
+            supabaseClient
+                .from('planejamento_semanal')
+                .select(['placa', ...camposDias].join(', '))
+                .eq('semana_nome', semana)
+        ).order('placa');
+
+        if (error) throw error;
+
+        const planejamentoPorPlaca = new Map();
+        (data || []).forEach(item => {
+            const placa = normalizeVehiclePlate(item.placa);
+            if (!placa) return;
+
+            const diasEscalados = IMPORT_DAYS
+                .filter(dia => {
+                    const diaKey = DIA_KEY_MAP[dia];
+                    return cleanImportValue(item[`${diaKey}_rota`], { keepZero: true })
+                        || cleanImportValue(item[`${diaKey}_status`], { keepZero: true });
+                })
+                .map(getDiaNomeAba);
+
+            planejamentoPorPlaca.set(placa, diasEscalados.join(', '));
+        });
+
+        return planejamentoPorPlaca;
     }
 
     // --- FUNÇÕES DO MODAL DE EXPEDIÇÃO ---
