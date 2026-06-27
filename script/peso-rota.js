@@ -415,6 +415,19 @@ function getSemanaNomeEscala(semanaAno = getSemanaAnoSelecionada()) {
     return `SEMANA ${String(semana).padStart(2, '0')} - ${ano}`;
 }
 
+function normalizarSemanaAno(value) {
+    const texto = normalizarTexto(value);
+    if (!texto) return '';
+
+    const iso = texto.match(/^(\d{4})-W(\d{1,2})$/i);
+    if (iso) return `${iso[1]}-W${String(Number(iso[2])).padStart(2, '0')}`;
+
+    const escala = texto.match(/SEMANA\s+(\d{1,2})\s*-\s*(\d{4})/i);
+    if (escala) return `${escala[2]}-W${String(Number(escala[1])).padStart(2, '0')}`;
+
+    return texto;
+}
+
 function getFilialSelecionada() {
     const filialUsuario = getUserFilial();
     if (filialUsuario) return filialUsuario;
@@ -732,7 +745,7 @@ function getDataRetornoPorDia(semanaAno, diaSaida, diaRetorno) {
 }
 
 function getSemanaAnoOperacional(item) {
-    const semanaSalva = normalizarTexto(item?.semana_ano);
+    const semanaSalva = normalizarSemanaAno(item?.semana_ano);
     const diaRetorno = normalizarTexto(item?.dia_retorno);
     const offsetSaida = SEMANA_DIA_OFFSET[normalizarSemana(item?.semana)];
     const offsetRetorno = SEMANA_DIA_OFFSET[getDiaSemanaPorData(diaRetorno)];

@@ -10439,6 +10439,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    function getSemanaAnoPesoRota(semanaNome, dataIso) {
+        const match = String(semanaNome || '').match(/SEMANA\s+(\d{1,2})\s*-\s*(\d{4})/i);
+        if (match) return `${match[2]}-W${String(Number(match[1])).padStart(2, '0')}`;
+
+        if (dataIso) {
+            const data = new Date(`${dataIso}T12:00:00`);
+            if (!Number.isNaN(data.getTime())) {
+                const base = new Date(Date.UTC(data.getFullYear(), data.getMonth(), data.getDate()));
+                const diaSemana = base.getUTCDay() || 7;
+                base.setUTCDate(base.getUTCDate() + 4 - diaSemana);
+                const ano = base.getUTCFullYear();
+                const inicioAno = new Date(Date.UTC(ano, 0, 1));
+                const semana = Math.ceil((((base - inicioAno) / 86400000) + 1) / 7);
+                return `${ano}-W${String(semana).padStart(2, '0')}`;
+            }
+        }
+
+        return '';
+    }
+
     function getModoCalculoPeso() {
         const radio = document.querySelector('input[name="modoCalculoPeso"]:checked');
         return radio ? radio.value : 'auto';
@@ -10629,7 +10649,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const payload = {
                     rota: rota,
                     semana: diaSemana,
-                    semana_ano: semanaNome,
+                    semana_ano: getSemanaAnoPesoRota(semanaNome, diaRetorno),
+                    dia_semana_retorno: diaSemana,
                     motorista: (calculoPesoMotorista.value || '').trim().toUpperCase(),
                     auxiliar: (calculoPesoAuxiliar.value || '').trim().toUpperCase(),
                     placa: placa,
@@ -10641,7 +10662,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     qtd_clientes: parseInt(calculoPesoQtdClientes.value) || 0,
                     dia_retorno: diaRetorno, // Campo crucial para aparecer na lista de Peso de Rota
                     status_percentual: 0,
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
+                    ultima_alteracao_por: getUsuarioAuditoria(),
+                    ultima_alteracao_em: new Date().toISOString()
                 };
 
                 // Cálculo do status percentual
