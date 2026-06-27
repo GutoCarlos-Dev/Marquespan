@@ -1560,12 +1560,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return '';
     }
 
+    function isFuncionarioEscalavel(funcionario) {
+        return funcionario?.escala_ativa !== false;
+    }
+
     async function sincronizarReservasAutomaticas(semana, dataISO, dadosEscala, dadosFaltas) {
         if (!podeGerenciarEscala || !semana || !dataISO || !getFilialEscala()) return dadosEscala;
 
         const { data: funcionarios, error: funcionariosError } = await supabaseClient
             .from('funcionario')
-            .select('nome, nome_completo, funcao, status')
+            .select('*')
             .eq('filial', getFilialEscala())
             .order('nome');
 
@@ -1612,6 +1616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const desejados = { motorista: new Map(), auxiliar: new Map() };
         (funcionarios || [])
             .filter(funcionario => normalizeString(funcionario.status) === 'ATIVO')
+            .filter(isFuncionarioEscalavel)
             .forEach(funcionario => {
                 const campo = getFuncaoReservaAutomatica(funcionario.funcao);
                 const nome = getNomeFuncionarioExibicao(funcionario.nome || funcionario.nome_completo);
@@ -8054,11 +8059,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { data: funcs } = filial
             ? await supabaseClient
                 .from('funcionario')
-                .select('nome, nome_completo, funcao, status, filial')
+                .select('*')
                 .eq('filial', filial)
             : { data: [] };
         if (funcs) {
-            const funcionariosAtivos = funcs.filter(f => normalizeString(f.status) === 'ATIVO');
+            const funcionariosAtivos = funcs
+                .filter(f => normalizeString(f.status) === 'ATIVO')
+                .filter(isFuncionarioEscalavel);
             mapaNomesFuncionarios = new Map();
             funcs.forEach(f => {
                 const nomeCurto = cleanImportValue(f.nome);

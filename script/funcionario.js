@@ -222,6 +222,7 @@ const FuncionarioUI = {
         this.btnImportXLSX = document.getElementById('btnImportXLSX');
         this.fileImportFuncionarioXLSX = document.getElementById('fileImportFuncionarioXLSX');
         this.diariaSelect = document.getElementById('funcDiaria');
+        this.escalaAtivaSelect = document.getElementById('funcEscalaAtiva');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
         this.gridCount = document.getElementById('countFuncGrid');
         this.filterCount = document.getElementById('funcFilterCount');
@@ -718,6 +719,7 @@ const FuncionarioUI = {
             contato_pessoal: document.getElementById('funcContatoPessoal').value,
             status: document.getElementById('funcStatus').value,
             recebe_diaria: document.getElementById('funcDiaria').value !== 'false',
+            escala_ativa: document.getElementById('funcEscalaAtiva')?.value !== 'false',
             data_desligamento: document.getElementById('funcDesligamento').value || null,
             funcao_anterior: document.getElementById('funcPromocao').value || null,
             data_alteracao_funcao: document.getElementById('funcDataPromocao').value || null,
@@ -736,6 +738,17 @@ const FuncionarioUI = {
                 delete payloadSemCNH.cnh_categoria;
                 delete payloadSemCNH.cnh_vencimento;
                 ({ error } = await supabaseClient.from('funcionario').upsert(payloadSemCNH, options));
+            }
+            const erroEscalaAtivaSchema = error && /escala_ativa|schema cache|column/i.test(String(error.message || error));
+            if (erroEscalaAtivaSchema) {
+                const payloadSemEscalaAtiva = { ...payload };
+                delete payloadSemEscalaAtiva.escala_ativa;
+                if (erroCNHSchema && !temDadosCNH) {
+                    delete payloadSemEscalaAtiva.cnh_numero;
+                    delete payloadSemEscalaAtiva.cnh_categoria;
+                    delete payloadSemEscalaAtiva.cnh_vencimento;
+                }
+                ({ error } = await supabaseClient.from('funcionario').upsert(payloadSemEscalaAtiva, options));
             }
             if (error) throw error;
 
@@ -775,6 +788,7 @@ const FuncionarioUI = {
         }
         if (this.histFuncContainer) this.histFuncContainer.classList.add('hidden');
         if (this.histFuncTableBody) this.histFuncTableBody.innerHTML = '';
+        if (this.escalaAtivaSelect) this.escalaAtivaSelect.value = 'true';
         if (fecharModal) this.closeFuncionarioModal();
     },
 
@@ -790,7 +804,7 @@ const FuncionarioUI = {
         try {
             let query = supabaseClient
                 .from('funcionario')
-                .select('id, rh_registro, filial, nome, nome_completo, cpf, cnh_numero, cnh_categoria, cnh_vencimento, data_nascimento, funcao, data_admissao, contato_corp, contato_pessoal, status, recebe_diaria, data_desligamento, funcao_anterior, data_alteracao_funcao');
+                .select('*');
             
             if (selectedStatuses.length > 0) {
                 query = query.in('status', selectedStatuses);
@@ -867,6 +881,7 @@ const FuncionarioUI = {
                         <td title="${f.data_admissao ? this.calculateTenure(f.data_admissao) : ''}">${formatDateBR(f.data_admissao)}</td>
                         <td>${escapeHtml(f.contato_corp || '-')}</td>
                         <td><span class="status-badge status-${statusClass(f.status)}">${escapeHtml(f.status)}</span></td>
+                        <td>${f.escala_ativa === false ? 'NAO' : 'SIM'}</td>
                         <td>
                             <button class="btn-icon edit btn-edit" data-id="${escapeHtml(f.id)}" title="Editar"><i class="fas fa-edit"></i></button>
                             <button class="btn-icon delete btn-delete" data-id="${escapeHtml(f.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -1096,6 +1111,7 @@ const FuncionarioUI = {
         document.getElementById('funcContatoPessoal').value = f.contato_pessoal || '';
         document.getElementById('funcStatus').value = f.status;
         document.getElementById('funcDiaria').value = f.recebe_diaria !== false ? 'true' : 'false';
+        document.getElementById('funcEscalaAtiva').value = f.escala_ativa === false ? 'false' : 'true';
         document.getElementById('funcDesligamento').value = f.data_desligamento || '';
         document.getElementById('funcPromocao').value = f.funcao_anterior || '';
         document.getElementById('funcDataPromocao').value = f.data_alteracao_funcao || '';
@@ -1158,6 +1174,8 @@ const FuncionarioUI = {
 
         const diariaRaw = getImportValue(row, ['Diária', 'Diaria', 'Recebe Diaria', 'Recebe Diária']);
         if (diariaRaw !== '') payload.recebe_diaria = parseImportBoolean(diariaRaw, true);
+        const escalaRaw = getImportValue(row, ['Escalar', 'Escalar?', 'Aparece na Escala', 'Escala Ativa']);
+        if (escalaRaw !== '') payload.escala_ativa = parseImportBoolean(escalaRaw, true);
 
         if (!payload.rh_registro) throw new Error('Campo RH Registro/Nº Identificador (RH) nao informado.');
 
@@ -1165,6 +1183,7 @@ const FuncionarioUI = {
             payload.filial = payload.filial || filialPadrao;
             payload.status = payload.status || 'Ativo';
             payload.recebe_diaria = payload.recebe_diaria ?? true;
+            payload.escala_ativa = payload.escala_ativa ?? true;
             if (!payload.nome) throw new Error('Campo Nome nao informado.');
             if (!payload.nome_completo) payload.nome_completo = payload.nome;
             if (!payload.funcao) throw new Error('Campo Funcao nao informado.');
@@ -1236,12 +1255,21 @@ const FuncionarioUI = {
                         const payloadUpdate = { ...payload };
                         delete payloadUpdate.rh_registro;
                         if (Object.keys(payloadUpdate).length === 0) throw new Error('Nenhum campo para atualizar.');
-                        const { error } = await supabaseClient.from('funcionario').update(payloadUpdate).eq('rh_registro', rh);
+                        let { error } = await supabaseClient.from('funcionario').update(payloadUpdate).eq('rh_registro', rh);
+                        if (error && /escala_ativa|schema cache|column/i.test(String(error.message || error))) {
+                            delete payloadUpdate.escala_ativa;
+                            ({ error } = await supabaseClient.from('funcionario').update(payloadUpdate).eq('rh_registro', rh));
+                        }
                         if (error) throw error;
                         atualizados += 1;
                         report.push(`LINHA ${rowNumber} | RH ${rh} | ATUALIZADO`);
                     } else {
-                        const { error } = await supabaseClient.from('funcionario').insert(payload);
+                        let { error } = await supabaseClient.from('funcionario').insert(payload);
+                        if (error && /escala_ativa|schema cache|column/i.test(String(error.message || error))) {
+                            const payloadSemEscalaAtiva = { ...payload };
+                            delete payloadSemEscalaAtiva.escala_ativa;
+                            ({ error } = await supabaseClient.from('funcionario').insert(payloadSemEscalaAtiva));
+                        }
                         if (error) throw error;
                         incluidos += 1;
                         rhsExistentes.add(rh);
@@ -1291,6 +1319,7 @@ const FuncionarioUI = {
             'Contato Pessoal',
             'Status',
             'Diária',
+            'Escalar',
             'Data Desligamento',
             'Função Anterior',
             'Data Alt. Função'
@@ -1312,6 +1341,7 @@ const FuncionarioUI = {
             'Contato Pessoal': '(00)00000-0000',
             'Status': 'Ativo',
             'Diária': 'SIM',
+            'Escalar': 'SIM',
             'Data Desligamento': '',
             'Função Anterior': '',
             'Data Alt. Função': ''
@@ -1346,6 +1376,7 @@ const FuncionarioUI = {
             'Contato Pessoal': f.contato_pessoal || '-',
             'Status': f.status,
             'Diária': f.recebe_diaria !== false ? 'SIM' : 'NÃO',
+            'Escalar': f.escala_ativa === false ? 'NAO' : 'SIM',
             'Data Desligamento': formatDateBR(f.data_desligamento),
             'Função Anterior': f.funcao_anterior || '-',
             'Data Alt. Função': formatDateBR(f.data_alteracao_funcao)
