@@ -5550,6 +5550,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <label>Status</label>
                         <div id="jantaPernoiteEscalaStatusFiltro" class="janta-pernoite-escala-status-options"></div>
                     </div>
+                    <div class="form-group janta-pernoite-escala-funcao-filter">
+                        <label>Funcao</label>
+                        <div id="jantaPernoiteEscalaFuncaoFiltro" class="janta-pernoite-escala-status-options"></div>
+                    </div>
                     <div class="form-group">
                         <label for="jantaPernoiteEscalaDataDesconto">Data do valor a descontar</label>
                         <input type="date" id="jantaPernoiteEscalaDataDesconto" class="glass-input">
@@ -5579,6 +5583,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </table>
                 </div>
                 <div class="boleta-modal-actions">
+                    <button type="button" id="btnXLSXJantaPernoiteEscala" class="pdf-expedicao-btn excel">
+                        <i class="fas fa-file-excel"></i> XLSX
+                    </button>
                     <button type="button" id="btnSalvarJantaPernoiteEscala" class="pdf-expedicao-btn primary">
                         <i class="fas fa-save"></i> Salvar
                     </button>
@@ -5600,6 +5607,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (event.target.closest('#btnSalvarJantaPernoiteEscala')) salvarJantaPernoiteEscala();
+            if (event.target.closest('#btnXLSXJantaPernoiteEscala')) gerarXLSXJantaPernoiteEscala();
 
             const checkJantaPernoite = event.target.closest('.jp-escala-check');
             if (checkJantaPernoite) {
@@ -5617,7 +5625,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         modal.addEventListener('change', (event) => {
-            if (event.target.closest('.jp-escala-status-filter')) {
+            if (event.target.closest('.jp-escala-status-filter') || event.target.closest('.jp-escala-funcao-filter')) {
                 renderJantaPernoiteEscalaTabela();
                 return;
             }
@@ -5643,6 +5651,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         return cleanImportValue(item?.status) || 'SEM STATUS';
     }
 
+    function getFuncaoFiltroJantaPernoiteEscala(item) {
+        return cleanImportValue(item?.funcao) || 'SEM FUNCAO';
+    }
+
     function atualizarFiltroStatusJantaPernoiteEscala() {
         const container = document.getElementById('jantaPernoiteEscalaStatusFiltro');
         if (!container) return;
@@ -5663,8 +5675,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         `).join('');
     }
 
+    function atualizarFiltroFuncaoJantaPernoiteEscala() {
+        const container = document.getElementById('jantaPernoiteEscalaFuncaoFiltro');
+        if (!container) return;
+
+        const funcoes = [...new Set(jantaPernoiteEscalaDados.map(getFuncaoFiltroJantaPernoiteEscala))]
+            .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+        if (!funcoes.length) {
+            container.innerHTML = '<span class="janta-pernoite-escala-status-empty">Sem funcao</span>';
+            return;
+        }
+
+        container.innerHTML = funcoes.map(funcao => `
+            <label class="janta-pernoite-escala-status-option">
+                <input type="checkbox" class="jp-escala-funcao-filter" value="${escapeAttribute(funcao)}" checked>
+                <span>${escapeAttribute(funcao)}</span>
+            </label>
+        `).join('');
+    }
+
     function getStatusSelecionadosJantaPernoiteEscala() {
         const checkboxes = Array.from(document.querySelectorAll('#jantaPernoiteEscalaStatusFiltro .jp-escala-status-filter'));
+        if (!checkboxes.length) return null;
+
+        return new Set(checkboxes
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => normalizeString(checkbox.value)));
+    }
+
+    function getFuncoesSelecionadasJantaPernoiteEscala() {
+        const checkboxes = Array.from(document.querySelectorAll('#jantaPernoiteEscalaFuncaoFiltro .jp-escala-funcao-filter'));
         if (!checkboxes.length) return null;
 
         return new Set(checkboxes
@@ -5687,8 +5728,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     function getDadosVisiveisJantaPernoiteEscala() {
         const termo = normalizeString(document.getElementById('jantaPernoiteEscalaBusca')?.value);
         const statusSelecionados = getStatusSelecionadosJantaPernoiteEscala();
+        const funcoesSelecionadas = getFuncoesSelecionadasJantaPernoiteEscala();
         const dadosFiltrados = jantaPernoiteEscalaDados.filter(item => {
             const statusOk = !statusSelecionados || statusSelecionados.has(normalizeString(getStatusFiltroJantaPernoiteEscala(item)));
+            const funcaoOk = !funcoesSelecionadas || funcoesSelecionadas.has(normalizeString(getFuncaoFiltroJantaPernoiteEscala(item)));
             const termoOk = !termo
                 || normalizeString(item.nome).includes(termo)
                 || normalizeString(item.funcao).includes(termo)
@@ -5696,7 +5739,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 || normalizeString(item.rota).includes(termo)
                 || normalizeVehiclePlate(item.placa).includes(normalizeVehiclePlate(termo));
 
-            return statusOk && termoOk;
+            return statusOk && funcaoOk && termoOk;
         });
 
         return [...dadosFiltrados].sort((a, b) => {
@@ -5738,6 +5781,96 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${formatMoedaBR(getValorJantaPernoiteEscala(item))}</td>
             </tr>
         `).join('');
+    }
+
+    function getNomeArquivoJantaPernoiteEscala(ext) {
+        const contexto = getDataEscalaAberta();
+        const filial = getFilialEscala() || 'FILIAL';
+        const dia = contexto?.dia || 'DIA';
+        const data = contexto?.dataISO || new Date().toISOString().slice(0, 10);
+        const nome = `Janta_Per_Noite_${dia}_${data}_${filial}`.replace(/[^a-z0-9_-]+/gi, '_').replace(/_+/g, '_');
+        return `${nome}.${ext}`;
+    }
+
+    function gerarXLSXJantaPernoiteEscala() {
+        if (typeof XLSX === 'undefined') return alert('Biblioteca XLSX nao carregada.');
+
+        const dados = getDadosVisiveisJantaPernoiteEscala();
+        if (!dados.length) return alert('Nenhum dado do grid para exportar.');
+
+        const contexto = getDataEscalaAberta();
+        const filial = getFilialEscala() || '';
+        const headers = ['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'ROTA', 'PLACA', 'STATUS', 'JANTA', 'PER NOITE', 'DESCONTO', 'VALOR DESC.', 'VALOR'];
+        const totalJanta = dados.reduce((sum, item) => sum + (!item.desconto && item.pagaJanta ? Number(jantaPernoiteEscalaValores.valorJanta || 0) : 0), 0);
+        const totalPerNoite = dados.reduce((sum, item) => sum + (!item.desconto && item.pagaPerNoite ? Number(jantaPernoiteEscalaValores.valorPerNoite || 0) : 0), 0);
+        const totalDesconto = dados.reduce((sum, item) => sum + getValorDescontoJantaPernoiteEscala(item), 0);
+        const totalPagar = dados.reduce((sum, item) => sum + getValorJantaPernoiteEscala(item), 0);
+
+        const wsData = [
+            [`JANTA E PER NOITE - ${contexto?.dia || ''} - ${contexto?.dataBR || ''} - ${filial}`],
+            [
+                `Valor Janta: ${formatMoedaBR(jantaPernoiteEscalaValores.valorJanta)}`,
+                `Valor Per Noite: ${formatMoedaBR(jantaPernoiteEscalaValores.valorPerNoite)}`,
+                `Total Janta: ${formatMoedaBR(totalJanta)}`,
+                `Total Per Noite: ${formatMoedaBR(totalPerNoite)}`,
+                `Total Desconto: ${formatMoedaBR(totalDesconto)}`,
+                `Total a Pagar: ${formatMoedaBR(totalPagar)}`,
+                `Funcionarios: ${dados.length}`
+            ],
+            [],
+            headers,
+            ...dados.map(item => [
+                item.nome,
+                item.nomeCompleto || item.nome,
+                item.cpf || '',
+                item.funcaoCadastro || item.funcao || '',
+                item.rota || '',
+                item.placa || '',
+                item.status || '',
+                item.pagaJanta ? 'SIM' : 'NAO',
+                item.pagaPerNoite ? 'SIM' : 'NAO',
+                item.desconto ? 'SIM' : 'NAO',
+                getValorDescontoJantaPernoiteEscala(item),
+                getValorJantaPernoiteEscala(item)
+            ])
+        ];
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+        ws['!cols'] = [
+            { wch: 34 },
+            { wch: 42 },
+            { wch: 16 },
+            { wch: 20 },
+            { wch: 10 },
+            { wch: 12 },
+            { wch: 18 },
+            { wch: 10 },
+            { wch: 12 },
+            { wch: 12 },
+            { wch: 14 },
+            { wch: 14 }
+        ];
+        ws['!autofilter'] = { ref: `A4:L${wsData.length}` };
+
+        const titleStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 14 }, fill: { fgColor: { rgb: '006937' } }, alignment: { horizontal: 'center' } };
+        const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '006937' } }, alignment: { horizontal: 'center' } };
+        const moneyStyle = { numFmt: 'R$ #,##0.00', alignment: { horizontal: 'right' } };
+        if (ws.A1) ws.A1.s = titleStyle;
+        headers.forEach((_, index) => {
+            const cell = ws[XLSX.utils.encode_cell({ r: 3, c: index })];
+            if (cell) cell.s = headerStyle;
+        });
+        for (let row = 4; row < wsData.length; row++) {
+            [10, 11].forEach(col => {
+                const cell = ws[XLSX.utils.encode_cell({ r: row, c: col })];
+                if (cell) cell.s = moneyStyle;
+            });
+        }
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Janta Per Noite');
+        XLSX.writeFile(wb, getNomeArquivoJantaPernoiteEscala('xlsx'));
     }
 
     function aplicarCliqueCheckboxJantaPernoiteEscala(event, checkbox) {
@@ -5886,6 +6019,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             modal.querySelector('#jantaPernoiteEscalaDataDesconto').value = contexto.dataISO;
             modal.querySelector('#jantaPernoiteEscalaMotivoDesconto').value = 'Retornou sem utilizar Janta/Per Noite';
             atualizarFiltroStatusJantaPernoiteEscala();
+            atualizarFiltroFuncaoJantaPernoiteEscala();
             renderJantaPernoiteEscalaTabela();
             modal.classList.remove('hidden');
         } catch (error) {

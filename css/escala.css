@@ -850,7 +850,7 @@ body.escala-menu-oculto .menu-floating-toggle i {
 
 .janta-pernoite-escala-search {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) minmax(180px, 220px) minmax(260px, 1.2fr);
+    grid-template-columns: minmax(200px, 1fr) minmax(180px, 1fr) minmax(180px, 1fr) minmax(180px, 220px) minmax(240px, 1.2fr);
     gap: 12px;
     align-items: end;
     padding: 0 18px 12px;
