@@ -172,6 +172,7 @@ const FuncionarioUI = {
     sortConfig: { column: 'nome', direction: 'asc' }, // Estado inicial da ordenação
     listData: [], // Armazena os dados atuais da grid para exportação
     usuarioAtual: null,
+    isAdministrador: false,
     async init() {
         this.cache();
         const acessoPermitido = await this.verificarPermissaoPagina();
@@ -373,13 +374,14 @@ const FuncionarioUI = {
     async verificarPermissaoPagina() {
         this.usuarioAtual = JSON.parse(localStorage.getItem('usuarioLogado'));
         const nivel = this.usuarioAtual?.nivel?.toLowerCase();
+        this.isAdministrador = nivel === 'administrador';
 
         if (!nivel) {
             window.location.href = 'index.html';
             return false;
         }
 
-        if (nivel === 'administrador') return true;
+        if (this.isAdministrador) return true;
 
         try {
             const { data, error } = await supabaseClient
@@ -400,6 +402,28 @@ const FuncionarioUI = {
         return false;
     },
 
+    getFilialUsuarioRestrita() {
+        if (this.isAdministrador) return '';
+        return String(this.usuarioAtual?.filial || '').trim();
+    },
+
+    usuarioPodeAcessarFilial(filial) {
+        const filialRestrita = this.getFilialUsuarioRestrita();
+        if (!filialRestrita) return this.isAdministrador;
+        return String(filial || '').trim().toUpperCase() === filialRestrita.toUpperCase();
+    },
+
+    aplicarFiltroFilialRestrita(query) {
+        const filialRestrita = this.getFilialUsuarioRestrita();
+        return filialRestrita ? query.eq('filial', filialRestrita) : query;
+    },
+
+    bloquearSeSemFilialUsuario() {
+        if (this.isAdministrador || this.getFilialUsuarioRestrita()) return false;
+        alert('Seu usuario nao possui filial definida. Solicite o ajuste do cadastro para acessar funcionarios.');
+        return true;
+    },
+
     updateStatusFilterText() {
         const checked = Array.from(this.statusFilterOptions.querySelectorAll('.status-checkbox:checked'));
         if (checked.length === 0) {
@@ -414,6 +438,7 @@ const FuncionarioUI = {
     },
 
     openFuncionarioModal() {
+        if (this.bloquearSeSemFilialUsuario()) return;
         if (!this.modalFuncionario) return;
         this.modalFuncionario.classList.remove('hidden');
         document.body.classList.add('funcionario-modal-open');
@@ -641,7 +666,8 @@ const FuncionarioUI = {
     },
 
     preencherSelectFiliais(opcoes) {
-        const filialPadrao = this.usuarioAtual?.filial || 'SP';
+        const filialRestrita = this.getFilialUsuarioRestrita();
+        const filialPadrao = filialRestrita || this.usuarioAtual?.filial || 'SP';
         const unicas = [];
         const vistos = new Set();
 
@@ -652,20 +678,27 @@ const FuncionarioUI = {
             unicas.push({ value, label: opcao.label || value });
         });
 
-        if (!vistos.has('SP')) unicas.unshift({ value: 'SP', label: 'SP' });
+        if (filialRestrita && !vistos.has(filialRestrita)) {
+            unicas.unshift({ value: filialRestrita, label: filialRestrita });
+            vistos.add(filialRestrita);
+        }
+        if (!filialRestrita && !vistos.has('SP')) unicas.unshift({ value: 'SP', label: 'SP' });
 
         if (this.filialSelect) {
             this.filialSelect.innerHTML = unicas
                 .map(opcao => `<option value="${escapeHtml(opcao.value)}">${escapeHtml(opcao.label)}</option>`)
                 .join('');
             this.filialSelect.value = vistos.has(filialPadrao) ? filialPadrao : 'SP';
+            this.filialSelect.disabled = Boolean(filialRestrita);
         }
 
         if (this.filialFilter) {
-            this.filialFilter.innerHTML = '<option value="">Todas</option>' + unicas
+            this.filialFilter.innerHTML = (filialRestrita ? '' : '<option value="">Todas</option>') + unicas
+                .filter(opcao => !filialRestrita || String(opcao.value).toUpperCase() === filialRestrita.toUpperCase())
                 .map(opcao => `<option value="${escapeHtml(opcao.value)}">${escapeHtml(opcao.label)}</option>`)
                 .join('');
             this.filialFilter.value = vistos.has(filialPadrao) ? filialPadrao : 'SP';
+            this.filialFilter.disabled = Boolean(filialRestrita);
         }
     },
 
@@ -680,10 +713,30 @@ const FuncionarioUI = {
 
     async handleFormSubmit(e) {
         e.preventDefault();
+        if (this.bloquearSeSemFilialUsuario()) return;
 
         const rh = document.getElementById('funcRH').value;
         const novaFuncao = document.getElementById('funcFuncao').value;
         const dataHoje = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Sao_Paulo'});
+        const filialPermitida = this.getFilialUsuarioRestrita();
+
+        if (this.editingIdInput.value) {
+            let permissaoQuery = supabaseClient
+                .from('funcionario')
+                .select('id, filial')
+                .eq('id', this.editingIdInput.value);
+            permissaoQuery = this.aplicarFiltroFilialRestrita(permissaoQuery);
+            const { data: funcionarioPermitido, error: permissaoError } = await permissaoQuery.maybeSingle();
+            if (permissaoError) {
+                console.error('Erro ao validar filial do funcionario:', permissaoError);
+                alert('Nao foi possivel validar a filial do funcionario.');
+                return;
+            }
+            if (!funcionarioPermitido || !this.usuarioPodeAcessarFilial(funcionarioPermitido.filial)) {
+                alert('Voce nao tem permissao para alterar funcionarios de outra filial.');
+                return;
+            }
+        }
 
         // Lógica de Histórico: Se estiver editando e a função mudou, registra na tabela de histórico
         if (this.editingIdInput.value && this.currentFuncaoBeforeEdit && this.currentFuncaoBeforeEdit !== novaFuncao) {
@@ -714,7 +767,7 @@ const FuncionarioUI = {
             cnh_categoria: cnhCategoria || null,
             cnh_vencimento: cnhVencimento || null,
             data_admissao: document.getElementById('funcAdmissao').value,
-            filial: document.getElementById('funcFilial').value || 'SP',
+            filial: filialPermitida || document.getElementById('funcFilial').value || 'SP',
             funcao: novaFuncao,
             contato_corp: document.getElementById('funcContatoCorp').value,
             contato_pessoal: document.getElementById('funcContatoPessoal').value,
@@ -727,18 +780,40 @@ const FuncionarioUI = {
             id: this.editingIdInput.value || undefined
         };
 
+        if (!this.usuarioPodeAcessarFilial(payload.filial)) {
+            alert('Voce nao tem permissao para salvar funcionarios de outra filial.');
+            return;
+        }
+
         try {
             // Se temos um ID, o upsert resolve pelo ID (padrão). 
             // Se não temos, usamos o rh_registro para evitar duplicidade de matrícula.
-            const options = this.editingIdInput.value ? {} : { onConflict: 'rh_registro' };
-            let { error } = await supabaseClient.from('funcionario').upsert(payload, options);
+            const salvarPayload = async (payloadSalvar) => {
+                if (this.editingIdInput.value) {
+                    const updatePayload = { ...payloadSalvar };
+                    delete updatePayload.id;
+                    let query = supabaseClient.from('funcionario').update(updatePayload).eq('id', this.editingIdInput.value);
+                    query = this.aplicarFiltroFilialRestrita(query);
+                    const result = await query.select('id').maybeSingle();
+                    if (!result.error && !result.data) {
+                        return { error: new Error('Funcionario nao encontrado na filial permitida.') };
+                    }
+                    return result;
+                }
+
+                const insertPayload = { ...payloadSalvar };
+                delete insertPayload.id;
+                return supabaseClient.from('funcionario').insert(insertPayload).select('id').single();
+            };
+
+            let { error } = await salvarPayload(payload);
             const erroCNHSchema = error && /cnh_|schema cache|column/i.test(String(error.message || error));
             if (erroCNHSchema && !temDadosCNH) {
                 const payloadSemCNH = { ...payload };
                 delete payloadSemCNH.cnh_numero;
                 delete payloadSemCNH.cnh_categoria;
                 delete payloadSemCNH.cnh_vencimento;
-                ({ error } = await supabaseClient.from('funcionario').upsert(payloadSemCNH, options));
+                ({ error } = await salvarPayload(payloadSemCNH));
             }
             const erroEscalaAtivaSchema = error && /escala_ativa|schema cache|column/i.test(String(error.message || error));
             if (erroEscalaAtivaSchema) {
@@ -749,7 +824,7 @@ const FuncionarioUI = {
                     delete payloadSemEscalaAtiva.cnh_categoria;
                     delete payloadSemEscalaAtiva.cnh_vencimento;
                 }
-                ({ error } = await supabaseClient.from('funcionario').upsert(payloadSemEscalaAtiva, options));
+                ({ error } = await salvarPayload(payloadSemEscalaAtiva));
             }
             if (error) throw error;
 
@@ -782,10 +857,11 @@ const FuncionarioUI = {
         this.btnSubmit.textContent = 'Salvar Registro';
         this.toggleDesligamentoField();
         if (this.filialSelect) {
-            const filialPadrao = this.usuarioAtual?.filial || 'SP';
+            const filialPadrao = this.getFilialUsuarioRestrita() || this.usuarioAtual?.filial || 'SP';
             this.filialSelect.value = Array.from(this.filialSelect.options).some(opt => opt.value === filialPadrao)
                 ? filialPadrao
                 : 'SP';
+            this.filialSelect.disabled = Boolean(this.getFilialUsuarioRestrita());
         }
         if (this.histFuncContainer) this.histFuncContainer.classList.add('hidden');
         if (this.histFuncTableBody) this.histFuncTableBody.innerHTML = '';
@@ -801,6 +877,8 @@ const FuncionarioUI = {
             let query = supabaseClient
                 .from('funcionario')
                 .select(select);
+
+            query = this.aplicarFiltroFilialRestrita(query);
 
             if (typeof applyFilters === 'function') {
                 query = applyFilters(query);
@@ -824,6 +902,15 @@ const FuncionarioUI = {
     },
 
     async renderGrid() {
+        if (!this.isAdministrador && !this.getFilialUsuarioRestrita()) {
+            this.listData = [];
+            if (this.tableBody) this.tableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;">Seu usuario nao possui filial definida.</td></tr>';
+            if (this.gridCount) this.gridCount.textContent = '(0)';
+            if (this.filterCount) this.filterCount.textContent = 'Quantidade listada: 0';
+            this.renderSummary([]);
+            return;
+        }
+
         const searchTerm = this.searchInput?.value.toLowerCase().trim() || '';
         const selectedStatuses = Array.from(this.statusFilterOptions?.querySelectorAll('.status-checkbox:checked') || []).map(cb => cb.value);
         const selectedMonth = this.monthFilter?.value || '';
@@ -1125,8 +1212,14 @@ const FuncionarioUI = {
     },
 
     async loadForEditing(id) {
-        const { data: f } = await supabaseClient.from('funcionario').select('*').eq('id', id).single();
+        let query = supabaseClient.from('funcionario').select('*').eq('id', id);
+        query = this.aplicarFiltroFilialRestrita(query);
+        const { data: f } = await query.maybeSingle();
         if (!f) return;
+        if (!this.usuarioPodeAcessarFilial(f.filial)) {
+            alert('Voce nao tem permissao para alterar funcionarios de outra filial.');
+            return;
+        }
         this.currentFuncaoBeforeEdit = f.funcao;
         this.editingIdInput.value = f.id;
         document.getElementById('funcRH').value = f.rh_registro;
@@ -1157,8 +1250,14 @@ const FuncionarioUI = {
     async deleteFuncionario(id) {
         if (confirm('Deseja realmente excluir este colaborador?')) {
             const func = this.listData.find(f => String(f.id) === String(id));
+            if (!func || !this.usuarioPodeAcessarFilial(func.filial)) {
+                alert('Voce nao tem permissao para excluir funcionarios de outra filial.');
+                return;
+            }
             const nomeFuncionario = func ? `${func.nome} (RH: ${func.rh_registro})` : `ID ${id}`;
-            await supabaseClient.from('funcionario').delete().eq('id', id);
+            let query = supabaseClient.from('funcionario').delete().eq('id', id);
+            query = this.aplicarFiltroFilialRestrita(query);
+            await query;
             registrarAuditoria('EXCLUIR', 'Funcionário', `Exclusão do colaborador ${nomeFuncionario}`);
             await this.renderGrid();
         }
@@ -1166,7 +1265,8 @@ const FuncionarioUI = {
 
     getPayloadImportacaoFuncionario(row, { existente = false } = {}) {
         const rh = cleanImportText(getImportValue(row, ['RH Registro', 'RH', 'Nº Identificador (RH)', 'N Identificador RH', 'RH_REGISTRO']));
-        const filialPadrao = this.usuarioAtual?.filial || 'SP';
+        const filialRestrita = this.getFilialUsuarioRestrita();
+        const filialPadrao = filialRestrita || this.usuarioAtual?.filial || 'SP';
         const payload = { rh_registro: rh };
 
         const textFields = [
@@ -1212,6 +1312,11 @@ const FuncionarioUI = {
 
         if (!payload.rh_registro) throw new Error('Campo RH Registro/Nº Identificador (RH) nao informado.');
 
+        if (filialRestrita) payload.filial = filialRestrita;
+        if (!this.usuarioPodeAcessarFilial(payload.filial || filialPadrao)) {
+            throw new Error('Usuario sem permissao para importar funcionario de outra filial.');
+        }
+
         if (!existente) {
             payload.filial = payload.filial || filialPadrao;
             payload.status = payload.status || 'Ativo';
@@ -1244,6 +1349,10 @@ const FuncionarioUI = {
     async importFromXLSX(event) {
         const file = event.target.files?.[0];
         if (!file) return;
+        if (this.bloquearSeSemFilialUsuario()) {
+            event.target.value = '';
+            return;
+        }
 
         const startedAt = new Date();
         const report = [
@@ -1264,9 +1373,11 @@ const FuncionarioUI = {
             if (!rows.length) throw new Error('Arquivo vazio.');
 
             const rhsArquivo = new Set();
-            const { data: existentes, error: buscaError } = await supabaseClient
+            let existentesQuery = supabaseClient
                 .from('funcionario')
                 .select('rh_registro');
+            existentesQuery = this.aplicarFiltroFilialRestrita(existentesQuery);
+            const { data: existentes, error: buscaError } = await existentesQuery;
             if (buscaError) throw buscaError;
 
             const rhsExistentes = new Set((existentes || []).map(item => cleanImportText(item.rh_registro)).filter(Boolean));
@@ -1288,12 +1399,17 @@ const FuncionarioUI = {
                         const payloadUpdate = { ...payload };
                         delete payloadUpdate.rh_registro;
                         if (Object.keys(payloadUpdate).length === 0) throw new Error('Nenhum campo para atualizar.');
-                        let { error } = await supabaseClient.from('funcionario').update(payloadUpdate).eq('rh_registro', rh);
+                        let updateQuery = supabaseClient.from('funcionario').update(payloadUpdate).eq('rh_registro', rh);
+                        updateQuery = this.aplicarFiltroFilialRestrita(updateQuery);
+                        let { data: updatedRow, error } = await updateQuery.select('id').maybeSingle();
                         if (error && /escala_ativa|schema cache|column/i.test(String(error.message || error))) {
                             delete payloadUpdate.escala_ativa;
-                            ({ error } = await supabaseClient.from('funcionario').update(payloadUpdate).eq('rh_registro', rh));
+                            let retryUpdateQuery = supabaseClient.from('funcionario').update(payloadUpdate).eq('rh_registro', rh);
+                            retryUpdateQuery = this.aplicarFiltroFilialRestrita(retryUpdateQuery);
+                            ({ data: updatedRow, error } = await retryUpdateQuery.select('id').maybeSingle());
                         }
                         if (error) throw error;
+                        if (!updatedRow) throw new Error('Funcionario nao encontrado na filial permitida.');
                         atualizados += 1;
                         report.push(`LINHA ${rowNumber} | RH ${rh} | ATUALIZADO`);
                     } else {
