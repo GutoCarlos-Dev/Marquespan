@@ -2,6 +2,7 @@ import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
 const FUNCIONARIO_PAGE_ID = 'funcionario.html';
+const FUNCIONARIO_PAGE_SIZE = 1000;
 const FUNCOES_FALLBACK = [
     'Jovem Aprendiz',
     'Auxiliar de Expedição',
@@ -792,6 +793,36 @@ const FuncionarioUI = {
         if (fecharModal) this.closeFuncionarioModal();
     },
 
+    async buscarFuncionariosPaginado({ select = '*', applyFilters = null, orderColumn = null, orderAscending = true } = {}) {
+        const todos = [];
+        let inicio = 0;
+
+        while (true) {
+            let query = supabaseClient
+                .from('funcionario')
+                .select(select);
+
+            if (typeof applyFilters === 'function') {
+                query = applyFilters(query);
+            }
+
+            if (orderColumn) {
+                query = query.order(orderColumn, { ascending: orderAscending });
+            }
+
+            const { data, error } = await query.range(inicio, inicio + FUNCIONARIO_PAGE_SIZE - 1);
+            if (error) throw error;
+
+            const lote = data || [];
+            todos.push(...lote);
+
+            if (lote.length < FUNCIONARIO_PAGE_SIZE) break;
+            inicio += FUNCIONARIO_PAGE_SIZE;
+        }
+
+        return todos;
+    },
+
     async renderGrid() {
         const searchTerm = this.searchInput?.value.toLowerCase().trim() || '';
         const selectedStatuses = Array.from(this.statusFilterOptions?.querySelectorAll('.status-checkbox:checked') || []).map(cb => cb.value);
@@ -802,29 +833,28 @@ const FuncionarioUI = {
         const selectedFilial = this.filialFilter?.value || '';
 
         try {
-            let query = supabaseClient
-                .from('funcionario')
-                .select('*');
-            
-            if (selectedStatuses.length > 0) {
-                query = query.in('status', selectedStatuses);
-            } else {
-                query = query.in('status', []); // Mostra nada se nenhum estiver marcado
-            }
+            let list = await this.buscarFuncionariosPaginado({
+                select: '*',
+                orderColumn: this.sortConfig.column,
+                orderAscending: this.sortConfig.direction === 'asc',
+                applyFilters: (query) => {
+                    if (selectedStatuses.length > 0) {
+                        query = query.in('status', selectedStatuses);
+                    } else {
+                        query = query.in('status', []); // Mostra nada se nenhum estiver marcado
+                    }
 
-            if (searchTerm) {
-                query = query.or(`nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,rh_registro.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%`);
-            }
+                    if (searchTerm) {
+                        query = query.or(`nome.ilike.%${searchTerm}%,nome_completo.ilike.%${searchTerm}%,rh_registro.ilike.%${searchTerm}%,funcao.ilike.%${searchTerm}%`);
+                    }
 
-            if (selectedFilial) {
-                query = query.eq('filial', selectedFilial);
-            }
-            
-            // Aplica a ordenação configurada
-            query = query.order(this.sortConfig.column, { ascending: this.sortConfig.direction === 'asc' });
+                    if (selectedFilial) {
+                        query = query.eq('filial', selectedFilial);
+                    }
 
-            let { data: list, error } = await query;
-            if (error) throw error;
+                    return query;
+                }
+            });
 
             // Filtro de mês (realizado no cliente para simplificar a lógica de data)
             if (selectedMonth) {
@@ -1034,12 +1064,13 @@ const FuncionarioUI = {
         try {
             let list = sourceList;
             if (!Array.isArray(list)) {
-                let query = supabaseClient.from('funcionario').select('funcao, status, filial');
-                if (this.filialFilter?.value) query = query.eq('filial', this.filialFilter.value);
-
-                const { data, error } = await query;
-                if (error) throw error;
-                list = data || [];
+                list = await this.buscarFuncionariosPaginado({
+                    select: 'funcao, status, filial',
+                    applyFilters: (query) => {
+                        if (this.filialFilter?.value) query = query.eq('filial', this.filialFilter.value);
+                        return query;
+                    }
+                });
             }
 
             const summaryData = {}; 
@@ -1064,7 +1095,9 @@ const FuncionarioUI = {
             });
 
             this.funcSummaryBody.innerHTML = '';
-            for (const funcao in summaryData) {
+            Object.keys(summaryData)
+                .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }))
+                .forEach(funcao => {
                 const data = summaryData[funcao];
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -1077,7 +1110,7 @@ const FuncionarioUI = {
                     <td><strong>${data['Total']}</strong></td>
                 `;
                 this.funcSummaryBody.appendChild(tr);
-            }
+            });
             this.funcSummaryBody.innerHTML += `
                 <tr style="font-weight: bold; background-color: rgba(0,0,0,0.05);">
                     <td>TOTAIS GERAIS</td>
