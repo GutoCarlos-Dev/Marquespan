@@ -80,8 +80,8 @@ function bindEvents() {
   document.getElementById('mobileFiltroDataDe').addEventListener('change', carregarAcompanhamentos);
   document.getElementById('mobileFiltroDataAte').addEventListener('change', carregarAcompanhamentos);
   document.getElementById('mobileBusca').addEventListener('input', renderCards);
-  document.getElementById('btnAdicionarClienteMobile').addEventListener('click', () => adicionarCliente());
-  document.getElementById('btnAdicionarSugestaoClienteMobile').addEventListener('click', () => adicionarCliente({}, 'sugestaoClientesMobileContainer'));
+  document.getElementById('btnAdicionarClienteMobile').addEventListener('click', () => adicionarCliente({}, 'clientesMobileContainer', { focus: true }));
+  document.getElementById('btnAdicionarSugestaoClienteMobile').addEventListener('click', () => adicionarCliente({}, 'sugestaoClientesMobileContainer', { focus: true }));
   document.getElementById('btnAdicionarDiaMobile').addEventListener('click', () => adicionarDia());
   document.getElementById('btnCompartilharSugestaoWhatsappMobile').addEventListener('click', compartilharSugestaoWhatsapp);
   document.getElementById('mobileTipoRota').addEventListener('change', atualizarTipoRota);
@@ -194,7 +194,7 @@ function preencherSupervisorDaRota() {
   document.getElementById('mobileSupervisor').value = supervisor;
 }
 
-function adicionarCliente(cliente = {}, containerId = 'clientesMobileContainer') {
+function adicionarCliente(cliente = {}, containerId = 'clientesMobileContainer', options = {}) {
   const container = document.getElementById(containerId);
   const isSugestao = containerId === 'sugestaoClientesMobileContainer';
   const index = container.querySelectorAll('.cliente-item').length + 1;
@@ -237,8 +237,17 @@ function adicionarCliente(cliente = {}, containerId = 'clientesMobileContainer')
       </div>
       `}
     </div>
+    <div class="mobile-cliente-actions">
+      <button type="button" class="btn-primary btn-block btn-add-cliente-after-mobile" data-add-after="cliente">
+        <i class="fas fa-plus"></i> Adicionar abaixo
+      </button>
+    </div>
   `;
-  container.appendChild(item);
+  if (options.insertAfter?.parentElement === container) {
+    options.insertAfter.after(item);
+  } else {
+    container.appendChild(item);
+  }
   item.querySelector('.cliente-nome').value = cliente.nome || '';
   item.querySelector('.cliente-mercado-horario').checked = Boolean(cliente.mercado_horario);
   item.querySelector('.cliente-horario-recebimento').value = cliente.horario_recebimento_ate || '';
@@ -249,6 +258,13 @@ function adicionarCliente(cliente = {}, containerId = 'clientesMobileContainer')
     item.querySelector('.cliente-liberou-canhoto').value = cliente.liberou_canhoto || '';
   }
   atualizarMercadoHorario(item);
+  renumerarItens(container);
+  if (options.focus) {
+    requestAnimationFrame(() => {
+      item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      item.querySelector('.cliente-nome')?.focus();
+    });
+  }
 }
 
 function adicionarDia(dia = {}, numeroInformado = null) {
@@ -354,6 +370,16 @@ function atualizarSugestaoRoteiro() {
 }
 
 function handleDynamicRemove(event) {
+  const addButton = event.target.closest('[data-add-after]');
+  if (addButton) {
+    const itemAtual = addButton.closest('.cliente-item');
+    const container = itemAtual?.closest('.mobile-dynamic-list');
+    if (container) {
+      adicionarCliente({}, container.id, { insertAfter: itemAtual, focus: true });
+    }
+    return;
+  }
+
   const button = event.target.closest('[data-remove]');
   if (!button) return;
   const container = button.closest('.mobile-dynamic-list');
@@ -369,7 +395,9 @@ function renumerarItens(container) {
   container.querySelectorAll('.mobile-dynamic-title').forEach((title, index) => {
     title.textContent = container.id === 'horariosMobileContainer' ? `${index + 1} Dia` : `Cliente ${index + 1}`;
   });
-  atualizarTipoRota();
+  if (container.id === 'horariosMobileContainer') {
+    atualizarTipoRota();
+  }
 }
 
 function atualizarTipoRota() {

@@ -84,8 +84,8 @@ function bindEvents() {
   document.getElementById('formAcompanhamento').addEventListener('submit', salvarAcompanhamento);
   document.getElementById('btnFecharModal').addEventListener('click', fecharModal);
   document.getElementById('btnCancelarAcompanhamento').addEventListener('click', fecharModal);
-  document.getElementById('btnAdicionarCliente').addEventListener('click', () => adicionarCliente());
-  document.getElementById('btnAdicionarSugestaoCliente').addEventListener('click', () => adicionarCliente({}, 'sugestaoClientesContainer'));
+  document.getElementById('btnAdicionarCliente').addEventListener('click', () => adicionarCliente({}, 'clientesContainer', { focus: true }));
+  document.getElementById('btnAdicionarSugestaoCliente').addEventListener('click', () => adicionarCliente({}, 'sugestaoClientesContainer', { focus: true }));
   document.getElementById('btnAdicionarDia').addEventListener('click', () => adicionarDia());
   document.getElementById('btnCompartilharSugestaoWhatsapp').addEventListener('click', compartilharSugestaoWhatsapp);
   document.getElementById('btnCompartilharRoteiroAtualWhatsapp').addEventListener('click', compartilharRoteiroAtualWhatsapp);
@@ -243,6 +243,9 @@ function aplicarModoVisualizacaoAcompanhamento() {
   modal.querySelectorAll('[data-remove]').forEach(btn => {
     btn.classList.toggle('hidden', acompanhamentoVisualizando);
   });
+  modal.querySelectorAll('[data-add-after]').forEach(btn => {
+    btn.classList.toggle('hidden', acompanhamentoVisualizando);
+  });
 
   const btnCancelar = document.getElementById('btnCancelarAcompanhamento');
   if (btnCancelar) btnCancelar.textContent = acompanhamentoVisualizando ? 'Fechar' : 'Cancelar';
@@ -250,7 +253,7 @@ function aplicarModoVisualizacaoAcompanhamento() {
   atualizarBotaoCompartilharModal();
 }
 
-function adicionarCliente(cliente = {}, containerId = 'clientesContainer') {
+function adicionarCliente(cliente = {}, containerId = 'clientesContainer', options = {}) {
   const container = document.getElementById(containerId);
   const isSugestao = containerId === 'sugestaoClientesContainer';
   const index = container.querySelectorAll('.cliente-item').length + 1;
@@ -293,8 +296,17 @@ function adicionarCliente(cliente = {}, containerId = 'clientesContainer') {
       </div>
       `}
     </div>
+    <div class="cliente-item-actions">
+      <button type="button" class="btn-custom btn-green btn-add-cliente-after" data-add-after="cliente">
+        <i class="fas fa-plus"></i> Adicionar abaixo
+      </button>
+    </div>
   `;
-  container.appendChild(item);
+  if (options.insertAfter?.parentElement === container) {
+    options.insertAfter.after(item);
+  } else {
+    container.appendChild(item);
+  }
   item.querySelector('.cliente-nome').value = cliente.nome || '';
   item.querySelector('.cliente-mercado-horario').checked = Boolean(cliente.mercado_horario);
   item.querySelector('.cliente-horario-recebimento').value = cliente.horario_recebimento_ate || '';
@@ -305,6 +317,13 @@ function adicionarCliente(cliente = {}, containerId = 'clientesContainer') {
     item.querySelector('.cliente-liberou-canhoto').value = cliente.liberou_canhoto || '';
   }
   atualizarMercadoHorario(item);
+  renumerarItens(container);
+  if (options.focus) {
+    requestAnimationFrame(() => {
+      item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      item.querySelector('.cliente-nome')?.focus();
+    });
+  }
 }
 
 function adicionarDia(dia = {}, numeroInformado = null) {
@@ -411,6 +430,16 @@ function atualizarSugestaoRoteiro() {
 }
 
 function handleDynamicRemove(event) {
+  const addButton = event.target.closest('[data-add-after]');
+  if (addButton) {
+    const itemAtual = addButton.closest('.cliente-item');
+    const container = itemAtual?.closest('.dynamic-list');
+    if (container) {
+      adicionarCliente({}, container.id, { insertAfter: itemAtual, focus: true });
+    }
+    return;
+  }
+
   const button = event.target.closest('[data-remove]');
   if (!button) return;
   const container = button.closest('.dynamic-list');
@@ -428,7 +457,9 @@ function renumerarItens(container) {
       ? `Cliente ${index + 1}`
       : `${index + 1} Dia`;
   });
-  atualizarTipoRota();
+  if (container.id === 'horariosContainer') {
+    atualizarTipoRota();
+  }
 }
 
 function atualizarTipoRota() {
