@@ -639,8 +639,36 @@ body.funcionario-modal-open {
     padding: 7px 12px;
 }
 
+.funcionario-grid-toolbar {
+    align-items: end;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin: 8px 0 0;
+}
+
+.funcionario-grid-search {
+    margin: 0;
+    width: min(360px, 100%);
+}
+
+.funcionario-grid-search label {
+    color: #555;
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.funcionario-grid-search .glass-input {
+    height: 34px;
+    min-height: 34px;
+    padding: 7px 12px;
+}
+
 .funcionario-table-container {
     clear: both;
+    margin-top: 6px;
 }
 
 @media (max-width: 1100px) {
@@ -670,6 +698,21 @@ body.funcionario-modal-open {
     .filtro-equipe-escala,
     .filtro-status {
         grid-column: auto;
+    }
+
+    .funcionario-grid-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 8px;
+        justify-content: stretch;
+    }
+
+    .funcionario-grid-search {
+        width: 100%;
+    }
+
+    .funcionario-grid-toolbar .func-filter-count {
+        align-self: flex-start;
     }
 }
 

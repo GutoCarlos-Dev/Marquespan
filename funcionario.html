@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/menu.css" />
   <!-- Estilo Específico -->
-  <link rel="stylesheet" href="css/funcionario.css?v=20260630-10" />
+  <link rel="stylesheet" href="css/funcionario.css?v=20260630-12" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     /* Estilos críticos antecipados para evitar salto visual (flicker) */
@@ -309,10 +309,6 @@
                     <option value="">Todas</option>
                 </select>
             </div>
-            <div class="form-group filtro-busca">
-                <label for="searchFuncInput">Busca</label>
-                <input type="text" id="searchFuncInput" placeholder="🔍 Filtrar por nome, RH ou função..." class="glass-input">
-            </div>
             <div class="form-group filtro-nascimento">
                 <label for="monthFilter">Mês de Nascimento</label>
                 <select id="monthFilter" class="glass-input">
@@ -393,7 +389,14 @@
                 </div>
             </div>
         </div>
-        <div id="funcFilterCount" class="func-filter-count">Quantidade listada: 0</div>
+        </div>
+
+        <div class="funcionario-grid-toolbar">
+            <div id="funcFilterCount" class="func-filter-count">Quantidade listada: 0</div>
+            <div class="form-group funcionario-grid-search">
+                <label for="searchFuncInput">Busca</label>
+                <input type="text" id="searchFuncInput" placeholder="Filtrar por nome, RH ou fun&ccedil;&atilde;o..." class="glass-input">
+            </div>
         </div>
 
         <div class="table-responsive funcionario-table-container">
