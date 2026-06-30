@@ -173,6 +173,7 @@ const FuncionarioUI = {
     listData: [], // Armazena os dados atuais da grid para exportação
     usuarioAtual: null,
     isAdministrador: false,
+    isGerencia: false,
     async init() {
         this.cache();
         const acessoPermitido = await this.verificarPermissaoPagina();
@@ -375,6 +376,7 @@ const FuncionarioUI = {
         this.usuarioAtual = JSON.parse(localStorage.getItem('usuarioLogado'));
         const nivel = this.usuarioAtual?.nivel?.toLowerCase();
         this.isAdministrador = nivel === 'administrador';
+        this.isGerencia = nivel === 'gerencia';
 
         if (!nivel) {
             window.location.href = 'index.html';
@@ -403,13 +405,17 @@ const FuncionarioUI = {
     },
 
     getFilialUsuarioRestrita() {
-        if (this.isAdministrador) return '';
+        if (this.usuarioTemAcessoGlobal()) return '';
         return String(this.usuarioAtual?.filial || '').trim();
+    },
+
+    usuarioTemAcessoGlobal() {
+        return this.isAdministrador || this.isGerencia;
     },
 
     usuarioPodeAcessarFilial(filial) {
         const filialRestrita = this.getFilialUsuarioRestrita();
-        if (!filialRestrita) return this.isAdministrador;
+        if (!filialRestrita) return this.usuarioTemAcessoGlobal();
         return String(filial || '').trim().toUpperCase() === filialRestrita.toUpperCase();
     },
 
@@ -419,7 +425,7 @@ const FuncionarioUI = {
     },
 
     bloquearSeSemFilialUsuario() {
-        if (this.isAdministrador || this.getFilialUsuarioRestrita()) return false;
+        if (this.usuarioTemAcessoGlobal() || this.getFilialUsuarioRestrita()) return false;
         alert('Seu usuario nao possui filial definida. Solicite o ajuste do cadastro para acessar funcionarios.');
         return true;
     },
@@ -697,7 +703,7 @@ const FuncionarioUI = {
                 .filter(opcao => !filialRestrita || String(opcao.value).toUpperCase() === filialRestrita.toUpperCase())
                 .map(opcao => `<option value="${escapeHtml(opcao.value)}">${escapeHtml(opcao.label)}</option>`)
                 .join('');
-            this.filialFilter.value = vistos.has(filialPadrao) ? filialPadrao : 'SP';
+            this.filialFilter.value = filialRestrita && vistos.has(filialPadrao) ? filialPadrao : '';
             this.filialFilter.disabled = Boolean(filialRestrita);
         }
     },
@@ -902,7 +908,7 @@ const FuncionarioUI = {
     },
 
     async renderGrid() {
-        if (!this.isAdministrador && !this.getFilialUsuarioRestrita()) {
+        if (!this.usuarioTemAcessoGlobal() && !this.getFilialUsuarioRestrita()) {
             this.listData = [];
             if (this.tableBody) this.tableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;">Seu usuario nao possui filial definida.</td></tr>';
             if (this.gridCount) this.gridCount.textContent = '(0)';
