@@ -505,19 +505,34 @@ body.funcionario-modal-open {
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
     margin: 12px 0 18px;
     padding: 16px;
+    position: relative;
     width: calc(75% - 5px);
 }
 
 .funcionario-filter-panel::before {
     border-bottom: 1px solid rgba(0,0,0,0.1);
     color: #006937;
-    content: "\f0b0  Filtros de Busca";
+    content: "FILTROS DE BUSCA";
     display: block;
-    font-family: "Font Awesome 6 Free", Arial, sans-serif;
-    font-size: 1.2rem;
-    font-weight: 900;
+    font-size: 1.05rem;
+    font-weight: 700;
     margin-bottom: 20px;
+    padding-left: 22px;
     padding-bottom: 10px;
+    position: relative;
+    text-transform: uppercase;
+}
+
+.funcionario-filter-panel::after {
+    color: #006937;
+    content: "\f0b0";
+    font-family: "Font Awesome 6 Free";
+    font-size: 1.05rem;
+    font-weight: 900;
+    left: 16px;
+    line-height: 1;
+    position: absolute;
+    top: 18px;
 }
 
 .funcionario-filters-grid {
