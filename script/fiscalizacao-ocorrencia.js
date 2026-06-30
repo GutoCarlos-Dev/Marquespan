@@ -3,7 +3,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 
 let ocorrencias = [];
 let ocorrenciaEditandoId = null;
-let sortState = { field: 'data_ocorrencia', ascending: false };
+let sortState = { field: 'created_at', ascending: false };
 const PAGE_ID = 'fiscalizacao-ocorrencia.html';
 const niveisComExclusao = ['administrador', 'gerencia'];
 const bucketAnexos = 'fiscalizacao_ocorrencias_anexos';
@@ -561,8 +561,8 @@ async function buscarOcorrencias() {
     if (boletimOcorrencia) query = query.eq('boletim_ocorrencia_status', boletimOcorrencia);
 
     const { data, error } = await query
-      .order('data_ocorrencia', { ascending: false })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('data_ocorrencia', { ascending: false });
     if (error) throw error;
 
     ocorrencias = data || [];
