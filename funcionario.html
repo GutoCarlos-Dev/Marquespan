@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/menu.css" />
   <!-- Estilo Específico -->
-  <link rel="stylesheet" href="css/funcionario.css?v=20260626-4" />
+  <link rel="stylesheet" href="css/funcionario.css?v=20260630-7" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     /* Estilos críticos antecipados para evitar salto visual (flicker) */
@@ -29,18 +29,6 @@
 
       <section id="sectionCadastrarFuncionarios" class="glass-panel">
         <h3><i class="fas fa-user-plus"></i> Formulário do Colaborador</h3>
-        <div class="funcionario-page-actions glass-panel-inner">
-            <h3><i class="fas fa-cogs"></i> Ações</h3>
-            <div class="form-actions-inline">
-                <button type="button" id="btnOpenFuncionarioModal" class="btn-glass btn-green"><i class="fas fa-plus"></i> Incluir</button>
-                <button type="button" id="btnDownloadModeloImportacao" class="btn-glass btn-blue"><i class="fas fa-download"></i> Baixar Modelo</button>
-                <button type="button" id="btnImportXLSX" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar XLSX</button>
-                <button type="button" id="btnExportXLSX" class="btn-glass btn-blue"><i class="fas fa-file-excel"></i> Exportar XLSX</button>
-                <button type="button" id="btnExportPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-                <input type="file" id="fileImportFuncionarioXLSX" accept=".xlsx,.xls" hidden>
-            </div>
-        </div>
-
         <div id="modalFuncionario" class="funcionario-modal-backdrop hidden">
           <div class="funcionario-modal">
             <div class="funcionario-modal-header">
@@ -299,19 +287,33 @@
 
         <hr style="margin: 30px 0; border-color: rgba(0,0,0,0.1);">
 
-        <h3><i class="fas fa-id-card"></i> Quadro de Funcionários <span id="countFuncGrid" style="font-size: 0.85rem; color: #666; font-weight: normal; margin-left: 8px;">(0)</span></h3>
+        <div class="funcionario-board-header">
+            <h3><i class="fas fa-id-card"></i> Quadro de Funcion&aacute;rios <span id="countFuncGrid" style="font-size: 0.85rem; color: #666; font-weight: normal; margin-left: 8px;">(0)</span></h3>
+            <div class="funcionario-board-actions">
+                <span class="funcionario-actions-label"><i class="fas fa-cogs"></i> A&ccedil;&otilde;es</span>
+                <div class="form-actions-inline">
+                    <button type="button" id="btnOpenFuncionarioModal" class="btn-glass btn-green"><i class="fas fa-plus"></i> Incluir</button>
+                    <button type="button" id="btnDownloadModeloImportacao" class="btn-glass btn-blue"><i class="fas fa-download"></i> Baixar Modelo</button>
+                    <button type="button" id="btnImportXLSX" class="btn-glass btn-blue"><i class="fas fa-file-import"></i> Importar XLSX</button>
+                    <button type="button" id="btnExportXLSX" class="btn-glass btn-blue"><i class="fas fa-file-excel"></i> Exportar XLSX</button>
+                    <button type="button" id="btnExportPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+                    <input type="file" id="fileImportFuncionarioXLSX" accept=".xlsx,.xls" hidden>
+                </div>
+            </div>
+        </div>
+        <div class="funcionario-filter-panel">
         <div class="filters-actions-grid funcionario-filters-grid">
-            <div class="form-group">
+            <div class="form-group filtro-filial">
                 <label for="filialFilter">Filial</label>
                 <select id="filialFilter" class="glass-input">
                     <option value="">Todas</option>
                 </select>
             </div>
-            <div class="form-group">
+            <div class="form-group filtro-busca">
                 <label for="searchFuncInput">Busca</label>
                 <input type="text" id="searchFuncInput" placeholder="🔍 Filtrar por nome, RH ou função..." class="glass-input">
             </div>
-            <div class="form-group">
+            <div class="form-group filtro-nascimento">
                 <label for="monthFilter">Mês de Nascimento</label>
                 <select id="monthFilter" class="glass-input">
                     <option value="">Todos os Meses</option>
@@ -329,15 +331,15 @@
                     <option value="12">Dezembro</option>
                 </select>
             </div>
-            <div class="form-group">
+            <div class="form-group filtro-admissao">
                 <label for="admissaoMonthYearFilter">Mês/Ano Admissão</label>
                 <input type="month" id="admissaoMonthYearFilter" class="glass-input">
             </div>
-            <div class="form-group">
+            <div class="form-group filtro-demissao">
                 <label for="demissaoMonthYearFilter">Mês/Ano Demissão</label>
                 <input type="month" id="demissaoMonthYearFilter" class="glass-input">
             </div>
-            <div class="form-group">
+            <div class="form-group filtro-cnh">
                 <label for="cnhVencFilter">CNH Venc.</label>
                 <select id="cnhVencFilter" class="glass-input">
                     <option value="">Todos</option>
@@ -345,7 +347,18 @@
                     <option value="vencida">Vencida</option>
                 </select>
             </div>
-            <div class="form-group custom-multiselect">
+            <div class="form-group custom-multiselect filtro-funcao">
+                <label>Fun&ccedil;&atilde;o</label>
+                <div class="multiselect-display glass-input" id="funcaoFilterDisplay">
+                    <span id="funcaoFilterText">Todas</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="glass-dropdown hidden" id="funcaoFilterOptions">
+                    <button type="button" id="btnLimparFuncaoFilter" class="dropdown-clear-btn">Limpar sele&ccedil;&atilde;o</button>
+                    <div id="funcaoFilterList" class="dropdown-scroll-list"></div>
+                </div>
+            </div>
+            <div class="form-group custom-multiselect filtro-status">
                 <label>Filtrar Status</label>
                 <div class="multiselect-display glass-input" id="statusFilterDisplay">
                     <span id="statusFilterText">Todos</span>
@@ -361,6 +374,7 @@
             </div>
         </div>
         <div id="funcFilterCount" class="func-filter-count">Quantidade listada: 0</div>
+        </div>
 
         <div class="table-responsive funcionario-table-container">
             <table class="glass-table data-grid">
@@ -418,6 +432,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/funcionario.js?v=20260630-2"></script>
+  <script type="module" src="script/funcionario.js?v=20260630-3"></script>
 </body>
 </html>

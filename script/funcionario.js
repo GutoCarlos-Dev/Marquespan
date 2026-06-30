@@ -174,6 +174,7 @@ const FuncionarioUI = {
     usuarioAtual: null,
     isAdministrador: false,
     isGerencia: false,
+    funcoesFiltroDisponiveis: [],
     async init() {
         this.cache();
         const acessoPermitido = await this.verificarPermissaoPagina();
@@ -212,6 +213,11 @@ const FuncionarioUI = {
         this.statusFilterDisplay = document.getElementById('statusFilterDisplay');
         this.statusFilterOptions = document.getElementById('statusFilterOptions');
         this.statusFilterText = document.getElementById('statusFilterText');
+        this.funcaoFilterDisplay = document.getElementById('funcaoFilterDisplay');
+        this.funcaoFilterOptions = document.getElementById('funcaoFilterOptions');
+        this.funcaoFilterText = document.getElementById('funcaoFilterText');
+        this.funcaoFilterList = document.getElementById('funcaoFilterList');
+        this.btnLimparFuncaoFilter = document.getElementById('btnLimparFuncaoFilter');
         this.monthFilter = document.getElementById('monthFilter');
         this.admissaoMonthYearFilter = document.getElementById('admissaoMonthYearFilter');
         this.demissaoMonthYearFilter = document.getElementById('demissaoMonthYearFilter');
@@ -342,6 +348,33 @@ const FuncionarioUI = {
         }
 
         // Listeners para ordenação da tabela principal
+        if (this.funcaoFilterDisplay && this.funcaoFilterOptions) {
+            this.funcaoFilterDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.funcaoFilterOptions.classList.toggle('hidden');
+            });
+            document.addEventListener('click', (e) => {
+                if (!this.funcaoFilterDisplay.contains(e.target) && !this.funcaoFilterOptions.contains(e.target)) {
+                    this.funcaoFilterOptions.classList.add('hidden');
+                }
+            });
+        }
+
+        if (this.funcaoFilterList) {
+            this.funcaoFilterList.addEventListener('change', (event) => {
+                if (!event.target.classList.contains('funcao-filter-checkbox')) return;
+                this.updateFuncaoFilterText();
+                this.renderGrid();
+            });
+        }
+
+        if (this.btnLimparFuncaoFilter) {
+            this.btnLimparFuncaoFilter.addEventListener('click', () => {
+                this.clearFuncaoFilter();
+                this.renderGrid();
+            });
+        }
+
         document.querySelectorAll('#sectionCadastrarFuncionarios .data-grid thead th[data-sort]').forEach(th => {
             const column = th.dataset.sort;
             th.addEventListener('click', () => this.handleSort(column));
@@ -511,10 +544,12 @@ const FuncionarioUI = {
             const funcoes = (data || []).filter(funcao => funcao.ativo !== false);
             const nomes = funcoes.map(funcao => funcao.nome).filter(Boolean);
             this.preencherSelectFuncoes(nomes.length ? nomes : FUNCOES_FALLBACK, atual);
+            this.preencherFiltroFuncoes(nomes.length ? nomes : FUNCOES_FALLBACK);
             this.renderFuncoesGrid(funcoes.length ? funcoes : this.getFuncoesFallbackGrid());
         } catch (error) {
             console.warn('Erro ao carregar cadastro de funcoes:', error);
             this.preencherSelectFuncoes(FUNCOES_FALLBACK, atual);
+            this.preencherFiltroFuncoes(FUNCOES_FALLBACK);
             this.renderFuncoesGrid(this.getFuncoesFallbackGrid());
         }
     },
@@ -608,6 +643,62 @@ const FuncionarioUI = {
             .join('');
 
         this.funcaoSelect.value = selectedValue || '';
+    },
+
+    preencherFiltroFuncoes(funcoes) {
+        if (!this.funcaoFilterList) return;
+
+        const selecionadas = new Set(this.getFuncoesFiltroSelecionadas());
+        const nomes = [];
+        const vistos = new Set();
+
+        funcoes.forEach(funcao => {
+            const nome = String(funcao || '').trim();
+            const key = nome.toUpperCase();
+            if (!nome || vistos.has(key)) return;
+            vistos.add(key);
+            nomes.push(nome);
+        });
+
+        this.funcoesFiltroDisponiveis = nomes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        this.funcaoFilterList.innerHTML = this.funcoesFiltroDisponiveis
+            .map(nome => {
+                const checked = selecionadas.has(nome) ? 'checked' : '';
+                return `
+                    <label class="dropdown-item">
+                        <input type="checkbox" class="funcao-filter-checkbox" value="${escapeHtml(nome)}" ${checked}>
+                        ${escapeHtml(nome)}
+                    </label>
+                `;
+            })
+            .join('');
+
+        this.updateFuncaoFilterText();
+    },
+
+    getFuncoesFiltroSelecionadas() {
+        return Array.from(this.funcaoFilterList?.querySelectorAll('.funcao-filter-checkbox:checked') || [])
+            .map(cb => cb.value);
+    },
+
+    updateFuncaoFilterText() {
+        if (!this.funcaoFilterText) return;
+        const selecionadas = this.getFuncoesFiltroSelecionadas();
+
+        if (selecionadas.length === 0) {
+            this.funcaoFilterText.textContent = 'Todas';
+        } else if (selecionadas.length === 1) {
+            this.funcaoFilterText.textContent = selecionadas[0];
+        } else {
+            this.funcaoFilterText.textContent = `${selecionadas.length} selecionadas`;
+        }
+    },
+
+    clearFuncaoFilter() {
+        this.funcaoFilterList?.querySelectorAll('.funcao-filter-checkbox:checked').forEach(cb => {
+            cb.checked = false;
+        });
+        this.updateFuncaoFilterText();
     },
 
     async handleCadastroFuncaoSubmit(e) {
@@ -924,6 +1015,7 @@ const FuncionarioUI = {
         const selectedDemissaoMonthYear = this.demissaoMonthYearFilter?.value || '';
         const selectedCnhVenc = this.cnhVencFilter?.value || '';
         const selectedFilial = this.filialFilter?.value || '';
+        const selectedFuncoes = this.getFuncoesFiltroSelecionadas();
 
         try {
             let list = await this.buscarFuncionariosPaginado({
@@ -943,6 +1035,10 @@ const FuncionarioUI = {
 
                     if (selectedFilial) {
                         query = query.eq('filial', selectedFilial);
+                    }
+
+                    if (selectedFuncoes.length > 0) {
+                        query = query.in('funcao', selectedFuncoes);
                     }
 
                     return query;

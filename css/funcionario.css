@@ -74,6 +74,51 @@
     min-width: 150px;
 }
 
+.funcionario-board-header {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 105, 55, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    box-sizing: border-box;
+    float: right;
+    margin: 0 0 20px 20px;
+    min-height: 228px;
+    padding: 18px;
+    width: calc(25% - 15px);
+}
+
+.funcionario-board-header h3 {
+    display: none;
+}
+
+.funcionario-board-actions {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.funcionario-actions-label {
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    color: #006937;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+}
+
+.funcionario-board-actions .form-actions-inline {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 1fr 1fr;
+}
+
+.funcionario-board-actions .form-actions-inline .btn-glass {
+    min-width: 0;
+    padding-left: 14px;
+    padding-right: 14px;
+    width: 100%;
+}
+
 .funcionario-modal-backdrop {
     position: fixed;
     inset: 0;
@@ -453,24 +498,112 @@ body.funcionario-modal-open {
     background-color: #f1f3f5 !important;
 }
 
+.funcionario-filter-panel {
+    background: linear-gradient(180deg, #ffffff 0%, #f8faf9 100%);
+    border: 1px solid #e2e8e5;
+    border-radius: 8px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    margin: 12px 0 18px;
+    padding: 16px;
+    width: calc(75% - 5px);
+}
+
+.funcionario-filter-panel::before {
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    color: #006937;
+    content: "\f0b0  Filtros de Busca";
+    display: block;
+    font-family: "Font Awesome 6 Free", Arial, sans-serif;
+    font-size: 1.2rem;
+    font-weight: 900;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+}
+
 .funcionario-filters-grid {
     display: grid;
-    grid-template-columns: 120px minmax(220px, 1fr) 150px 160px 160px 130px 220px;
-    gap: 15px;
-    margin-bottom: 8px;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 14px;
     align-items: end;
 }
 
-.func-filter-count {
-    margin: 0 0 15px;
-    color: #495057;
+.funcionario-filters-grid .form-group {
+    min-width: 0;
+}
+
+.funcionario-filters-grid label {
+    color: #555;
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    margin-bottom: 5px;
+    text-transform: none;
+}
+
+.funcionario-filters-grid .glass-input,
+.funcionario-filters-grid .multiselect-display {
+    border-color: #e0e0e0;
+    border-radius: 10px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    color: #333;
     font-size: 0.9rem;
-    font-weight: 700;
+    height: 42px;
+    min-height: 42px;
+    padding: 10px 15px;
+}
+
+.filtro-filial { grid-column: span 2; }
+.filtro-busca { grid-column: span 4; }
+.filtro-nascimento { grid-column: span 3; }
+.filtro-cnh { grid-column: span 3; }
+.filtro-admissao,
+.filtro-demissao,
+.filtro-funcao,
+.filtro-status { grid-column: span 3; }
+
+.func-filter-count {
+    align-items: center;
+    background: #eef7f2;
+    border: 1px solid #d4eadf;
+    border-radius: 999px;
+    color: #006937;
+    display: inline-flex;
+    font-size: 0.88rem;
+    font-weight: 800;
+    margin: 14px 0 0;
+    padding: 7px 12px;
+}
+
+.funcionario-table-container {
+    clear: both;
 }
 
 @media (max-width: 1100px) {
+    .funcionario-board-header {
+        float: none;
+        margin: 0 0 18px;
+        min-height: 0;
+        width: 100%;
+    }
+
+    .funcionario-filter-panel {
+        width: auto;
+    }
+
     .funcionario-filters-grid {
         grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+
+    .filtro-filial,
+    .filtro-busca,
+    .filtro-nascimento,
+    .filtro-cnh,
+    .filtro-admissao,
+    .filtro-demissao,
+    .filtro-funcao,
+    .filtro-status {
+        grid-column: auto;
     }
 }
 
@@ -534,3 +667,26 @@ body.funcionario-modal-open {
 
 .dropdown-item:hover { background: #f8f9fa; }
 .dropdown-item input { margin: 0; cursor: pointer; }
+
+.dropdown-clear-btn {
+    width: 100%;
+    border: 0;
+    border-radius: 6px;
+    background: #f1f3f5;
+    color: #006937;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    padding: 8px;
+    text-align: center;
+}
+
+.dropdown-clear-btn:hover {
+    background: #e6f4ec;
+}
+
+.dropdown-scroll-list {
+    max-height: 260px;
+    overflow-y: auto;
+}
