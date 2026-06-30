@@ -282,9 +282,15 @@ const FuncionarioUI = {
         }
         if (this.tbodyFuncoesCadastradas) {
             this.tbodyFuncoesCadastradas.addEventListener('click', (event) => {
-                const btn = event.target.closest('.btn-edit-funcao');
-                if (!btn) return;
-                this.prepararEdicaoFuncao(btn.dataset);
+                const editButton = event.target.closest('.btn-edit-funcao');
+                const deleteButton = event.target.closest('.btn-delete-funcao');
+                if (editButton) {
+                    this.prepararEdicaoFuncao(editButton.dataset);
+                    return;
+                }
+                if (deleteButton) {
+                    this.deleteFuncao(deleteButton.dataset);
+                }
             });
         }
         if (this.searchInput) {
@@ -579,6 +585,13 @@ const FuncionarioUI = {
                                 data-nome="${escapeHtml(funcao.nome || '')}">
                                 <i class="fas fa-edit"></i>
                             </button>
+                            <button type="button"
+                                class="btn-icon delete btn-delete-funcao"
+                                title="Excluir função"
+                                data-id="${escapeHtml(funcao.id || '')}"
+                                data-nome="${escapeHtml(funcao.nome || '')}">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -594,6 +607,60 @@ const FuncionarioUI = {
             this.btnSalvarCadastroFuncao.innerHTML = '<i class="fas fa-save"></i> Atualizar Função';
         }
         nomeInput?.focus();
+    },
+
+    async deleteFuncao(dataset) {
+        const id = dataset.id || '';
+        const nome = dataset.nome || '';
+
+        if (!id) {
+            alert('Esta função ainda não está salva no cadastro e não pode ser excluída.');
+            return;
+        }
+
+        if (!nome) {
+            alert('Não foi possível identificar a função para exclusão.');
+            return;
+        }
+
+        try {
+            const funcionariosVinculados = await this.buscarFuncionariosPaginado({
+                select: 'rh_registro, nome, filial, funcao',
+                applyFilters: (query) => query.eq('funcao', nome)
+            });
+
+            if (funcionariosVinculados.length > 0) {
+                const linhas = funcionariosVinculados
+                    .slice(0, 20)
+                    .map(funcionario => `RH ${funcionario.rh_registro || '-'} - ${funcionario.nome || '-'} (${funcionario.filial || 'SP'})`)
+                    .join('\n');
+                const restante = funcionariosVinculados.length > 20
+                    ? `\n... e mais ${funcionariosVinculados.length - 20} colaborador(es).`
+                    : '';
+
+                alert(`Não foi possível excluir a função "${nome}".\n\nEla está configurada nos seguintes colaboradores:\n${linhas}${restante}\n\nRemova ou altere a função desses colaboradores antes de excluir.`);
+                return;
+            }
+
+            if (!confirm(`Deseja realmente excluir a função "${nome}"?`)) return;
+
+            const { error } = await supabaseClient
+                .from('funcionario_funcoes')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            if (this.cadFuncaoId?.value === id) {
+                this.resetCadastroFuncaoForm();
+            }
+
+            await this.carregarFuncoes('');
+            alert('Função excluída com sucesso!');
+        } catch (error) {
+            console.error('Erro ao excluir função:', error);
+            alert('Erro ao excluir função: ' + (error.message || error));
+        }
     },
 
     preencherSelectFuncoes(funcoes, selectedValue = '') {
