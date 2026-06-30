@@ -1088,9 +1088,17 @@ async function salvarArquivoAnexo(idOcorrencia, file, categoria) {
 
 async function baixarAnexo(anexo) {
   if (!anexo?.caminho_arquivo) return;
-  const { data, error } = await supabaseClient.storage.from(bucketAnexos).createSignedUrl(anexo.caminho_arquivo, 60);
-  if (error) return alert(`Erro ao gerar link do anexo: ${error.message}`);
-  window.open(data.signedUrl, '_blank');
+  const { data, error } = await supabaseClient.storage.from(bucketAnexos).download(anexo.caminho_arquivo);
+  if (error) return alert(`Erro ao baixar o anexo: ${error.message}`);
+
+  const url = URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = anexo.nome_arquivo || anexo.caminho_arquivo.split('/').pop() || 'anexo';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function sanitizarNomeArquivo(nome) {
