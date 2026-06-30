@@ -3,7 +3,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 
 let ocorrencias = [];
 let ocorrenciaEditandoId = null;
-let sortState = { field: 'created_at', ascending: false };
+let sortState = { field: 'data_ocorrencia', ascending: false };
 const PAGE_ID = 'fiscalizacao-ocorrencia.html';
 const niveisComExclusao = ['administrador', 'gerencia'];
 const bucketAnexos = 'fiscalizacao_ocorrencias_anexos';
@@ -560,7 +560,9 @@ async function buscarOcorrencias() {
     if (filial) query = query.eq('filial', filial);
     if (boletimOcorrencia) query = query.eq('boletim_ocorrencia_status', boletimOcorrencia);
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query
+      .order('data_ocorrencia', { ascending: false })
+      .order('created_at', { ascending: false });
     if (error) throw error;
 
     ocorrencias = data || [];
@@ -618,13 +620,14 @@ function renderizarTabela() {
   document.getElementById('totalRegistros').textContent = dados.length;
 
   if (dados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
     atualizarIconesOrdenacao();
     return;
   }
 
   tbody.innerHTML = dados.map(item => `
     <tr>
+      <td>${formatarData(item.data_ocorrencia)}</td>
       <td>${formatarDataHora(item.created_at)}</td>
       <td>${escapeHtml(item.usuario_inclusao_nome || item.usuario_nome || '-')}</td>
       <td>${escapeHtml(formatarUltimaEdicao(item))}</td>
@@ -704,8 +707,8 @@ function usuarioPodeExcluir() {
 
 function dadosParaExportacao() {
   return getDadosGrid().map(item => ({
-    'Data Inclusao': formatarDataHora(item.created_at),
     'Data Ocorrencia': formatarData(item.data_ocorrencia),
+    'Data Lancamento': formatarDataHora(item.created_at),
     'Usuario que Incluiu': item.usuario_inclusao_nome || item.usuario_nome || '',
     'Ultima Edicao': formatarUltimaEdicao(item),
     Rota: item.rota || '',
@@ -1145,10 +1148,10 @@ async function exportarPDF() {
   doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 283, 18, { align: 'right' });
 
   doc.autoTable({
-    head: [['Data Inclusao', 'Data Ocorrencia', 'Ultima Edicao', 'Filial', 'Rota', 'Placa', 'Motorista', 'BO', 'Ocorrencia']],
+    head: [['Data Ocorrencia', 'Data Lancamento', 'Ultima Edicao', 'Filial', 'Rota', 'Placa', 'Motorista', 'BO', 'Ocorrencia']],
     body: rows.map(row => [
-      row['Data Inclusao'],
       row['Data Ocorrencia'],
+      row['Data Lancamento'],
       row['Ultima Edicao'],
       row.Filial,
       row.Rota,

@@ -29,11 +29,11 @@
         <h3><i class="fas fa-filter"></i> Filtros de Busca</h3>
         <div class="filtros-container fiscalizacao-filtros">
           <div class="form-group-filter">
-            <label for="filtroDataDe">Data de</label>
+            <label for="filtroDataDe">Ocorrencia de</label>
             <input type="date" id="filtroDataDe">
           </div>
           <div class="form-group-filter">
-            <label for="filtroDataAte">Data ate</label>
+            <label for="filtroDataAte">Ocorrencia ate</label>
             <input type="date" id="filtroDataAte">
           </div>
           <div class="form-group-filter">
@@ -89,7 +89,8 @@
         <table class="data-grid" id="tabelaFiscalizacao">
           <thead>
             <tr>
-              <th class="sortable" data-sort="created_at">Data inclusao <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="data_ocorrencia">Data ocorrencia <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="created_at">Data lancamento <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="usuario_inclusao_nome">Incluido por <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="usuario_edicao_nome">Ultima edicao <i class="fas fa-sort"></i></th>
               <th class="sortable" data-sort="rota">Rota <i class="fas fa-sort"></i></th>
@@ -103,7 +104,7 @@
             </tr>
           </thead>
           <tbody id="tbodyOcorrencias">
-            <tr><td colspan="11" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
+            <tr><td colspan="12" style="text-align:center; padding: 20px;">Utilize os filtros acima para pesquisar.</td></tr>
           </tbody>
         </table>
       </div>
@@ -122,7 +123,7 @@
             <h4><i class="fas fa-circle-info"></i> Informacoes internas</h4>
             <div class="form-grid-2-cols">
               <div class="form-group">
-                <label for="ocorrenciaData">Data</label>
+                <label for="ocorrenciaData">Data da ocorrencia</label>
                 <input type="date" id="ocorrenciaData" class="glass-input" required>
               </div>
               <div class="form-group">
@@ -309,6 +310,6 @@
 
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="./script/fiscalizacao-ocorrencia.js?v=20260605-1" defer></script>
+  <script type="module" src="./script/fiscalizacao-ocorrencia.js?v=20260630-1" defer></script>
 </body>
 </html>
