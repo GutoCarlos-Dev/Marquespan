@@ -395,6 +395,53 @@ body.funcionario-modal-open {
     background: rgba(0, 105, 55, 0.05);
 }
 
+.funcionario-table-container .data-grid {
+    table-layout: fixed;
+    font-size: 0.72rem;
+}
+
+.funcionario-table-container .data-grid th,
+.funcionario-table-container .data-grid td {
+    padding: 6px 8px;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.funcionario-table-container .data-grid th {
+    font-size: 0.68rem;
+}
+
+.funcionario-table-container .data-grid td {
+    height: 32px;
+}
+
+.funcionario-table-container .data-grid th:nth-child(1) { width: 6%; }
+.funcionario-table-container .data-grid th:nth-child(2) { width: 4%; }
+.funcionario-table-container .data-grid th:nth-child(3) { width: 12%; }
+.funcionario-table-container .data-grid th:nth-child(4) { width: 8%; }
+.funcionario-table-container .data-grid th:nth-child(5) { width: 10%; }
+.funcionario-table-container .data-grid th:nth-child(6) { width: 6%; }
+.funcionario-table-container .data-grid th:nth-child(7) { width: 4%; }
+.funcionario-table-container .data-grid th:nth-child(8) { width: 8%; }
+.funcionario-table-container .data-grid th:nth-child(9) { width: 8%; }
+.funcionario-table-container .data-grid th:nth-child(10) { width: 12%; }
+.funcionario-table-container .data-grid th:nth-child(11) { width: 7%; }
+.funcionario-table-container .data-grid th:nth-child(12) { width: 6%; }
+.funcionario-table-container .data-grid th:nth-child(13) { width: 9%; }
+
+.funcionario-table-container .status-badge {
+    border-radius: 10px;
+    font-size: 0.66rem;
+    padding: 3px 7px;
+}
+
+.funcionario-table-container .btn-icon {
+    font-size: 0.9rem;
+    margin: 0 2px;
+}
+
 /* Botões de Ação na Tabela */
 .btn-icon {
     background: none;
