@@ -410,7 +410,7 @@ const FuncionarioUI = {
     },
 
     usuarioTemAcessoGlobal() {
-        return this.isAdministrador || this.isGerencia;
+        return this.isAdministrador || this.isGerencia || !String(this.usuarioAtual?.filial || '').trim();
     },
 
     usuarioPodeAcessarFilial(filial) {
