@@ -136,6 +136,25 @@
                               </select>
                           </div>
                           <div class="form-group">
+                              <label for="funcTipoEscala">Tipo</label>
+                              <select id="funcTipoEscala" class="glass-input">
+                                  <option value="Normal">Normal</option>
+                                  <option value="12X36">12X36</option>
+                              </select>
+                          </div>
+                          <div class="form-group">
+                              <label for="funcEquipeEscala">Equipe</label>
+                              <select id="funcEquipeEscala" class="glass-input">
+                                  <option value="">Selecione</option>
+                                  <option value="AD">AD</option>
+                                  <option value="BD">BD</option>
+                                  <option value="AN">AN</option>
+                                  <option value="BN">BN</option>
+                                  <option value="Diurno">Diurno</option>
+                                  <option value="Noturno">Noturno</option>
+                              </select>
+                          </div>
+                          <div class="form-group">
                               <label for="funcDiaria">Diária</label>
                               <select id="funcDiaria" class="glass-input">
                                   <option value="true">SIM</option>
@@ -243,23 +262,6 @@
                   <label for="cadFuncaoNome">Nome</label>
                   <input type="text" id="cadFuncaoNome" required class="glass-input" placeholder="Ex: Motorista">
                 </div>
-                <div class="form-group">
-                  <label for="cadFuncaoTipo">Tipo</label>
-                  <select id="cadFuncaoTipo" required class="glass-input">
-                    <option value="Normal">Normal</option>
-                    <option value="12X36">12X36</option>
-                  </select>
-                </div>
-                <div class="form-group hidden" id="cadFuncaoEquipeGroup">
-                  <label for="cadFuncaoEquipe">Equipe</label>
-                  <select id="cadFuncaoEquipe" class="glass-input">
-                    <option value="">Selecione</option>
-                    <option value="AD">AD (Equipe Diurna)</option>
-                    <option value="BD">BD (Equipe Diurna)</option>
-                    <option value="AN">AN (Equipe Noturna)</option>
-                    <option value="BN">BN (Equipe Noturna)</option>
-                  </select>
-                </div>
               </div>
               <div class="form-actions-inline modal-actions">
                 <button type="submit" id="btnSalvarCadastroFuncao" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Função</button>
@@ -273,8 +275,6 @@
                   <thead>
                     <tr>
                       <th>Nome</th>
-                      <th>Tipo</th>
-                      <th>Equipe</th>
                       <th>Ações</th>
                     </tr>
                   </thead>
@@ -358,6 +358,26 @@
                     <div id="funcaoFilterList" class="dropdown-scroll-list"></div>
                 </div>
             </div>
+            <div class="form-group filtro-tipo-escala">
+                <label for="tipoEscalaFilter">Tipo</label>
+                <select id="tipoEscalaFilter" class="glass-input">
+                    <option value="">Todos</option>
+                    <option value="Normal">Normal</option>
+                    <option value="12X36">12X36</option>
+                </select>
+            </div>
+            <div class="form-group filtro-equipe-escala">
+                <label for="equipeEscalaFilter">Equipe</label>
+                <select id="equipeEscalaFilter" class="glass-input">
+                    <option value="">Todas</option>
+                    <option value="AD">AD</option>
+                    <option value="BD">BD</option>
+                    <option value="AN">AN</option>
+                    <option value="BN">BN</option>
+                    <option value="Diurno">Diurno</option>
+                    <option value="Noturno">Noturno</option>
+                </select>
+            </div>
             <div class="form-group custom-multiselect filtro-status">
                 <label>Filtrar Status</label>
                 <div class="multiselect-display glass-input" id="statusFilterDisplay">
@@ -432,6 +452,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/funcionario.js?v=20260630-3"></script>
+  <script type="module" src="script/funcionario.js?v=20260630-5"></script>
 </body>
 </html>

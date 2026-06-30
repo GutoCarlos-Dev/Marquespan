@@ -575,6 +575,8 @@ body.funcionario-modal-open {
 .filtro-admissao,
 .filtro-demissao,
 .filtro-funcao,
+.filtro-tipo-escala,
+.filtro-equipe-escala,
 .filtro-status { grid-column: span 3; }
 
 .func-filter-count {
@@ -617,6 +619,8 @@ body.funcionario-modal-open {
     .filtro-admissao,
     .filtro-demissao,
     .filtro-funcao,
+    .filtro-tipo-escala,
+    .filtro-equipe-escala,
     .filtro-status {
         grid-column: auto;
     }

@@ -4534,8 +4534,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const baseTableOptions = {
                 theme: 'grid',
                 head,
-                styles: { fontSize: 4.8, cellPadding: 0.18, lineWidth: 0.05, overflow: 'ellipsize', valign: 'middle' },
-                headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 5 },
+                styles: { fontSize: 8, cellPadding: 0.8, lineWidth: 0.08, overflow: 'ellipsize', valign: 'middle' },
+                headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 8.5 },
                 alternateRowStyles: { fillColor: [244, 248, 245] },
                 didParseCell: (data) => {
                     if (data.section !== 'body') return;
@@ -4554,14 +4554,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 startY: margin,
                 margin: { left: margin, right: margin, top: margin, bottom: margin },
                 tableWidth: pageWidth - (margin * 2),
-                styles: { ...baseTableOptions.styles, fontSize: 5.4, cellPadding: 0.24 },
-                headStyles: { ...baseTableOptions.headStyles, fontSize: 5.5 },
                 columnStyles: {
-                    0: { cellWidth: 22 },
-                    1: { cellWidth: 38 },
-                    2: { cellWidth: 15, halign: 'center' },
-                    3: { cellWidth: 17, halign: 'center' },
-                    4: { cellWidth: pageWidth - (margin * 2) - 92 }
+                    0: { cellWidth: 24 },
+                    1: { cellWidth: 42 },
+                    2: { cellWidth: 18, halign: 'center' },
+                    3: { cellWidth: 24, halign: 'center' },
+                    4: { cellWidth: pageWidth - (margin * 2) - 108 }
                 }
             });
 

@@ -197,9 +197,6 @@ const FuncionarioUI = {
         this.btnSalvarCadastroFuncao = document.getElementById('btnSalvarCadastroFuncao');
         this.btnCloseCadastroFuncao = document.getElementById('btnCloseCadastroFuncao');
         this.btnCancelarCadastroFuncao = document.getElementById('btnCancelarCadastroFuncao');
-        this.cadFuncaoTipo = document.getElementById('cadFuncaoTipo');
-        this.cadFuncaoEquipeGroup = document.getElementById('cadFuncaoEquipeGroup');
-        this.cadFuncaoEquipe = document.getElementById('cadFuncaoEquipe');
         this.tbodyFuncoesCadastradas = document.getElementById('tbodyFuncoesCadastradas');
         this.tableBody = document.getElementById('funcTableBody');
         this.btnSubmit = document.getElementById('btnSubmitFunc');
@@ -222,6 +219,8 @@ const FuncionarioUI = {
         this.admissaoMonthYearFilter = document.getElementById('admissaoMonthYearFilter');
         this.demissaoMonthYearFilter = document.getElementById('demissaoMonthYearFilter');
         this.cnhVencFilter = document.getElementById('cnhVencFilter');
+        this.tipoEscalaFilter = document.getElementById('tipoEscalaFilter');
+        this.equipeEscalaFilter = document.getElementById('equipeEscalaFilter');
         this.filialSelect = document.getElementById('funcFilial');
         this.filialFilter = document.getElementById('filialFilter');
         this.funcaoSelect = document.getElementById('funcFuncao');
@@ -232,6 +231,8 @@ const FuncionarioUI = {
         this.fileImportFuncionarioXLSX = document.getElementById('fileImportFuncionarioXLSX');
         this.diariaSelect = document.getElementById('funcDiaria');
         this.escalaAtivaSelect = document.getElementById('funcEscalaAtiva');
+        this.tipoEscalaSelect = document.getElementById('funcTipoEscala');
+        this.equipeEscalaSelect = document.getElementById('funcEquipeEscala');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
         this.gridCount = document.getElementById('countFuncGrid');
         this.filterCount = document.getElementById('funcFilterCount');
@@ -279,9 +280,6 @@ const FuncionarioUI = {
                 if (event.target === this.modalCadastroFuncao) this.closeCadastroFuncaoModal();
             });
         }
-        if (this.cadFuncaoTipo) {
-            this.cadFuncaoTipo.addEventListener('change', () => this.toggleEquipeFuncao());
-        }
         if (this.tbodyFuncoesCadastradas) {
             this.tbodyFuncoesCadastradas.addEventListener('click', (event) => {
                 const btn = event.target.closest('.btn-edit-funcao');
@@ -303,6 +301,12 @@ const FuncionarioUI = {
         }
         if (this.cnhVencFilter) {
             this.cnhVencFilter.addEventListener('change', () => this.renderGrid());
+        }
+        if (this.tipoEscalaFilter) {
+            this.tipoEscalaFilter.addEventListener('change', () => this.renderGrid());
+        }
+        if (this.equipeEscalaFilter) {
+            this.equipeEscalaFilter.addEventListener('change', () => this.renderGrid());
         }
         if (this.filialFilter) {
             this.filialFilter.addEventListener('change', () => this.renderGrid());
@@ -498,7 +502,7 @@ const FuncionarioUI = {
         this.modalCadastroFuncao.classList.remove('hidden');
         document.body.classList.add('funcionario-modal-open');
         if (this.tbodyFuncoesCadastradas) {
-            this.tbodyFuncoesCadastradas.innerHTML = '<tr><td colspan="4" style="text-align:center;">Carregando funções...</td></tr>';
+            this.tbodyFuncoesCadastradas.innerHTML = '<tr><td colspan="2" style="text-align:center;">Carregando funções...</td></tr>';
         }
         await this.carregarFuncoes(this.funcaoSelect?.value || '');
         setTimeout(() => document.getElementById('cadFuncaoNome')?.focus(), 0);
@@ -512,22 +516,12 @@ const FuncionarioUI = {
         }
     },
 
-    toggleEquipeFuncao() {
-        const is12x36 = this.cadFuncaoTipo?.value === '12X36';
-        this.cadFuncaoEquipeGroup?.classList.toggle('hidden', !is12x36);
-        if (this.cadFuncaoEquipe) {
-            this.cadFuncaoEquipe.required = is12x36;
-            if (!is12x36) this.cadFuncaoEquipe.value = '';
-        }
-    },
-
     resetCadastroFuncaoForm() {
         this.formCadastroFuncao?.reset();
         if (this.cadFuncaoId) this.cadFuncaoId.value = '';
         if (this.btnSalvarCadastroFuncao) {
             this.btnSalvarCadastroFuncao.innerHTML = '<i class="fas fa-save"></i> Salvar Função';
         }
-        this.toggleEquipeFuncao();
     },
 
     async carregarFuncoes(selectedValue = '') {
@@ -536,7 +530,7 @@ const FuncionarioUI = {
         try {
             const { data, error } = await supabaseClient
                 .from('funcionario_funcoes')
-                .select('id, nome, tipo, equipe, ativo')
+                .select('id, nome, ativo')
                 .order('nome');
 
             if (error) throw error;
@@ -559,14 +553,14 @@ const FuncionarioUI = {
             .map(option => option.value)
             .filter(Boolean);
         const nomes = opcoesSelect.length ? opcoesSelect : FUNCOES_FALLBACK;
-        return nomes.map(nome => ({ nome, tipo: 'Normal', equipe: null }));
+        return nomes.map(nome => ({ nome }));
     },
 
     renderFuncoesGrid(funcoes) {
         if (!this.tbodyFuncoesCadastradas) return;
 
         if (!funcoes || funcoes.length === 0) {
-            this.tbodyFuncoesCadastradas.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhuma função cadastrada.</td></tr>';
+            this.tbodyFuncoesCadastradas.innerHTML = '<tr><td colspan="2" style="text-align:center;">Nenhuma função cadastrada.</td></tr>';
             return;
         }
 
@@ -574,20 +568,15 @@ const FuncionarioUI = {
             .slice()
             .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
             .map(funcao => {
-                const equipeLabel = this.getEquipeLabel(funcao.equipe);
                 return `
                     <tr>
                         <td>${escapeHtml(funcao.nome)}</td>
-                        <td>${escapeHtml(funcao.tipo || 'Normal')}</td>
-                        <td>${escapeHtml(equipeLabel || '-')}</td>
                         <td>
                             <button type="button"
                                 class="btn-icon edit btn-edit-funcao"
                                 title="Editar função"
                                 data-id="${escapeHtml(funcao.id || '')}"
-                                data-nome="${escapeHtml(funcao.nome || '')}"
-                                data-tipo="${escapeHtml(funcao.tipo || 'Normal')}"
-                                data-equipe="${escapeHtml(funcao.equipe || '')}">
+                                data-nome="${escapeHtml(funcao.nome || '')}">
                                 <i class="fas fa-edit"></i>
                             </button>
                         </td>
@@ -597,23 +586,10 @@ const FuncionarioUI = {
             .join('');
     },
 
-    getEquipeLabel(equipe) {
-        const labels = {
-            AD: 'AD (Equipe Diurna)',
-            BD: 'BD (Equipe Diurna)',
-            AN: 'AN (Equipe Noturna)',
-            BN: 'BN (Equipe Noturna)'
-        };
-        return labels[equipe] || equipe || '';
-    },
-
     prepararEdicaoFuncao(dataset) {
         if (this.cadFuncaoId) this.cadFuncaoId.value = dataset.id || '';
         const nomeInput = document.getElementById('cadFuncaoNome');
         if (nomeInput) nomeInput.value = dataset.nome || '';
-        if (this.cadFuncaoTipo) this.cadFuncaoTipo.value = dataset.tipo || 'Normal';
-        this.toggleEquipeFuncao();
-        if (this.cadFuncaoEquipe) this.cadFuncaoEquipe.value = dataset.equipe || '';
         if (this.btnSalvarCadastroFuncao) {
             this.btnSalvarCadastroFuncao.innerHTML = '<i class="fas fa-save"></i> Atualizar Função';
         }
@@ -705,18 +681,12 @@ const FuncionarioUI = {
         e.preventDefault();
 
         const nome = document.getElementById('cadFuncaoNome')?.value.trim();
-        const tipo = this.cadFuncaoTipo?.value || 'Normal';
-        const equipe = tipo === '12X36' ? this.cadFuncaoEquipe?.value : null;
         const id = this.cadFuncaoId?.value || '';
 
         if (!nome) return alert('Informe o nome da função.');
-        if (tipo === '12X36' && !equipe) return alert('Selecione a equipe da escala 12X36.');
-
         try {
             const payload = {
                 nome,
-                tipo,
-                equipe,
                 ativo: true
             };
 
@@ -866,6 +836,8 @@ const FuncionarioUI = {
             data_admissao: document.getElementById('funcAdmissao').value,
             filial: filialPermitida || document.getElementById('funcFilial').value || 'SP',
             funcao: novaFuncao,
+            tipo_escala: document.getElementById('funcTipoEscala')?.value || 'Normal',
+            equipe_escala: document.getElementById('funcEquipeEscala')?.value || null,
             contato_corp: document.getElementById('funcContatoCorp').value,
             contato_pessoal: document.getElementById('funcContatoPessoal').value,
             status: document.getElementById('funcStatus').value,
@@ -939,8 +911,10 @@ const FuncionarioUI = {
         } catch (err) {
             console.error('Erro ao salvar funcionário:', err);
             const detalhe = String(err?.message || err || '');
-            const complemento = /cnh_|schema cache|column/i.test(detalhe)
-                ? '\n\nAplique o SQL supabase/2026-06-26_add_funcionario_cnh.sql e recarregue o schema do Supabase.'
+            const complemento = /tipo_escala|equipe_escala/i.test(detalhe)
+                ? '\n\nAplique o SQL supabase/2026-06-30_add_funcionario_tipo_equipe_escala.sql e recarregue o schema do Supabase.'
+                : /cnh_|schema cache|column/i.test(detalhe)
+                ? '\n\nAplique o SQL pendente da coluna informada em supabase/ e recarregue o schema do Supabase.'
                 : '';
             alert(`❌ Erro ao salvar registro: ${detalhe}${complemento}`);
         }
@@ -963,6 +937,8 @@ const FuncionarioUI = {
         if (this.histFuncContainer) this.histFuncContainer.classList.add('hidden');
         if (this.histFuncTableBody) this.histFuncTableBody.innerHTML = '';
         if (this.escalaAtivaSelect) this.escalaAtivaSelect.value = 'true';
+        if (this.tipoEscalaSelect) this.tipoEscalaSelect.value = 'Normal';
+        if (this.equipeEscalaSelect) this.equipeEscalaSelect.value = '';
         if (fecharModal) this.closeFuncionarioModal();
     },
 
@@ -1015,6 +991,8 @@ const FuncionarioUI = {
         const selectedDemissaoMonthYear = this.demissaoMonthYearFilter?.value || '';
         const selectedCnhVenc = this.cnhVencFilter?.value || '';
         const selectedFilial = this.filialFilter?.value || '';
+        const selectedTipoEscala = this.tipoEscalaFilter?.value || '';
+        const selectedEquipeEscala = this.equipeEscalaFilter?.value || '';
         const selectedFuncoes = this.getFuncoesFiltroSelecionadas();
 
         try {
@@ -1039,6 +1017,14 @@ const FuncionarioUI = {
 
                     if (selectedFuncoes.length > 0) {
                         query = query.in('funcao', selectedFuncoes);
+                    }
+
+                    if (selectedTipoEscala) {
+                        query = query.eq('tipo_escala', selectedTipoEscala);
+                    }
+
+                    if (selectedEquipeEscala) {
+                        query = query.eq('equipe_escala', selectedEquipeEscala);
                     }
 
                     return query;
@@ -1335,6 +1321,8 @@ const FuncionarioUI = {
         document.getElementById('funcAdmissao').value = f.data_admissao;
         document.getElementById('funcFilial').value = f.filial || 'SP';
         document.getElementById('funcFuncao').value = f.funcao;
+        document.getElementById('funcTipoEscala').value = f.tipo_escala || 'Normal';
+        document.getElementById('funcEquipeEscala').value = f.equipe_escala || '';
         document.getElementById('funcContatoCorp').value = f.contato_corp || '';
         document.getElementById('funcContatoPessoal').value = f.contato_pessoal || '';
         document.getElementById('funcStatus').value = f.status;
@@ -1377,6 +1365,8 @@ const FuncionarioUI = {
             ['cpf', ['CPF']],
             ['filial', ['Filial']],
             ['funcao', ['Função', 'Funcao', 'Função Atual']],
+            ['tipo_escala', ['Tipo Escala', 'Tipo']],
+            ['equipe_escala', ['Equipe Escala', 'Equipe']],
             ['contato_corp', ['Contato Corp', 'Contato Corporativo']],
             ['contato_pessoal', ['Contato Pessoal']],
             ['status', ['Status']],
@@ -1422,6 +1412,7 @@ const FuncionarioUI = {
         if (!existente) {
             payload.filial = payload.filial || filialPadrao;
             payload.status = payload.status || 'Ativo';
+            payload.tipo_escala = payload.tipo_escala || 'Normal';
             payload.recebe_diaria = payload.recebe_diaria ?? true;
             payload.escala_ativa = payload.escala_ativa ?? true;
             if (!payload.nome) throw new Error('Campo Nome nao informado.');
@@ -1439,6 +1430,27 @@ const FuncionarioUI = {
                 AFASTADO: 'Afastado'
             };
             payload.status = statusMap[normalizeImportKey(payload.status)] || payload.status;
+        }
+
+        if (payload.tipo_escala) {
+            const tipoMap = {
+                NORMAL: 'Normal',
+                '12X36': '12X36',
+                '12 X 36': '12X36'
+            };
+            payload.tipo_escala = tipoMap[normalizeImportKey(payload.tipo_escala)] || payload.tipo_escala;
+        }
+
+        if (payload.equipe_escala) {
+            const equipeMap = {
+                AD: 'AD',
+                BD: 'BD',
+                AN: 'AN',
+                BN: 'BN',
+                DIURNO: 'Diurno',
+                NOTURNO: 'Noturno'
+            };
+            payload.equipe_escala = equipeMap[normalizeImportKey(payload.equipe_escala)] || payload.equipe_escala;
         }
 
         Object.keys(payload).forEach(key => {
@@ -1462,7 +1474,7 @@ const FuncionarioUI = {
             `Arquivo: ${file.name}`,
             `Data/Hora: ${startedAt.toLocaleString('pt-BR')}`,
             '',
-            'Campos aceitos: RH Registro/RH/Nº Identificador (RH), Filial, Nome, Nome Completo, CPF, Nº CNH, Categoria CNH, Vencimento CNH, Data Nascimento, Data Admissao, Funcao, Contato Corp, Contato Pessoal, Status, Diaria, Data Desligamento, Funcao Anterior, Data Alt. Funcao.',
+            'Campos aceitos: RH Registro/RH/Nº Identificador (RH), Filial, Nome, Nome Completo, CPF, Nº CNH, Categoria CNH, Vencimento CNH, Data Nascimento, Data Admissao, Funcao, Tipo Escala, Equipe Escala, Contato Corp, Contato Pessoal, Status, Diaria, Data Desligamento, Funcao Anterior, Data Alt. Funcao.',
             ''
         ];
 
@@ -1566,6 +1578,8 @@ const FuncionarioUI = {
             'Data Nascimento',
             'Data Admissão',
             'Função',
+            'Tipo Escala',
+            'Equipe Escala',
             'Contato Corp',
             'Contato Pessoal',
             'Status',
@@ -1588,6 +1602,8 @@ const FuncionarioUI = {
             'Data Nascimento': '01/01/1990',
             'Data Admissão': '01/01/2026',
             'Função': 'Motorista',
+            'Tipo Escala': 'Normal',
+            'Equipe Escala': '',
             'Contato Corp': '(00)00000-0000',
             'Contato Pessoal': '(00)00000-0000',
             'Status': 'Ativo',
@@ -1623,6 +1639,8 @@ const FuncionarioUI = {
             'Data Nascimento': formatDateBR(f.data_nascimento),
             'Data Admissão': formatDateBR(f.data_admissao),
             'Função': f.funcao,
+            'Tipo Escala': f.tipo_escala || 'Normal',
+            'Equipe Escala': f.equipe_escala || '-',
             'Contato Corp': f.contato_corp || '-',
             'Contato Pessoal': f.contato_pessoal || '-',
             'Status': f.status,
