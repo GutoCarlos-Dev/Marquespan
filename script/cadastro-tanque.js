@@ -139,9 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const id = parseInt(button.dataset.id, 10);
 
-            if (button.classList.contains('btn-edit')) {
+            if (button.classList.contains('edit')) {
                 this.loadForEditing(id);
-            } else if (button.classList.contains('btn-delete')) {
+            } else if (button.classList.contains('delete')) {
                 if (confirm('Tem certeza que deseja excluir este tanque?')) {
                     this.deleteTanque(id);
                 }
