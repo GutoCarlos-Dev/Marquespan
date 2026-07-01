@@ -4259,16 +4259,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const styles = {};
         const widths = {
-            PLACA: 16,
+            PLACA: 22,
             MODELO: 19,
             ROTA: 13,
             STATUS: 14,
-            TIPO: 20,
-            'DIA ESCALADO': 146,
+            TIPO: 22,
+            'DIA ESCALADO': 30,
             MOTORISTA: 30,
             AUXILIAR: 27,
             TERCEIRO: 27,
-            ASSINATURA: 55
+            ASSINATURA: 51
         };
         const reducedFontColumns = new Set(['PLACA', 'MODELO', 'ROTA', 'STATUS', 'TIPO', 'DIA ESCALADO', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO', 'ASSINATURA']);
 
@@ -4277,7 +4277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 styles[index] = { ...(styles[index] || {}), cellWidth: widths[column] };
             }
             if (reducedFontColumns.has(column)) {
-                styles[index] = { ...(styles[index] || {}), fontSize: 6.5 };
+                styles[index] = { ...(styles[index] || {}), fontSize: 8 };
             }
         });
 
