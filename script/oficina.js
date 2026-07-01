@@ -77,6 +77,16 @@ function setupTabs() {
 
 function setupEventListeners() {
     // Oficina Forms
+    const oficinaNomeInput = document.getElementById('oficinaNome');
+    if (oficinaNomeInput) {
+        oficinaNomeInput.addEventListener('input', () => {
+            const start = oficinaNomeInput.selectionStart;
+            const end = oficinaNomeInput.selectionEnd;
+            oficinaNomeInput.value = oficinaNomeInput.value.toUpperCase();
+            oficinaNomeInput.setSelectionRange(start, end);
+        });
+    }
+
     document.getElementById('formCadastrarOficina').addEventListener('submit', salvarOficina);
     document.getElementById('btnClearOficinaForm').addEventListener('click', limparFormularioOficina);
     document.getElementById('searchOficinaInput').addEventListener('input', filtrarOficinas);
@@ -188,7 +198,7 @@ function renderTableOficinas(oficinas) {
 async function salvarOficina(e) {
     e.preventDefault();
     const id = document.getElementById('oficinaEditingId').value;
-    const nome = document.getElementById('oficinaNome').value.trim();
+    const nome = document.getElementById('oficinaNome').value.trim().toUpperCase();
     const filial = document.getElementById('oficinaFilial').value;
     const itemVerificador = document.getElementById('oficinaItemVerificador').value;
 
