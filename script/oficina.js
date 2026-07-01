@@ -3,6 +3,8 @@ import { registrarAuditoria } from './auditoria-utils.js';
 
 let filiaisPermitidasOficina = [];
 let usuarioLogadoOficina = null;
+let oficinasCache = [];
+let oficinaSortState = { campo: 'nome', direcao: 'asc' };
 
 document.addEventListener('DOMContentLoaded', async () => {
     usuarioLogadoOficina = getUsuarioLogadoOficina();
@@ -105,6 +107,9 @@ function setupEventListeners() {
     document.getElementById('formCadastrarOficina').addEventListener('submit', salvarOficina);
     document.getElementById('btnClearOficinaForm').addEventListener('click', limparFormularioOficina);
     document.getElementById('searchOficinaInput').addEventListener('input', filtrarOficinas);
+    document.querySelectorAll('[data-oficina-sort]').forEach(button => {
+        button.addEventListener('click', () => ordenarOficinas(button.dataset.oficinaSort));
+    });
 
     // Item Forms
     if (isAdministradorOficina()) {
@@ -177,7 +182,8 @@ async function carregarOficinas() {
 
         if (error) throw error;
 
-        renderTableOficinas(data);
+        oficinasCache = data || [];
+        renderTableOficinas(oficinasCache);
     } catch (err) {
         console.error('Erro ao carregar oficinas:', err);
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
@@ -188,12 +194,15 @@ function renderTableOficinas(oficinas) {
     const tbody = document.getElementById('oficinaTableBody');
     tbody.innerHTML = '';
 
-    if (!oficinas || oficinas.length === 0) {
+    const oficinasOrdenadas = ordenarListaOficinas(oficinas || []);
+    atualizarIndicadoresOrdenacaoOficinas();
+
+    if (oficinasOrdenadas.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhuma oficina cadastrada.</td></tr>';
         return;
     }
 
-    oficinas.forEach(o => {
+    oficinasOrdenadas.forEach(o => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${escapeHtml(o.nome)}</td>
@@ -209,6 +218,50 @@ function renderTableOficinas(oficinas) {
         tr.querySelector('.delete').addEventListener('click', () => excluirOficina(o.id));
 
         tbody.appendChild(tr);
+    });
+
+    filtrarOficinas();
+}
+
+function getValorOrdenacaoOficina(oficina, campo) {
+    const valores = {
+        nome: oficina?.nome,
+        filial: oficina?.filial,
+        item: oficina?.itens_verificacao?.descricao
+    };
+    return String(valores[campo] || '').trim();
+}
+
+function ordenarListaOficinas(oficinas) {
+    return [...oficinas].sort((a, b) => {
+        const valorA = getValorOrdenacaoOficina(a, oficinaSortState.campo);
+        const valorB = getValorOrdenacaoOficina(b, oficinaSortState.campo);
+        const compare = valorA.localeCompare(valorB, 'pt-BR', { numeric: true, sensitivity: 'base' });
+        return oficinaSortState.direcao === 'asc' ? compare : -compare;
+    });
+}
+
+function ordenarOficinas(campo) {
+    if (!campo) return;
+
+    if (oficinaSortState.campo === campo) {
+        oficinaSortState.direcao = oficinaSortState.direcao === 'asc' ? 'desc' : 'asc';
+    } else {
+        oficinaSortState = { campo, direcao: 'asc' };
+    }
+
+    renderTableOficinas(oficinasCache);
+}
+
+function atualizarIndicadoresOrdenacaoOficinas() {
+    document.querySelectorAll('[data-oficina-sort]').forEach(button => {
+        const icon = button.querySelector('i');
+        const ativo = button.dataset.oficinaSort === oficinaSortState.campo;
+        button.classList.toggle('active', ativo);
+        if (!icon) return;
+        icon.className = ativo
+            ? `fas fa-sort-${oficinaSortState.direcao === 'asc' ? 'up' : 'down'}`
+            : 'fas fa-sort';
     });
 }
 
@@ -307,7 +360,7 @@ function limparFormularioOficina() {
 }
 
 function filtrarOficinas(e) {
-    const termo = e.target.value.toLowerCase();
+    const termo = (e?.target?.value ?? document.getElementById('searchOficinaInput')?.value ?? '').toLowerCase();
     const linhas = document.querySelectorAll('#oficinaTableBody tr');
     linhas.forEach(linha => {
         const texto = linha.textContent.toLowerCase();

@@ -180,6 +180,30 @@
     z-index: 10;
 }
 
+.oficina-sort-btn {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.oficina-sort-btn i {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.oficina-sort-btn.active i {
+    color: var(--primary-color);
+}
+
 .glass-table td {
     padding: 12px 15px;
     border-bottom: 1px solid rgba(0,0,0,0.05);
