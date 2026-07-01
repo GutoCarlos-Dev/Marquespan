@@ -11,9 +11,67 @@ let sortStateNovaLista = { key: 'placa', asc: true };
 let sortStateVencimentos = { key: 'diasRestantes', asc: true };
 let sortStateItensModal = { key: 'placa', asc: true };
 let lastVencimentoCheckbox = null;
+let usuarioLogadoEngraxe = null;
+let filiaisDisponiveisEngraxe = [];
 
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
 const PAGE_SIZE = 1000;
+
+function normalizarFilialEngraxe(value) {
+    return String(value || '').trim().toUpperCase();
+}
+
+function getUsuarioFilialEngraxe() {
+    return normalizarFilialEngraxe(usuarioLogadoEngraxe?.filial);
+}
+
+function getNomeUsuarioEngraxe() {
+    return usuarioLogadoEngraxe?.nome || usuarioLogadoEngraxe?.nomecompleto || usuarioLogadoEngraxe?.email || 'Sistema';
+}
+
+function usuarioTemFilialEngraxe() {
+    return Boolean(getUsuarioFilialEngraxe());
+}
+
+function filialPermitidaEngraxe(filial) {
+    const filialUsuario = getUsuarioFilialEngraxe();
+    return !filialUsuario || normalizarFilialEngraxe(filial) === filialUsuario;
+}
+
+function preencherSelectFiliaisEngraxe(select, filiais, textoTodas = 'Todas Filiais') {
+    if (!select) return;
+    const filialUsuario = getUsuarioFilialEngraxe();
+    const valores = [...new Set((filiais || []).map(normalizarFilialEngraxe).filter(Boolean))]
+        .filter(filial => filialPermitidaEngraxe(filial))
+        .sort();
+
+    select.innerHTML = `<option value="">${textoTodas}</option>`;
+    valores.forEach(filial => select.add(new Option(filial, filial)));
+
+    if (filialUsuario) {
+        if (!valores.includes(filialUsuario)) select.add(new Option(filialUsuario, filialUsuario));
+        select.value = filialUsuario;
+        select.disabled = true;
+    } else {
+        select.disabled = false;
+    }
+}
+
+async function carregarFiliaisEngraxe() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('nome, sigla')
+            .order('nome');
+        if (error) throw error;
+        filiaisDisponiveisEngraxe = (data || []).map(f => normalizarFilialEngraxe(f.sigla || f.nome)).filter(Boolean);
+    } catch (error) {
+        console.error('Erro ao carregar filiais do engraxe:', error);
+        filiaisDisponiveisEngraxe = [];
+    }
+
+    preencherSelectFiliaisEngraxe(document.getElementById('filtroFilialLista'), filiaisDisponiveisEngraxe);
+}
 
 async function fetchAll(buildQuery) {
     const rows = [];
@@ -157,6 +215,7 @@ async function preencherDatasItensOkAntesDeFinalizar(listaAtual) {
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuario) { window.location.href = 'index.html'; return; }
+    usuarioLogadoEngraxe = usuario;
 
     // Inicializa filtros de data com o mês atual
     const hoje = new Date();
@@ -164,9 +223,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('filtroDataIni').value = primeiroDia.toISOString().split('T')[0];
     document.getElementById('filtroDataFim').value = getTodayISO();
 
+    await carregarFiliaisEngraxe();
     await carregarListas();
 
     document.getElementById('btnBuscar').addEventListener('click', carregarListas);
+    document.getElementById('filtroFilialLista')?.addEventListener('change', carregarListas);
     document.getElementById('btnNovoLancamento').addEventListener('click', abrirModalNovaLista);
     document.getElementById('btnCloseModal').addEventListener('click', fecharModal);
     
@@ -398,8 +459,17 @@ async function abrirModalNovaLista() {
 
     try {
         // Busca veículos e histórico de engraxe (apenas itens realizados)
+        let queryVeiculosNovaLista = supabaseClient
+            .from('veiculos')
+            .select('placa, modelo, marca, tipo, filial')
+            .eq('situacao', 'ativo')
+            .order('placa');
+        if (usuarioTemFilialEngraxe()) {
+            queryVeiculosNovaLista = queryVeiculosNovaLista.eq('filial', getUsuarioFilialEngraxe());
+        }
+
         const [veiculosRes, historicoRealizacoes] = await Promise.all([
-            supabaseClient.from('veiculos').select('placa, modelo, marca, tipo, filial').eq('situacao', 'ativo').order('placa'),
+            queryVeiculosNovaLista,
             carregarHistoricoRealizacoesEngraxe()
         ]);
 
@@ -419,16 +489,17 @@ async function abrirModalNovaLista() {
         });
         
         // Popula Filtros
-        const filiais = [...new Set(veiculosCacheNovaLista.map(v => v.filial).filter(Boolean))].sort();
+        const filiais = [...new Set(veiculosCacheNovaLista.map(v => normalizarFilialEngraxe(v.filial)).filter(Boolean))].sort();
         const marcas = [...new Set(veiculosCacheNovaLista.map(v => v.marca).filter(m => m))].sort();
         const modelos = [...new Set(veiculosCacheNovaLista.map(v => v.modelo).filter(m => m))].sort();
         const tipos = [...new Set(veiculosCacheNovaLista.map(v => v.tipo).filter(Boolean))].sort();
 
         const filtroFilial = document.getElementById('filtroFilialNovaLista');
         const currentFilial = filtroFilial.value;
-        filtroFilial.innerHTML = '<option value="">Todas Filiais</option>';
-        filiais.forEach(f => filtroFilial.add(new Option(f, f)));
-        filtroFilial.value = currentFilial;
+        preencherSelectFiliaisEngraxe(filtroFilial, filiais);
+        if (!usuarioTemFilialEngraxe() && currentFilial && filiais.includes(currentFilial)) {
+            filtroFilial.value = currentFilial;
+        }
 
         populateMultiselect(document.getElementById('filtroMarcaNovaListaOptions'), marcas, 'Limpar Marcas');
         populateMultiselect(document.getElementById('filtroModeloNovaListaOptions'), modelos, 'Limpar Modelos');
@@ -473,7 +544,7 @@ function renderizarTabelaNovaLista(veiculos) {
         const proximaDataFmt = formatDateBR(v.proximaData);
 
         tr.innerHTML = `
-            <td style="text-align: center;"><input type="checkbox" class="chk-veiculo-novalista" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}"></td>
+            <td style="text-align: center;"><input type="checkbox" class="chk-veiculo-novalista" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}" data-filial="${normalizarFilialEngraxe(v.filial)}"></td>
             <td>${v.filial || '-'}</td>
             <td><strong>${v.placa}</strong></td>
             <td>${v.marca || '-'}</td>
@@ -487,7 +558,7 @@ function renderizarTabelaNovaLista(veiculos) {
 }
 
 function filtrarVeiculosNovaLista() {
-    const filial = document.getElementById('filtroFilialNovaLista').value;
+    const filial = normalizarFilialEngraxe(document.getElementById('filtroFilialNovaLista').value);
     const placa = document.getElementById('filtroPlacaNovaLista').value.toLowerCase();
     
     const marcasSelecionadas = Array.from(document.querySelectorAll('#filtroMarcaNovaListaOptions input:checked')).map(cb => cb.value);
@@ -495,7 +566,7 @@ function filtrarVeiculosNovaLista() {
     const tiposSelecionados = Array.from(document.querySelectorAll('#filtroTipoNovaListaOptions input:checked')).map(cb => cb.value);
 
     const filtrados = veiculosCacheNovaLista.filter(v => {
-        const matchFilial = !filial || v.filial === filial;
+        const matchFilial = !filial || normalizarFilialEngraxe(v.filial) === filial;
         const matchPlaca = !placa || v.placa.toLowerCase().includes(placa);
         const matchMarca = marcasSelecionadas.length === 0 || (v.marca && marcasSelecionadas.includes(v.marca));
         const matchModelo = modelosSelecionados.length === 0 || (v.modelo && modelosSelecionados.includes(v.modelo));
@@ -550,7 +621,24 @@ async function aplicarStatusEmMassaNovaLista() {
 }
 
 async function salvarListaNoStorage(nome, veiculos, dataLista) {
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
+    const usuario = getNomeUsuarioEngraxe();
+    const filiaisSelecionadas = [...new Set((veiculos || []).map(v => normalizarFilialEngraxe(v.filial)).filter(Boolean))];
+    const filialLista = filiaisSelecionadas[0] || getUsuarioFilialEngraxe();
+
+    if (!filialLista) {
+        alert('Selecione a filial para criar a lista.');
+        return;
+    }
+
+    if (filiaisSelecionadas.length > 1) {
+        alert('Selecione veículos de apenas uma filial para criar a lista.');
+        return;
+    }
+
+    if (!filialPermitidaEngraxe(filialLista)) {
+        alert('Seu usuário não tem permissão para criar lista nesta filial.');
+        return;
+    }
 
     try {
         const listaId = Date.now().toString(); // Gera ID único para a lista
@@ -562,6 +650,7 @@ async function salvarListaNoStorage(nome, veiculos, dataLista) {
             status: 'ABERTA',
             created_at: new Date().toISOString(),
             data_lista: dataLista || getTodayISO(),
+            filial: filialLista,
             marcas_presentes: [...new Set(veiculos.map(v => v.marca).filter(Boolean))] // Coleta marcas únicas
         };
 
@@ -608,14 +697,19 @@ async function salvarListaNoStorage(nome, veiculos, dataLista) {
 async function confirmarDuplicidadesUltimasListasFinalizadas(veiculos) {
     const placasSelecionadas = [...new Set(veiculos.map(v => (v.placa || '').trim().toUpperCase()).filter(Boolean))];
     if (placasSelecionadas.length === 0) return true;
+    const filiaisSelecionadas = [...new Set((veiculos || []).map(v => normalizarFilialEngraxe(v.filial)).filter(Boolean))];
+    const filialLista = filiaisSelecionadas[0] || getUsuarioFilialEngraxe();
 
-    const { data: listas, error: listasError } = await supabaseClient
+    let queryListas = supabaseClient
         .from('engraxe_listas')
         .select('id, nome, data_lista, created_at')
         .eq('status', 'FINALIZADA')
         .order('data_lista', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(2);
+    if (filialLista) queryListas = queryListas.eq('filial', filialLista);
+
+    const { data: listas, error: listasError } = await queryListas;
 
     if (listasError) throw listasError;
     if (!listas || listas.length === 0) return true;
@@ -659,7 +753,8 @@ async function confirmarCriacaoNovaLista() {
         selecionados.push({
             placa: chk.value,
             modelo: chk.dataset.modelo,
-            marca: chk.dataset.marca
+            marca: chk.dataset.marca,
+            filial: chk.dataset.filial
         });
     });
 
@@ -683,13 +778,13 @@ function getSemanaAtual() {
 
 async function carregarListas() {
     const tbody = document.getElementById('tbodyEngraxe');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Carregando listas...</td></tr>';
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Carregando listas...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Carregando listas...</td></tr>';
 
     const dataIni = document.getElementById('filtroDataIni').value;
     const dataFim = document.getElementById('filtroDataFim').value;
     const status = document.getElementById('filtroStatus').value;
     const marcaFiltro = document.getElementById('filtroMarca').value.trim().toLowerCase();
+    const filialFiltro = normalizarFilialEngraxe(document.getElementById('filtroFilialLista')?.value);
 
     try {
         let query = supabaseClient
@@ -701,6 +796,11 @@ async function carregarListas() {
         if (dataIni) query = query.gte('created_at', `${dataIni}T00:00:00`);
         if (dataFim) query = query.lte('created_at', `${dataFim}T23:59:59`);
         if (status) query = query.eq('status', status);
+        if (usuarioTemFilialEngraxe()) {
+            query = query.eq('filial', getUsuarioFilialEngraxe());
+        } else if (filialFiltro) {
+            query = query.eq('filial', filialFiltro);
+        }
 
         const { data, error } = await query;
 
@@ -717,8 +817,7 @@ async function carregarListas() {
         renderizarTabelaListas(listasFiltradas);
     } catch (error) {
         console.error('Erro ao carregar listas:', error);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>';
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">Erro ao carregar dados.</td></tr>';
     }
 }
 
@@ -727,8 +826,7 @@ function renderizarTabelaListas(dados) {
     tbody.innerHTML = '';
     
     if (!dados || dados.length === 0) { 
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhuma lista encontrada.</td></tr>'; 
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Nenhuma lista encontrada.</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Nenhuma lista encontrada.</td></tr>'; 
         return; 
     }
 
@@ -747,6 +845,7 @@ function renderizarTabelaListas(dados) {
 
         tr.innerHTML = `
             <td>${dataCriacao}</td>
+            <td>${item.filial || '-'}</td>
             <td>${item.nome || 'Lista sem nome'}</td>
             <td>${item.usuario || '-'}</td>
             <td><span class="badge ${item.status === 'ABERTA' ? 'badge-pendente' : 'badge-realizado'}">${item.status}</span></td>
@@ -1480,11 +1579,16 @@ async function abrirControleVencimentos() {
 
     try {
         // 1. Buscar Veículos Ativos com Filial
-        const { data: veiculos, error } = await supabaseClient
+        let queryVeiculosVencimentos = supabaseClient
             .from('veiculos')
             .select('id, placa, modelo, marca, filial, tipo, situacao')
             .in('situacao', ['ativo', 'NAO_ENGRAXAR'])
             .order('placa');
+        if (usuarioTemFilialEngraxe()) {
+            queryVeiculosVencimentos = queryVeiculosVencimentos.eq('filial', getUsuarioFilialEngraxe());
+        }
+
+        const { data: veiculos, error } = await queryVeiculosVencimentos;
 
         if (error) throw error;
 
@@ -1532,7 +1636,7 @@ async function abrirControleVencimentos() {
 
 async function popularFiltrosVencimentos() {
     const dados = currentVencimentosData;
-    const filiais = [...new Set(dados.map(d => d.filial).filter(Boolean))].sort();
+    const filiais = [...new Set(dados.map(d => normalizarFilialEngraxe(d.filial)).filter(Boolean))].sort();
 
     const populate = (id, items, defaultText) => {
         const sel = document.getElementById(id);
@@ -1542,10 +1646,14 @@ async function popularFiltrosVencimentos() {
         if (items.includes(currentVal)) sel.value = currentVal;
     };
 
-    populate('filtroVencimentoFilial', filiais, 'Todas Filiais');
+    preencherSelectFiliaisEngraxe(document.getElementById('filtroVencimentoFilial'), filiais);
 
-    // Busca marcas e modelos de todos os veículos para os novos filtros
-    const { data: veiculos, error } = await supabaseClient.from('veiculos').select('marca, modelo, tipo');
+    // Busca marcas e modelos dos veiculos permitidos para os novos filtros
+    let queryFiltros = supabaseClient.from('veiculos').select('marca, modelo, tipo, filial');
+    if (usuarioTemFilialEngraxe()) {
+        queryFiltros = queryFiltros.eq('filial', getUsuarioFilialEngraxe());
+    }
+    const { data: veiculos, error } = await queryFiltros;
     if (error) return console.error('Erro ao carregar marcas e modelos para filtros:', error);
 
     const marcas = [...new Set(veiculos.map(v => v.marca).filter(Boolean))].sort();
@@ -1586,7 +1694,7 @@ function renderizarTabelaVencimentos(dados) {
         const proximoFmt = formatDateBR(item.proximaData);
 
         tr.innerHTML = `
-            <td style="text-align: center;"><input type="checkbox" class="chk-veiculo-vencimento" value="${item.placa}" data-modelo="${item.modelo}" data-marca="${item.marca}"></td>
+            <td style="text-align: center;"><input type="checkbox" class="chk-veiculo-vencimento" value="${item.placa}" data-modelo="${item.modelo}" data-marca="${item.marca}" data-filial="${normalizarFilialEngraxe(item.filial)}"></td>
             <td>${item.filial || '-'}</td>
             <td><strong>${item.placa}</strong></td>
             <td>${item.marca || '-'}</td>
@@ -1601,7 +1709,7 @@ function renderizarTabelaVencimentos(dados) {
 }
 
 function filtrarTabelaVencimentos() {
-    const filial = document.getElementById('filtroVencimentoFilial').value;
+    const filial = normalizarFilialEngraxe(document.getElementById('filtroVencimentoFilial').value);
     const marcasSelecionadas = Array.from(document.querySelectorAll('#filtroVencimentoMarcaOptions input:checked')).map(cb => cb.value);
     const modelosSelecionados = Array.from(document.querySelectorAll('#filtroVencimentoModeloOptions input:checked')).map(cb => cb.value);
     const tiposSelecionados = Array.from(document.querySelectorAll('#filtroVencimentoTipoOptions input:checked')).map(cb => cb.value);
@@ -1610,7 +1718,7 @@ function filtrarTabelaVencimentos() {
     let filtrados = currentVencimentosData;
 
     if (filial) {
-        filtrados = filtrados.filter(item => item.filial === filial);
+        filtrados = filtrados.filter(item => normalizarFilialEngraxe(item.filial) === filial);
     }
     if (tiposSelecionados.length > 0) {
         filtrados = filtrados.filter(item => tiposSelecionados.includes(item.tipo));
@@ -1667,7 +1775,8 @@ async function gerarListaComSelecionados() {
     const selecionados = Array.from(document.querySelectorAll('.chk-veiculo-vencimento:checked')).map(chk => ({
         placa: chk.value,
         modelo: chk.dataset.modelo,
-        marca: chk.dataset.marca
+        marca: chk.dataset.marca,
+        filial: chk.dataset.filial
     }));
 
     if (selecionados.length === 0) {
@@ -1701,15 +1810,20 @@ async function aplicarStatusEmMassa() {
     const selecionados = Array.from(document.querySelectorAll('.chk-veiculo-vencimento:checked')).map(chk => ({
         placa: chk.value,
         modelo: chk.dataset.modelo,
-        marca: chk.dataset.marca
+        marca: chk.dataset.marca,
+        filial: chk.dataset.filial
     }));
 
     if (selecionados.length === 0) return alert('Selecione pelo menos um veículo.');
     if (!status) return alert('Selecione um status para aplicar.');
+    const filiaisSelecionadas = [...new Set(selecionados.map(v => normalizarFilialEngraxe(v.filial)).filter(Boolean))];
+    if (filiaisSelecionadas.length > 1) return alert('Selecione veículos de apenas uma filial para aplicar esta ação.');
+    const filialLista = filiaisSelecionadas[0] || getUsuarioFilialEngraxe();
+    if (filialLista && !filialPermitidaEngraxe(filialLista)) return alert('Seu usuário não tem permissão para esta filial.');
 
     if (!confirm(`Confirma alterar o status de ${selecionados.length} veículos para ${status}?`)) return;
 
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
+    const usuario = getNomeUsuarioEngraxe();
 
     try {
         if (status === 'REALIZADO') {
@@ -1721,7 +1835,8 @@ async function aplicarStatusEmMassa() {
                 .select('id')
                 .eq('nome', nomeLista)
                 .eq('data_lista', hoje)
-                .single();
+                .eq('filial', filialLista)
+                .maybeSingle();
 
             let listaId = lista?.id;
 
@@ -1733,6 +1848,7 @@ async function aplicarStatusEmMassa() {
                         data_lista: hoje,
                         status: 'ABERTA',
                         usuario: usuario,
+                        filial: filialLista,
                         marcas_presentes: [...new Set(selecionados.map(v => v.marca).filter(Boolean))]
                     })
                     .select()

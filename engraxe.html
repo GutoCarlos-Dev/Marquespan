@@ -52,6 +52,12 @@
                 <input type="text" id="filtroMarca" class="glass-input" placeholder="Buscar Marca...">
               </div>
               <div class="form-group">
+                <label for="filtroFilialLista">Filial</label>
+                <select id="filtroFilialLista" class="glass-input">
+                  <option value="">Todas Filiais</option>
+                </select>
+              </div>
+              <div class="form-group">
                 <label for="filtroStatus">Status</label>
                 <select id="filtroStatus" class="glass-input">
                   <option value="">Todos</option>
@@ -92,6 +98,7 @@
               <thead>
                 <tr>
                   <th>Data/Hora</th>
+                  <th>Filial</th>
                   <th>Nome da Lista</th>
                   <th>Usuário Criou</th>
                   <th>Status</th>
@@ -101,7 +108,7 @@
                 </tr>
               </thead>
               <tbody id="tbodyEngraxe">
-                <tr><td colspan="7" style="text-align: center;">Carregando dados...</td></tr>
+                <tr><td colspan="8" style="text-align: center;">Carregando dados...</td></tr>
               </tbody>
             </table>
           </div>

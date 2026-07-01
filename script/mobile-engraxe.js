@@ -3,7 +3,16 @@ import { supabaseClient } from './supabase.js';
 let currentListId = null;
 let currentItems = [];
 let currentFilter = 'TODOS';
+let usuarioLogadoMobileEngraxe = null;
 const NIVEIS_BLOQUEIO_LOCALIZACAO_MOBILE = new Set(['equipe_sabado', 'coleta_km']);
+
+function normalizarFilialMobileEngraxe(value) {
+    return String(value || '').trim().toUpperCase();
+}
+
+function getFilialUsuarioMobileEngraxe() {
+    return normalizarFilialMobileEngraxe(usuarioLogadoMobileEngraxe?.filial);
+}
 
 function getNivelUsuarioMobile() {
     try {
@@ -21,6 +30,7 @@ function localizacaoBloqueadaMobile() {
 document.addEventListener('DOMContentLoaded', () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuario) { window.location.href = 'index.html'; return; }
+    usuarioLogadoMobileEngraxe = usuario;
 
     carregarListasMobile();
 
@@ -128,11 +138,15 @@ async function carregarListasMobile() {
     container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando listas...</div>';
 
     try {
-        const { data: listasAbertas, error } = await supabaseClient
+        let query = supabaseClient
             .from('engraxe_listas')
             .select('*')
             .eq('status', 'ABERTA')
             .order('created_at', { ascending: false });
+        const filialUsuario = getFilialUsuarioMobileEngraxe();
+        if (filialUsuario) query = query.eq('filial', filialUsuario);
+
+        const { data: listasAbertas, error } = await query;
 
         if (error) throw error;
 
