@@ -41,6 +41,7 @@ const RotasUI = {
 
         this.SupabaseService = SupabaseService;
         this.cache();
+        this.aplicarModoAcesso();
         this.setupFiltroGridFilial();
         this.bind();
         this.setupInitialState();
@@ -57,16 +58,43 @@ const RotasUI = {
         }
     },
 
+    normalizarNivel(nivel) {
+        return String(nivel || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    },
+
+    usuarioTemAcessoTotal() {
+        const nivel = this.normalizarNivel(this.getCurrentUser()?.nivel);
+        return nivel === 'administrador' || nivel === 'gerencia';
+    },
+
+    usuarioSomenteVisualiza() {
+        return !this.usuarioTemAcessoTotal();
+    },
+
+    getFilialUsuario() {
+        return String(this.getCurrentUser()?.filial || '').trim().toUpperCase();
+    },
+
+    aplicarModoAcesso() {
+        if (!this.usuarioSomenteVisualiza()) return;
+
+        const form = document.getElementById('formCadastrarRota');
+        if (form) form.style.display = 'none';
+
+        const formTitle = document.querySelector('#sectionCadastrarRotas > h3');
+        if (formTitle) formTitle.style.display = 'none';
+    },
+
     async verificarPermissaoPagina() {
         const usuario = this.getCurrentUser();
-        const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+        const nivel = this.normalizarNivel(usuario?.nivel);
 
         if (!nivel) {
             window.location.href = 'index.html';
             return false;
         }
 
-        if (nivel === 'administrador') {
+        if (nivel === 'administrador' || nivel === 'gerencia') {
             return true;
         }
 
@@ -209,26 +237,44 @@ const RotasUI = {
     },
 
     async carregarFiliais() {
+        const filialUsuario = this.getFilialUsuario();
+        const restringirFilial = this.usuarioSomenteVisualiza() && filialUsuario;
+
         try {
             const { data, error } = await supabaseClient
-                .from('filiais') // Tabela alimentada pela página filiais.html
+                .from('filiais')
                 .select('nome, sigla')
                 .order('nome', { ascending: true });
-            
+
             if (error) throw error;
 
-            if (this.filialSelect && data) {
+            const filiais = restringirFilial
+                ? (data || []).filter(f => String(f.sigla || f.nome || '').trim().toUpperCase() === filialUsuario)
+                : (data || []);
+
+            if (this.filialSelect) {
                 this.filialSelect.innerHTML = '<option value="">Selecione a Filial</option>';
-                data.forEach(f => {
+                filiais.forEach(f => {
                     const value = f.sigla || f.nome;
                     this.filialSelect.add(new Option(f.sigla ? `${f.nome} (${f.sigla})` : f.nome, value));
                 });
             }
-            if (this.filtroGridFilial && data) {
-                this.filtroGridFilial.innerHTML = '<option value="">Todas</option>';
-                data.forEach(f => {
+
+            if (this.filtroGridFilial) {
+                this.filtroGridFilial.innerHTML = restringirFilial ? '' : '<option value="">Todas</option>';
+                filiais.forEach(f => {
                     const value = f.sigla || f.nome;
                     this.filtroGridFilial.add(new Option(f.sigla ? `${f.nome} (${f.sigla})` : f.nome, value));
+                });
+            }
+
+            if (restringirFilial) {
+                [this.filialSelect, this.filtroGridFilial].filter(Boolean).forEach(sel => {
+                    if (!Array.from(sel.options).some(o => String(o.value).trim().toUpperCase() === filialUsuario)) {
+                        sel.add(new Option(filialUsuario, filialUsuario));
+                    }
+                    sel.value = filialUsuario;
+                    sel.disabled = true;
                 });
             }
         } catch (err) {
@@ -238,6 +284,10 @@ const RotasUI = {
 
     async handleFormSubmit(e) {
         e.preventDefault();
+        if (this.usuarioSomenteVisualiza()) {
+            alert('Seu nivel de acesso permite somente visualizar as rotas.');
+            return;
+        }
 
         const editingId = this.editingIdInput.value;
         const payload = {
@@ -304,6 +354,10 @@ const RotasUI = {
         const id = btn.dataset.id;
 
         if (btn.classList.contains('btn-delete')) {
+            if (this.usuarioSomenteVisualiza()) {
+                alert('Seu nivel de acesso permite somente visualizar as rotas.');
+                return;
+            }
             if (confirm('Tem certeza que deseja excluir esta rota?')) {
                 try {
                     const rotaExcluida = this._data?.find(r => r.id == id);
@@ -316,6 +370,10 @@ const RotasUI = {
                 }
             }
         } else if (btn.classList.contains('btn-edit')) {
+            if (this.usuarioSomenteVisualiza()) {
+                alert('Seu nivel de acesso permite somente visualizar as rotas.');
+                return;
+            }
             this.loadForEditing(id);
         }
     },
@@ -331,7 +389,10 @@ const RotasUI = {
     },
 
     handleImportClick() {
-        // Aciona o clique no input de arquivo oculto
+        if (this.usuarioSomenteVisualiza()) {
+            alert('Seu nivel de acesso permite somente visualizar as rotas.');
+            return;
+        }
         this.importFileInput.click();
     },
 
@@ -417,10 +478,12 @@ const RotasUI = {
             }
         });
 
-        let rotas = []; // Declarar a variável aqui para que seja acessível fora do try/catch
+        let rotas = [];
         try {
             const searchTerm = this.searchInput?.value.trim();
-            const filialFiltro = this.filtroGridFilial?.value || '';
+            const filialUsuario = this.getFilialUsuario();
+            const restringirFilial = this.usuarioSomenteVisualiza() && filialUsuario;
+            const filialFiltro = restringirFilial ? filialUsuario : (this.filtroGridFilial?.value || '');
             let queryOptions = { orderBy: this._sort.field, ascending: this._sort.ascending };
 
             if (filialFiltro) {
@@ -429,8 +492,8 @@ const RotasUI = {
 
             if (searchTerm) {
                 const searchConditions = [
-                    `numero.ilike.%${searchTerm}%`, // Busca pelo número da rota como texto
-                    `filial.ilike.%${searchTerm}%`, // Novo filtro por Filial
+                    `numero.ilike.%${searchTerm}%`,
+                    `filial.ilike.%${searchTerm}%`,
                     `supervisor.ilike.%${searchTerm}%`,
                     `cidades.ilike.%${searchTerm}%`,
                     `status.ilike.%${searchTerm}%`
@@ -462,9 +525,10 @@ const RotasUI = {
                     <td>${r.dias || ''}</td>
                     <td><span class="status-badge ${r.status === 'INATIVA' ? 'status-inativa' : 'status-ativa'}">${r.status || 'ATIVA'}</span></td>
                     <td>
+                        ${this.usuarioSomenteVisualiza() ? '' : `
                         <button class="btn-edit" data-id="${r.id}">Editar</button>
                         <button class="btn-delete" data-id="${r.id}">Excluir</button>
-
+                        `}
                     </td>
                 </tr>`;
             }).join('');
