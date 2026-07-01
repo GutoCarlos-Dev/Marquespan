@@ -29,6 +29,18 @@ function getNomeUsuarioEngraxe() {
     return usuarioLogadoEngraxe?.nome || usuarioLogadoEngraxe?.nomecompleto || usuarioLogadoEngraxe?.email || 'Sistema';
 }
 
+function isAdministradorEngraxe() {
+    return String(usuarioLogadoEngraxe?.nivel || '').trim().toLowerCase() === 'administrador';
+}
+
+function aplicarRestricoesNivelEngraxe() {
+    const btnNovoLancamento = document.getElementById('btnNovoLancamento');
+    if (!btnNovoLancamento || isAdministradorEngraxe()) return;
+
+    btnNovoLancamento.classList.add('hidden');
+    btnNovoLancamento.disabled = true;
+}
+
 function usuarioTemFilialEngraxe() {
     return Boolean(getUsuarioFilialEngraxe());
 }
@@ -36,6 +48,21 @@ function usuarioTemFilialEngraxe() {
 function filialPermitidaEngraxe(filial) {
     const filialUsuario = getUsuarioFilialEngraxe();
     return !filialUsuario || normalizarFilialEngraxe(filial) === filialUsuario;
+}
+
+async function buscarListaPermitidaEngraxe(id) {
+    let query = supabaseClient
+        .from('engraxe_listas')
+        .select('*')
+        .eq('id', id);
+
+    if (usuarioTemFilialEngraxe()) {
+        query = query.eq('filial', getUsuarioFilialEngraxe());
+    }
+
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
+    return data || null;
 }
 
 function preencherSelectFiliaisEngraxe(select, filiais, textoTodas = 'Todas Filiais') {
@@ -216,6 +243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuario) { window.location.href = 'index.html'; return; }
     usuarioLogadoEngraxe = usuario;
+    aplicarRestricoesNivelEngraxe();
 
     // Inicializa filtros de data com o mês atual
     const hoje = new Date();
@@ -408,6 +436,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function abrirModalNovaLista() {
+    if (!isAdministradorEngraxe()) {
+        alert('Disponivel apenas para administrador.');
+        return;
+    }
+
     const modal = document.getElementById('modalNovaLista');
     const tbody = document.getElementById('tbodyNovaListaVeiculos');
     const nomeInput = document.getElementById('nomeNovaLista');
@@ -872,10 +905,15 @@ window.editarNomeLista = async function(id, nomeAtual) {
     if (novoNome === null || novoNome.trim() === "") return;
 
     try {
-        const { error } = await supabaseClient
+        let query = supabaseClient
             .from('engraxe_listas')
             .update({ nome: novoNome.trim() })
             .eq('id', id);
+        if (usuarioTemFilialEngraxe()) {
+            query = query.eq('filial', getUsuarioFilialEngraxe());
+        }
+
+        const { error } = await query;
 
         if (error) throw error;
         carregarListas();
@@ -892,10 +930,15 @@ window.excluirLista = async function(id) {
 
     try {
         // O CASCADE no banco de dados cuidará dos itens
-        const { error } = await supabaseClient
+        let query = supabaseClient
             .from('engraxe_listas')
             .delete()
             .eq('id', id);
+        if (usuarioTemFilialEngraxe()) {
+            query = query.eq('filial', getUsuarioFilialEngraxe());
+        }
+
+        const { error } = await query;
 
         if (error) throw error;
 
@@ -907,9 +950,6 @@ window.excluirLista = async function(id) {
 }
 
 window.abrirLista = async function(id, nome) {
-    document.getElementById('modalTitle').textContent = `Lista: ${nome}`;
-    currentListId = id;
-
     // Reseta filtros ao abrir uma nova lista
     const inputFiltro = document.getElementById('filtroModalInput');
     if (inputFiltro) inputFiltro.value = '';
@@ -918,11 +958,15 @@ window.abrirLista = async function(id, nome) {
 
     // --- Injeção do Campo Data da Lista ---
     // Busca a lista para pegar a data
-    const { data: listaAtual } = await supabaseClient
-        .from('engraxe_listas')
-        .select('*')
-        .eq('id', id)
-        .single();
+    const listaAtual = await buscarListaPermitidaEngraxe(id);
+    if (!listaAtual) {
+        alert('Lista nao encontrada para a sua filial.');
+        carregarListas();
+        return;
+    }
+
+    document.getElementById('modalTitle').textContent = `Lista: ${listaAtual.nome || nome}`;
+    currentListId = id;
 
     const dataLista = listaAtual ? listaAtual.data_lista : '';
 
@@ -2103,12 +2147,8 @@ async function gerarPDFLista(id, itemsOverride = null, nomeOverride = null) {
         // Se não fornecidos itens pré-carregados (modo lista principal), busca do banco
         if (!itens) {
             // 1. Buscar dados da lista
-            const { data: listaDb, error: errLista } = await supabaseClient
-                .from('engraxe_listas')
-                .select('*')
-                .eq('id', id)
-                .single();
-            if (errLista) throw errLista;
+            const listaDb = await buscarListaPermitidaEngraxe(id);
+            if (!listaDb) throw new Error('Lista nao encontrada para a sua filial.');
             lista = listaDb;
 
             // 2. Buscar itens da lista

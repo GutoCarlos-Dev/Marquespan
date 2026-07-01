@@ -178,17 +178,32 @@ async function carregarListasMobile() {
 
 // Expor função para o escopo global
 window.abrirLista = async function(id, nome) {
-    currentListId = id;
-    const titulo = document.getElementById('tituloListaAtual');
-    if (titulo) titulo.textContent = nome;
-    
-    document.getElementById('viewListas').classList.add('hidden');
-    document.getElementById('viewItens').classList.remove('hidden');
-    
-    const container = document.getElementById('listaVeiculosContainer');
-    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando itens...</div>';
-
     try {
+        let queryLista = supabaseClient
+            .from('engraxe_listas')
+            .select('id, nome, filial')
+            .eq('id', id);
+        const filialUsuario = getFilialUsuarioMobileEngraxe();
+        if (filialUsuario) queryLista = queryLista.eq('filial', filialUsuario);
+
+        const { data: listaPermitida, error: listaError } = await queryLista.maybeSingle();
+        if (listaError) throw listaError;
+        if (!listaPermitida) {
+            alert('Lista nao encontrada para a sua filial.');
+            carregarListasMobile();
+            return;
+        }
+
+        currentListId = id;
+        const titulo = document.getElementById('tituloListaAtual');
+        if (titulo) titulo.textContent = listaPermitida.nome || nome;
+        
+        document.getElementById('viewListas').classList.add('hidden');
+        document.getElementById('viewItens').classList.remove('hidden');
+        
+        const container = document.getElementById('listaVeiculosContainer');
+        container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando itens...</div>';
+
         const { data: itens, error } = await supabaseClient
             .from('engraxe_itens')
             .select('*')
