@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const acessoPermitido = await verificarPermissaoPagina();
     if (!acessoPermitido) return;
 
-    carregarFiliais();
+    aplicarModoAcessoVeiculos();
+    await carregarFiliais();
     carregarTipos();
     carregarFabricantes();
     carregarVeiculos();
@@ -27,16 +28,53 @@ function getCurrentUser() {
     }
 }
 
+function normalizarNivelVeiculos(nivel) {
+    return String(nivel || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
+function getFilialUsuarioVeiculos() {
+    return String(getCurrentUser()?.filial || '').trim().toUpperCase();
+}
+
+function usuarioTemAcessoTotalVeiculos() {
+    const nivel = normalizarNivelVeiculos(getCurrentUser()?.nivel);
+    return nivel === 'administrador' || nivel === 'gerencia';
+}
+
+function usuarioSomenteVisualizaVeiculos() {
+    return !usuarioTemAcessoTotalVeiculos();
+}
+
+function aplicarModoAcessoVeiculos() {
+    if (!usuarioSomenteVisualizaVeiculos()) return;
+
+    ['btn-novo-veiculo', 'btn-importar-massa', 'btn-exportar-xls', 'btn-gerar-qrcode'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.classList.add('hidden');
+            btn.disabled = true;
+            btn.style.display = 'none';
+        }
+    });
+
+    const painelAcoes = document.querySelector('.acoes-panel');
+    if (painelAcoes) painelAcoes.style.display = 'none';
+}
+
 async function verificarPermissaoPagina() {
     const usuario = getCurrentUser();
-    const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+    const nivel = normalizarNivelVeiculos(usuario?.nivel);
 
     if (!nivel) {
         window.location.href = 'index.html';
         return false;
     }
 
-    if (nivel === 'administrador') {
+    if (nivel === 'administrador' || nivel === 'gerencia') {
         return true;
     }
 
@@ -200,6 +238,11 @@ function handleTableClick(e) {
     const btnEdit = e.target.closest('.btn-edit');
     const btnDelete = e.target.closest('.btn-delete');
 
+    if (usuarioSomenteVisualizaVeiculos() && (btnEdit || btnDelete)) {
+        alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+        return;
+    }
+
     if (btnEdit) editarVeiculo(btnEdit.dataset.id);
     if (btnDelete) excluirVeiculo(btnDelete.dataset.id);
 }
@@ -208,6 +251,8 @@ async function carregarFiliais() {
     const select = document.getElementById('campo-filial');
     const selectImport = document.getElementById('importFilial');
     const selectModal = document.getElementById('veiculoFilial');
+    const filialUsuario = getFilialUsuarioVeiculos();
+    const restringirFilial = usuarioSomenteVisualizaVeiculos() && filialUsuario;
 
     try {
         const { data, error } = await supabaseClient
@@ -222,8 +267,12 @@ async function carregarFiliais() {
         if (selectImport) selectImport.innerHTML = '<option value="">Não alterar / não preencher</option>';
         if (selectModal) selectModal.innerHTML = '<option value="">Selecione</option>';
 
-        if (data) {
-            data.forEach(f => {
+        const filiais = restringirFilial
+            ? (data || []).filter(f => String(f.sigla || f.nome || '').trim().toUpperCase() === filialUsuario)
+            : (data || []);
+
+        if (filiais.length > 0) {
+            filiais.forEach(f => {
                 const option = document.createElement('option');
                 option.value = f.sigla || f.nome;
                 option.textContent = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
@@ -231,6 +280,16 @@ async function carregarFiliais() {
                 if (select) select.appendChild(option.cloneNode(true));
                 if (selectImport) selectImport.appendChild(option.cloneNode(true));
                 if (selectModal) selectModal.appendChild(option.cloneNode(true));
+            });
+        }
+
+        if (restringirFilial) {
+            [select, selectImport, selectModal].filter(Boolean).forEach(item => {
+                if (!Array.from(item.options).some(option => String(option.value).toUpperCase() === filialUsuario)) {
+                    item.add(new Option(filialUsuario, filialUsuario));
+                }
+                item.value = filialUsuario;
+                item.disabled = true;
             });
         }
     } catch (err) {
@@ -243,12 +302,17 @@ async function carregarFabricantes() {
     if (!select) return;
 
     try {
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('veiculos')
             .select('fabricante')
             .not('fabricante', 'is', null)
             .neq('fabricante', '');
 
+        if (usuarioSomenteVisualizaVeiculos() && getFilialUsuarioVeiculos()) {
+            query = query.eq('filial', getFilialUsuarioVeiculos());
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
 
         const unicos = [...new Set(data.map(v => v.fabricante?.trim()).filter(Boolean))].sort();
@@ -296,7 +360,10 @@ async function carregarVeiculos() {
 
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
 
-    const filial = document.getElementById('campo-filial').value;
+    const filialUsuario = getFilialUsuarioVeiculos();
+    const filial = usuarioSomenteVisualizaVeiculos() && filialUsuario
+        ? filialUsuario
+        : document.getElementById('campo-filial').value;
     const placa = document.getElementById('campo-placa').value.trim();
     const modelo = document.getElementById('campo-modelo').value.trim();
     const situacao = document.getElementById('campo-situacao').value;
@@ -370,20 +437,24 @@ function renderizarTabela(veiculos) {
 
         const tdAcoes = document.createElement('td');
 
-        const btnEdit = document.createElement('button');
-        btnEdit.className = 'btn-icon edit btn-edit';
-        btnEdit.title = 'Editar';
-        btnEdit.dataset.id = v.id;
-        btnEdit.innerHTML = '<i class="fas fa-edit"></i>';
+        if (usuarioTemAcessoTotalVeiculos()) {
+            const btnEdit = document.createElement('button');
+            btnEdit.className = 'btn-icon edit btn-edit';
+            btnEdit.title = 'Editar';
+            btnEdit.dataset.id = v.id;
+            btnEdit.innerHTML = '<i class="fas fa-edit"></i>';
 
-        const btnDelete = document.createElement('button');
-        btnDelete.className = 'btn-icon delete btn-delete';
-        btnDelete.title = 'Excluir';
-        btnDelete.dataset.id = v.id;
-        btnDelete.innerHTML = '<i class="fas fa-trash"></i>';
-        btnDelete.style.marginLeft = '5px';
+            const btnDelete = document.createElement('button');
+            btnDelete.className = 'btn-icon delete btn-delete';
+            btnDelete.title = 'Excluir';
+            btnDelete.dataset.id = v.id;
+            btnDelete.innerHTML = '<i class="fas fa-trash"></i>';
+            btnDelete.style.marginLeft = '5px';
 
-        tdAcoes.append(btnEdit, btnDelete);
+            tdAcoes.append(btnEdit, btnDelete);
+        } else {
+            tdAcoes.textContent = '-';
+        }
 
         tr.append(tdFilial, tdPlaca, tdModelo, tdRenavan, tdTipo, tdSituacao, tdQr, tdAcoes);
         tbody.appendChild(tr);
@@ -479,6 +550,11 @@ function atualizarPbtPorTaraECapacidade() {
 }
 
 function abrirModalVeiculo(veiculo = null) {
+    if (usuarioSomenteVisualizaVeiculos()) {
+        alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+        return;
+    }
+
     const modal = document.getElementById('modalVeiculo');
     const form = document.getElementById('formVeiculo');
     const title = document.getElementById('modalTitle');
@@ -559,6 +635,11 @@ function fecharModalVeiculo() {
 }
 
 async function editarVeiculo(id) {
+    if (usuarioSomenteVisualizaVeiculos()) {
+        alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+        return;
+    }
+
     try {
         const { data, error } = await supabaseClient
             .from('veiculos')
@@ -576,6 +657,10 @@ async function editarVeiculo(id) {
 
 async function salvarVeiculo(e) {
     e.preventDefault();
+    if (usuarioSomenteVisualizaVeiculos()) {
+        alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+        return;
+    }
 
     const id = document.getElementById('veiculoId').value;
     const placaOriginal = normalizarPlacaVeiculo(document.getElementById('veiculoPlacaOriginal')?.value);
@@ -726,6 +811,11 @@ async function uploadFotosVeiculo(veiculoId, placa) {
 }
 
 async function excluirVeiculo(id) {
+    if (usuarioSomenteVisualizaVeiculos()) {
+        alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+        return;
+    }
+
     if (!confirm('Tem certeza que deseja excluir este veículo?')) return;
     try {
         const { error } = await supabaseClient.from('veiculos').delete().eq('id', id);
@@ -739,6 +829,11 @@ async function excluirVeiculo(id) {
 }
 
 function exportarExcel() {
+    if (usuarioSomenteVisualizaVeiculos()) {
+        alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+        return;
+    }
+
     if (veiculosData.length === 0) {
         alert('Sem dados para exportar.');
         return;
@@ -823,6 +918,10 @@ function aplicarTotaisTanqueImportacao(target, base = {}) {
 
 async function handleImportacao(e) {
     e.preventDefault();
+    if (usuarioSomenteVisualizaVeiculos()) {
+        alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+        return;
+    }
 
     const fileInput = document.getElementById('arquivoImportacao');
     const filialSelect = document.getElementById('importFilial');

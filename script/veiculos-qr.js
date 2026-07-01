@@ -2,6 +2,20 @@ import { supabaseClient } from './supabase.js';
 
 let generatedCodesCache = [];
 
+function usuarioSomenteVisualizaQRCodeVeiculos() {
+    try {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+        const nivel = String(usuario?.nivel || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+        return nivel !== 'administrador' && nivel !== 'gerencia';
+    } catch {
+        return true;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const btnGerar = document.getElementById('btn-gerar-qrcode');
     const modal = document.getElementById('modalGerarQRCode');
@@ -11,6 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnGerar) {
         btnGerar.addEventListener('click', () => {
+            if (usuarioSomenteVisualizaQRCodeVeiculos()) {
+                alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+                return;
+            }
             if (modal) {
                 modal.classList.remove('hidden');
                 resetModal();
@@ -61,6 +79,11 @@ function resetModal() {
 }
 
 async function gerarCodigosUnicos() {
+    if (usuarioSomenteVisualizaQRCodeVeiculos()) {
+        alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+        return;
+    }
+
     const qtdInput = document.getElementById('qtdQRCode');
     const qtd = parseInt(qtdInput ? qtdInput.value : 0) || 0;
     

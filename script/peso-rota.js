@@ -202,6 +202,7 @@ function bindEvents() {
     document.getElementById('btnImportarRetornoRota')?.addEventListener('click', importarRetornoRota);
     document.getElementById('inputImportarRoteiro')?.addEventListener('change', importarRoteiroPeso);
     document.getElementById('btnExportarBackupXlsx')?.addEventListener('click', exportarBackupPesoRotaXlsx);
+    document.getElementById('btnExportarPdf')?.addEventListener('click', exportarPesoRotaPdf);
     document.getElementById('btnSalvarTudo')?.addEventListener('click', salvarTudo);
     document.getElementById('btnExcluirSelecionados')?.addEventListener('click', excluirSelecionados);
     document.getElementById('filtroSemana')?.addEventListener('change', renderGrid);
@@ -2029,9 +2030,79 @@ function validarContextoEspecificoBackupPesoRota() {
 }
 
 function getNomeArquivoBackupPesoRota(contexto) {
-    const filial = normalizarBusca(contexto.filial).replace(/[^A-Z0-9]+/g, '_');
-    const dia = normalizarBusca(contexto.diaSemana).replace(/[^A-Z0-9]+/g, '_');
-    return `Peso_Rota_${filial}_${contexto.semanaAno}_${dia}.xlsx`;
+    const filial = normalizarBusca(contexto.filial || 'Todas').replace(/[^A-Z0-9]+/g, '_');
+    const semana = normalizarBusca(contexto.semanaAno || 'Semana').replace(/[^A-Z0-9-]+/g, '_');
+    const dia = normalizarBusca(contexto.diaSemana || 'Todos').replace(/[^A-Z0-9]+/g, '_');
+    return `Peso_Rota_${filial}_${semana}_${dia}.xlsx`;
+}
+
+function getNomeArquivoExportacaoPesoRota(extensao) {
+    const contexto = getContextoBackupPesoRota();
+    return getNomeArquivoBackupPesoRota(contexto).replace(/\.xlsx$/i, `.${extensao}`);
+}
+
+function getLinhasExportacaoPesoRota() {
+    return getLinhasVisiveis().map(({ row }) => row);
+}
+
+function formatarDataBR(dataIso) {
+    if (!dataIso) return '';
+    const partes = String(dataIso).slice(0, 10).split('-');
+    if (partes.length !== 3) return dataIso;
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+}
+
+function getTextoFiltroPesoRota(id, fallback = 'Todos') {
+    const el = document.getElementById(id);
+    if (!el) return fallback;
+    if (el.tagName === 'SELECT') {
+        return el.selectedOptions?.[0]?.textContent?.trim() || fallback;
+    }
+    return el.value || fallback;
+}
+
+function getContextoRowsExportacaoPesoRota(linhas) {
+    return [
+        ['CHAVE', 'VALOR'],
+        ['TIPO_ARQUIVO', 'PESO_ROTA_GRID'],
+        ['VERSAO', PESO_ROTA_BACKUP_VERSAO],
+        ['FILIAL', getTextoFiltroPesoRota('filtroFilial')],
+        ['SEMANA_ANO', getSemanaAnoSelecionada()],
+        ['SUPERVISOR', getTextoFiltroPesoRota('filtroSupervisor')],
+        ['ROTA', getTextoFiltroPesoRota('filtroRota')],
+        ['DIA_SAIDA', getTextoFiltroPesoRota('filtroSemana')],
+        ['DIA_RETORNO', getTextoFiltroPesoRota('filtroDiaRetorno')],
+        ['BUSCA_GRID', document.getElementById('searchInput')?.value || ''],
+        ['TOTAL_LINHAS', linhas.length],
+        ['EXPORTADO_EM', new Date().toISOString()]
+    ];
+}
+
+function montarDadosExportacaoPesoRota(linhas) {
+    return linhas.map(row => {
+        const registro = {
+            filial: getFilialRegistro(row),
+            semana_ano: row.semana_ano || getSemanaAnoSelecionada(),
+            semana: row.semana || '',
+            rota: row.rota ?? '',
+            supervisor: row.supervisor ?? '',
+            motorista: row.motorista ?? '',
+            auxiliar: row.auxiliar ?? '',
+            placa: row.placa ?? '',
+            tipo_veiculo: row.tipo_veiculo ?? '',
+            pbt: row.pbt ?? '',
+            peso_carga: row.peso_carga ?? '',
+            qtd_caixas: row.qtd_caixas ?? '',
+            qtd_clientes: row.qtd_clientes ?? '',
+            status: getStatus(row).texto,
+            dia_semana_retorno: row.dia_semana_retorno ?? '',
+            dia_retorno: row.dia_retorno ?? '',
+            horario_chegada: row.horario_chegada ?? '',
+            descricao: row.descricao ?? ''
+        };
+
+        return Object.fromEntries(PESO_ROTA_BACKUP_COLUNAS.map(([cabecalho, campo]) => [cabecalho, registro[campo] ?? '']));
+    });
 }
 
 function exportarBackupPesoRotaXlsx() {
@@ -2040,43 +2111,16 @@ function exportarBackupPesoRotaXlsx() {
         return;
     }
 
-    const contexto = validarContextoEspecificoBackupPesoRota();
-    if (!contexto) return;
-
-    const linhas = gridData.filter(row =>
-        normalizarBusca(getFilialRegistro(row)) === normalizarBusca(contexto.filial)
-        && normalizarSemana(row.semana) === contexto.diaSemana
-        && (row.semana_ano || getSemanaAnoDaData(row.dia_retorno)) === contexto.semanaAno
-    );
+    const contexto = getContextoBackupPesoRota();
+    const linhas = getLinhasExportacaoPesoRota();
 
     if (linhas.length === 0) {
-        alert('Nao ha linhas neste contexto para exportar.');
+        alert('Nao ha linhas visiveis no grid para exportar.');
         return;
     }
 
-    const dados = linhas.map(row => {
-        const registro = {};
-        PESO_ROTA_BACKUP_COLUNAS.forEach(([, campo]) => {
-            if (campo === 'status') return;
-            registro[campo] = row[campo] ?? '';
-        });
-        registro.filial = contexto.filial;
-        registro.semana_ano = contexto.semanaAno;
-        registro.semana = contexto.diaSemana;
-        registro.status = getStatus(row).texto;
-        return Object.fromEntries(PESO_ROTA_BACKUP_COLUNAS.map(([cabecalho, campo]) => [cabecalho, registro[campo] ?? '']));
-    });
-
-    const contextoRows = [
-        ['CHAVE', 'VALOR'],
-        ['TIPO_ARQUIVO', 'PESO_ROTA_BACKUP'],
-        ['VERSAO', PESO_ROTA_BACKUP_VERSAO],
-        ['FILIAL', contexto.filial],
-        ['SEMANA_ANO', contexto.semanaAno],
-        ['DIA_SEMANA', contexto.diaSemana],
-        ['TOTAL_LINHAS', linhas.length],
-        ['EXPORTADO_EM', new Date().toISOString()]
-    ];
+    const dados = montarDadosExportacaoPesoRota(linhas);
+    const contextoRows = getContextoRowsExportacaoPesoRota(linhas);
 
     const workbook = window.XLSX.utils.book_new();
     const sheetContexto = window.XLSX.utils.aoa_to_sheet(contextoRows);
@@ -2092,6 +2136,173 @@ function exportarBackupPesoRotaXlsx() {
     window.XLSX.utils.book_append_sheet(workbook, sheetContexto, PESO_ROTA_BACKUP_ABA_CONTEXTO);
     window.XLSX.utils.book_append_sheet(workbook, sheetDados, PESO_ROTA_BACKUP_ABA_DADOS);
     window.XLSX.writeFile(workbook, getNomeArquivoBackupPesoRota(contexto));
+}
+
+function getResumoExportacaoPesoRota(linhas) {
+    const rotas = new Set(linhas.map(row => row.rota).filter(Boolean));
+    const pesoTotal = linhas.reduce((total, row) => total + Number(row.peso_carga || 0), 0);
+    const capacidadeTotal = linhas.reduce((total, row) => total + Number(row.pbt || 0), 0);
+    const caixasTotal = linhas.reduce((total, row) => total + Number(row.qtd_caixas || 0), 0);
+    const clientesTotal = linhas.reduce((total, row) => total + Number(row.qtd_clientes || 0), 0);
+    const acima90 = linhas.filter(row => {
+        const percentual = getStatus(row).percentual;
+        return percentual > 90 && percentual <= 100;
+    }).length;
+    const excesso = linhas.filter(row => (getStatus(row).percentual || 0) > 100).length;
+
+    return { rotas: rotas.size, pesoTotal, capacidadeTotal, caixasTotal, clientesTotal, acima90, excesso };
+}
+
+function adicionarRodapePesoRotaPdf(doc) {
+    const totalPaginas = doc.internal.getNumberOfPages();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    for (let page = 1; page <= totalPaginas; page += 1) {
+        doc.setPage(page);
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Pagina ${page} de ${totalPaginas}`, pageWidth - 10, pageHeight - 6, { align: 'right' });
+        doc.text('Marquespan - Peso de Rota', 10, pageHeight - 6);
+    }
+}
+
+function exportarPesoRotaPdf() {
+    if (!window.jspdf?.jsPDF) {
+        alert('Biblioteca PDF nao carregada. Recarregue a pagina e tente novamente.');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    if (typeof doc.autoTable !== 'function') {
+        alert('Biblioteca autoTable nao carregada. Recarregue a pagina e tente novamente.');
+        return;
+    }
+
+    const linhas = getLinhasExportacaoPesoRota();
+    if (linhas.length === 0) {
+        alert('Nao ha linhas visiveis no grid para exportar.');
+        return;
+    }
+
+    const btn = document.getElementById('btnExportarPdf');
+    const htmlOriginal = btn?.innerHTML;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+    }
+
+    try {
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const resumo = getResumoExportacaoPesoRota(linhas);
+
+        doc.setTextColor(0, 105, 55);
+        doc.setFontSize(15);
+        doc.text('Peso de Rota', pageWidth / 2, 12, { align: 'center' });
+        doc.setFontSize(8);
+        doc.setTextColor(90, 100, 112);
+        doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 18, { align: 'center' });
+        doc.setDrawColor(220, 226, 222);
+        doc.line(10, 23, pageWidth - 10, 23);
+
+        doc.autoTable({
+            startY: 27,
+            head: [['Filtro', 'Valor']],
+            body: [
+                ['Filial', getTextoFiltroPesoRota('filtroFilial')],
+                ['Semana Ano', getSemanaAnoSelecionada()],
+                ['Supervisor', getTextoFiltroPesoRota('filtroSupervisor')],
+                ['Rota', getTextoFiltroPesoRota('filtroRota')],
+                ['Dia Saida', getTextoFiltroPesoRota('filtroSemana')],
+                ['Dia Retorno', getTextoFiltroPesoRota('filtroDiaRetorno')],
+                ['Busca Grid', document.getElementById('searchInput')?.value || '']
+            ],
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+            margin: { left: 10, right: 10 }
+        });
+
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 5,
+            head: [['Linhas', 'Rotas', 'Capacidade', 'Peso', 'Acima de 90%', 'Excesso', 'Caixas', 'Clientes']],
+            body: [[
+                linhas.length,
+                resumo.rotas,
+                formatarDecimalBR(resumo.capacidadeTotal),
+                formatarDecimalBR(resumo.pesoTotal),
+                resumo.acima90,
+                resumo.excesso,
+                resumo.caixasTotal,
+                resumo.clientesTotal
+            ]],
+            theme: 'grid',
+            styles: { fontSize: 8, halign: 'center', cellPadding: 2 },
+            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+            margin: { left: 10, right: 10 }
+        });
+
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 6,
+            head: [[
+                'Filial',
+                'Rota',
+                'Saida',
+                'Supervisor',
+                'Motorista',
+                'Auxiliar',
+                'Placa',
+                'Modelo',
+                'Capacidade',
+                'Peso',
+                'Uso',
+                'Caixas',
+                'Clientes',
+                'Retorno',
+                'Chegada'
+            ]],
+            body: linhas.map(row => [
+                getFilialRegistro(row),
+                row.rota || '',
+                row.semana || '',
+                row.supervisor || '',
+                row.motorista || '',
+                row.auxiliar || '',
+                row.placa || '',
+                row.tipo_veiculo || '',
+                formatarDecimalBR(row.pbt),
+                formatarDecimalBR(row.peso_carga),
+                getStatus(row).texto,
+                row.qtd_caixas ?? '',
+                row.qtd_clientes ?? '',
+                `${row.dia_semana_retorno || ''}${row.dia_retorno ? ` ${formatarDataBR(row.dia_retorno)}` : ''}`,
+                row.horario_chegada || ''
+            ]),
+            theme: 'striped',
+            styles: { fontSize: 6.2, cellPadding: 1.3, overflow: 'linebreak' },
+            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+            columnStyles: {
+                3: { cellWidth: 22 },
+                4: { cellWidth: 25 },
+                5: { cellWidth: 23 },
+                7: { cellWidth: 22 },
+                13: { cellWidth: 24 }
+            },
+            margin: { left: 6, right: 6 }
+        });
+
+        adicionarRodapePesoRotaPdf(doc);
+        doc.save(getNomeArquivoExportacaoPesoRota('pdf'));
+    } catch (error) {
+        console.error('Erro ao gerar PDF de peso de rota:', error);
+        alert(`Erro ao gerar PDF: ${error.message || error}`);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = htmlOriginal;
+        }
+    }
 }
 
 function getDiaSemanaDaAba(nomeAba) {

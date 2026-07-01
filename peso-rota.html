@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="css/peso-rota.css?v=20260617-1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -88,6 +90,7 @@
                         <button id="btnImportarRetornoRota" class="btn-glass btn-blue" title="Usa os filtros Dia de Saída e Dia de Retorno para buscar os retornos registrados"><i class="fas fa-clock"></i> Importar Horário Retorno Online</button>
                         <input type="file" id="inputImportarRoteiro" accept=".xlsx,.xls" hidden>
                         <button id="btnExportarBackupXlsx" class="btn-glass btn-green"><i class="fas fa-file-arrow-down"></i> Exportar XLSX</button>
+                        <button id="btnExportarPdf" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
                         <button id="btnSalvarTudo" class="btn-glass btn-green" title="Salvar tudo (Ctrl+S)"><i class="fas fa-save"></i> Salvar Tudo</button>
                         <button id="btnExcluirSelecionados" class="btn-glass btn-red"><i class="fas fa-trash-alt"></i> Excluir Selecionados</button>
                     </div>
@@ -150,7 +153,7 @@
     <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
     <script type="module" src="./script/auth-guard.js"></script>
     <script type="module" src="script/menu.js" defer></script>
-    <script type="module" src="script/peso-rota.js?v=20260619-1"></script>
+    <script type="module" src="script/peso-rota.js?v=20260701-export-pdf"></script>
 </body>
 </html>
 
