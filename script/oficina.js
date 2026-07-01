@@ -1,12 +1,58 @@
 import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+let filiaisPermitidasOficina = [];
+let usuarioLogadoOficina = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    usuarioLogadoOficina = getUsuarioLogadoOficina();
     setupTabs();
-    carregarOficinas();
+    await carregarFiliaisOficina();
+    await carregarOficinas();
     carregarItens();
     setupEventListeners();
 });
+
+function getUsuarioLogadoOficina() {
+    try {
+        return JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+    } catch {
+        return null;
+    }
+}
+
+function normalizarFilialOficina(valor) {
+    return String(valor || '').trim().toUpperCase();
+}
+
+function getFilialUsuarioOficina() {
+    return normalizarFilialOficina(usuarioLogadoOficina?.filial);
+}
+
+function filialCombinaUsuario(filial, filialUsuario) {
+    if (!filialUsuario) return true;
+    const nome = normalizarFilialOficina(filial?.nome);
+    const sigla = normalizarFilialOficina(filial?.sigla);
+    const valor = normalizarFilialOficina(filial?.sigla || filial?.nome);
+    return filialUsuario === nome || filialUsuario === sigla || filialUsuario === valor;
+}
+
+function getValorFilialOficina(filial) {
+    return String(filial?.sigla || filial?.nome || '').trim();
+}
+
+function getLabelFilialOficina(filial) {
+    return filial?.sigla ? `${filial.nome} (${filial.sigla})` : (filial?.nome || '');
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 function setupTabs() {
     const tabs = document.querySelectorAll('.painel-btn');
@@ -42,15 +88,65 @@ function setupEventListeners() {
 
 // --- OFICINAS ---
 
+async function carregarFiliaisOficina() {
+    const select = document.getElementById('oficinaFilial');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Carregando...</option>';
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('nome, sigla')
+            .order('nome', { ascending: true });
+
+        if (error) throw error;
+
+        const filialUsuario = getFilialUsuarioOficina();
+        filiaisPermitidasOficina = filialUsuario
+            ? (data || []).filter(filial => filialCombinaUsuario(filial, filialUsuario))
+            : (data || []);
+
+        select.innerHTML = '<option value="">Selecione a filial</option>';
+        filiaisPermitidasOficina.forEach(filial => {
+            const value = getValorFilialOficina(filial);
+            if (!value) return;
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = getLabelFilialOficina(filial);
+            select.appendChild(option);
+        });
+
+        if (filialUsuario && filiaisPermitidasOficina.length === 1) {
+            select.value = getValorFilialOficina(filiaisPermitidasOficina[0]);
+            select.disabled = true;
+        } else {
+            select.disabled = false;
+        }
+    } catch (err) {
+        console.error('Erro ao carregar filiais da oficina:', err);
+        select.innerHTML = '<option value="">Erro ao carregar filiais</option>';
+    }
+}
+
 async function carregarOficinas() {
     const tbody = document.getElementById('oficinaTableBody');
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Carregando...</td></tr>';
 
     try {
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('oficinas')
             .select('*, itens_verificacao(descricao)')
             .order('nome', { ascending: true });
+
+        const filiaisFiltro = filiaisPermitidasOficina.map(getValorFilialOficina).filter(Boolean);
+        if (filiaisFiltro.length === 0) {
+            renderTableOficinas([]);
+            return;
+        }
+        query = query.in('filial', filiaisFiltro);
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -73,9 +169,9 @@ function renderTableOficinas(oficinas) {
     oficinas.forEach(o => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${o.nome}</td>
-            <td>${o.filial || '-'}</td>
-            <td>${o.itens_verificacao?.descricao || '-'}</td>
+            <td>${escapeHtml(o.nome)}</td>
+            <td>${escapeHtml(o.filial || '-')}</td>
+            <td>${escapeHtml(o.itens_verificacao?.descricao || '-')}</td>
             <td>
                 <button class="btn-icon edit" title="Editar"><i class="fas fa-edit"></i></button>
                 <button class="btn-icon delete" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -95,6 +191,11 @@ async function salvarOficina(e) {
     const nome = document.getElementById('oficinaNome').value.trim();
     const filial = document.getElementById('oficinaFilial').value;
     const itemVerificador = document.getElementById('oficinaItemVerificador').value;
+
+    if (!filiaisPermitidasOficina.some(f => getValorFilialOficina(f) === filial)) {
+        alert('Seu usuário não tem permissão para salvar oficina nesta filial.');
+        return;
+    }
 
     const payload = { nome, filial, item_verificador_id: itemVerificador || null };
 
@@ -172,6 +273,10 @@ function limparFormularioOficina() {
     document.getElementById('formCadastrarOficina').reset();
     document.getElementById('oficinaEditingId').value = '';
     document.getElementById('btnClearOficinaForm').classList.add('hidden');
+    const selectFilial = document.getElementById('oficinaFilial');
+    if (getFilialUsuarioOficina() && filiaisPermitidasOficina.length === 1 && selectFilial) {
+        selectFilial.value = getValorFilialOficina(filiaisPermitidasOficina[0]);
+    }
 }
 
 function filtrarOficinas(e) {
