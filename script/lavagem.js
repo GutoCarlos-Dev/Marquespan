@@ -12,6 +12,9 @@ let currentSort = { key: null, asc: true };
 let precosCache = [];
 let editingPriceId = null;
 let sortStatePrecos = { key: 'tipoVeiculo', asc: true };
+let usuarioLogadoLavagem = null;
+let filiaisLavagemCache = [];
+let currentListFilial = '';
 
 function getDisplayStatus(status, isPdf = false) {
     if (status === 'DISPENSADO') return 'DISPENSADO';
@@ -35,9 +38,103 @@ function normalizeIdForQuery(id) {
     return id === null || id === undefined ? id : String(id);
 }
 
+function normalizarFilialLavagem(filial) {
+    return (filial || '').toString().trim().toUpperCase();
+}
+
+function getUsuarioFilialLavagem() {
+    return normalizarFilialLavagem(usuarioLogadoLavagem?.filial);
+}
+
+function usuarioTemFilialLavagem() {
+    return !!getUsuarioFilialLavagem();
+}
+
+function filialPermitidaLavagem(filial) {
+    const filialUsuario = getUsuarioFilialLavagem();
+    if (!filialUsuario) return true;
+    return normalizarFilialLavagem(filial) === filialUsuario;
+}
+
+function getNomeUsuarioLavagem() {
+    return usuarioLogadoLavagem?.nome || JSON.parse(localStorage.getItem('usuarioLogado') || '{}')?.nome || '';
+}
+
+function moverCampoAntesLavagem(campoId, referenciaId) {
+    const campo = document.getElementById(campoId)?.closest('.form-group');
+    const referencia = document.getElementById(referenciaId)?.closest('.form-group');
+    if (campo && referencia && campo !== referencia) {
+        referencia.parentNode.insertBefore(campo, referencia);
+    }
+}
+
+function preencherSelectFiliaisLavagem(select, options = {}) {
+    if (!select) return;
+
+    const filialUsuario = getUsuarioFilialLavagem();
+    const filiais = filialUsuario ? [filialUsuario] : filiaisLavagemCache;
+    const labelTodas = options.labelTodas || 'Todas';
+    const valorAtual = normalizarFilialLavagem(select.value);
+
+    select.innerHTML = options.semTodas ? '' : `<option value="">${labelTodas}</option>`;
+    filiais.forEach(filial => select.add(new Option(filial, filial)));
+
+    if (filialUsuario) {
+        select.value = filialUsuario;
+        select.disabled = true;
+    } else {
+        select.disabled = false;
+        if (valorAtual && filiais.includes(valorAtual)) select.value = valorAtual;
+    }
+}
+
+async function carregarFiliaisLavagem() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('nome, sigla')
+            .order('nome');
+
+        if (error) throw error;
+
+        filiaisLavagemCache = [...new Set((data || [])
+            .map(f => normalizarFilialLavagem(f.sigla || f.nome))
+            .filter(Boolean))]
+            .sort();
+    } catch (error) {
+        console.warn('Erro ao carregar filiais cadastradas para lavagem:', error);
+        filiaisLavagemCache = [];
+    }
+
+    const filialUsuario = getUsuarioFilialLavagem();
+    if (filialUsuario && !filiaisLavagemCache.includes(filialUsuario)) {
+        filiaisLavagemCache.push(filialUsuario);
+        filiaisLavagemCache.sort();
+    }
+
+    preencherSelectFiliaisLavagem(document.getElementById('filtroFilialLista'));
+    preencherSelectFiliaisLavagem(document.getElementById('relFilial'));
+}
+
+async function buscarListaPermitidaLavagem(id) {
+    let query = supabaseClient
+        .from('lavagem_listas')
+        .select('*')
+        .eq('id', id);
+
+    const filialUsuario = getUsuarioFilialLavagem();
+    if (filialUsuario) query = query.eq('filial', filialUsuario);
+
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error('Lista nao encontrada para a filial do usuario.');
+    return data;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuario) { window.location.href = 'index.html'; return; }
+    usuarioLogadoLavagem = usuario;
 
     // Controle de Permissões: Ocultar abas para coleta_km
     if (usuario.nivel && usuario.nivel.toLowerCase() === 'coleta_km') {
@@ -63,6 +160,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     document.getElementById('filtroDataIni').value = inicioMes.toISOString().split('T')[0];
     document.getElementById('filtroDataFim').value = hoje.toISOString().split('T')[0];
+    const labelFiltroFilialLista = document.getElementById('filtroFilialLista')?.closest('.form-group')?.querySelector('label');
+    if (labelFiltroFilialLista) labelFiltroFilialLista.textContent = 'Filial';
+    const labelFiltroDataIni = document.getElementById('filtroDataIni')?.closest('.form-group')?.querySelector('label');
+    if (labelFiltroDataIni) labelFiltroDataIni.textContent = 'Data Inicio';
+    moverCampoAntesLavagem('filtroFilialLista', 'filtroDataIni');
+    moverCampoAntesLavagem('relFilial', 'relDataIni');
     
     // Init dates for report
     document.getElementById('relDataIni').value = inicioMes.toISOString().split('T')[0];
@@ -81,6 +184,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Listeners
     const btnBuscar = document.getElementById('btnBuscar');
     if (btnBuscar) btnBuscar.addEventListener('click', carregarListas);
+    document.getElementById('filtroFilialLista')?.addEventListener('change', carregarListas);
+    document.getElementById('relFilial')?.addEventListener('change', gerarRelatorio);
 
     const btnNovaLista = document.getElementById('btnNovaLista');
     if (btnNovaLista) {
@@ -185,6 +290,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnSalvarPreco')?.addEventListener('click', salvarPreco);
     document.getElementById('btnGerarRelatorio')?.addEventListener('click', gerarRelatorio);
 
+    await carregarFiliaisLavagem();
+    injectFornecedorFields();
     await carregarListas();
     await carregarPrecos();
     carregarTiposVeiculoParaPreco();
@@ -218,6 +325,16 @@ function injectFornecedorFields() {
         div.innerHTML = `<label>Fornecedor</label><input type="text" id="precoFornecedor" class="glass-input" placeholder="Ex: Lava Jato X" style="text-transform: uppercase;">`;
         divPreco.parentNode.insertBefore(div, divPreco);
     }
+
+    if (divPreco && !document.getElementById('precoFilial')) {
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        div.innerHTML = `<label>Filial</label><select id="precoFilial" class="glass-input"></select>`;
+        divPreco.parentNode.insertBefore(div, document.getElementById('precoFornecedor')?.closest('.form-group') || divPreco);
+        preencherSelectFiliaisLavagem(div.querySelector('select'));
+        div.querySelector('select')?.addEventListener('change', carregarPrecos);
+    }
+    moverCampoAntesLavagem('precoFilial', 'precoFornecedor');
 
     // 2. Campo na Nova Lista
     const divNovaLista = document.getElementById('nomeNovaLista')?.parentNode;
@@ -253,6 +370,15 @@ function injectFornecedorFields() {
     }
 
     // 5. Adicionar colunas Usuário e Fornecedor na tabela de Detalhes da Lista
+    if (tblPrecosHead && !tblPrecosHead.innerHTML.includes('Filial')) {
+        const th = document.createElement('th');
+        th.innerHTML = 'Filial <i class="fas fa-sort"></i>';
+        th.className = 'sortable-preco';
+        th.dataset.sort = 'filial';
+        th.addEventListener('click', () => ordenarPrecos('filial'));
+        tblPrecosHead.insertBefore(th, tblPrecosHead.children[0]);
+    }
+
     const tblDetalhesHead = document.querySelector('#tbodyDetalhesItens')?.previousElementSibling?.querySelector('tr');
     if (tblDetalhesHead) {
         // Tenta encontrar a coluna Fornecedor para inserir o Usuário antes dela
@@ -302,11 +428,12 @@ function atualizarDropdownFornecedores() {
 
 async function carregarListas() {
     const tbody = document.getElementById('tbodyListas');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
 
     const dataIni = document.getElementById('filtroDataIni').value;
     const dataFim = document.getElementById('filtroDataFim').value;
     const status = document.getElementById('filtroStatus').value;
+    const filialSelecionada = normalizarFilialLavagem(document.getElementById('filtroFilialLista')?.value);
 
     try {
         let query = supabaseClient
@@ -319,13 +446,18 @@ async function carregarListas() {
         if (dataIniFilter) query = query.gte('data_lista', dataIniFilter);
         if (dataFimFilter) query = query.lte('data_lista', dataFimFilter);
         if (status) query = query.eq('status', status);
+        if (getUsuarioFilialLavagem()) {
+            query = query.eq('filial', getUsuarioFilialLavagem());
+        } else if (filialSelecionada) {
+            query = query.eq('filial', filialSelecionada);
+        }
 
         const { data, error } = await query;
         if (error) throw error;
 
         tbody.innerHTML = '';
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhuma lista encontrada.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhuma lista encontrada.</td></tr>';
             return;
         }
 
@@ -406,6 +538,7 @@ async function carregarListas() {
             tr.innerHTML = `
                 <td>${new Date(lista.created_at).toLocaleDateString('pt-BR')}</td>
                 <td>${lista.nome}</td>
+                <td>${normalizarFilialLavagem(lista.filial) || '-'}</td>
                 <td>${new Date(lista.data_lista + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                 <td><span class="badge badge-${lista.status.toLowerCase()}">${lista.status}</span></td>
                 <td class="progress-cell" data-status-counts='${JSON.stringify(statusCounts)}'>
@@ -432,7 +565,7 @@ async function carregarListas() {
 
     } catch (error) {
         console.error(error);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erro ao carregar listas.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Erro ao carregar listas.</td></tr>';
     }
 }
 
@@ -490,20 +623,29 @@ async function abrirModalNovaLista() {
     updateSortIconsModal();
 
     try {
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('veiculos')
             .select('*')
             .in('situacao', ['ativo', 'INTERNADO'])
             .order('placa');
 
+        if (getUsuarioFilialLavagem()) query = query.eq('filial', getUsuarioFilialLavagem());
+
+        const { data, error } = await query;
         if (error) throw error;
 
-        veiculosAptosCache = data;
+        veiculosAptosCache = (data || []).filter(v => filialPermitidaLavagem(v.filial));
         
-        const filiais = [...new Set(data.map(v => v.filial).filter(Boolean))].sort();
         const selectFilial = document.getElementById('filtroFilialNovaLista');
-        selectFilial.innerHTML = '<option value="">Todas Filiais</option>';
+        const filiais = [...new Set(veiculosAptosCache.map(v => normalizarFilialLavagem(v.filial)).filter(Boolean))].sort();
+        selectFilial.innerHTML = getUsuarioFilialLavagem() ? '' : '<option value="">Todas Filiais</option>';
         filiais.forEach(f => selectFilial.add(new Option(f, f)));
+        if (getUsuarioFilialLavagem()) {
+            selectFilial.value = getUsuarioFilialLavagem();
+            selectFilial.disabled = true;
+        } else {
+            selectFilial.disabled = false;
+        }
 
         // Popula filtro de situação
         let selectSituacao = document.getElementById('filtroSituacaoNovaLista');
@@ -516,7 +658,7 @@ async function abrirModalNovaLista() {
             selectFilial.insertAdjacentElement('afterend', selectSituacao);
             selectSituacao.addEventListener('change', filtrarVeiculosModal);
         }
-        const situacoes = [...new Set(data.map(v => v.situacao).filter(Boolean))].sort();
+        const situacoes = [...new Set(veiculosAptosCache.map(v => v.situacao).filter(Boolean))].sort();
         selectSituacao.innerHTML = '<option value="">Todas Situações</option>';
         situacoes.forEach(s => selectSituacao.add(new Option(s.toUpperCase(), s)));
 
@@ -571,7 +713,7 @@ function renderizarVeiculosModal(veiculos) {
         }
 
         tr.innerHTML = `
-            <td style="text-align:center;"><input type="checkbox" class="chk-veiculo" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}" data-situacao="${v.situacao}"></td>
+            <td style="text-align:center;"><input type="checkbox" class="chk-veiculo" value="${v.placa}" data-modelo="${v.modelo}" data-marca="${v.marca}" data-situacao="${v.situacao}" data-filial="${normalizarFilialLavagem(v.filial)}"></td>
             <td><strong>${v.placa}</strong></td>
             <td>${v.tipo || '-'}</td>
             <td>${v.marca || '-'}</td>
@@ -595,7 +737,7 @@ function filtrarVeiculosModal() {
 
     const filtrados = veiculosAptosCache.filter(v => {
         const matchPlaca = !placa || v.placa.toUpperCase().includes(placa.trim());
-        const matchFilial = !filial || (v.filial && v.filial.trim() === filial.trim());
+        const matchFilial = !filial || normalizarFilialLavagem(v.filial) === normalizarFilialLavagem(filial);
         const matchSituacao = !situacao || v.situacao === situacao;
         const matchTipo = checkedTypes.length === 0 || checkedTypes.includes(v.tipo);
         return matchPlaca && matchFilial && matchTipo && matchSituacao;
@@ -664,13 +806,19 @@ async function criarNovaLista() {
         placa: chk.value,
         modelo: chk.dataset.modelo,
         marca: chk.dataset.marca,
-        situacao: chk.dataset.situacao
+        situacao: chk.dataset.situacao,
+        filial: normalizarFilialLavagem(chk.dataset.filial)
     }));
 
     if (selecionados.length === 0) return alert('Selecione pelo menos um veículo.');
     if (!nome || !dataLista) return alert('Preencha nome e data.');
 
-    const usuario = JSON.parse(localStorage.getItem('usuarioLogado')).nome;
+    const filiaisSelecionadas = [...new Set(selecionados.map(v => v.filial).filter(Boolean))];
+    if (filiaisSelecionadas.length !== 1) return alert('Selecione veiculos de uma unica filial para criar a lista.');
+    const filialLista = filiaisSelecionadas[0];
+    if (!filialPermitidaLavagem(filialLista)) return alert('Voce nao tem permissao para criar lista nesta filial.');
+
+    const usuario = getNomeUsuarioLavagem();
 
     try {
         const { data: lista, error: errLista } = await supabaseClient
@@ -680,7 +828,8 @@ async function criarNovaLista() {
                 data_lista: dataLista,
                 status: 'ABERTA',
                 usuario_criacao: usuario,
-                fornecedor: fornecedor
+                fornecedor: fornecedor,
+                filial: filialLista
             }])
             .select()
             .single();
@@ -714,7 +863,16 @@ async function criarNovaLista() {
 }
 
 window.abrirDetalhesLista = async function(id, nome) {
+    let listaPermitida;
+    try {
+        listaPermitida = await buscarListaPermitidaLavagem(id);
+    } catch (error) {
+        alert(error.message || 'Lista nao encontrada para a filial do usuario.');
+        return;
+    }
+
     currentListId = id;
+    currentListFilial = normalizarFilialLavagem(listaPermitida.filial);
     document.getElementById('tituloDetalhesLista').textContent = nome;
     document.getElementById('modalDetalhesLista').classList.remove('hidden');
 
@@ -745,8 +903,7 @@ window.abrirDetalhesLista = async function(id, nome) {
         if (error) throw error;
 
         // Buscar status da lista para controle de UI
-        const { data: listaInfo } = await supabaseClient.from('lavagem_listas').select('status').eq('id', id).single();
-        currentListStatus = listaInfo ? listaInfo.status : 'ABERTA';
+        currentListStatus = listaPermitida ? listaPermitida.status : 'ABERTA';
         updateModalState();
 
         // Buscar tipos de veículos para exibir na lista
@@ -1018,7 +1175,8 @@ function calcularValorPeloPrecoAtual(item) {
         const p = precosCache.find(x => 
             (x.tipoVeiculo || '').toUpperCase() === (item.tipo_veiculo || '').toUpperCase() && 
             x.tipoLavagem === tipo &&
-            (x.fornecedor === item.fornecedor || (!x.fornecedor && !item.fornecedor))
+            (x.fornecedor === item.fornecedor || (!x.fornecedor && !item.fornecedor)) &&
+            (!currentListFilial || normalizarFilialLavagem(x.filial) === currentListFilial)
         );
         if (p) total += p.valor;
     });
@@ -1108,7 +1266,9 @@ async function finalizarListaAtual() {
     if (currentListStatus === 'FINALIZADA') {
         if (!confirm('Deseja reabrir esta lista? Ela voltará a ser editável.')) return;
         try {
-            const { error } = await supabaseClient.from('lavagem_listas').update({ status: 'ABERTA' }).eq('id', currentListId);
+            let query = supabaseClient.from('lavagem_listas').update({ status: 'ABERTA' }).eq('id', currentListId);
+            if (getUsuarioFilialLavagem()) query = query.eq('filial', getUsuarioFilialLavagem());
+            const { error } = await query;
             if (error) throw error;
             alert('Lista reaberta!');
             currentListStatus = 'ABERTA';
@@ -1204,7 +1364,9 @@ function setupGlobalTooltip() {
 
         if (updates.length > 0) await Promise.all(updates);
 
-        await supabaseClient.from('lavagem_listas').update({ status: 'FINALIZADA' }).eq('id', currentListId);
+        let finalizarQuery = supabaseClient.from('lavagem_listas').update({ status: 'FINALIZADA' }).eq('id', currentListId);
+        if (getUsuarioFilialLavagem()) finalizarQuery = finalizarQuery.eq('filial', getUsuarioFilialLavagem());
+        await finalizarQuery;
         alert('Lista finalizada!');
         document.getElementById('modalDetalhesLista').classList.add('hidden');
         carregarListas();
@@ -1220,7 +1382,10 @@ function setupGlobalTooltip() {
 window.excluirLista = async function(id) {
     if (!confirm('Excluir lista e todos os itens?')) return;
     try {
-        await supabaseClient.from('lavagem_listas').delete().eq('id', id);
+        await buscarListaPermitidaLavagem(id);
+        let query = supabaseClient.from('lavagem_listas').delete().eq('id', id);
+        if (getUsuarioFilialLavagem()) query = query.eq('filial', getUsuarioFilialLavagem());
+        await query;
         carregarListas();
     } catch (error) {
         alert('Erro ao excluir lista.');
@@ -1231,6 +1396,8 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
     if (!window.jspdf) return alert('Biblioteca PDF não carregada.');
     
     try {
+        const listaPermitida = await buscarListaPermitidaLavagem(id);
+        const filialListaPdf = normalizarFilialLavagem(listaPermitida.filial);
         let itens;
         // Se os itens foram passados pelo modal (já ordenados), usa-os.
         // Senão, busca no banco (chamada da lista principal).
@@ -1294,7 +1461,8 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                     const precoObj = precosCache.find(p => 
                         (p.tipoVeiculo || '').toUpperCase() === (tipoVeiculo || '').toUpperCase() && 
                         p.tipoLavagem === tipo &&
-                        (p.fornecedor === item.fornecedor || (!p.fornecedor && !item.fornecedor))
+                        (p.fornecedor === item.fornecedor || (!p.fornecedor && !item.fornecedor)) &&
+                        (!filialListaPdf || normalizarFilialLavagem(p.filial) === filialListaPdf)
                     );
                     const valorTipo = precoObj ? precoObj.valor : 0;
                     valorCalculadoAtual += valorTipo;
@@ -1896,11 +2064,16 @@ function ordenarItensDetalhes(key) {
 
 async function carregarPrecos() {
     try {
-        const { data, error } = await supabaseClient.from('lavagem_precos').select('*');
+        let query = supabaseClient.from('lavagem_precos').select('*');
+        if (getUsuarioFilialLavagem()) {
+            query = query.eq('filial', getUsuarioFilialLavagem());
+        }
+        const { data, error } = await query;
         if (error) throw error;
         
         precosCache = data.map(p => ({
             id: p.id,
+            filial: normalizarFilialLavagem(p.filial),
             tipoVeiculo: p.tipo_veiculo,
             tipoLavagem: p.tipo_lavagem,
             fornecedor: p.fornecedor,
@@ -1917,16 +2090,17 @@ async function salvarPreco() {
     const tipoVeiculo = document.getElementById('precoTipoVeiculo').value.trim().toUpperCase();
     const tipoLavagem = document.getElementById('precoTipoLavagem').value;
     const fornecedor = document.getElementById('precoFornecedor')?.value?.trim().toUpperCase() || null;
+    const filial = getUsuarioFilialLavagem() || normalizarFilialLavagem(document.getElementById('precoFilial')?.value);
     const valor = parseFloat(document.getElementById('precoValor').value);
 
-    if (!tipoVeiculo || !tipoLavagem || isNaN(valor)) {
+    if (!filial || !tipoVeiculo || !tipoLavagem || isNaN(valor)) {
         return alert('Preencha todos os campos corretamente.');
     }
 
     try {
         if (editingPriceId) {
             // Update existing
-            const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem && p.fornecedor === fornecedor && p.id !== editingPriceId);
+            const exists = precosCache.find(p => p.filial === filial && p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem && p.fornecedor === fornecedor && p.id !== editingPriceId);
             if (exists) {
                 return alert('Já existe um preço cadastrado para este Tipo de Veículo, Lavagem e Fornecedor.');
             }
@@ -1935,6 +2109,7 @@ async function salvarPreco() {
                 tipo_veiculo: tipoVeiculo, 
                 tipo_lavagem: tipoLavagem, 
                 fornecedor: fornecedor,
+                filial: filial,
                 valor: valor 
             }).eq('id', editingPriceId);
             
@@ -1942,7 +2117,7 @@ async function salvarPreco() {
             alert('Preço atualizado com sucesso!');
         } else {
             // Insert new
-            const exists = precosCache.find(p => p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem && p.fornecedor === fornecedor);
+            const exists = precosCache.find(p => p.filial === filial && p.tipoVeiculo === tipoVeiculo && p.tipoLavagem === tipoLavagem && p.fornecedor === fornecedor);
             
             if (exists) {
                 if(!confirm('Já existe um preço para este tipo de veículo, lavagem e fornecedor. Deseja atualizar o valor?')) return;
@@ -1950,7 +2125,7 @@ async function salvarPreco() {
                 if (error) throw error;
                 alert('Preço atualizado com sucesso!');
             } else {
-                const { error } = await supabaseClient.from('lavagem_precos').insert({ tipo_veiculo: tipoVeiculo, tipo_lavagem: tipoLavagem, fornecedor: fornecedor, valor });
+                const { error } = await supabaseClient.from('lavagem_precos').insert({ filial, tipo_veiculo: tipoVeiculo, tipo_lavagem: tipoLavagem, fornecedor: fornecedor, valor });
                 if (error) throw error;
                 alert('Preço adicionado com sucesso!');
             }
@@ -1983,6 +2158,7 @@ function renderizarTabelaPrecos() {
     precosCache.forEach((p, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td>${p.filial || '-'}</td>
             <td>${p.fornecedor || '-'}</td>
             <td>${p.tipoVeiculo}</td>
             <td>${p.tipoLavagem}</td>
@@ -2003,6 +2179,7 @@ window.editarPreco = function(id) {
     document.getElementById('precoTipoVeiculo').value = p.tipoVeiculo;
     document.getElementById('precoTipoLavagem').value = p.tipoLavagem;
     document.getElementById('precoValor').value = p.valor;
+    if(document.getElementById('precoFilial')) document.getElementById('precoFilial').value = p.filial || '';
     if(document.getElementById('precoFornecedor')) document.getElementById('precoFornecedor').value = p.fornecedor || '';
     
     editingPriceId = id;
@@ -2053,9 +2230,10 @@ window.removerPreco = async function(id) {
 async function gerarRelatorio() {
     const dataIni = document.getElementById('relDataIni').value;
     const dataFim = document.getElementById('relDataFim').value;
+    const filialSelecionada = normalizarFilialLavagem(document.getElementById('relFilial')?.value);
     const tbody = document.getElementById('tbodyRelatorio');
     
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Gerando relatório...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Gerando relatório...</td></tr>';
 
     try {
         const dataIniFilter = buildDateRangeFilter(dataIni, false);
@@ -2067,13 +2245,18 @@ async function gerarRelatorio() {
             .order('data_lista', { ascending: false });
         if (dataIniFilter) query = query.gte('data_lista', dataIniFilter);
         if (dataFimFilter) query = query.lte('data_lista', dataFimFilter);
+        if (getUsuarioFilialLavagem()) {
+            query = query.eq('filial', getUsuarioFilialLavagem());
+        } else if (filialSelecionada) {
+            query = query.eq('filial', filialSelecionada);
+        }
 
         const { data: listas, error: errListas } = await query;
 
         if (errListas) throw errListas;
 
         if (!listas || listas.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhuma lista encontrada no período.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhuma lista encontrada no período.</td></tr>';
             document.getElementById('relTotalGastoGeral').textContent = 'R$ 0,00';
             return;
         }
@@ -2130,7 +2313,8 @@ async function gerarRelatorio() {
                                 const precoObj = precosCache.find(p => 
                                     p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
                                     p.tipoLavagem === tipo &&
-                                    (p.fornecedor === item.fornecedor || (!p.fornecedor && !item.fornecedor))
+                                    (p.fornecedor === item.fornecedor || (!p.fornecedor && !item.fornecedor)) &&
+                                    normalizarFilialLavagem(p.filial) === normalizarFilialLavagem(lista.filial)
                                 );
                                 if (precoObj) valorLista += precoObj.valor;
                             });
@@ -2149,6 +2333,7 @@ async function gerarRelatorio() {
                 <td>${new Date(lista.created_at).toLocaleDateString('pt-BR')}</td>
                 <td>${new Date(lista.data_lista).toLocaleDateString('pt-BR')}</td>
                 <td>${lista.nome}</td>
+                <td>${normalizarFilialLavagem(lista.filial) || '-'}</td>
                 <td><span class="badge badge-${lista.status.toLowerCase()}">${lista.status}</span></td>
                 <td>${qtdRealizada}</td>
                 <td>${qtdPendente}</td>
@@ -2165,7 +2350,7 @@ async function gerarRelatorio() {
 
     } catch (err) {
         console.error(err);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Erro ao gerar relatório.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:red;">Erro ao gerar relatório.</td></tr>';
     }
 }
 
@@ -2174,10 +2359,13 @@ async function carregarTiposVeiculoParaPreco() {
     if (!select) return;
 
     try {
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('veiculos')
             .select('tipo');
 
+        if (getUsuarioFilialLavagem()) query = query.eq('filial', getUsuarioFilialLavagem());
+
+        const { data, error } = await query;
         if (error) throw error;
 
         const tipos = [...new Set(data.map(v => v.tipo).filter(t => t))].sort();
@@ -2211,16 +2399,22 @@ async function abrirModalAdicionarVeiculo() {
     try {
         // Reutiliza o cache de veículos se já foi carregado, senão busca
         if (veiculosAptosCache.length === 0) {
-            const { data, error } = await supabaseClient
+            let query = supabaseClient
                 .from('veiculos')
                 .select('*')
                 .in('situacao', ['ativo', 'INTERNADO']);
+            const filialFiltro = currentListFilial || getUsuarioFilialLavagem();
+            if (filialFiltro) query = query.eq('filial', filialFiltro);
+            const { data, error } = await query;
             if (error) throw error;
             veiculosAptosCache = data;
         }
 
         // Carrega todos os veículos, permitindo adicionar mesmo que já esteja na lista (duplicidade)
-        veiculosDisponiveisParaAdicao = [...veiculosAptosCache];
+        veiculosDisponiveisParaAdicao = veiculosAptosCache.filter(v => {
+            const filialVeiculo = normalizarFilialLavagem(v.filial);
+            return (!currentListFilial || filialVeiculo === currentListFilial) && filialPermitidaLavagem(filialVeiculo);
+        });
 
         // Limpa busca
         const searchInput = document.getElementById('searchAdicionarVeiculo');
@@ -2288,7 +2482,7 @@ function renderTabelaAdicionarVeiculo(veiculos) {
     veiculos.forEach(v => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td style="text-align:center;"><input type="checkbox" class="chk-veiculo-adicionar" value="${v.placa}" data-modelo="${v.modelo || ''}" data-marca="${v.marca || ''}"></td>
+            <td style="text-align:center;"><input type="checkbox" class="chk-veiculo-adicionar" value="${v.placa}" data-modelo="${v.modelo || ''}" data-marca="${v.marca || ''}" data-filial="${normalizarFilialLavagem(v.filial)}"></td>
             <td><strong>${v.placa}</strong></td>
             <td>${v.tipo || '-'}</td>
             <td>${v.modelo || '-'}</td>
@@ -2307,6 +2501,9 @@ async function adicionarVeiculosNaLista() {
 
     if (selecionados.length === 0) return alert('Selecione pelo menos um veículo para adicionar.');
     if (!currentListId) return alert('Erro: ID da lista atual não encontrado.');
+
+    const foraDaFilial = selecionados.some(chk => normalizarFilialLavagem(chk.dataset.filial) !== currentListFilial);
+    if (currentListFilial && foraDaFilial) return alert('Selecione apenas veiculos da filial da lista.');
 
     const btn = document.getElementById('btnConfirmarAdicao');
     btn.disabled = true;

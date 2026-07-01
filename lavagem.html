@@ -60,6 +60,12 @@
             <div class="filtros-container">
                 <div class="form-group">
                     <label>Data Início</label>
+                    <select id="filtroFilialLista" class="glass-input">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Filial</label>
                     <input type="date" id="filtroDataIni" class="glass-input">
                 </div>
                 <div class="form-group">
@@ -83,6 +89,7 @@
                         <tr>
                             <th>Data Criação</th>
                             <th>Nome da Lista</th>
+                            <th>Filial</th>
                             <th>Data da Lavagem</th>
                             <th>Status</th>
                             <th>Progresso</th>
@@ -147,6 +154,12 @@
                     <label>Data Fim (Lista)</label>
                     <input type="date" id="relDataFim" class="glass-input">
                 </div>
+                <div class="form-group">
+                    <label>Filial</label>
+                    <select id="relFilial" class="glass-input">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
                 <button id="btnGerarRelatorio" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
             </div>
             <div class="resumo-lista" style="margin-bottom: 15px; display: flex; gap: 20px; font-weight: bold; font-size: 1.1em;">
@@ -159,6 +172,7 @@
                             <th>Data Criação</th>
                             <th>Data Lista</th>
                             <th>Nome Lista</th>
+                            <th>Filial</th>
                             <th>Status</th>
                             <th>Qtd Realizada</th>
                             <th>Qtd Pendente</th>
