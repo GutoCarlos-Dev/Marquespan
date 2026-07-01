@@ -61,6 +61,13 @@ function getNomeUsuarioLavagem() {
     return usuarioLogadoLavagem?.nome || JSON.parse(localStorage.getItem('usuarioLogado') || '{}')?.nome || '';
 }
 
+function escapeParametroOnclickLavagem(value) {
+    return String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r?\n/g, ' ');
+}
+
 function moverCampoAntesLavagem(campoId, referenciaId) {
     const campo = document.getElementById(campoId)?.closest('.form-group');
     const referencia = document.getElementById(referenciaId)?.closest('.form-group');
@@ -547,6 +554,7 @@ async function carregarListas() {
                 ? Math.round((statusCounts.realizados / totalProgress) * 100)
                 : 0;
             const percent = Math.min(100, Math.max(0, calculatedPercent));
+            const nomeOnclick = escapeParametroOnclickLavagem(lista.nome);
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -567,8 +575,9 @@ async function carregarListas() {
                     <small>${percent}% (${statusCounts.realizados}/${totalProgress})</small>
                 </td>
                 <td>
-                    <button class="btn-icon edit" onclick="abrirDetalhesLista('${lista.id}', '${lista.nome}')"><i class="fas fa-folder-open"></i></button>
-                    <button class="btn-icon pdf" onclick="gerarPDFListaPorId('${lista.id}', '${lista.nome}')" title="Gerar PDF" style="color: #dc3545;"><i class="fas fa-file-pdf"></i></button>
+                    <button class="btn-icon edit" onclick="abrirDetalhesLista('${lista.id}', '${nomeOnclick}')" title="Abrir Lista"><i class="fas fa-folder-open"></i></button>
+                    <button class="btn-icon rename" onclick="editarNomeListaLavagem('${lista.id}', '${nomeOnclick}')" title="Editar Nome da Lista" aria-label="Editar Nome da Lista"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon pdf" onclick="gerarPDFListaPorId('${lista.id}', '${nomeOnclick}')" title="Gerar PDF" style="color: #dc3545;"><i class="fas fa-file-pdf"></i></button>
                     ${lista.status !== 'FINALIZADA' || nivelUsuario === 'administrador' ? `
                     <button class="btn-icon delete" onclick="excluirLista('${lista.id}')"><i class="fas fa-trash"></i></button>
                     ` : ''}
@@ -1403,6 +1412,39 @@ window.excluirLista = async function(id) {
         carregarListas();
     } catch (error) {
         alert('Erro ao excluir lista.');
+    }
+}
+
+window.editarNomeListaLavagem = async function(id, nomeAtual = '') {
+    const novoNome = prompt('Novo nome da lista:', nomeAtual);
+    if (novoNome === null) return;
+
+    const nomeTratado = novoNome.trim();
+    if (!nomeTratado) return alert('Informe um nome para a lista.');
+    if (nomeTratado === nomeAtual) return;
+
+    try {
+        await buscarListaPermitidaLavagem(id);
+
+        let query = supabaseClient
+            .from('lavagem_listas')
+            .update({ nome: nomeTratado })
+            .eq('id', id);
+
+        if (getUsuarioFilialLavagem()) query = query.eq('filial', getUsuarioFilialLavagem());
+
+        const { error } = await query;
+        if (error) throw error;
+
+        if (String(currentListId) === String(id)) {
+            const titulo = document.getElementById('tituloDetalhesLista');
+            if (titulo) titulo.textContent = nomeTratado;
+        }
+
+        await carregarListas();
+    } catch (error) {
+        console.error('Erro ao editar nome da lista de lavagem:', error);
+        alert('Erro ao editar nome da lista.');
     }
 }
 
