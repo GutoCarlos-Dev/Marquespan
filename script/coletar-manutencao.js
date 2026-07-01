@@ -40,6 +40,7 @@ const ColetarManutencaoUI = {
         }
 
         this.cacheDOM();
+        this.organizarCamposFilial();
         this.fixStatusOptions();
         this.bindEvents();
         this.initTabs();
@@ -177,6 +178,20 @@ const ColetarManutencaoUI = {
     },
 
     // Corrige opções de status para padronizar valores
+    moverCampoAntes(campoId, referenciaId) {
+        const campo = document.getElementById(campoId)?.closest('.form-group-filter, .form-group, div');
+        const referencia = document.getElementById(referenciaId)?.closest('.form-group-filter, .form-group, div');
+        if (campo && referencia && campo !== referencia && referencia.parentNode) {
+            referencia.parentNode.insertBefore(campo, referencia);
+        }
+    },
+
+    organizarCamposFilial() {
+        this.moverCampoAntes('searchFilialLancamento', 'filtroDataInicialLancamento');
+        this.moverCampoAntes('filtroFilialRelatorio', 'filtroSemana');
+        this.moverCampoAntes('coletaFilial', 'coletaSemana');
+    },
+
     fixStatusOptions() {
         const selects = document.querySelectorAll('.checklist-status');
         selects.forEach(select => {
