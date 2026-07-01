@@ -2260,43 +2260,6 @@ async function exportarPesoRotaPdf() {
 
         doc.autoTable({
             startY: 38,
-            head: [['Filtro', 'Valor']],
-            body: [
-                ['Filial', filial],
-                ['Semana Ano', semana],
-                ['Supervisor', getTextoFiltroPesoRota('filtroSupervisor')],
-                ['Rota', getTextoFiltroPesoRota('filtroRota')],
-                ['Dia Saida', getTextoFiltroPesoRota('filtroSemana')],
-                ['Dia Retorno', getTextoFiltroPesoRota('filtroDiaRetorno')],
-                ['Busca Grid', document.getElementById('searchInput')?.value || '']
-            ],
-            theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 2 },
-            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
-            margin: { left: 10, right: 10 }
-        });
-
-        doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 5,
-            head: [['Linhas', 'Rotas', 'Capacidade', 'Peso', 'Acima de 90%', 'Excesso', 'Caixas', 'Clientes']],
-            body: [[
-                linhas.length,
-                resumo.rotas,
-                formatarDecimalBR(resumo.capacidadeTotal),
-                formatarDecimalBR(resumo.pesoTotal),
-                resumo.acima90,
-                resumo.excesso,
-                resumo.caixasTotal,
-                resumo.clientesTotal
-            ]],
-            theme: 'grid',
-            styles: { fontSize: 8, halign: 'center', cellPadding: 2 },
-            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
-            margin: { left: 10, right: 10 }
-        });
-
-        doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 6,
             margin: { top: 38, left: 6, right: 6, bottom: 14 },
             head: [[
                 'Filial', 'Rota', 'Saida', 'Supervisor', 'Motorista', 'Auxiliar',
@@ -2329,9 +2292,42 @@ async function exportarPesoRotaPdf() {
                 7: { cellWidth: 22 },
                 13: { cellWidth: 24 }
             },
+            didParseCell: (data) => {
+                if (data.section !== 'body' || data.column.index !== 10) return;
+                const status = getStatus(linhas[data.row.index]);
+                if (status.classe === 'status-ok') {
+                    data.cell.styles.fillColor = [209, 250, 223];
+                    data.cell.styles.textColor = [5, 96, 58];
+                } else if (status.classe === 'status-alerta') {
+                    data.cell.styles.fillColor = [254, 240, 199];
+                    data.cell.styles.textColor = [147, 55, 13];
+                } else if (status.classe === 'status-excesso') {
+                    data.cell.styles.fillColor = [254, 228, 226];
+                    data.cell.styles.textColor = [180, 35, 24];
+                }
+            },
             didDrawPage: () => {
                 desenharCabecalhoPesoRotaPdf(doc, cabecalhoOpts);
             }
+        });
+
+        doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 8,
+            head: [['Linhas', 'Rotas', 'Capacidade Total', 'Peso Total', 'Acima de 90%', 'Excesso', 'Caixas', 'Clientes']],
+            body: [[
+                linhas.length,
+                resumo.rotas,
+                formatarDecimalBR(resumo.capacidadeTotal),
+                formatarDecimalBR(resumo.pesoTotal),
+                resumo.acima90,
+                resumo.excesso,
+                resumo.caixasTotal,
+                resumo.clientesTotal
+            ]],
+            theme: 'grid',
+            styles: { fontSize: 8, halign: 'center', cellPadding: 2 },
+            headStyles: { fillColor: [0, 105, 55], textColor: 255 },
+            margin: { left: 10, right: 10 }
         });
 
         doc.save(getNomeArquivoExportacaoPesoRota('pdf'));
