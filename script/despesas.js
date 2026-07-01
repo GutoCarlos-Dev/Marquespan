@@ -55,6 +55,9 @@ const DespesasUI = {
         this.tableBody = document.getElementById('despesaTableBody');
         this.searchInput = document.getElementById('searchDespesaInput');
 
+        // Filial
+        this.filialSelect = document.getElementById('despesaFilial');
+
         // Dropdowns Multiselect
         this.despesaRotaDisplay = document.getElementById('despesaRotaDisplay');
         this.despesaRotaOptions = document.getElementById('despesaRotaOptions');
@@ -98,6 +101,8 @@ const DespesasUI = {
         this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
         this.searchInput.addEventListener('input', () => this.renderGrid());
         this.btnToggleMenuLateral?.addEventListener('click', () => this.toggleMenuLateral());
+
+        this.filialSelect?.addEventListener('change', () => this.loadRotasPorFilial(this.filialSelect.value));
 
         // ** Adiciona os listeners para o cálculo automático do valor total **
         this.qtdDiariasInput.addEventListener('input', () => {
@@ -229,6 +234,7 @@ const DespesasUI = {
 
     async loadInitialData() {
         this.renderGrid();
+        await this.loadFiliais();
         await this.loadDatalists();
     },
 
@@ -793,46 +799,71 @@ const DespesasUI = {
         });
     },
 
+    async loadFiliais() {
+        try {
+            const { data, error } = await supabaseClient.from('filiais').select('sigla, nome').order('nome');
+            if (error) throw error;
+            if (this.filialSelect && data) {
+                data.forEach(f => {
+                    const value = f.sigla || f.nome;
+                    this.filialSelect.add(new Option(f.sigla ? `${f.nome} (${f.sigla})` : f.nome, value));
+                });
+            }
+        } catch (err) {
+            console.error('Erro ao carregar filiais:', err);
+        }
+    },
+
+    async loadRotasPorFilial(filial) {
+        try {
+            let query = supabaseClient.from('rotas').select('numero').order('numero', { ascending: true });
+            if (filial) query = query.eq('filial', filial);
+            const { data: rotas, error } = await query;
+            if (error) throw error;
+            this.preencherDropdownRotas(rotas || []);
+        } catch (err) {
+            console.error('Erro ao carregar rotas:', err);
+        }
+    },
+
+    preencherDropdownRotas(rotas) {
+        if (!this.despesaRotaOptions) return;
+
+        this.despesaRotaOptions.innerHTML = '';
+
+        const stickyContainer = document.createElement('div');
+        stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
+
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Buscar rota...';
+        searchInput.style.cssText = 'width: 100%; padding: 10px; border: none; border-bottom: 1px solid #eee; outline: none; box-sizing: border-box;';
+        searchInput.onclick = (e) => e.stopPropagation();
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            this.despesaRotaOptions.querySelectorAll('label.custom-option').forEach(opt => {
+                opt.style.display = opt.textContent.toLowerCase().includes(term) ? 'block' : 'none';
+            });
+        });
+        stickyContainer.appendChild(searchInput);
+
+        const btnLimpar = this.criarBotaoLimpar(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox', searchInput);
+        stickyContainer.appendChild(btnLimpar);
+        this.despesaRotaOptions.appendChild(stickyContainer);
+
+        rotas.forEach(r => {
+            const label = document.createElement('label');
+            label.className = 'custom-option';
+            label.innerHTML = `<input type="checkbox" class="rota-checkbox" value="${r.numero}" style="margin-right: 8px;"> ${r.numero}`;
+            this.despesaRotaOptions.appendChild(label);
+        });
+
+        this.updateMultiselectText(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox');
+    },
+
     async loadDatalists() {
         try {
-            const { data: rotas, error: rotasError } = await supabaseClient.from('rotas').select('numero').order('numero', { ascending: true });
-            if (rotasError) throw rotasError;
-            
-            if (this.despesaRotaOptions) {
-                this.despesaRotaOptions.innerHTML = '';
-                
-                const stickyContainer = document.createElement('div');
-                stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
-
-                const searchInput = document.createElement('input');
-                searchInput.type = 'text';
-                searchInput.placeholder = 'Buscar rota...';
-                searchInput.style.cssText = 'width: 100%; padding: 10px; border: none; border-bottom: 1px solid #eee; outline: none; box-sizing: border-box;';
-                searchInput.onclick = (e) => e.stopPropagation();
-                searchInput.addEventListener('input', (e) => {
-                     const term = e.target.value.toLowerCase();
-                     const options = this.despesaRotaOptions.querySelectorAll('label.custom-option');
-                     options.forEach(opt => {
-                         const text = opt.textContent.toLowerCase();
-                         opt.style.display = text.includes(term) ? 'block' : 'none';
-                     });
-                });
-                stickyContainer.appendChild(searchInput);
-
-                const btnLimpar = this.criarBotaoLimpar(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox', searchInput);
-                stickyContainer.appendChild(btnLimpar);
-                
-                this.despesaRotaOptions.appendChild(stickyContainer);
-
-                if (rotas) {
-                    rotas.forEach(r => {
-                        const label = document.createElement('label');
-                        label.className = 'custom-option';
-                        label.innerHTML = `<input type="checkbox" class="rota-checkbox" value="${r.numero}" style="margin-right: 8px;"> ${r.numero}`;
-                        this.despesaRotaOptions.appendChild(label);
-                    });
-                }
-            }
+            await this.loadRotasPorFilial(this.filialSelect?.value || '');
 
             const { data: hoteis, error: hoteisError } = await supabaseClient.from('hoteis').select('id, nome').order('nome', { ascending: true });
             if (hoteisError) throw hoteisError;
