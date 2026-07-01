@@ -13,6 +13,7 @@ let sortStateItensModal = { key: 'placa', asc: true };
 let lastVencimentoCheckbox = null;
 let usuarioLogadoEngraxe = null;
 let filiaisDisponiveisEngraxe = [];
+let labelsFiliaisEngraxe = new Map();
 
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
 const PAGE_SIZE = 1000;
@@ -50,6 +51,11 @@ function filialPermitidaEngraxe(filial) {
     return !filialUsuario || normalizarFilialEngraxe(filial) === filialUsuario;
 }
 
+function getLabelFilialEngraxe(filial) {
+    const sigla = normalizarFilialEngraxe(filial);
+    return labelsFiliaisEngraxe.get(sigla) || sigla;
+}
+
 async function buscarListaPermitidaEngraxe(id) {
     let query = supabaseClient
         .from('engraxe_listas')
@@ -73,10 +79,10 @@ function preencherSelectFiliaisEngraxe(select, filiais, textoTodas = 'Todas Fili
         .sort();
 
     select.innerHTML = `<option value="">${textoTodas}</option>`;
-    valores.forEach(filial => select.add(new Option(filial, filial)));
+    valores.forEach(filial => select.add(new Option(getLabelFilialEngraxe(filial), filial)));
 
     if (filialUsuario) {
-        if (!valores.includes(filialUsuario)) select.add(new Option(filialUsuario, filialUsuario));
+        if (!valores.includes(filialUsuario)) select.add(new Option(getLabelFilialEngraxe(filialUsuario), filialUsuario));
         select.value = filialUsuario;
         select.disabled = true;
     } else {
@@ -91,10 +97,17 @@ async function carregarFiliaisEngraxe() {
             .select('nome, sigla')
             .order('nome');
         if (error) throw error;
-        filiaisDisponiveisEngraxe = (data || []).map(f => normalizarFilialEngraxe(f.sigla || f.nome)).filter(Boolean);
+        labelsFiliaisEngraxe = new Map();
+        filiaisDisponiveisEngraxe = (data || []).map(f => {
+            const sigla = normalizarFilialEngraxe(f.sigla || f.nome);
+            const nome = (f.nome || '').toString().trim();
+            if (sigla) labelsFiliaisEngraxe.set(sigla, f.sigla && nome ? `${nome} (${sigla})` : (nome || sigla));
+            return sigla;
+        }).filter(Boolean);
     } catch (error) {
         console.error('Erro ao carregar filiais do engraxe:', error);
         filiaisDisponiveisEngraxe = [];
+        labelsFiliaisEngraxe = new Map();
     }
 
     preencherSelectFiliaisEngraxe(document.getElementById('filtroFilialLista'), filiaisDisponiveisEngraxe);

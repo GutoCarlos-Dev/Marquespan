@@ -14,6 +14,7 @@ let editingPriceId = null;
 let sortStatePrecos = { key: 'tipoVeiculo', asc: true };
 let usuarioLogadoLavagem = null;
 let filiaisLavagemCache = [];
+let labelsFiliaisLavagem = new Map();
 let currentListFilial = '';
 
 function getDisplayStatus(status, isPdf = false) {
@@ -68,6 +69,11 @@ function moverCampoAntesLavagem(campoId, referenciaId) {
     }
 }
 
+function getLabelFilialLavagem(filial) {
+    const sigla = normalizarFilialLavagem(filial);
+    return labelsFiliaisLavagem.get(sigla) || sigla;
+}
+
 function preencherSelectFiliaisLavagem(select, options = {}) {
     if (!select) return;
 
@@ -77,7 +83,7 @@ function preencherSelectFiliaisLavagem(select, options = {}) {
     const valorAtual = normalizarFilialLavagem(select.value);
 
     select.innerHTML = options.semTodas ? '' : `<option value="">${labelTodas}</option>`;
-    filiais.forEach(filial => select.add(new Option(filial, filial)));
+    filiais.forEach(filial => select.add(new Option(getLabelFilialLavagem(filial), filial)));
 
     if (filialUsuario) {
         select.value = filialUsuario;
@@ -97,18 +103,26 @@ async function carregarFiliaisLavagem() {
 
         if (error) throw error;
 
+        labelsFiliaisLavagem = new Map();
         filiaisLavagemCache = [...new Set((data || [])
-            .map(f => normalizarFilialLavagem(f.sigla || f.nome))
+            .map(f => {
+                const sigla = normalizarFilialLavagem(f.sigla || f.nome);
+                const nome = (f.nome || '').toString().trim();
+                if (sigla) labelsFiliaisLavagem.set(sigla, f.sigla && nome ? `${nome} (${sigla})` : (nome || sigla));
+                return sigla;
+            })
             .filter(Boolean))]
             .sort();
     } catch (error) {
         console.warn('Erro ao carregar filiais cadastradas para lavagem:', error);
         filiaisLavagemCache = [];
+        labelsFiliaisLavagem = new Map();
     }
 
     const filialUsuario = getUsuarioFilialLavagem();
     if (filialUsuario && !filiaisLavagemCache.includes(filialUsuario)) {
         filiaisLavagemCache.push(filialUsuario);
+        labelsFiliaisLavagem.set(filialUsuario, getLabelFilialLavagem(filialUsuario));
         filiaisLavagemCache.sort();
     }
 
@@ -639,7 +653,7 @@ async function abrirModalNovaLista() {
         const selectFilial = document.getElementById('filtroFilialNovaLista');
         const filiais = [...new Set(veiculosAptosCache.map(v => normalizarFilialLavagem(v.filial)).filter(Boolean))].sort();
         selectFilial.innerHTML = getUsuarioFilialLavagem() ? '' : '<option value="">Todas Filiais</option>';
-        filiais.forEach(f => selectFilial.add(new Option(f, f)));
+        filiais.forEach(f => selectFilial.add(new Option(getLabelFilialLavagem(f), f)));
         if (getUsuarioFilialLavagem()) {
             selectFilial.value = getUsuarioFilialLavagem();
             selectFilial.disabled = true;
