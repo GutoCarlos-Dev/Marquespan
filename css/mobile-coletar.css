@@ -233,6 +233,21 @@ body {
     padding: 15px;
 }
 
+#modalLancamento .panel-body {
+    padding-bottom: 96px;
+}
+
+#modalLancamento .mobile-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    margin: 0 -15px -15px;
+    padding: 12px 15px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(244, 246, 249, 0.96);
+    border-top: 1px solid #dfe5e8;
+    box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+}
+
 /* Estilização do Formulário */
 .form-fieldset {
     border: 1px solid #e0e0e0;
