@@ -238,10 +238,12 @@ body {
 }
 
 #modalLancamento .mobile-actions {
-    position: sticky;
+    position: fixed;
     bottom: 0;
+    left: 0;
+    right: 0;
     z-index: 20;
-    margin: 0 -15px -15px;
+    margin: 0;
     padding: 12px 15px calc(12px + env(safe-area-inset-bottom));
     background: rgba(244, 246, 249, 0.96);
     border-top: 1px solid #dfe5e8;
