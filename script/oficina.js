@@ -6,6 +6,7 @@ let usuarioLogadoOficina = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     usuarioLogadoOficina = getUsuarioLogadoOficina();
+    aplicarRestricoesNivelOficina();
     setupTabs();
     await carregarFiliaisOficina();
     await carregarOficinas();
@@ -27,6 +28,20 @@ function normalizarFilialOficina(valor) {
 
 function getFilialUsuarioOficina() {
     return normalizarFilialOficina(usuarioLogadoOficina?.filial);
+}
+
+function isAdministradorOficina() {
+    return String(usuarioLogadoOficina?.nivel || '').trim().toLowerCase() === 'administrador';
+}
+
+function aplicarRestricoesNivelOficina() {
+    if (isAdministradorOficina()) return;
+
+    const tabItens = document.querySelector('.painel-btn[data-tab="sectionCadastrarItem"]');
+    const sectionItens = document.getElementById('sectionCadastrarItem');
+
+    if (tabItens) tabItens.classList.add('hidden');
+    if (sectionItens) sectionItens.classList.add('hidden');
 }
 
 function filialCombinaUsuario(filial, filialUsuario) {
@@ -92,8 +107,10 @@ function setupEventListeners() {
     document.getElementById('searchOficinaInput').addEventListener('input', filtrarOficinas);
 
     // Item Forms
-    document.getElementById('formCadastrarItem').addEventListener('submit', salvarItem);
-    document.getElementById('btnClearItemForm').addEventListener('click', limparFormularioItem);
+    if (isAdministradorOficina()) {
+        document.getElementById('formCadastrarItem').addEventListener('submit', salvarItem);
+        document.getElementById('btnClearItemForm').addEventListener('click', limparFormularioItem);
+    }
 }
 
 // --- OFICINAS ---
@@ -351,6 +368,11 @@ async function carregarItens() {
 
 async function salvarItem(e) {
     e.preventDefault();
+    if (!isAdministradorOficina()) {
+        alert('Disponível apenas para administrador.');
+        return;
+    }
+
     const id = document.getElementById('itemEditingId').value;
     const descricao = document.getElementById('itemDescricao').value.trim();
 
@@ -377,6 +399,11 @@ async function salvarItem(e) {
 }
 
 function editarItem(item) {
+    if (!isAdministradorOficina()) {
+        alert('Disponível apenas para administrador.');
+        return;
+    }
+
     document.getElementById('itemEditingId').value = item.id;
     document.getElementById('itemDescricao').value = item.descricao;
     document.getElementById('btnClearItemForm').classList.remove('hidden');
@@ -384,6 +411,11 @@ function editarItem(item) {
 }
 
 async function excluirItem(id) {
+    if (!isAdministradorOficina()) {
+        alert('Disponível apenas para administrador.');
+        return;
+    }
+
     if (!confirm('Tem certeza? Isso pode afetar oficinas vinculadas.')) return;
     const { error } = await supabaseClient.from('itens_verificacao').delete().eq('id', id);
     if (error) return alert('Erro ao excluir: ' + error.message);
