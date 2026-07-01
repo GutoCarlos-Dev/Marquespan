@@ -2153,21 +2153,71 @@ function getResumoExportacaoPesoRota(linhas) {
     return { rotas: rotas.size, pesoTotal, capacidadeTotal, caixasTotal, clientesTotal, acima90, excesso };
 }
 
-function adicionarRodapePesoRotaPdf(doc) {
-    const totalPaginas = doc.internal.getNumberOfPages();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    for (let page = 1; page <= totalPaginas; page += 1) {
-        doc.setPage(page);
-        doc.setFontSize(7);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Pagina ${page} de ${totalPaginas}`, pageWidth - 10, pageHeight - 6, { align: 'right' });
-        doc.text('Marquespan - Peso de Rota', 10, pageHeight - 6);
+async function getLogoBase64PesoRotaPdf() {
+    const caminhos = ['logo.png', 'img/logonavegador.png'];
+    for (const caminho of caminhos) {
+        try {
+            const response = await fetch(caminho);
+            if (!response.ok) continue;
+            const blob = await response.blob();
+            const image = await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = URL.createObjectURL(blob);
+            });
+            const canvas = document.createElement('canvas');
+            canvas.width = image.naturalWidth || image.width;
+            canvas.height = image.naturalHeight || image.height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(image, 0, 0);
+            URL.revokeObjectURL(image.src);
+            return canvas.toDataURL('image/png');
+        } catch {
+            // tenta o proximo caminho
+        }
     }
+    return null;
 }
 
-function exportarPesoRotaPdf() {
+function getFormatoImagemPesoRotaPdf(base64) {
+    const value = String(base64 || '');
+    if (value.startsWith('data:image/png')) return 'PNG';
+    if (value.startsWith('data:image/webp')) return 'WEBP';
+    return 'JPEG';
+}
+
+function desenharCabecalhoPesoRotaPdf(doc, { logoBase64, titulo, subtitulo, nomeUsuario, nivel, filialUsuario }) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
+
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, 34, 'F');
+    doc.setDrawColor(220, 232, 226);
+    doc.line(14, 32, pageWidth - 14, 32);
+
+    if (logoBase64) {
+        doc.addImage(logoBase64, getFormatoImagemPesoRotaPdf(logoBase64), 14, 8, 38, 12);
+    }
+
+    doc.setTextColor(31, 51, 40);
+    doc.setFontSize(15);
+    doc.text(titulo, 60, 13);
+    doc.setFontSize(9);
+    doc.text(subtitulo, 60, 20);
+    doc.text(`Usuario: ${nomeUsuario} | Nivel: ${nivel} | Filial: ${filialUsuario}`, 60, 26);
+
+    doc.setFontSize(8);
+    doc.setTextColor(100, 115, 107);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 8);
+    doc.text(`Pagina ${pageNumber}`, pageWidth - 14, pageHeight - 8, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+}
+
+async function exportarPesoRotaPdf() {
     if (!window.jspdf?.jsPDF) {
         alert('Biblioteca PDF nao carregada. Recarregue a pagina e tente novamente.');
         return;
@@ -2194,24 +2244,26 @@ function exportarPesoRotaPdf() {
     }
 
     try {
-        const pageWidth = doc.internal.pageSize.getWidth();
+        const logoBase64 = await getLogoBase64PesoRotaPdf();
+        const nomeUsuario = getUsuarioLogadoNome();
+        const u = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
+        const nivel = u?.nivel || '-';
+        const filialUsuario = u?.filial || '-';
+        const semana = getSemanaAnoSelecionada();
+        const filial = getTextoFiltroPesoRota('filtroFilial') || 'Todas';
+        const titulo = `Peso de Rota${semana ? ' - ' + semana : ''}`;
+        const subtitulo = `Filial: ${filial} | Semana: ${semana || 'Todas'} | Registros: ${linhas.length}`;
+        const cabecalhoOpts = { logoBase64, titulo, subtitulo, nomeUsuario, nivel, filialUsuario };
         const resumo = getResumoExportacaoPesoRota(linhas);
 
-        doc.setTextColor(0, 105, 55);
-        doc.setFontSize(15);
-        doc.text('Peso de Rota', pageWidth / 2, 12, { align: 'center' });
-        doc.setFontSize(8);
-        doc.setTextColor(90, 100, 112);
-        doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 18, { align: 'center' });
-        doc.setDrawColor(220, 226, 222);
-        doc.line(10, 23, pageWidth - 10, 23);
+        desenharCabecalhoPesoRotaPdf(doc, cabecalhoOpts);
 
         doc.autoTable({
-            startY: 27,
+            startY: 38,
             head: [['Filtro', 'Valor']],
             body: [
-                ['Filial', getTextoFiltroPesoRota('filtroFilial')],
-                ['Semana Ano', getSemanaAnoSelecionada()],
+                ['Filial', filial],
+                ['Semana Ano', semana],
                 ['Supervisor', getTextoFiltroPesoRota('filtroSupervisor')],
                 ['Rota', getTextoFiltroPesoRota('filtroRota')],
                 ['Dia Saida', getTextoFiltroPesoRota('filtroSemana')],
@@ -2245,22 +2297,10 @@ function exportarPesoRotaPdf() {
 
         doc.autoTable({
             startY: doc.lastAutoTable.finalY + 6,
+            margin: { top: 38, left: 6, right: 6, bottom: 14 },
             head: [[
-                'Filial',
-                'Rota',
-                'Saida',
-                'Supervisor',
-                'Motorista',
-                'Auxiliar',
-                'Placa',
-                'Modelo',
-                'Capacidade',
-                'Peso',
-                'Uso',
-                'Caixas',
-                'Clientes',
-                'Retorno',
-                'Chegada'
+                'Filial', 'Rota', 'Saida', 'Supervisor', 'Motorista', 'Auxiliar',
+                'Placa', 'Modelo', 'Capacidade', 'Peso', 'Uso', 'Caixas', 'Clientes', 'Retorno', 'Chegada'
             ]],
             body: linhas.map(row => [
                 getFilialRegistro(row),
@@ -2289,10 +2329,11 @@ function exportarPesoRotaPdf() {
                 7: { cellWidth: 22 },
                 13: { cellWidth: 24 }
             },
-            margin: { left: 6, right: 6 }
+            didDrawPage: () => {
+                desenharCabecalhoPesoRotaPdf(doc, cabecalhoOpts);
+            }
         });
 
-        adicionarRodapePesoRotaPdf(doc);
         doc.save(getNomeArquivoExportacaoPesoRota('pdf'));
     } catch (error) {
         console.error('Erro ao gerar PDF de peso de rota:', error);
