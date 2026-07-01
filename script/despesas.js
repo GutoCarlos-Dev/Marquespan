@@ -5,6 +5,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 const DESPESAS_PAGE_ID = 'despesas.html';
 const DESPESA_CAMPOS_FIXOS_STORAGE = 'despesas_campos_fixos';
 const MAPA_CAMPOS_FIXOS_DESPESA = {
+    filial: { label: 'Filial', grupo: 'Hospedagem', icon: 'fa-building' },
     rota: { label: 'Rota', grupo: 'Hospedagem', icon: 'fa-route' },
     hotel: { label: 'Hotel', grupo: 'Hospedagem', icon: 'fa-hotel' },
     tipoQuarto: { label: 'Tipo de Quarto', grupo: 'Hospedagem', icon: 'fa-bed' },
@@ -403,6 +404,7 @@ const DespesasUI = {
         const valores = {};
         const deveFixar = (campo) => camposFixos.includes(campo);
 
+        if (deveFixar('filial')) valores.filial = this.filialSelect?.value || '';
         if (deveFixar('rota')) valores.rota = this.getSelectedValues(this.despesaRotaOptions, 'rota-checkbox');
         if (deveFixar('hotel')) valores.hotel = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
         if (deveFixar('tipoQuarto')) valores.tipoQuarto = this.tipoQuartoSelect.value;
@@ -421,6 +423,11 @@ const DespesasUI = {
     },
 
     restaurarValoresFixos(valores) {
+        if (Object.prototype.hasOwnProperty.call(valores, 'filial') && this.filialSelect) {
+            this.filialSelect.value = valores.filial;
+            this.loadRotasPorFilial(valores.filial);
+        }
+
         if (Object.prototype.hasOwnProperty.call(valores, 'rota')) {
             this.setSelectedValues(this.despesaRotaOptions, 'rota-checkbox', valores.rota);
             this.updateMultiselectText(this.despesaRotaOptions, this.despesaRotaText, 'rota-checkbox');
