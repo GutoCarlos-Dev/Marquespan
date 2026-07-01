@@ -29,16 +29,33 @@ const RelatorioEstatistica = {
         }
     },
 
+    normalizarNivel(nivel) {
+        return String(nivel || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    },
+
+    usuarioTemAcessoTotal() {
+        const nivel = this.normalizarNivel(this.getUsuarioAtual()?.nivel);
+        return nivel === 'administrador' || nivel === 'gerencia';
+    },
+
+    usuarioSomenteVisualiza() {
+        return !this.usuarioTemAcessoTotal();
+    },
+
+    getFilialUsuario() {
+        return String(this.getUsuarioAtual()?.filial || '').trim().toUpperCase();
+    },
+
     async verificarPermissaoPagina() {
         const usuario = this.getUsuarioAtual();
-        const nivel = String(usuario?.nivel || '').trim().toLowerCase();
+        const nivel = this.normalizarNivel(usuario?.nivel);
 
         if (!nivel) {
             window.location.href = 'index.html';
             return false;
         }
 
-        if (nivel === 'administrador') {
+        if (nivel === 'administrador' || nivel === 'gerencia') {
             return true;
         }
 
@@ -183,11 +200,30 @@ const RelatorioEstatistica = {
     },
 
     async loadFilters() {
+        const filialUsuario = this.getFilialUsuario();
+        const restringirFilial = this.usuarioSomenteVisualiza() && filialUsuario;
+
         const { data: filiais } = await supabaseClient.from('filiais').select('sigla, nome').order('nome');
         const selFilial = document.getElementById('filtroFilial');
-        filiais?.forEach(f => selFilial.add(new Option(f.sigla || f.nome, f.sigla || f.nome)));
 
-        const { data: rotas } = await supabaseClient.from('rotas').select('numero').order('numero');
+        if (restringirFilial) {
+            selFilial.innerHTML = '';
+            const filialData = (filiais || []).find(f =>
+                String(f.sigla || f.nome || '').trim().toUpperCase() === filialUsuario
+            );
+            const label = filialData
+                ? (filialData.sigla ? `${filialData.nome} (${filialData.sigla})` : filialData.nome)
+                : filialUsuario;
+            selFilial.add(new Option(label, filialUsuario));
+            selFilial.value = filialUsuario;
+            selFilial.disabled = true;
+        } else {
+            filiais?.forEach(f => selFilial.add(new Option(f.sigla || f.nome, f.sigla || f.nome)));
+        }
+
+        let queryRotas = supabaseClient.from('rotas').select('numero').order('numero');
+        if (restringirFilial) queryRotas = queryRotas.eq('filial', filialUsuario);
+        const { data: rotas } = await queryRotas;
         const dlRotas = document.getElementById('listaRotasEstatistica');
         if (dlRotas && rotas) {
             dlRotas.replaceChildren();
@@ -196,13 +232,13 @@ const RelatorioEstatistica = {
             });
         }
 
-        const { data: veiculos } = await supabaseClient.from('veiculos').select('placa').eq('situacao', 'ativo').order('placa');
+        let queryVeiculos = supabaseClient.from('veiculos').select('placa').eq('situacao', 'ativo').order('placa');
+        if (restringirFilial) queryVeiculos = queryVeiculos.eq('filial', filialUsuario);
+        const { data: veiculos } = await queryVeiculos;
         const dlVeic = document.getElementById('listaVeiculosEstatistica');
         if (dlVeic && veiculos) {
             dlVeic.replaceChildren();
-            veiculos
-                .map(v => v.placa)
-                .filter(Boolean)
+            veiculos.map(v => v.placa).filter(Boolean)
                 .forEach(placa => dlVeic.appendChild(new Option('', placa)));
         }
     },
@@ -278,7 +314,9 @@ const RelatorioEstatistica = {
     },
 
     async buscarRegistrosAnaliticos(dtIni, dtFim) {
-        const filial = document.getElementById('filtroFilial').value;
+        const filialUsuario = this.getFilialUsuario();
+        const filialSelect = document.getElementById('filtroFilial').value;
+        const filial = (this.usuarioSomenteVisualiza() && filialUsuario) ? filialUsuario : filialSelect;
         const placa = document.getElementById('filtroPlaca').value.trim().toUpperCase();
         const rota = document.getElementById('filtroRota').value.trim();
 
