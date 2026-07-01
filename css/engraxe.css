@@ -193,6 +193,36 @@
     background-image: none;
 }
 
+#tabelaEngraxe {
+    font-size: 0.86rem;
+}
+
+#tabelaEngraxe th {
+    padding: 9px 12px;
+}
+
+#tabelaEngraxe td {
+    padding: 7px 12px;
+}
+
+#tabelaEngraxe .badge {
+    padding: 3px 8px;
+    font-size: 0.72rem;
+}
+
+#tabelaEngraxe small {
+    font-size: 0.72rem;
+}
+
+#tabelaEngraxe .progress-bar-container {
+    height: 8px;
+}
+
+#tabelaEngraxe .btn-icon {
+    font-size: 0.95rem;
+    margin: 0 3px;
+}
+
 /* Modal */
 .modal-backdrop {
     position: fixed;
