@@ -850,6 +850,7 @@ async function carregarDados({ incluirRotasBase = false } = {}) {
 }
 
 function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro = true) {
+    const pesosPorChaveOperacional = criarMapaPesosPorChaveOperacional(pesos);
     const pesosPorRota = criarMapaPesosPorRota(pesos);
     const pesosPorRotaFilial = criarMapaPesosPorRotaFilial(pesos);
     const rotasPorNumero = new Map((rotas || []).map(rota => [
@@ -867,7 +868,14 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
 
         const semana = normalizarSemana(rota.semana);
         const diaRetornoPrevisto = calcularDataRetornoPrevista(semanaAno, semana, rota.dias);
-        const salvo = escolherPesoSalvo(pesosPorRota.get(chaveRota), diaRetornoPrevisto)
+        const chaveOperacional = getChaveOperacionalPesoRota({
+            semana_ano: semanaAno,
+            rota: numeroRota,
+            filial: rota.filial || getFilialSelecionada(),
+            semana
+        });
+        const salvo = pesosPorChaveOperacional.get(chaveOperacional)
+            || escolherPesoSalvo(pesosPorRota.get(chaveRota), diaRetornoPrevisto)
             || escolherPesoSalvo(pesosPorRotaFilial.get(getChaveRotaFilial(numeroRota, rota.filial)), diaRetornoPrevisto);
         const semanaLinha = salvo ? normalizarSemana(salvo.semana) || semana : semana;
         const manterRetornoSalvo = Boolean(salvo?.dia_retorno);
@@ -889,14 +897,14 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
             linha._dirty = true;
         }
         linhas.push(linha);
-        if (salvo) pesosIncluidos.add(getChaveLinha(salvo));
+        if (salvo) pesosIncluidos.add(getChaveOperacionalPesoRota(salvo));
         rotasIncluidas.add(chaveRota);
     });
 
     if (incluirPesosSemCadastro) {
         (pesos || []).forEach(item => {
             const chaveRota = getChavePesoRota(item.rota, item.filial, item.semana);
-            const chaveLinha = getChaveLinha(item);
+            const chaveLinha = getChaveOperacionalPesoRota(item);
             if (chaveRota && !rotasIncluidas.has(chaveRota) && !pesosIncluidos.has(chaveLinha)) {
                 const rotaBase = rotasPorNumero.get(chaveRota);
                 linhas.push(criarLinha({
@@ -923,6 +931,22 @@ function criarMapaPesosPorRota(pesos) {
         const registros = mapa.get(chaveRota) || [];
         registros.push(item);
         mapa.set(chaveRota, registros);
+    });
+
+    return mapa;
+}
+
+function criarMapaPesosPorChaveOperacional(pesos) {
+    const mapa = new Map();
+
+    (pesos || []).forEach(item => {
+        const chave = getChaveOperacionalPesoRota(item);
+        if (!chave) return;
+
+        const atual = mapa.get(chave);
+        if (!atual || deveSubstituirPesoSalvo(atual, item)) {
+            mapa.set(chave, item);
+        }
     });
 
     return mapa;
@@ -983,6 +1007,10 @@ function getChavePesoRota(rota, filial, semana) {
 }
 
 function deveSubstituirPesoSalvo(atual, candidato) {
+    const scoreAtual = contarCamposPesoPreenchidos(atual);
+    const scoreCandidato = contarCamposPesoPreenchidos(candidato);
+    if (scoreCandidato !== scoreAtual) return scoreCandidato > scoreAtual;
+
     const dataAtual = Date.parse(atual?.updated_at || atual?.created_at || '');
     const dataCandidato = Date.parse(candidato?.updated_at || candidato?.created_at || '');
 
@@ -990,13 +1018,27 @@ function deveSubstituirPesoSalvo(atual, candidato) {
         return (Number.isFinite(dataCandidato) ? dataCandidato : 0) >= (Number.isFinite(dataAtual) ? dataAtual : 0);
     }
 
-    const scoreAtual = contarCamposPreenchidos(atual);
-    const scoreCandidato = contarCamposPreenchidos(candidato);
-    return scoreCandidato >= scoreAtual;
+    return true;
 }
 
 function contarCamposPreenchidos(item) {
     return Object.values(item || {}).filter(value => value !== null && value !== undefined && String(value).trim() !== '').length;
+}
+
+function contarCamposPesoPreenchidos(item = {}) {
+    return [
+        item.supervisor,
+        item.motorista,
+        item.auxiliar,
+        item.placa,
+        item.tipo_veiculo,
+        item.pbt,
+        item.peso_carga,
+        item.qtd_caixas,
+        item.qtd_clientes,
+        item.horario_chegada,
+        item.descricao
+    ].filter(value => value !== null && value !== undefined && String(value).trim() !== '').length;
 }
 
 function criarLinha(data = {}) {
