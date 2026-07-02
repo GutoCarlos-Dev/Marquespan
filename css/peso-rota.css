@@ -200,6 +200,15 @@ body.peso-rota-menu-oculto .menu-floating-toggle i {
     font-weight: 700;
 }
 
+.filter-action-group {
+    justify-content: flex-end;
+}
+
+.filter-action-group .btn-glass {
+    min-height: 39px;
+    width: 100%;
+}
+
 .actions-container {
     display: grid;
     gap: 10px;

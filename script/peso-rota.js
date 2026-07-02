@@ -182,13 +182,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     aplicarVisibilidadeAdmin();
 
-    const filtroSemanaAno = document.getElementById('filtroSemanaAno');
-    if (filtroSemanaAno && !filtroSemanaAno.value) filtroSemanaAno.value = getSemanaAnoAtual();
+    aplicarFiltrosPadraoPesoRota();
 
     bindEvents();
     setupResizableColumns();
     await carregarFiliaisFiltro();
-    restaurarFiltrosPesoRota();
     await carregarDados();
 });
 
@@ -206,13 +204,14 @@ function bindEvents() {
     document.getElementById('btnExportarPdf')?.addEventListener('click', exportarPesoRotaPdf);
     document.getElementById('btnSalvarTudo')?.addEventListener('click', salvarTudo);
     document.getElementById('btnExcluirSelecionados')?.addEventListener('click', excluirSelecionados);
-    document.getElementById('filtroSemana')?.addEventListener('change', () => { salvarFiltrosPesoRota(); renderGrid(); });
-    document.getElementById('filtroDiaRetorno')?.addEventListener('change', () => { salvarFiltrosPesoRota(); renderGrid(); });
-    document.getElementById('filtroSupervisor')?.addEventListener('change', () => { salvarFiltrosPesoRota(); renderGrid(); });
-    document.getElementById('filtroRota')?.addEventListener('change', () => { salvarFiltrosPesoRota(); renderGrid(); });
-    document.getElementById('filtroFilial')?.addEventListener('change', () => { salvarFiltrosPesoRota(); carregarDados(); });
-    document.getElementById('filtroSemanaAno')?.addEventListener('change', () => { salvarFiltrosPesoRota(); carregarDados(); });
-    document.getElementById('searchInput')?.addEventListener('input', () => { salvarFiltrosPesoRota(); renderGrid(); });
+    document.getElementById('btnLimparFiltrosPesoRota')?.addEventListener('click', limparFiltrosPesoRota);
+    document.getElementById('filtroSemana')?.addEventListener('change', renderGrid);
+    document.getElementById('filtroDiaRetorno')?.addEventListener('change', renderGrid);
+    document.getElementById('filtroSupervisor')?.addEventListener('change', renderGrid);
+    document.getElementById('filtroRota')?.addEventListener('change', renderGrid);
+    document.getElementById('filtroFilial')?.addEventListener('change', () => carregarDados());
+    document.getElementById('filtroSemanaAno')?.addEventListener('change', () => carregarDados());
+    document.getElementById('searchInput')?.addEventListener('input', renderGrid);
 
     document.getElementById('selectAllRows')?.addEventListener('change', (event) => {
         document.querySelectorAll('#tbodyPesoRota .row-select').forEach(checkbox => {
@@ -255,31 +254,31 @@ function handleSalvarTudoShortcut(event) {
 
 const PESO_ROTA_FILTROS_KEY = 'peso-rota-filtros-v1';
 
-function salvarFiltrosPesoRota() {
-    const filtros = {};
-    ['filtroSemanaAno', 'filtroFilial', 'filtroSemana', 'filtroDiaRetorno', 'filtroSupervisor', 'filtroRota', 'searchInput']
-        .forEach(id => {
-            const el = document.getElementById(id);
-            if (el && !el.disabled) filtros[id] = el.value || '';
-        });
-    localStorage.setItem(PESO_ROTA_FILTROS_KEY, JSON.stringify(filtros));
+function aplicarFiltrosPadraoPesoRota() {
+    localStorage.removeItem(PESO_ROTA_FILTROS_KEY);
+
+    const filtroSemanaAno = document.getElementById('filtroSemanaAno');
+    const filtroSemana = document.getElementById('filtroSemana');
+    const filtroDiaRetorno = document.getElementById('filtroDiaRetorno');
+    const filtroSupervisor = document.getElementById('filtroSupervisor');
+    const filtroRota = document.getElementById('filtroRota');
+    const searchInput = document.getElementById('searchInput');
+
+    if (filtroSemanaAno) filtroSemanaAno.value = getSemanaAnoAtual();
+    if (filtroSemana) filtroSemana.value = '';
+    if (filtroDiaRetorno) filtroDiaRetorno.value = '';
+    if (filtroSupervisor) filtroSupervisor.value = '';
+    if (filtroRota) filtroRota.value = '';
+    if (searchInput) searchInput.value = '';
 }
 
-function lerFiltrosPesoRotaSalvos() {
-    try {
-        return JSON.parse(localStorage.getItem(PESO_ROTA_FILTROS_KEY) || '{}') || {};
-    } catch (error) {
-        console.warn('Nao foi possivel ler filtros do peso de rota:', error);
-        return {};
-    }
-}
+function limparFiltrosPesoRota() {
+    const filtroFilial = document.getElementById('filtroFilial');
 
-function restaurarFiltrosPesoRota() {
-    const filtros = lerFiltrosPesoRotaSalvos();
-    Object.entries(filtros).forEach(([id, value]) => {
-        const el = document.getElementById(id);
-        if (el && !el.disabled && value !== undefined) el.value = value;
-    });
+    aplicarFiltrosPadraoPesoRota();
+    if (filtroFilial && !filtroFilial.disabled) filtroFilial.value = '';
+
+    carregarDados();
 }
 
 function toggleMenuLateralPesoRota() {
@@ -527,7 +526,7 @@ function atualizarFiltroSupervisores() {
     const select = document.getElementById('filtroSupervisor');
     if (!select) return;
 
-    const valorAtual = select.value || lerFiltrosPesoRotaSalvos().filtroSupervisor || '';
+    const valorAtual = select.value;
     const supervisores = [...new Set(gridData
         .map(row => normalizarUpper(row.supervisor))
         .filter(Boolean))]
@@ -547,7 +546,7 @@ function atualizarFiltroRotas() {
     const select = document.getElementById('filtroRota');
     if (!select) return;
 
-    const valorAtual = select.value || lerFiltrosPesoRotaSalvos().filtroRota || '';
+    const valorAtual = select.value;
     const rotas = [...new Map(gridData
         .map(row => [normalizarRota(row.rota), normalizarTexto(row.rota)])
         .filter(([chave, label]) => chave && label))]
