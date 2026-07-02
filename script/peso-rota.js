@@ -188,6 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     bindEvents();
     setupResizableColumns();
     await carregarFiliaisFiltro();
+    restaurarFiltrosPesoRota();
     await carregarDados();
 });
 
@@ -205,13 +206,13 @@ function bindEvents() {
     document.getElementById('btnExportarPdf')?.addEventListener('click', exportarPesoRotaPdf);
     document.getElementById('btnSalvarTudo')?.addEventListener('click', salvarTudo);
     document.getElementById('btnExcluirSelecionados')?.addEventListener('click', excluirSelecionados);
-    document.getElementById('filtroSemana')?.addEventListener('change', renderGrid);
-    document.getElementById('filtroDiaRetorno')?.addEventListener('change', renderGrid);
-    document.getElementById('filtroSupervisor')?.addEventListener('change', renderGrid);
-    document.getElementById('filtroRota')?.addEventListener('change', renderGrid);
-    document.getElementById('filtroFilial')?.addEventListener('change', () => carregarDados());
-    document.getElementById('filtroSemanaAno')?.addEventListener('change', () => carregarDados());
-    document.getElementById('searchInput')?.addEventListener('input', renderGrid);
+    document.getElementById('filtroSemana')?.addEventListener('change', () => { salvarFiltrosPesoRota(); renderGrid(); });
+    document.getElementById('filtroDiaRetorno')?.addEventListener('change', () => { salvarFiltrosPesoRota(); renderGrid(); });
+    document.getElementById('filtroSupervisor')?.addEventListener('change', () => { salvarFiltrosPesoRota(); renderGrid(); });
+    document.getElementById('filtroRota')?.addEventListener('change', () => { salvarFiltrosPesoRota(); renderGrid(); });
+    document.getElementById('filtroFilial')?.addEventListener('change', () => { salvarFiltrosPesoRota(); carregarDados(); });
+    document.getElementById('filtroSemanaAno')?.addEventListener('change', () => { salvarFiltrosPesoRota(); carregarDados(); });
+    document.getElementById('searchInput')?.addEventListener('input', () => { salvarFiltrosPesoRota(); renderGrid(); });
 
     document.getElementById('selectAllRows')?.addEventListener('change', (event) => {
         document.querySelectorAll('#tbodyPesoRota .row-select').forEach(checkbox => {
@@ -250,6 +251,35 @@ function handleSalvarTudoShortcut(event) {
     if (btn?.disabled) return;
 
     salvarTudo();
+}
+
+const PESO_ROTA_FILTROS_KEY = 'peso-rota-filtros-v1';
+
+function salvarFiltrosPesoRota() {
+    const filtros = {};
+    ['filtroSemanaAno', 'filtroFilial', 'filtroSemana', 'filtroDiaRetorno', 'filtroSupervisor', 'filtroRota', 'searchInput']
+        .forEach(id => {
+            const el = document.getElementById(id);
+            if (el && !el.disabled) filtros[id] = el.value || '';
+        });
+    localStorage.setItem(PESO_ROTA_FILTROS_KEY, JSON.stringify(filtros));
+}
+
+function lerFiltrosPesoRotaSalvos() {
+    try {
+        return JSON.parse(localStorage.getItem(PESO_ROTA_FILTROS_KEY) || '{}') || {};
+    } catch (error) {
+        console.warn('Nao foi possivel ler filtros do peso de rota:', error);
+        return {};
+    }
+}
+
+function restaurarFiltrosPesoRota() {
+    const filtros = lerFiltrosPesoRotaSalvos();
+    Object.entries(filtros).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el && !el.disabled && value !== undefined) el.value = value;
+    });
 }
 
 function toggleMenuLateralPesoRota() {
@@ -497,7 +527,7 @@ function atualizarFiltroSupervisores() {
     const select = document.getElementById('filtroSupervisor');
     if (!select) return;
 
-    const valorAtual = select.value;
+    const valorAtual = select.value || lerFiltrosPesoRotaSalvos().filtroSupervisor || '';
     const supervisores = [...new Set(gridData
         .map(row => normalizarUpper(row.supervisor))
         .filter(Boolean))]
@@ -517,7 +547,7 @@ function atualizarFiltroRotas() {
     const select = document.getElementById('filtroRota');
     if (!select) return;
 
-    const valorAtual = select.value;
+    const valorAtual = select.value || lerFiltrosPesoRotaSalvos().filtroRota || '';
     const rotas = [...new Map(gridData
         .map(row => [normalizarRota(row.rota), normalizarTexto(row.rota)])
         .filter(([chave, label]) => chave && label))]
@@ -801,11 +831,10 @@ async function carregarDados({ incluirRotasBase = false } = {}) {
         veiculosPorPlaca.clear();
         const semanaAno = getSemanaAnoSelecionada();
         const filial = getFilialSelecionada();
-        const periodo = getPeriodoSemanaAno(semanaAno);
         let pesosQuery = supabaseClient
                 .from('peso_rota')
                 .select('*')
-                .or(`semana_ano.eq.${semanaAno},and(dia_retorno.gte.${periodo.inicio},dia_retorno.lte.${somarDiasIso(periodo.fim, 6)})`)
+                .eq('semana_ano', semanaAno)
                 .order('rota', { ascending: true });
 
         if (filial) {
@@ -1796,9 +1825,7 @@ async function salvarTudo() {
     try {
         await preencherVeiculosDasLinhas();
 
-        const linhasParaSalvar = gridData
-            .filter(row => row._dirty && normalizarTexto(row.rota))
-            .filter(row => row.id || row._nova_rota_base || temDadosPreenchidos(row));
+        const linhasParaSalvar = getLinhasParaSalvarPlanilha();
 
         let payload = deduplicarPayloadPorRota(
             linhasParaSalvar
@@ -1882,6 +1909,23 @@ function temDadosPreenchidos(row) {
         parseNumero(row.peso_carga) ||
         parseNumero(row.pbt)
     );
+}
+
+function getLinhasParaSalvarPlanilha() {
+    const semanaAno = getSemanaAnoSelecionada();
+    const diaSaidaFiltro = normalizarSemana(document.getElementById('filtroSemana')?.value);
+    const filial = getFilialSelecionada();
+
+    return gridData
+        .filter(row => normalizarTexto(row.rota))
+        .filter(row => !filial || normalizarBusca(getFilialRegistro(row)) === normalizarBusca(filial))
+        .filter(row => normalizarSemanaAno(row.semana_ano || semanaAno) === semanaAno)
+        .filter(row => !diaSaidaFiltro || normalizarSemana(row.semana) === diaSaidaFiltro)
+        .map(row => {
+            row.semana_ano = semanaAno;
+            if (!row.dia_retorno) aplicarRetornoPrevisto(row);
+            return row;
+        });
 }
 
 function deduplicarPayloadPorRota(payload) {
