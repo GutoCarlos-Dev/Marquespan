@@ -844,26 +844,25 @@ async function carregarDados({ incluirRotasBase = false } = {}) {
 
         if (pesosResult.error) throw pesosResult.error;
 
-        rotasBase = [];
-        if (incluirRotasBase) {
-            let rotasQuery = supabaseClient
-                .from('rotas')
-                .select('numero, semana, supervisor, dias, filial')
-                .order('numero', { ascending: true });
+        let rotasQuery = supabaseClient
+            .from('rotas')
+            .select('numero, semana, supervisor, dias, filial')
+            .order('numero', { ascending: true });
 
-            if (filial) {
-                rotasQuery = rotasQuery.eq('filial', filial);
-            }
-
-            const rotasResult = await rotasQuery;
-            if (rotasResult.error) throw rotasResult.error;
-            rotasBase = rotasResult.data || [];
+        if (filial) {
+            rotasQuery = rotasQuery.eq('filial', filial);
         }
+
+        const rotasResult = await rotasQuery;
+        if (rotasResult.error) throw rotasResult.error;
+
+        const rotasReferencia = rotasResult.data || [];
+        rotasBase = incluirRotasBase ? rotasReferencia : [];
 
         const pesosDaSemana = (pesosResult.data || []).filter(item =>
             getSemanaAnoOperacional(item) === semanaAno
         );
-        gridData = mesclarRotasComPesos(rotasBase, pesosDaSemana, semanaAno, true);
+        gridData = mesclarRotasComPesos(rotasBase, pesosDaSemana, semanaAno, true, rotasReferencia);
 
         await preencherVeiculosDasLinhas();
         atualizarFiltroSupervisores();
@@ -877,11 +876,11 @@ async function carregarDados({ incluirRotasBase = false } = {}) {
     }
 }
 
-function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro = true) {
+function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro = true, rotasReferencia = rotas) {
     const pesosPorChaveOperacional = criarMapaPesosPorChaveOperacional(pesos);
     const pesosPorRota = criarMapaPesosPorRota(pesos);
     const pesosPorRotaFilial = criarMapaPesosPorRotaFilial(pesos);
-    const rotasPorNumero = new Map((rotas || []).map(rota => [
+    const rotasPorNumero = new Map((rotasReferencia || []).map(rota => [
         getChavePesoRota(rota.numero, rota.filial, rota.semana),
         rota
     ]));
