@@ -458,6 +458,19 @@ body.funcionario-modal-open {
 .btn-icon.delete { color: #dc3545; }
 .btn-icon.delete:hover { color: #bd2130; }
 
+body.funcionario-somente-leitura #btnOpenFuncionarioModal,
+body.funcionario-somente-leitura #btnDownloadModeloImportacao,
+body.funcionario-somente-leitura #btnImportXLSX,
+body.funcionario-somente-leitura #btnAbrirCadastroFuncao,
+body.funcionario-somente-leitura #btnSubmitFunc,
+body.funcionario-somente-leitura #btnSalvarCadastroFuncao,
+body.funcionario-somente-leitura .btn-edit,
+body.funcionario-somente-leitura .btn-delete,
+body.funcionario-somente-leitura .btn-edit-funcao,
+body.funcionario-somente-leitura .btn-delete-funcao {
+    display: none !important;
+}
+
 /* Badges de Status */
 .status-badge {
     padding: 4px 8px;

@@ -112,22 +112,26 @@ function getUserLevel() {
     const usuario = getCurrentUser();
     return usuario ? (usuario.nivel || '').toLowerCase().trim() : null;
 }
+
+function isEncarregadoRetorno() {
+    return ['pr_encarregado', 'mg_encarregado', 'ms_encarregado'].includes(getUserLevel());
+}
 //**Liberação para editar o Grid da Pagina */
 function canManageGrid() {
     const nivel = getUserLevel();
     return nivel === 'administrador'
         || nivel === 'gerencia'
         || nivel === 'adm_logistica'
-        || nivel === 'pr_encarregado';
+        || isEncarregadoRetorno();
 }
 
 function canImportarEscalaOnline() {
     const nivel = getUserLevel();
-    return canManageGrid() || nivel === 'pr_encarregado' || nivel === 'pr_lider';
+    return canManageGrid() || isEncarregadoRetorno() || nivel === 'pr_lider';
 }
 
 function isPrEncarregado() {
-    return getUserLevel() === 'pr_encarregado';
+    return isEncarregadoRetorno();
 }
 
 function canDelete() {

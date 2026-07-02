@@ -174,11 +174,13 @@ const FuncionarioUI = {
     usuarioAtual: null,
     isAdministrador: false,
     isGerencia: false,
+    acessoTotal: false,
     funcoesFiltroDisponiveis: [],
     async init() {
         this.cache();
         const acessoPermitido = await this.verificarPermissaoPagina();
         if (!acessoPermitido) return;
+        this.aplicarPermissoesAcesso();
         this.bind();
         await this.carregarFiliais();
         await this.carregarFuncoes();
@@ -238,6 +240,29 @@ const FuncionarioUI = {
         this.filterCount = document.getElementById('funcFilterCount');
     },
 
+    usuarioTemAcessoTotal() {
+        return this.isAdministrador || this.isGerencia;
+    },
+
+    aplicarPermissoesAcesso() {
+        this.acessoTotal = this.usuarioTemAcessoTotal();
+        document.body.classList.toggle('funcionario-acesso-total', this.acessoTotal);
+        document.body.classList.toggle('funcionario-somente-leitura', !this.acessoTotal);
+
+        if (this.acessoTotal) return;
+
+        [
+            this.btnOpenFuncionarioModal,
+            this.btnDownloadModeloImportacao,
+            this.btnImportXLSX,
+            this.btnAbrirCadastroFuncao,
+            this.btnSubmit,
+            this.btnSalvarCadastroFuncao
+        ].forEach(el => {
+            if (el) el.style.display = 'none';
+        });
+    },
+
     // Adiciona o campo Data de Nascimento ao cache
     bind() {
         if (this.form) {
@@ -245,6 +270,7 @@ const FuncionarioUI = {
         }
         if (this.btnOpenFuncionarioModal) {
             this.btnOpenFuncionarioModal.addEventListener('click', () => {
+                if (!this.acessoTotal) return;
                 this.clearForm({ fecharModal: false });
                 this.openFuncionarioModal();
             });
@@ -261,7 +287,10 @@ const FuncionarioUI = {
             this.btnClearForm.addEventListener('click', () => this.clearForm());
         }
         if (this.btnAbrirCadastroFuncao) {
-            this.btnAbrirCadastroFuncao.addEventListener('click', () => this.openCadastroFuncaoModal());
+            this.btnAbrirCadastroFuncao.addEventListener('click', () => {
+                if (!this.acessoTotal) return;
+                this.openCadastroFuncaoModal();
+            });
         }
         if (this.formCadastroFuncao) {
             this.formCadastroFuncao.addEventListener('submit', (e) => this.handleCadastroFuncaoSubmit(e));
@@ -284,6 +313,7 @@ const FuncionarioUI = {
             this.tbodyFuncoesCadastradas.addEventListener('click', (event) => {
                 const editButton = event.target.closest('.btn-edit-funcao');
                 const deleteButton = event.target.closest('.btn-delete-funcao');
+                if (!this.acessoTotal && (editButton || deleteButton)) return;
                 if (editButton) {
                     this.prepararEdicaoFuncao(editButton.dataset);
                     return;
@@ -331,11 +361,20 @@ const FuncionarioUI = {
             this.btnExportPDF.addEventListener('click', () => this.exportToPDF());
         }
         if (this.btnDownloadModeloImportacao) {
-            this.btnDownloadModeloImportacao.addEventListener('click', () => this.downloadModeloImportacao());
+            this.btnDownloadModeloImportacao.addEventListener('click', () => {
+                if (!this.acessoTotal) return;
+                this.downloadModeloImportacao();
+            });
         }
         if (this.btnImportXLSX && this.fileImportFuncionarioXLSX) {
-            this.btnImportXLSX.addEventListener('click', () => this.fileImportFuncionarioXLSX.click());
-            this.fileImportFuncionarioXLSX.addEventListener('change', event => this.importFromXLSX(event));
+            this.btnImportXLSX.addEventListener('click', () => {
+                if (!this.acessoTotal) return;
+                this.fileImportFuncionarioXLSX.click();
+            });
+            this.fileImportFuncionarioXLSX.addEventListener('change', event => {
+                if (!this.acessoTotal) return;
+                this.importFromXLSX(event);
+            });
         }
         
         // Listeners para o filtro de status
@@ -395,6 +434,7 @@ const FuncionarioUI = {
                 const editButton = event.target.closest('.btn-edit');
                 const deleteButton = event.target.closest('.btn-delete');
 
+                if (!this.acessoTotal && (editButton || deleteButton)) return;
                 if (editButton?.dataset.id) this.loadForEditing(editButton.dataset.id);
                 if (deleteButton?.dataset.id) this.deleteFuncionario(deleteButton.dataset.id);
             });
@@ -420,13 +460,14 @@ const FuncionarioUI = {
         const nivel = this.usuarioAtual?.nivel?.toLowerCase();
         this.isAdministrador = nivel === 'administrador';
         this.isGerencia = nivel === 'gerencia';
+        this.acessoTotal = this.usuarioTemAcessoTotal();
 
         if (!nivel) {
             window.location.href = 'index.html';
             return false;
         }
 
-        if (this.isAdministrador) return true;
+        if (this.acessoTotal) return true;
 
         try {
             const { data, error } = await supabaseClient
@@ -487,6 +528,7 @@ const FuncionarioUI = {
     },
 
     openFuncionarioModal() {
+        if (!this.acessoTotal) return;
         if (this.bloquearSeSemFilialUsuario()) return;
         if (!this.modalFuncionario) return;
         this.modalFuncionario.classList.remove('hidden');
@@ -503,6 +545,7 @@ const FuncionarioUI = {
     },
 
     async openCadastroFuncaoModal() {
+        if (!this.acessoTotal) return;
         if (!this.modalCadastroFuncao) return;
         this.resetCadastroFuncaoForm();
         this.modalCadastroFuncao.classList.remove('hidden');
@@ -600,6 +643,7 @@ const FuncionarioUI = {
     },
 
     prepararEdicaoFuncao(dataset) {
+        if (!this.acessoTotal) return;
         if (this.cadFuncaoId) this.cadFuncaoId.value = dataset.id || '';
         const nomeInput = document.getElementById('cadFuncaoNome');
         if (nomeInput) nomeInput.value = dataset.nome || '';
@@ -610,6 +654,7 @@ const FuncionarioUI = {
     },
 
     async deleteFuncao(dataset) {
+        if (!this.acessoTotal) return;
         const id = dataset.id || '';
         const nome = dataset.nome || '';
 
@@ -746,6 +791,7 @@ const FuncionarioUI = {
 
     async handleCadastroFuncaoSubmit(e) {
         e.preventDefault();
+        if (!this.acessoTotal) return;
 
         const nome = document.getElementById('cadFuncaoNome')?.value.trim();
         const id = this.cadFuncaoId?.value || '';
@@ -847,6 +893,7 @@ const FuncionarioUI = {
 
     async handleFormSubmit(e) {
         e.preventDefault();
+        if (!this.acessoTotal) return;
         if (this.bloquearSeSemFilialUsuario()) return;
 
         const rh = document.getElementById('funcRH').value;
@@ -1367,6 +1414,7 @@ const FuncionarioUI = {
     },
 
     async loadForEditing(id) {
+        if (!this.acessoTotal) return;
         let query = supabaseClient.from('funcionario').select('*').eq('id', id);
         query = this.aplicarFiltroFilialRestrita(query);
         const { data: f } = await query.maybeSingle();
@@ -1405,6 +1453,7 @@ const FuncionarioUI = {
     },
 
     async deleteFuncionario(id) {
+        if (!this.acessoTotal) return;
         if (confirm('Deseja realmente excluir este colaborador?')) {
             const func = this.listData.find(f => String(f.id) === String(id));
             if (!func || !this.usuarioPodeAcessarFilial(func.filial)) {
@@ -1528,6 +1577,10 @@ const FuncionarioUI = {
     },
 
     async importFromXLSX(event) {
+        if (!this.acessoTotal) {
+            if (event?.target) event.target.value = '';
+            return;
+        }
         const file = event.target.files?.[0];
         if (!file) return;
         if (this.bloquearSeSemFilialUsuario()) {
