@@ -59,7 +59,7 @@ const COLUNAS_COLAGEM = {
 };
 
 const CAMPO_CAPACIDADE_GRID = 'pbt';
-const PESO_ROTA_ON_CONFLICT = 'dia_retorno,rota,filial';
+const PESO_ROTA_ON_CONFLICT = 'semana_ano,rota,filial,semana';
 const PESO_ROTA_BACKUP_VERSAO = '1';
 const PESO_ROTA_BACKUP_ABA_CONTEXTO = 'CONTEXTO';
 const PESO_ROTA_BACKUP_ABA_DADOS = 'PESO_ROTA';
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function bindEvents() {
     document.getElementById('btnToggleMenuLateralPesoRota')?.addEventListener('click', toggleMenuLateralPesoRota);
-    document.getElementById('btnCarregarRotas')?.addEventListener('click', carregarDados);
+    document.getElementById('btnCarregarRotas')?.addEventListener('click', () => carregarDados({ incluirRotasBase: true }));
     document.getElementById('btnAdicionarLinha')?.addEventListener('click', adicionarLinha);
     document.getElementById('btnImportarRoteiro')?.addEventListener('click', () => {
         document.getElementById('inputImportarRoteiro')?.click();
@@ -209,8 +209,8 @@ function bindEvents() {
     document.getElementById('filtroDiaRetorno')?.addEventListener('change', renderGrid);
     document.getElementById('filtroSupervisor')?.addEventListener('change', renderGrid);
     document.getElementById('filtroRota')?.addEventListener('change', renderGrid);
-    document.getElementById('filtroFilial')?.addEventListener('change', carregarDados);
-    document.getElementById('filtroSemanaAno')?.addEventListener('change', carregarDados);
+    document.getElementById('filtroFilial')?.addEventListener('change', () => carregarDados());
+    document.getElementById('filtroSemanaAno')?.addEventListener('change', () => carregarDados());
     document.getElementById('searchInput')?.addEventListener('input', renderGrid);
 
     document.getElementById('selectAllRows')?.addEventListener('change', (event) => {
@@ -716,6 +716,16 @@ function getChaveLinha(row) {
     return `${data}|${String(row.rota || '').trim()}|${getFilialRegistro(row)}`;
 }
 
+function getChaveOperacionalPesoRota(row = {}) {
+    const partes = [
+        normalizarSemanaAno(row.semana_ano || getSemanaAnoSelecionada()),
+        normalizarRota(row.rota),
+        normalizarTexto(row.filial || getFilialRegistro(row)),
+        normalizarSemana(row.semana)
+    ];
+    return partes.every(Boolean) ? partes.join('|') : '';
+}
+
 function somarDiasIso(dataIso, dias) {
     if (!dataIso) return '';
 
@@ -783,7 +793,7 @@ function aplicarRetornoPrevisto(row) {
     row.dia_semana_retorno = getDiaSemanaPorData(row.dia_retorno) || normalizarSemana(row.semana);
 }
 
-async function carregarDados() {
+async function carregarDados({ incluirRotasBase = false } = {}) {
     const tbody = document.getElementById('tbodyPesoRota');
     if (tbody) tbody.innerHTML = `<tr><td colspan="17" class="loading-cell">Carregando...</td></tr>`;
 
@@ -792,39 +802,40 @@ async function carregarDados() {
         const semanaAno = getSemanaAnoSelecionada();
         const filial = getFilialSelecionada();
         const periodo = getPeriodoSemanaAno(semanaAno);
-        let rotasQuery = supabaseClient
-            .from('rotas')
-            .select('numero, semana, supervisor, dias, filial')
-            .order('numero', { ascending: true });
-
-        if (filial) {
-            rotasQuery = rotasQuery.eq('filial', filial);
-        }
-
         let pesosQuery = supabaseClient
                 .from('peso_rota')
                 .select('*')
-                .gte('dia_retorno', periodo.inicio)
-                .lte('dia_retorno', somarDiasIso(periodo.fim, 6))
+                .or(`semana_ano.eq.${semanaAno},and(dia_retorno.gte.${periodo.inicio},dia_retorno.lte.${somarDiasIso(periodo.fim, 6)})`)
                 .order('rota', { ascending: true });
 
         if (filial) {
             pesosQuery = pesosQuery.eq('filial', filial);
         }
 
-        const [rotasResult, pesosResult] = await Promise.all([
-            rotasQuery,
-            pesosQuery
-        ]);
+        const pesosResult = await pesosQuery;
 
-        if (rotasResult.error) throw rotasResult.error;
         if (pesosResult.error) throw pesosResult.error;
 
-        rotasBase = rotasResult.data || [];
+        rotasBase = [];
+        if (incluirRotasBase) {
+            let rotasQuery = supabaseClient
+                .from('rotas')
+                .select('numero, semana, supervisor, dias, filial')
+                .order('numero', { ascending: true });
+
+            if (filial) {
+                rotasQuery = rotasQuery.eq('filial', filial);
+            }
+
+            const rotasResult = await rotasQuery;
+            if (rotasResult.error) throw rotasResult.error;
+            rotasBase = rotasResult.data || [];
+        }
+
         const pesosDaSemana = (pesosResult.data || []).filter(item =>
             getSemanaAnoOperacional(item) === semanaAno
         );
-        gridData = mesclarRotasComPesos(rotasBase, pesosDaSemana, semanaAno, !filial);
+        gridData = mesclarRotasComPesos(rotasBase, pesosDaSemana, semanaAno, true);
 
         await preencherVeiculosDasLinhas();
         atualizarFiltroSupervisores();
@@ -840,12 +851,14 @@ async function carregarDados() {
 
 function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro = true) {
     const pesosPorRota = criarMapaPesosPorRota(pesos);
+    const pesosPorRotaFilial = criarMapaPesosPorRotaFilial(pesos);
     const rotasPorNumero = new Map((rotas || []).map(rota => [
         getChavePesoRota(rota.numero, rota.filial, rota.semana),
         rota
     ]));
     const linhas = [];
     const rotasIncluidas = new Set();
+    const pesosIncluidos = new Set();
 
     (rotas || []).forEach(rota => {
         const numeroRota = String(rota.numero || '').trim();
@@ -854,7 +867,9 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
 
         const semana = normalizarSemana(rota.semana);
         const diaRetornoPrevisto = calcularDataRetornoPrevista(semanaAno, semana, rota.dias);
-        const salvo = escolherPesoSalvo(pesosPorRota.get(chaveRota), diaRetornoPrevisto);
+        const salvo = escolherPesoSalvo(pesosPorRota.get(chaveRota), diaRetornoPrevisto)
+            || escolherPesoSalvo(pesosPorRotaFilial.get(getChaveRotaFilial(numeroRota, rota.filial)), diaRetornoPrevisto);
+        const semanaLinha = salvo ? normalizarSemana(salvo.semana) || semana : semana;
         const manterRetornoSalvo = Boolean(salvo?.dia_retorno);
         const diaRetorno = manterRetornoSalvo ? salvo.dia_retorno : diaRetornoPrevisto;
 
@@ -862,27 +877,30 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
             ...salvo,
             rota: numeroRota,
             filial: rota.filial || salvo?.filial || getFilialSelecionada(),
-            semana,
+            semana: semanaLinha,
             dias_rota: rota.dias,
             supervisor: salvo?.supervisor || rota.supervisor || '',
             dia_retorno: diaRetorno,
             dia_semana_retorno: manterRetornoSalvo ? (salvo?.dia_semana_retorno || getDiaSemanaPorData(diaRetorno)) : getDiaSemanaPorData(diaRetorno),
-            semana_ano: semanaAno
+            semana_ano: salvo?.semana_ano || semanaAno
         }));
+        if (salvo) pesosIncluidos.add(getChaveLinha(salvo));
         rotasIncluidas.add(chaveRota);
     });
 
     if (incluirPesosSemCadastro) {
         (pesos || []).forEach(item => {
             const chaveRota = getChavePesoRota(item.rota, item.filial, item.semana);
-            if (chaveRota && !rotasIncluidas.has(chaveRota)) {
+            const chaveLinha = getChaveLinha(item);
+            if (chaveRota && !rotasIncluidas.has(chaveRota) && !pesosIncluidos.has(chaveLinha)) {
                 const rotaBase = rotasPorNumero.get(chaveRota);
                 linhas.push(criarLinha({
                     ...item,
-                    semana_ano: semanaAno,
+                    semana_ano: item.semana_ano || semanaAno,
                     dias_rota: item.dias_rota ?? rotaBase?.dias
                 }));
                 rotasIncluidas.add(chaveRota);
+                pesosIncluidos.add(chaveLinha);
             }
         });
     }
@@ -905,10 +923,30 @@ function criarMapaPesosPorRota(pesos) {
     return mapa;
 }
 
+function criarMapaPesosPorRotaFilial(pesos) {
+    const mapa = new Map();
+
+    (pesos || []).forEach(item => {
+        const chaveRotaFilial = getChaveRotaFilial(item.rota, item.filial);
+        if (!chaveRotaFilial) return;
+
+        const registros = mapa.get(chaveRotaFilial) || [];
+        registros.push(item);
+        mapa.set(chaveRotaFilial, registros);
+    });
+
+    return mapa;
+}
+
 function escolherPesoSalvo(registros, diaRetornoPrevisto) {
     if (!Array.isArray(registros) || registros.length === 0) return null;
+    const semanaSelecionada = getSemanaAnoSelecionada();
+    const registrosMesmaSemana = registros.filter(item =>
+        getSemanaAnoOperacional(item) === semanaSelecionada
+    );
+    const candidatos = registrosMesmaSemana.length ? registrosMesmaSemana : registros;
 
-    return registros.reduce((melhor, candidato) => {
+    return candidatos.reduce((melhor, candidato) => {
         if (!melhor) return candidato;
 
         const distanciaMelhor = getDistanciaDias(melhor.dia_retorno, diaRetornoPrevisto);
@@ -1077,13 +1115,22 @@ function preencherVeiculoNaLinha(row, substituirValores = false) {
 
     const modelo = normalizarUpper(veiculo.modelo || veiculo.tipo);
     const capacidadeCarga = getCapacidadeCargaVeiculo(veiculo);
+    let alterou = false;
 
-    row.tipo_veiculo = substituirValores ? modelo : (row.tipo_veiculo || modelo);
+    const novoModelo = substituirValores ? modelo : (row.tipo_veiculo || modelo);
+    if (row.tipo_veiculo !== novoModelo) {
+        row.tipo_veiculo = novoModelo;
+        alterou = true;
+    }
     if (capacidadeCarga !== null) {
-        row.pbt = substituirValores ? capacidadeCarga : (row.pbt || capacidadeCarga);
+        const novaCapacidade = substituirValores ? capacidadeCarga : (row.pbt || capacidadeCarga);
+        if (row.pbt !== novaCapacidade) {
+            row.pbt = novaCapacidade;
+            alterou = true;
+        }
     }
     row.status_percentual = calcularPercentual(row);
-    row._dirty = true;
+    if (alterou && substituirValores) row._dirty = true;
 }
 
 function renderGrid() {
@@ -1706,25 +1753,17 @@ async function salvarTudo() {
             .filter(row => row._dirty && normalizarTexto(row.rota))
             .filter(row => row.id || temDadosPreenchidos(row));
 
-        const atualizacoesData = linhasParaSalvar.filter(row =>
-            row.id
-            && row._original_dia_retorno
-            && row.dia_retorno !== row._original_dia_retorno
-        );
-        const idsAtualizados = new Set(atualizacoesData.map(row => row.id));
         let payload = deduplicarPayloadPorRota(
             linhasParaSalvar
-                .filter(row => !idsAtualizados.has(row.id))
                 .map(row => prepararPayload(row))
         );
 
-        if (payload.length === 0 && atualizacoesData.length === 0) {
+        if (payload.length === 0) {
             alert('Nenhuma alteração para salvar.');
             return;
         }
 
-        const payloadAtualizacoes = atualizacoesData.map(row => prepararPayload(row));
-        const semFilial = [...payload, ...payloadAtualizacoes]
+        const semFilial = payload
             .filter(item => !item.filial)
             .map(item => item.rota)
             .filter(Boolean);
@@ -1734,43 +1773,6 @@ async function salvarTudo() {
         }
 
         marcarLinhas('saving');
-        const dadosAtualizados = [];
-        for (let index = 0; index < atualizacoesData.length; index += 1) {
-            const row = atualizacoesData[index];
-            const payloadAtualizacao = payloadAtualizacoes[index];
-            const { data: conflito, error: erroConflito } = await supabaseClient
-                .from('peso_rota')
-                .select('id')
-                .eq('dia_retorno', payloadAtualizacao.dia_retorno)
-                .eq('rota', payloadAtualizacao.rota)
-                .eq('filial', payloadAtualizacao.filial)
-                .neq('id', row.id)
-                .limit(1)
-                .maybeSingle();
-
-            if (erroConflito) throw erroConflito;
-
-            const idDestino = conflito?.id || row.id;
-            const { data: atualizado, error: erroAtualizacao } = await supabaseClient
-                .from('peso_rota')
-                .update(payloadAtualizacao)
-                .eq('id', idDestino)
-                .select()
-                .single();
-
-            if (erroAtualizacao) throw erroAtualizacao;
-
-            if (conflito?.id) {
-                const { error: erroExclusaoAntigo } = await supabaseClient
-                    .from('peso_rota')
-                    .delete()
-                    .eq('id', row.id);
-                if (erroExclusaoAntigo) throw erroExclusaoAntigo;
-            }
-
-            dadosAtualizados.push(atualizado);
-        }
-
         let data = [];
         let error = null;
         if (payload.length > 0) {
@@ -1784,7 +1786,7 @@ async function salvarTudo() {
 
         if (error && isErroColunaOpcional(error)) {
             console.warn('Coluna opcional ausente no Supabase. Salvando sem campos opcionais.', error);
-            payload = payload.map(({ semana_ano, dia_semana_retorno, ultima_alteracao_por, ultima_alteracao_em, ...item }) => item);
+            payload = payload.map(({ dia_semana_retorno, ultima_alteracao_por, ultima_alteracao_em, ...item }) => item);
             const retry = await supabaseClient
                 .from('peso_rota')
                 .upsert(payload, { onConflict: PESO_ROTA_ON_CONFLICT })
@@ -1796,15 +1798,17 @@ async function salvarTudo() {
 
         if (error) throw error;
 
-        data = [...dadosAtualizados, ...(data || [])];
-        const totalEnviado = payload.length + payloadAtualizacoes.length;
+        data = data || [];
+        const totalEnviado = payload.length;
         if (data.length !== totalEnviado) {
             throw new Error(`O banco confirmou ${data.length} de ${totalEnviado} linha(s) enviadas.`);
         }
 
-        atualizarIdsSalvos(data || []);
+        aplicarMetadadosSalvosNasLinhas(data || []);
         gridData.forEach(row => { row._dirty = false; });
-        await carregarDados();
+        atualizarFiltroSupervisores();
+        atualizarFiltroRotas();
+        renderGrid();
         registrarAuditoria('ALTERAR', 'Peso de Rota', `${data.length} linha(s) de peso de rota salvas`);
         alert(`${data.length} linha(s) de peso de rota salvas e conferidas no banco.`);
     } catch (error) {
@@ -1831,7 +1835,7 @@ function temDadosPreenchidos(row) {
 
 function deduplicarPayloadPorRota(payload) {
     return Array.from((payload || []).reduce((mapa, item) => {
-        const chaveRota = `${item.dia_retorno}|${getChaveRotaFilial(item.rota, item.filial)}`;
+        const chaveRota = getChaveOperacionalPesoRota(item);
         if (chaveRota) mapa.set(chaveRota, item);
         return mapa;
     }, new Map()).values());
@@ -1839,7 +1843,7 @@ function deduplicarPayloadPorRota(payload) {
 
 function isErroColunaOpcional(error) {
     const message = String(error?.message || '').toLowerCase();
-    return message.includes('semana_ano') || message.includes('dia_semana_retorno') || message.includes('ultima_alteracao');
+    return message.includes('dia_semana_retorno') || message.includes('ultima_alteracao');
 }
 
 function getCapacidadeCargaVeiculo(veiculo) {
@@ -1941,11 +1945,16 @@ function prepararPayload(row) {
     return payload;
 }
 
-function atualizarIdsSalvos(data) {
-    const idsPorChave = new Map((data || []).map(item => [`${item.dia_retorno}|${item.rota}|${getFilialRegistro(item)}`, item.id]));
+function aplicarMetadadosSalvosNasLinhas(data) {
+    const dadosPorChave = new Map((data || []).map(item => [getChaveOperacionalPesoRota(item), item]));
     gridData.forEach(row => {
-        const id = idsPorChave.get(`${row.dia_retorno}|${row.rota}|${getFilialRegistro(row)}`);
-        if (id) row.id = id;
+        const salvo = dadosPorChave.get(getChaveOperacionalPesoRota(row));
+        if (!salvo) return;
+
+        row.id = salvo.id || row.id;
+        row.ultima_alteracao_por = salvo.ultima_alteracao_por || row.ultima_alteracao_por;
+        row.ultima_alteracao_em = salvo.ultima_alteracao_em || row.ultima_alteracao_em;
+        row._original_dia_retorno = row.dia_retorno || salvo.dia_retorno || null;
     });
 }
 
@@ -2469,7 +2478,6 @@ async function importarRoteiroPeso(event) {
         const filtroSemanaAno = document.getElementById('filtroSemanaAno');
         if (filtroSemanaAno && filtroSemanaAno.value !== semanaAnoImportada) {
             filtroSemanaAno.value = semanaAnoImportada;
-            await carregarDados();
         }
 
         const detalheIgnoradas = ignoradasPorStatusP > 0 ? `\nIgnoradas com STA/STAT = P: ${ignoradasPorStatusP}` : '';
@@ -2477,6 +2485,7 @@ async function importarRoteiroPeso(event) {
             return;
         }
 
+        await carregarDados({ incluirRotasBase: true });
         const resultado = aplicarImportacaoRoteiro(importados);
         await preencherVeiculosDasLinhas();
         renderGrid();
@@ -2614,6 +2623,8 @@ async function importarEscalaOnlinePeso() {
             return;
         }
 
+        await carregarDados({ incluirRotasBase: true });
+
         const escalaPorRota = new Map();
         linhasEscala.forEach(item => {
             const chave = normalizarRota(item.rota);
@@ -2645,12 +2656,16 @@ async function importarEscalaOnlinePeso() {
             const placa = normalizarPlaca(item.placa);
             const motorista = normalizarUpper(item.motorista);
             const auxiliar = normalizarUpper(item.auxiliar);
-            const alterou = row.placa !== placa || row.motorista !== motorista || row.auxiliar !== auxiliar;
 
+            row.semana_ano = semanaAno;
+            row.semana = diaSaida;
             row.placa = placa;
             row.motorista = motorista;
             row.auxiliar = auxiliar;
-            if (alterou) row._dirty = true;
+            if (!row.dia_retorno) {
+                aplicarRetornoPrevisto(row);
+            }
+            row._dirty = true;
             aplicadas += 1;
             linhasAplicadas.push(row);
         });
@@ -2884,6 +2899,7 @@ async function importarRetornoRota() {
             row.dia_retorno = retorno.data_retorno;
             row.dia_semana_retorno = getDiaSemanaPorData(retorno.data_retorno);
             row.horario_chegada = normalizarHoraRetorno(retorno);
+            row._dirty = true;
             aplicadas += 1;
             if (row.horario_chegada) aplicadasComHorario += 1;
             atualizarCamposRetornoLinha(rowIndex, row);

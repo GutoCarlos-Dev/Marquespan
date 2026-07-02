@@ -10805,7 +10805,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // Ajuste no conflito: a chave da tabela peso_rota é baseada na data e na rota
-                const { error } = await supabaseClient.from('peso_rota').upsert([payload], { onConflict: 'dia_retorno,rota,filial' });
+                const { error } = await supabaseClient.from('peso_rota').upsert([payload], { onConflict: 'semana_ano,rota,filial,semana' });
                 if (error) throw error;
 
                 alert('Dados sincronizados com sucesso para Peso de Rota!');

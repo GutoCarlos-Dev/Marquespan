@@ -20,7 +20,7 @@ create table if not exists public.peso_rota (
     dia_retorno date not null,
     horario_chegada time,
     descricao text,
-    constraint peso_rota_dia_rota_filial_unique unique (dia_retorno, rota, filial)
+    constraint peso_rota_semana_rota_filial_saida_unique unique (semana_ano, rota, filial, semana)
 );
 
 alter table public.peso_rota add column if not exists filial text;
@@ -63,6 +63,7 @@ create index if not exists idx_peso_rota_semana_ano on public.peso_rota (semana_
 create index if not exists idx_peso_rota_dia_semana_retorno on public.peso_rota (dia_semana_retorno);
 create index if not exists idx_peso_rota_rota on public.peso_rota (rota);
 create index if not exists idx_peso_rota_filial_dia_rota on public.peso_rota (filial, dia_retorno, rota);
+create index if not exists idx_peso_rota_semana_filial_rota_saida on public.peso_rota (semana_ano, filial, rota, semana);
 
 alter table public.peso_rota enable row level security;
 
