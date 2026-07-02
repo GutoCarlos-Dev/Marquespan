@@ -1851,6 +1851,7 @@ async function salvarTudo() {
             throw new Error(`O banco confirmou ${data.length} de ${totalEnviado} linha(s) enviadas.`);
         }
 
+        await confirmarPayloadPersistido(payload);
         aplicarMetadadosSalvosNasLinhas(data || []);
         gridData.forEach(row => {
             row._dirty = false;
@@ -1889,6 +1890,60 @@ function deduplicarPayloadPorRota(payload) {
         if (chaveRota) mapa.set(chaveRota, item);
         return mapa;
     }, new Map()).values());
+}
+
+async function confirmarPayloadPersistido(payload) {
+    const porGrupo = new Map();
+    (payload || []).forEach(item => {
+        const grupo = [
+            normalizarSemanaAno(item.semana_ano),
+            normalizarTexto(item.filial),
+            normalizarSemana(item.semana)
+        ].join('|');
+        if (!grupo.includes('||')) {
+            const lista = porGrupo.get(grupo) || [];
+            lista.push(item);
+            porGrupo.set(grupo, lista);
+        }
+    });
+
+    const divergencias = [];
+    for (const [grupo, itens] of porGrupo.entries()) {
+        const [semanaAno, filial, semana] = grupo.split('|');
+        const rotas = [...new Set(itens.map(item => normalizarTexto(item.rota)).filter(Boolean))];
+        if (rotas.length === 0) continue;
+
+        const { data, error } = await supabaseClient
+            .from('peso_rota')
+            .select('semana_ano, rota, filial, semana, motorista, auxiliar, placa, tipo_veiculo, pbt')
+            .eq('semana_ano', semanaAno)
+            .eq('filial', filial)
+            .eq('semana', semana)
+            .in('rota', rotas);
+
+        if (error) throw error;
+
+        const salvos = new Map((data || []).map(item => [getChaveOperacionalPesoRota(item), item]));
+        itens.forEach(item => {
+            const salvo = salvos.get(getChaveOperacionalPesoRota(item));
+            if (!salvo) {
+                divergencias.push(`${item.rota}: nao retornou do banco`);
+                return;
+            }
+
+            const campos = ['motorista', 'auxiliar', 'placa', 'tipo_veiculo'];
+            const divergente = campos.some(campo =>
+                normalizarUpper(salvo[campo]) !== normalizarUpper(item[campo])
+            ) || parseNumero(salvo.pbt) !== parseNumero(item.pbt);
+
+            if (divergente) divergencias.push(`${item.rota}: banco retornou dados diferentes`);
+        });
+    }
+
+    if (divergencias.length > 0) {
+        console.warn('Divergencias apos salvar peso_rota:', divergencias);
+        throw new Error(`Algumas rotas nao foram confirmadas no banco: ${divergencias.slice(0, 8).join(', ')}${divergencias.length > 8 ? '...' : ''}`);
+    }
 }
 
 function isErroColunaOpcional(error) {
