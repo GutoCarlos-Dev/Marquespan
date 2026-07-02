@@ -873,7 +873,7 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
         const manterRetornoSalvo = Boolean(salvo?.dia_retorno);
         const diaRetorno = manterRetornoSalvo ? salvo.dia_retorno : diaRetornoPrevisto;
 
-        linhas.push(criarLinha({
+        const linha = criarLinha({
             ...salvo,
             rota: numeroRota,
             filial: rota.filial || salvo?.filial || getFilialSelecionada(),
@@ -883,7 +883,12 @@ function mesclarRotasComPesos(rotas, pesos, semanaAno, incluirPesosSemCadastro =
             dia_retorno: diaRetorno,
             dia_semana_retorno: manterRetornoSalvo ? (salvo?.dia_semana_retorno || getDiaSemanaPorData(diaRetorno)) : getDiaSemanaPorData(diaRetorno),
             semana_ano: salvo?.semana_ano || semanaAno
-        }));
+        });
+        if (!salvo?.id) {
+            linha._nova_rota_base = true;
+            linha._dirty = true;
+        }
+        linhas.push(linha);
         if (salvo) pesosIncluidos.add(getChaveLinha(salvo));
         rotasIncluidas.add(chaveRota);
     });
@@ -1751,7 +1756,7 @@ async function salvarTudo() {
 
         const linhasParaSalvar = gridData
             .filter(row => row._dirty && normalizarTexto(row.rota))
-            .filter(row => row.id || temDadosPreenchidos(row));
+            .filter(row => row.id || row._nova_rota_base || temDadosPreenchidos(row));
 
         let payload = deduplicarPayloadPorRota(
             linhasParaSalvar
@@ -1805,7 +1810,10 @@ async function salvarTudo() {
         }
 
         aplicarMetadadosSalvosNasLinhas(data || []);
-        gridData.forEach(row => { row._dirty = false; });
+        gridData.forEach(row => {
+            row._dirty = false;
+            row._nova_rota_base = false;
+        });
         atualizarFiltroSupervisores();
         atualizarFiltroRotas();
         renderGrid();
