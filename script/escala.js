@@ -864,6 +864,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         return payload;
     }
 
+    function getDiaPorDataEscalaModelo(dataEscala) {
+        const dataObj = dateFromISO(dataEscala);
+        return dataObj ? IMPORT_DAYS[dataObj.getUTCDay()] : null;
+    }
+
+    function montarPayloadReservaModelo(row, semanaDestino, dataISO, filial) {
+        return {
+            semana_nome: semanaDestino,
+            data_escala: dataISO,
+            filial,
+            tipo_escala: 'RESERVA',
+            placa: row.placa || null,
+            modelo: row.modelo || null,
+            rota: row.rota || null,
+            status: row.status || null,
+            motorista: row.motorista || null,
+            auxiliar: row.auxiliar || null,
+            terceiro: row.terceiro || null
+        };
+    }
+
+    function montarPayloadFaltaModelo(row, semanaDestino, dataISO, filial) {
+        return {
+            semana_nome: semanaDestino,
+            data_escala: dataISO,
+            filial,
+            motorista_ausente: row.motorista_ausente || null,
+            motivo_motorista: row.motivo_motorista || null,
+            auxiliar_ausente: row.auxiliar_ausente || null,
+            motivo_auxiliar: row.motivo_auxiliar || null
+        };
+    }
+
     async function copiarModeloPlanejamentoParaSemana() {
         const semanaDestino = selectSemana.value;
         if (!semanaDestino) return alert('Selecione uma semana.');
@@ -871,20 +904,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!exigirFilialEscala()) return;
 
         try {
-            const { data: modelo, error } = await supabaseClient
-                .from('planejamento_semanal')
-                .select('*')
-                .eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
-                .eq('filial', getFilialEscala())
-                .order('id');
+            const filial = getFilialEscala();
+            const [resPlanejamento, resReservas, resFaltas] = await Promise.all([
+                supabaseClient
+                    .from('planejamento_semanal')
+                    .select('*')
+                    .eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
+                    .eq('filial', filial)
+                    .order('id'),
+                supabaseClient
+                    .from('escala')
+                    .select('*')
+                    .eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
+                    .eq('filial', filial)
+                    .eq('tipo_escala', 'RESERVA'),
+                supabaseClient
+                    .from('faltas_afastamentos')
+                    .select('*')
+                    .eq('semana_nome', SEMANA_MODELO_PLANEJAMENTO)
+                    .eq('filial', filial)
+            ]);
 
-            if (error) throw error;
+            if (resPlanejamento.error) throw resPlanejamento.error;
+            if (resReservas.error) throw resReservas.error;
+            if (resFaltas.error) throw resFaltas.error;
+
+            const modelo = resPlanejamento.data;
             if (!modelo || modelo.length === 0) {
                 alert('A Semana Padrao - Modelo ainda nao possui planejamento cadastrado.');
                 return;
             }
 
-            if (!confirm(`Copiar a Semana Padrao - Modelo para ${semanaDestino}? O planejamento atual desta semana sera substituido.`)) return;
+            if (!confirm(`Copiar a Semana Padrao - Modelo para ${semanaDestino}? O planejamento, as reservas e as faltas/ferias/afastados/descontos atuais desta semana serao substituidos.`)) return;
 
             const { error: deleteError } = await aplicarFiltroFilial(
                 supabaseClient
@@ -894,6 +945,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             );
             if (deleteError) throw deleteError;
 
+            const { error: deleteReservasError } = await aplicarFiltroFilial(
+                supabaseClient
+                    .from('escala')
+                    .delete()
+                    .eq('semana_nome', semanaDestino)
+                    .eq('tipo_escala', 'RESERVA')
+            );
+            if (deleteReservasError) throw deleteReservasError;
+
+            const { error: deleteFaltasError } = await aplicarFiltroFilial(
+                supabaseClient
+                    .from('faltas_afastamentos')
+                    .delete()
+                    .eq('semana_nome', semanaDestino)
+            );
+            if (deleteFaltasError) throw deleteFaltasError;
+
             const payloads = modelo.map(row => comAuditoria(montarPayloadPlanejamentoModelo(row, semanaDestino)));
             const { error: insertError } = await supabaseClient
                 .from('planejamento_semanal')
@@ -901,9 +969,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (insertError) throw insertError;
 
+            const reservaPayloads = (resReservas.data || [])
+                .map(row => {
+                    const dia = getDiaPorDataEscalaModelo(row.data_escala);
+                    if (!dia) return null;
+                    const dataISO = getDataSemanaDia(semanaDestino, dia).toISOString().split('T')[0];
+                    return comAuditoria(montarPayloadReservaModelo(row, semanaDestino, dataISO, filial));
+                })
+                .filter(Boolean);
+
+            if (reservaPayloads.length > 0) {
+                const { error: insertReservasError } = await supabaseClient.from('escala').insert(reservaPayloads);
+                if (insertReservasError) throw insertReservasError;
+            }
+
+            const faltasPayloads = (resFaltas.data || [])
+                .map(row => {
+                    const dia = getDiaPorDataEscalaModelo(row.data_escala);
+                    if (!dia) return null;
+                    const dataISO = getDataSemanaDia(semanaDestino, dia).toISOString().split('T')[0];
+                    return comAuditoria(montarPayloadFaltaModelo(row, semanaDestino, dataISO, filial));
+                })
+                .filter(Boolean);
+
+            if (faltasPayloads.length > 0) {
+                const { error: insertFaltasError } = await supabaseClient.from('faltas_afastamentos').insert(faltasPayloads);
+                if (insertFaltasError) throw insertFaltasError;
+            }
+
             await carregarPlanejamento(semanaDestino);
-            registrarAuditoria('INCLUIR', 'Escala', `Planejamento preenchido com modelo para semana ${semanaDestino}`);
-            alert('Planejamento preenchido com o modelo com sucesso.');
+            registrarAuditoria('INCLUIR', 'Escala', `Planejamento, reservas e faltas preenchidos com modelo para semana ${semanaDestino}`);
+            alert('Planejamento, reservas e faltas/ferias/afastados/descontos preenchidos com o modelo com sucesso.');
         } catch (err) {
             console.error('Erro ao copiar modelo de planejamento:', err);
             alert('Erro ao copiar modelo de planejamento: ' + err.message);
