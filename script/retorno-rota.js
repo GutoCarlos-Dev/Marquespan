@@ -189,6 +189,18 @@ function applyDriverTimeToTeam(rowData) {
     }
 }
 
+const RECEBIMENTO_TIME_FIELDS = ['hora_mot', 'hora_aux', 'hora_terceiro'];
+
+function fillLoggedOperatorOnReceivingTime(rowData, field, value) {
+    if (!RECEBIMENTO_TIME_FIELDS.includes(field) || !String(value || '').trim()) return false;
+
+    const userName = getCurrentUserName();
+    if (!userName) return false;
+
+    rowData.operador_recebimento = userName;
+    return true;
+}
+
 function splitObsLegadoDevolucoes(value) {
     const DEVOLUCOES_EXTRAS_START = '[DEVOLUCOES_EXTRAS]';
     const DEVOLUCOES_EXTRAS_END = '[/DEVOLUCOES_EXTRAS]';
@@ -968,10 +980,9 @@ function handlePaste(event) {
                 const fieldToUpdate = visibleFields[currentColIndex];
                 if (gridData[currentRowIndex]) {
                     let processedValue = colValue.trim();
-                    const timeFields = ['hora_mot', 'hora_aux', 'hora_terceiro'];
 
                     // Se o campo for um campo de hora, tenta extrair apenas a parte da hora.
-                    if (timeFields.includes(fieldToUpdate)) {
+                    if (RECEBIMENTO_TIME_FIELDS.includes(fieldToUpdate)) {
                         // Esta expressão regular busca por um padrão como HH:mm ou HH:mm:ss
                         const timeMatch = processedValue.match(/\d{1,2}:\d{2}(:\d{2})?/);
                         if (timeMatch) {
@@ -982,6 +993,7 @@ function handlePaste(event) {
                     if (fieldToUpdate === 'hora_mot') {
                         applyDriverTimeToTeam(gridData[currentRowIndex]);
                     }
+                    fillLoggedOperatorOnReceivingTime(gridData[currentRowIndex], fieldToUpdate, processedValue);
                 }
             }
         });
@@ -1173,10 +1185,10 @@ function renderGrid() {
                 const field = e.target.dataset.field;
                 if (!field) return; // Ignora inputs que não possuem mapeamento de campo (ex: checkbox de seleção)
                 gridData[index][field] = e.target.value;
+                const tr = e.target.closest('tr');
                 if (field === 'hora_mot') {
                     applyDriverTimeToTeam(gridData[index]);
 
-                    const tr = e.target.closest('tr');
                     const horaAuxInput = tr?.querySelector('input[data-field="hora_aux"]');
                     const horaTerceiroInput = tr?.querySelector('input[data-field="hora_terceiro"]');
 
@@ -1188,11 +1200,16 @@ function renderGrid() {
                         horaTerceiroInput.value = gridData[index].hora_terceiro || '';
                     }
                 }
+                const operadorPreenchido = fillLoggedOperatorOnReceivingTime(gridData[index], field, e.target.value);
+                if (operadorPreenchido) {
+                    const operadorInput = tr?.querySelector('input[data-field="operador_recebimento"]');
+                    if (operadorInput) operadorInput.value = gridData[index].operador_recebimento || '';
+                }
                 if (field.startsWith('hora_')) {
-                    applyRowStyle(e.target.closest('tr'), gridData[index]);
+                    applyRowStyle(tr, gridData[index]);
                 }
                 // Se o campo for o operador, atualizamos os contadores imediatamente
-                if (field === 'operador_recebimento') {
+                if (field === 'operador_recebimento' || operadorPreenchido) {
                     renderGrid(); // Re-renderiza para atualizar os totais no cabeçalho
                 }
                 await saveRow(index);
