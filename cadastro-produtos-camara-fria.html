@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Produtos - Camara Fria - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/comodato.css" />
+  <link rel="stylesheet" href="css/cadastro-produtos-camara-fria.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+</head>
+<body>
+  <div id="menu-container"></div>
+
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-snowflake"></i> Cadastro de Produtos - Camara Fria</h1>
+    </header>
+
+    <section class="glass-panel">
+      <h3><i class="fas fa-filter"></i> Filtros</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="filtroFilial">Filial</label>
+          <select id="filtroFilial" class="glass-input">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="filtroNome">Nome do Produto</label>
+          <input type="text" id="filtroNome" class="glass-input" placeholder="Buscar por nome">
+        </div>
+        <div class="form-group">
+          <label for="filtroTipo">Tipo</label>
+          <select id="filtroTipo" class="glass-input">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Ações</label>
+          <div class="filtro-acoes-row">
+            <button type="button" id="btnBuscarProdutos" class="btn-glass btn-blue"><i class="fas fa-search"></i> Buscar</button>
+            <button type="button" id="btnIncluirProduto" class="btn-glass btn-green"><i class="fas fa-plus"></i> Incluir</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-panel">
+      <h3><i class="fas fa-list"></i> Produtos Cadastrados</h3>
+      <div class="table-responsive">
+        <table class="glass-table data-grid" id="tabelaProdutos">
+          <thead>
+            <tr>
+              <th>Código <button type="button" class="column-sort-btn" data-sort-key="codigo" title="Ordenar Código"><i class="fas fa-sort"></i></button></th>
+              <th>Nome <button type="button" class="column-sort-btn" data-sort-key="nome" title="Ordenar Nome"><i class="fas fa-sort"></i></button></th>
+              <th>Tipo <button type="button" class="column-sort-btn" data-sort-key="tipo" title="Ordenar Tipo"><i class="fas fa-sort"></i></button></th>
+              <th>Peso da Caixa (KG) <button type="button" class="column-sort-btn" data-sort-key="peso_caixa" title="Ordenar Peso da Caixa"><i class="fas fa-sort"></i></button></th>
+              <th>Caixas/Palete <button type="button" class="column-sort-btn" data-sort-key="caixas_por_palete" title="Ordenar Caixas/Palete"><i class="fas fa-sort"></i></button></th>
+              <th>Filial <button type="button" class="column-sort-btn" data-sort-key="filial" title="Ordenar Filial"><i class="fas fa-sort"></i></button></th>
+              <th style="width: 80px; text-align: center;">AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyProdutos">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Cadastro de Produto -->
+  <div id="modalProduto" class="modal-backdrop hidden">
+    <div class="tipo-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-box"></i> Cadastro de Produto</h3>
+        <button type="button" id="btnCloseModalProduto" class="close-button" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="formProduto">
+        <input type="hidden" id="produtoEditingId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="produtoCodigo">Código</label>
+            <input type="text" id="produtoCodigo" class="glass-input" required placeholder="Ex: PRD-0001">
+          </div>
+          <div class="form-group">
+            <label for="produtoNome">Nome do Produto</label>
+            <input type="text" id="produtoNome" class="glass-input" required placeholder="Ex: Coxao Mole">
+          </div>
+          <div class="form-group">
+            <label for="produtoTipo">Tipo</label>
+            <div class="tipo-input-row">
+              <select id="produtoTipo" class="glass-input" required>
+                <option value="">Selecione o Tipo</option>
+              </select>
+              <button type="button" id="btnAbrirCadastroTipo" class="btn-add-inline" title="Cadastrar tipo" aria-label="Cadastrar tipo"><i class="fas fa-plus"></i></button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="produtoPesoCaixa">Peso da Caixa (KG)</label>
+            <input type="text" inputmode="decimal" id="produtoPesoCaixa" class="glass-input" placeholder="Ex: 21,500">
+          </div>
+          <div class="form-group">
+            <label for="produtoCaixasPalete">Caixas por Palete</label>
+            <input type="number" min="1" step="1" id="produtoCaixasPalete" class="glass-input" required placeholder="Ex: 42">
+          </div>
+          <div class="form-group">
+            <label for="produtoFilial">Filial (em branco = Todas as Filiais)</label>
+            <select id="produtoFilial" class="glass-input">
+              <option value="">Todas as Filiais</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" id="btnSalvarProduto" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Produto</button>
+          <button type="button" id="btnCancelarProduto" class="btn-glass btn-red"><i class="fas fa-times"></i> Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Cadastro de Tipo -->
+  <div id="modalCadastroTipo" class="modal-backdrop hidden">
+    <div class="tipo-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-tags"></i> Cadastro de Tipo</h3>
+        <button type="button" id="btnCloseCadastroTipo" class="close-button" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="formCadastroTipo">
+        <input type="hidden" id="cadTipoId">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="cadTipoNome">Nome do Tipo</label>
+            <input type="text" id="cadTipoNome" required class="glass-input" placeholder="Ex: Congelado">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" id="btnSalvarCadastroTipo" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Tipo</button>
+          <button type="button" id="btnCancelarCadastroTipo" class="btn-glass btn-red"><i class="fas fa-times"></i> Cancelar</button>
+        </div>
+      </form>
+      <div class="tipo-grid-section">
+        <h4><i class="fas fa-list"></i> Tipos Cadastrados</h4>
+        <div class="table-responsive">
+          <table class="glass-table table-compact">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th style="width: 70px; text-align: center;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyTiposCadastrados"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js"></script>
+  <script type="module" src="script/cadastro-produtos-camara-fria.js"></script>
+</body>
+</html>
