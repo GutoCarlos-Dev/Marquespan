@@ -8440,6 +8440,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    const buscaReservasPlanejamento = document.getElementById('buscaReservasPlanejamento');
+    if (buscaReservasPlanejamento) {
+        buscaReservasPlanejamento.addEventListener('input', filtrarReservasPlanejamento);
+    }
+
+    const tabelaReservasPlanejamento = document.getElementById('tabelaReservasPlanejamento');
+    if (tabelaReservasPlanejamento) {
+        tabelaReservasPlanejamento.addEventListener('click', (e) => {
+            const sortButton = e.target.closest('[data-reservas-plan-sort]');
+            if (!sortButton) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            sortReservasPlanejamentoByKey(sortButton.dataset.reservasPlanSort);
+        });
+    }
+
     if (btnAbrirEscala) {
         btnAbrirEscala.addEventListener('click', async () => {
             if (!selectSemana.value) return alert('Selecione uma semana.');
@@ -10145,6 +10162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             verificarDuplicidades();
             aplicarModoVisualizacaoEscala();
             await carregarFaltasPlanejamento(semana);
+            await carregarReservasPlanejamento(semana);
         } catch (err) {
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="22" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
@@ -10266,6 +10284,167 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : 'fas fa-sort';
         });
     }
+
+    async function carregarReservasPlanejamento(semana) {
+        const tbody = document.getElementById('tbodyReservasPlanejamento');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
+
+        try {
+            const { data, error } = await aplicarFiltroFilial(
+                supabaseClient
+                    .from('escala')
+                    .select('*')
+                    .eq('semana_nome', semana)
+            );
+            if (error) throw error;
+
+            const diaPorData = new Map(
+                DIAS_FALTAS_PLANEJAMENTO.map(dia => [getDataSemanaDia(semana, dia).toISOString().split('T')[0], dia])
+            );
+
+            const porFuncionarios = new Map();
+            const escaladoPorDia = new Map();
+
+            (data || []).forEach(row => {
+                const dia = diaPorData.get(String(row.data_escala || '').slice(0, 10));
+                if (!dia) return;
+
+                const motorista = getNomeFuncionarioExibicao(row.motorista);
+                const auxiliar = getNomeFuncionarioExibicao(row.auxiliar);
+
+                if (normalizeString(row.tipo_escala) === 'RESERVA') {
+                    if (!motorista && !auxiliar) return;
+
+                    const chave = `${normalizeString(motorista)}|${normalizeString(auxiliar)}`;
+                    if (!porFuncionarios.has(chave)) {
+                        porFuncionarios.set(chave, { motorista, auxiliar, dias: {} });
+                    }
+                    porFuncionarios.get(chave).dias[dia] = { placa: row.placa || '' };
+                    return;
+                }
+
+                const resumo = {
+                    placa: row.placa || '',
+                    rota: row.rota || '',
+                    motorista,
+                    auxiliar,
+                    terceiro: getNomeFuncionarioExibicao(row.terceiro)
+                };
+                [motorista, auxiliar].forEach(nome => {
+                    const chaveNome = normalizeString(nome);
+                    if (!chaveNome) return;
+                    if (!escaladoPorDia.has(dia)) escaladoPorDia.set(dia, new Map());
+                    if (!escaladoPorDia.get(dia).has(chaveNome)) escaladoPorDia.get(dia).set(chaveNome, resumo);
+                });
+            });
+
+            const linhas = Array.from(porFuncionarios.values()).sort((a, b) => {
+                const motorista = a.motorista.localeCompare(b.motorista, 'pt-BR');
+                if (motorista !== 0) return motorista;
+                return a.auxiliar.localeCompare(b.auxiliar, 'pt-BR');
+            });
+
+            const montarResumoEscalado = (resumo) => `PLACA: ${resumo.placa || '-'} | ROTA: ${resumo.rota || '-'} | MOTORISTA: ${resumo.motorista || '-'} | AUXILIAR: ${resumo.auxiliar || '-'} | TERCEIRO: ${resumo.terceiro || '-'}`;
+
+            tbody.innerHTML = linhas.length
+                ? linhas.map(item => `
+                    <tr data-motorista="${escapeAttribute(item.motorista)}" data-auxiliar="${escapeAttribute(item.auxiliar)}">
+                        <td data-column-key="motorista">${escapeAttribute(item.motorista)}</td>
+                        <td data-column-key="auxiliar">${escapeAttribute(item.auxiliar)}</td>
+                        ${DIAS_FALTAS_PLANEJAMENTO.map(dia => {
+                            const registro = item.dias[dia];
+                            if (registro) {
+                                return `<td style="text-align: center; white-space: nowrap;">
+                                    <span>${escapeAttribute(registro.placa || 'RESERVA')}</span>
+                                    <button type="button" class="btn-icon edit btn-trocar-reserva-plan" data-dia="${dia}" title="Trocar funcionário em ${dia}" style="padding: 2px 4px; margin-left: 4px; font-size: 0.85em;">
+                                        <i class="fas fa-right-left"></i>
+                                    </button>
+                                </td>`;
+                            }
+
+                            const resumos = [item.motorista, item.auxiliar]
+                                .map(nome => escaladoPorDia.get(dia)?.get(normalizeString(nome)))
+                                .filter(Boolean);
+                            if (resumos.length === 0) return '<td style="text-align: center;"></td>';
+
+                            const resumosUnicos = Array.from(new Set(resumos.map(r => JSON.stringify(r)))).map(s => JSON.parse(s));
+                            const tooltip = resumosUnicos.map(montarResumoEscalado).join('\n');
+
+                            return `<td style="text-align: center; background-color: #fff3cd;" title="${escapeAttribute(tooltip)}">ESCALADO</td>`;
+                        }).join('')}
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="9" style="text-align: center;">Nenhum motorista ou auxiliar em RESERVAS para esta semana.</td></tr>';
+            filtrarReservasPlanejamento();
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color:red;">Erro ao carregar dados.</td></tr>';
+        }
+    }
+
+    function filtrarReservasPlanejamento() {
+        const inputBusca = document.getElementById('buscaReservasPlanejamento');
+        const tbody = document.getElementById('tbodyReservasPlanejamento');
+        if (!inputBusca || !tbody) return;
+
+        const termo = normalizeString(inputBusca.value);
+        const termos = termo.split(' ').filter(Boolean);
+
+        tbody.querySelectorAll('tr[data-motorista]').forEach(tr => {
+            const texto = normalizeString(`${tr.dataset.motorista} ${tr.dataset.auxiliar}`);
+            tr.style.display = termos.every(t => texto.includes(t)) ? '' : 'none';
+        });
+    }
+
+    const reservasPlanejamentoSortState = {};
+
+    function sortReservasPlanejamentoByKey(key) {
+        const table = document.getElementById('tabelaReservasPlanejamento');
+        const tbody = document.getElementById('tbodyReservasPlanejamento');
+        if (!table || !tbody || !key) return;
+
+        const rows = Array.from(tbody.querySelectorAll('tr[data-motorista]'));
+        if (rows.length === 0) return;
+
+        const nextDirection = reservasPlanejamentoSortState[key] === 'asc' ? 'desc' : 'asc';
+        Object.keys(reservasPlanejamentoSortState).forEach(k => delete reservasPlanejamentoSortState[k]);
+        reservasPlanejamentoSortState[key] = nextDirection;
+
+        rows.sort((rowA, rowB) => {
+            const valueA = rowA.dataset[key] || '';
+            const valueB = rowB.dataset[key] || '';
+            const result = valueA.localeCompare(valueB, 'pt-BR', { sensitivity: 'base', numeric: true });
+            return nextDirection === 'asc' ? result : -result;
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
+        table.querySelectorAll('[data-reservas-plan-sort] i').forEach(icon => {
+            const button = icon.closest('[data-reservas-plan-sort]');
+            icon.className = button?.dataset.reservasPlanSort === key
+                ? (nextDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
+                : 'fas fa-sort';
+        });
+    }
+
+    async function abrirTrocaFuncionarioNoDiaPlanejamento(dia) {
+        const semana = selectSemana.value;
+        if (!semana || !dia) return;
+
+        const tabBtn = document.querySelector(`.tab-btn[data-dia="${dia}"]`);
+        if (!tabBtn) return;
+
+        tabBtn.click();
+        await carregarDadosDia(dia, semana);
+        await abrirModalTrocaFuncionario();
+    }
+
+    document.addEventListener('click', (e) => {
+        const btnTrocarReservaPlan = e.target.closest('.btn-trocar-reserva-plan');
+        if (btnTrocarReservaPlan) {
+            abrirTrocaFuncionarioNoDiaPlanejamento(btnTrocarReservaPlan.dataset.dia);
+        }
+    });
 
     async function removerFaltaPlanejamento(id, campo) {
         if (!id || !campo) return;

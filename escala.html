@@ -357,6 +357,41 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Resumo Semanal (RESERVAS) -->
+                    <h3 style="margin: 25px 0 15px; color: #006937; display: flex; align-items: center; gap: 10px;">
+                        <span><i class="fa-solid fa-truck"></i> RESERVAS DA SEMANA</span>
+                        <span class="planning-search-wrap">
+                            <i class="fa-solid fa-search"></i>
+                            <input type="text" id="buscaReservasPlanejamento" class="glass-input planning-search-input" placeholder="Buscar motorista, auxiliar...">
+                        </span>
+                    </h3>
+                    <div class="table-scroll-container">
+                        <table class="data-grid" id="tabelaReservasPlanejamento">
+                            <thead>
+                                <tr>
+                                    <th style="min-width: 160px;">
+                                        <span class="planning-sort-label">MOTORISTA</span>
+                                        <button type="button" class="column-sort-btn" data-reservas-plan-sort="motorista" title="Ordenar MOTORISTA"><i class="fas fa-sort"></i></button>
+                                    </th>
+                                    <th style="min-width: 160px;">
+                                        <span class="planning-sort-label">AUXILIAR</span>
+                                        <button type="button" class="column-sort-btn" data-reservas-plan-sort="auxiliar" title="Ordenar AUXILIAR"><i class="fas fa-sort"></i></button>
+                                    </th>
+                                    <th style="min-width: 130px; background-color: #ffcccc !important;">DOMINGO</th>
+                                    <th style="min-width: 130px; background-color: #cce5ff !important;">SEGUNDA</th>
+                                    <th style="min-width: 130px; background-color: #fff3cd !important;">TERÇA</th>
+                                    <th style="min-width: 130px; background-color: #d4edda !important;">QUARTA</th>
+                                    <th style="min-width: 130px; background-color: #ffdfcc !important;">QUINTA</th>
+                                    <th style="min-width: 130px; background-color: #f2f2f2 !important;">SEXTA</th>
+                                    <th style="min-width: 130px; background-color: #e0d6cc !important;">SÁBADO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyReservasPlanejamento">
+                                <tr><td colspan="9" style="text-align: center;">Aguardando dados...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -552,7 +587,7 @@
     <!-- Assumindo que os scripts principais são carregados por um loader ou estão no menu -->
     <script type="module" src="script/supabase.js"></script>
     <script type="module" src="script/menu.js?v=20260609-1" defer></script>
-    <script type="module" src="script/escala.js?v=20260703-3"></script>
+    <script type="module" src="script/escala.js?v=20260703-7"></script>
     <footer class="footer">
         &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>
