@@ -174,6 +174,7 @@ const FuncionarioUI = {
     usuarioAtual: null,
     isAdministrador: false,
     isGerencia: false,
+    isLiderBalanca: false,
     acessoTotal: false,
     funcoesFiltroDisponiveis: [],
     async init() {
@@ -241,7 +242,7 @@ const FuncionarioUI = {
     },
 
     usuarioTemAcessoTotal() {
-        return this.isAdministrador || this.isGerencia;
+        return this.isAdministrador || this.isGerencia || this.isLiderBalanca;
     },
 
     aplicarPermissoesAcesso() {
@@ -460,6 +461,7 @@ const FuncionarioUI = {
         const nivel = this.usuarioAtual?.nivel?.toLowerCase();
         this.isAdministrador = nivel === 'administrador';
         this.isGerencia = nivel === 'gerencia';
+        this.isLiderBalanca = nivel === 'lider_balanca';
         this.acessoTotal = this.usuarioTemAcessoTotal();
 
         if (!nivel) {
@@ -494,7 +496,7 @@ const FuncionarioUI = {
     },
 
     usuarioTemAcessoGlobal() {
-        return this.isAdministrador || this.isGerencia || !String(this.usuarioAtual?.filial || '').trim();
+        return this.isAdministrador || this.isGerencia || this.isLiderBalanca || !String(this.usuarioAtual?.filial || '').trim();
     },
 
     usuarioPodeAcessarFilial(filial) {
