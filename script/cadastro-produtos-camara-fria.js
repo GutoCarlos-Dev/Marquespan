@@ -31,7 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.pesoCaixaInput = document.getElementById('produtoPesoCaixa');
             this.caixasPaleteInput = document.getElementById('produtoCaixasPalete');
             this.filialSelect = document.getElementById('produtoFilial');
-            this.tabelaProdutos = document.getElementById('tabelaProdutos');
+            this.sortableHeaders = document.querySelectorAll('th.sortable');
+            this.countBadge = document.getElementById('produtosRecordsCount');
             this.tableBody = document.getElementById('tableBodyProdutos');
             this.btnSalvar = document.getElementById('btnSalvarProduto');
             this.btnCloseModalProduto = document.getElementById('btnCloseModalProduto');
@@ -75,10 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.formCadastroTipo.addEventListener('submit', this.handleCadastroTipoSubmit.bind(this));
             this.tbodyTipos.addEventListener('click', this.handleTiposGridClick.bind(this));
 
-            this.tabelaProdutos.addEventListener('click', (e) => {
-                const sortButton = e.target.closest('[data-sort-key]');
-                if (!sortButton) return;
-                this.ordenarPor(sortButton.dataset.sortKey);
+            this.sortableHeaders.forEach(th => {
+                th.addEventListener('click', () => this.ordenarPor(th.dataset.sort));
             });
         },
 
@@ -268,12 +267,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            this.tabelaProdutos.querySelectorAll('[data-sort-key] i').forEach(icon => {
-                const button = icon.closest('[data-sort-key]');
-                icon.className = button?.dataset.sortKey === key
+            this.sortableHeaders.forEach(th => {
+                const icon = th.querySelector('i');
+                if (!icon) return;
+                icon.className = th.dataset.sort === key
                     ? (direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
                     : 'fas fa-sort';
             });
+
+            if (this.countBadge) this.countBadge.textContent = `${produtos.length} produto${produtos.length === 1 ? '' : 's'}`;
 
             this.tableBody.innerHTML = '';
 
