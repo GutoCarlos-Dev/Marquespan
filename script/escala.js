@@ -10371,7 +10371,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const resumosUnicos = Array.from(new Set(resumos.map(r => JSON.stringify(r)))).map(s => JSON.parse(s));
                             const tooltip = resumosUnicos.map(montarResumoEscalado).join('\n');
 
-                            return `<td style="text-align: center; background-color: #fff3cd;" title="${escapeAttribute(tooltip)}">ESCALADO</td>`;
+                            return `<td style="text-align: center; white-space: nowrap; background-color: #fff3cd;" title="${escapeAttribute(tooltip)}">
+                                <span>ESCALADO</span>
+                                <button type="button" class="btn-icon edit btn-trocar-reserva-plan" data-dia="${dia}" title="Trocar funcionário em ${dia}" style="padding: 2px 4px; margin-left: 4px; font-size: 0.85em;">
+                                    <i class="fas fa-right-left"></i>
+                                </button>
+                            </td>`;
                         }).join('')}
                     </tr>
                 `).join('')
