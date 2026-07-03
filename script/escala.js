@@ -8423,6 +8423,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    const buscaFaltasPlanejamento = document.getElementById('buscaFaltasPlanejamento');
+    if (buscaFaltasPlanejamento) {
+        buscaFaltasPlanejamento.addEventListener('input', filtrarFaltasPlanejamento);
+    }
+
+    const tabelaFaltasPlanejamento = document.getElementById('tabelaFaltasPlanejamento');
+    if (tabelaFaltasPlanejamento) {
+        tabelaFaltasPlanejamento.addEventListener('click', (e) => {
+            const sortButton = e.target.closest('[data-faltas-plan-sort]');
+            if (!sortButton) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            sortFaltasPlanejamentoByKey(sortButton.dataset.faltasPlanSort);
+        });
+    }
+
     if (btnAbrirEscala) {
         btnAbrirEscala.addEventListener('click', async () => {
             if (!selectSemana.value) return alert('Selecione uma semana.');
@@ -10183,9 +10200,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             tbody.innerHTML = linhas.length
                 ? linhas.map(item => `
-                    <tr>
-                        <td>${escapeAttribute(item.nome)}</td>
-                        <td style="text-align: center;">${escapeAttribute(item.funcao)}</td>
+                    <tr data-nome="${escapeAttribute(item.nome)}" data-funcao="${escapeAttribute(item.funcao)}">
+                        <td data-column-key="nome">${escapeAttribute(item.nome)}</td>
+                        <td data-column-key="funcao" style="text-align: center;">${escapeAttribute(item.funcao)}</td>
                         ${DIAS_FALTAS_PLANEJAMENTO.map(dia => {
                             const registro = item.dias[dia];
                             if (!registro) return '<td style="text-align: center;"></td>';
@@ -10199,10 +10216,55 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </tr>
                 `).join('')
                 : '<tr><td colspan="9" style="text-align: center;">Nenhuma falta, férias, afastamento ou desconto lançado para esta semana.</td></tr>';
+            filtrarFaltasPlanejamento();
         } catch (err) {
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color:red;">Erro ao carregar dados.</td></tr>';
         }
+    }
+
+    function filtrarFaltasPlanejamento() {
+        const inputBusca = document.getElementById('buscaFaltasPlanejamento');
+        const tbody = document.getElementById('tbodyFaltasPlanejamento');
+        if (!inputBusca || !tbody) return;
+
+        const termo = normalizeString(inputBusca.value);
+        const termos = termo.split(' ').filter(Boolean);
+
+        tbody.querySelectorAll('tr[data-nome]').forEach(tr => {
+            const texto = normalizeString(`${tr.dataset.nome} ${tr.dataset.funcao}`);
+            tr.style.display = termos.every(t => texto.includes(t)) ? '' : 'none';
+        });
+    }
+
+    const faltasPlanejamentoSortState = {};
+
+    function sortFaltasPlanejamentoByKey(key) {
+        const table = document.getElementById('tabelaFaltasPlanejamento');
+        const tbody = document.getElementById('tbodyFaltasPlanejamento');
+        if (!table || !tbody || !key) return;
+
+        const rows = Array.from(tbody.querySelectorAll('tr[data-nome]'));
+        if (rows.length === 0) return;
+
+        const nextDirection = faltasPlanejamentoSortState[key] === 'asc' ? 'desc' : 'asc';
+        Object.keys(faltasPlanejamentoSortState).forEach(k => delete faltasPlanejamentoSortState[k]);
+        faltasPlanejamentoSortState[key] = nextDirection;
+
+        rows.sort((rowA, rowB) => {
+            const valueA = rowA.dataset[key] || '';
+            const valueB = rowB.dataset[key] || '';
+            const result = valueA.localeCompare(valueB, 'pt-BR', { sensitivity: 'base', numeric: true });
+            return nextDirection === 'asc' ? result : -result;
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
+        table.querySelectorAll('[data-faltas-plan-sort] i').forEach(icon => {
+            const button = icon.closest('[data-faltas-plan-sort]');
+            icon.className = button?.dataset.faltasPlanSort === key
+                ? (nextDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
+                : 'fas fa-sort';
+        });
     }
 
     async function removerFaltaPlanejamento(id, campo) {

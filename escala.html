@@ -326,13 +326,23 @@
                         <button id="btnAdicionarFaltaPlanejamento" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #dc3545; color: white;" title="Adicionar / remover funcionário">
                             <i class="fa-solid fa-user-slash"></i> Adicionar/Remover
                         </button>
+                        <span class="planning-search-wrap">
+                            <i class="fa-solid fa-search"></i>
+                            <input type="text" id="buscaFaltasPlanejamento" class="glass-input planning-search-input" placeholder="Buscar funcionário, função...">
+                        </span>
                     </h3>
                     <div class="table-scroll-container">
                         <table class="data-grid" id="tabelaFaltasPlanejamento">
                             <thead>
                                 <tr>
-                                    <th style="min-width: 160px;">FUNCIONÁRIO</th>
-                                    <th style="min-width: 90px;">FUNÇÃO</th>
+                                    <th style="min-width: 160px;">
+                                        <span class="planning-sort-label">FUNCIONÁRIO</span>
+                                        <button type="button" class="column-sort-btn" data-faltas-plan-sort="nome" title="Ordenar FUNCIONÁRIO"><i class="fas fa-sort"></i></button>
+                                    </th>
+                                    <th style="min-width: 90px;">
+                                        <span class="planning-sort-label">FUNÇÃO</span>
+                                        <button type="button" class="column-sort-btn" data-faltas-plan-sort="funcao" title="Ordenar FUNÇÃO"><i class="fas fa-sort"></i></button>
+                                    </th>
                                     <th style="min-width: 90px; background-color: #ffcccc !important;">DOMINGO</th>
                                     <th style="min-width: 90px; background-color: #cce5ff !important;">SEGUNDA</th>
                                     <th style="min-width: 90px; background-color: #fff3cd !important;">TERÇA</th>
@@ -542,7 +552,7 @@
     <!-- Assumindo que os scripts principais são carregados por um loader ou estão no menu -->
     <script type="module" src="script/supabase.js"></script>
     <script type="module" src="script/menu.js?v=20260609-1" defer></script>
-    <script type="module" src="script/escala.js?v=20260703-2"></script>
+    <script type="module" src="script/escala.js?v=20260703-3"></script>
     <footer class="footer">
         &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>
