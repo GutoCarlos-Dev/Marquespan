@@ -319,6 +319,34 @@
                     <div style="text-align: right; margin-top: 10px;">
                         <button id="btnAdicionarLinhaPlanejamento" class="btn-custom" style="background-color: #28a745;"><i class="fas fa-plus"></i> Adicionar Linha</button>
                     </div>
+
+                    <!-- Resumo Semanal (FALTAS / FÉRIAS / AFASTADOS / DESCONTOS) -->
+                    <h3 style="margin: 25px 0 15px; color: #006937; display: flex; align-items: center; gap: 10px;">
+                        <span><i class="fa-solid fa-user-clock"></i> FALTAS / FÉRIAS / AFASTADOS / DESCONTOS DA SEMANA</span>
+                        <button id="btnAdicionarFaltaPlanejamento" class="btn-primary" style="padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8em; background-color: #dc3545; color: white;" title="Adicionar / remover funcionário">
+                            <i class="fa-solid fa-user-slash"></i> Adicionar/Remover
+                        </button>
+                    </h3>
+                    <div class="table-scroll-container">
+                        <table class="data-grid" id="tabelaFaltasPlanejamento">
+                            <thead>
+                                <tr>
+                                    <th style="min-width: 160px;">FUNCIONÁRIO</th>
+                                    <th style="min-width: 90px;">FUNÇÃO</th>
+                                    <th style="min-width: 90px; background-color: #ffcccc !important;">DOMINGO</th>
+                                    <th style="min-width: 90px; background-color: #cce5ff !important;">SEGUNDA</th>
+                                    <th style="min-width: 90px; background-color: #fff3cd !important;">TERÇA</th>
+                                    <th style="min-width: 90px; background-color: #d4edda !important;">QUARTA</th>
+                                    <th style="min-width: 90px; background-color: #ffdfcc !important;">QUINTA</th>
+                                    <th style="min-width: 90px; background-color: #f2f2f2 !important;">SEXTA</th>
+                                    <th style="min-width: 90px; background-color: #e0d6cc !important;">SÁBADO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyFaltasPlanejamento">
+                                <tr><td colspan="9" style="text-align: center;">Aguardando dados...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -506,6 +534,7 @@
     <datalist id="listaAuxiliares"></datalist>
     <datalist id="listaTerceiros"></datalist>
     <datalist id="listaStatus"></datalist>
+    <datalist id="listaFuncionariosFaltasPlan"></datalist>
 
     <!-- Scripts -->
     <script type="module" src="./script/auth-guard.js"></script>
@@ -513,7 +542,7 @@
     <!-- Assumindo que os scripts principais são carregados por um loader ou estão no menu -->
     <script type="module" src="script/supabase.js"></script>
     <script type="module" src="script/menu.js?v=20260609-1" defer></script>
-    <script type="module" src="script/escala.js?v=20260630-1"></script>
+    <script type="module" src="script/escala.js?v=20260703-2"></script>
     <footer class="footer">
         &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>

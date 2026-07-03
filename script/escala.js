@@ -10127,10 +10127,289 @@ document.addEventListener('DOMContentLoaded', async () => {
             applyCellAnnotations();
             verificarDuplicidades();
             aplicarModoVisualizacaoEscala();
+            await carregarFaltasPlanejamento(semana);
         } catch (err) {
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="22" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
         }
+    }
+
+    const DIAS_FALTAS_PLANEJAMENTO = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+
+    async function carregarFaltasPlanejamento(semana) {
+        const tbody = document.getElementById('tbodyFaltasPlanejamento');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
+
+        try {
+            const { data, error } = await aplicarFiltroFilial(
+                supabaseClient
+                    .from('faltas_afastamentos')
+                    .select('*')
+                    .eq('semana_nome', semana)
+            );
+            if (error) throw error;
+
+            const diaPorData = new Map(
+                DIAS_FALTAS_PLANEJAMENTO.map(dia => [getDataSemanaDia(semana, dia).toISOString().split('T')[0], dia])
+            );
+
+            const porFuncionario = new Map();
+
+            (data || []).forEach(row => {
+                const dia = diaPorData.get(String(row.data_escala || '').slice(0, 10));
+                if (!dia) return;
+
+                [
+                    { nome: row.motorista_ausente, motivo: row.motivo_motorista, funcao: 'MOTORISTA', campo: 'motorista_ausente' },
+                    { nome: row.auxiliar_ausente, motivo: row.motivo_auxiliar, funcao: 'AUXILIAR', campo: 'auxiliar_ausente' }
+                ].forEach(({ nome, motivo, funcao, campo }) => {
+                    const nomeLimpo = cleanImportValue(nome);
+                    if (!nomeLimpo) return;
+
+                    const chave = `${normalizeString(nomeLimpo)}|${funcao}`;
+                    if (!porFuncionario.has(chave)) {
+                        porFuncionario.set(chave, {
+                            nome: getNomeFuncionarioExibicao(nomeLimpo),
+                            funcao,
+                            dias: {}
+                        });
+                    }
+                    porFuncionario.get(chave).dias[dia] = { id: row.id, campo, motivo: cleanImportValue(motivo) || 'FALTA' };
+                });
+            });
+
+            const linhas = Array.from(porFuncionario.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+            tbody.innerHTML = linhas.length
+                ? linhas.map(item => `
+                    <tr>
+                        <td>${escapeAttribute(item.nome)}</td>
+                        <td style="text-align: center;">${escapeAttribute(item.funcao)}</td>
+                        ${DIAS_FALTAS_PLANEJAMENTO.map(dia => {
+                            const registro = item.dias[dia];
+                            if (!registro) return '<td style="text-align: center;"></td>';
+                            return `<td style="text-align: center; white-space: nowrap;">
+                                <span>${escapeAttribute(registro.motivo)}</span>
+                                <button type="button" class="btn-icon delete btn-remover-falta-plan" data-id="${registro.id}" data-campo="${registro.campo}" title="Remover lançamento" style="padding: 2px 4px; margin-left: 4px; font-size: 0.85em;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </td>`;
+                        }).join('')}
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="9" style="text-align: center;">Nenhuma falta, férias, afastamento ou desconto lançado para esta semana.</td></tr>';
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color:red;">Erro ao carregar dados.</td></tr>';
+        }
+    }
+
+    async function removerFaltaPlanejamento(id, campo) {
+        if (!id || !campo) return;
+        if (!confirm('Remover este lançamento de falta/férias/afastamento/desconto?')) return;
+
+        const campoMotivo = campo === 'motorista_ausente' ? 'motivo_motorista' : 'motivo_auxiliar';
+        const outroCampo = campo === 'motorista_ausente' ? 'auxiliar_ausente' : 'motorista_ausente';
+
+        try {
+            const { data: linhaAtual, error: fetchError } = await supabaseClient
+                .from('faltas_afastamentos')
+                .select('*')
+                .eq('id', id)
+                .single();
+            if (fetchError) throw fetchError;
+
+            if (cleanImportValue(linhaAtual?.[outroCampo])) {
+                const { error } = await supabaseClient
+                    .from('faltas_afastamentos')
+                    .update(comAuditoria({ [campo]: null, [campoMotivo]: null }))
+                    .eq('id', id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabaseClient.from('faltas_afastamentos').delete().eq('id', id);
+                if (error) throw error;
+            }
+
+            await carregarFaltasPlanejamento(selectSemana.value);
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (activeTab?.dataset.dia) await carregarDadosDia(activeTab.dataset.dia, selectSemana.value);
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao remover lançamento: ' + err.message);
+        }
+    }
+
+    document.addEventListener('click', (e) => {
+        const btnRemoverFaltaPlan = e.target.closest('.btn-remover-falta-plan');
+        if (btnRemoverFaltaPlan) {
+            removerFaltaPlanejamento(btnRemoverFaltaPlan.dataset.id, btnRemoverFaltaPlan.dataset.campo);
+        }
+    });
+
+    function ensureModalFaltasPlanejamentoSemana() {
+        let modal = document.getElementById('modalFaltasPlanejamentoSemana');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'modalFaltasPlanejamentoSemana';
+        modal.className = 'terceiro-modal hidden';
+        modal.innerHTML = `
+            <div class="terceiro-modal-content faltas-modal-content">
+                <div class="terceiro-modal-header faltas-modal-header">
+                    <h3><i class="fa-solid fa-user-slash"></i> Adicionar Falta / Férias / Afastamento / Desconto</h3>
+                    <button type="button" id="btnFecharFaltasPlanejamentoSemana" class="terceiro-modal-close" title="Fechar">&times;</button>
+                </div>
+                <div class="terceiro-modal-subtitle" id="faltasPlanejamentoContexto"></div>
+                <div class="terceiro-form-grid faltas-form-grid">
+                    <div class="form-group">
+                        <label for="faltasPlanFuncao">Função</label>
+                        <select id="faltasPlanFuncao" class="glass-input">
+                            <option value="motorista">Motorista</option>
+                            <option value="auxiliar">Auxiliar</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="faltasPlanNome">Funcionário</label>
+                        <input type="text" id="faltasPlanNome" class="glass-input" list="listaFuncionariosFaltasPlan" placeholder="Digite o nome">
+                    </div>
+                    <div class="form-group">
+                        <label for="faltasPlanMotivo">Motivo</label>
+                        <select id="faltasPlanMotivo" class="glass-input">
+                            ${FALTAS_MOTIVOS_PADRAO.map(motivo => `<option value="${motivo}">${motivo}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="faltasPlanComplemento">Detalhe</label>
+                        <input type="text" id="faltasPlanComplemento" class="glass-input" placeholder="Opcional">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 10px;">
+                    <label>Dias da semana</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px;">
+                        ${DIAS_FALTAS_PLANEJAMENTO.map(dia => `
+                            <label style="display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 0.85em;">
+                                <input type="checkbox" class="faltas-plan-dia" value="${dia}"> ${dia}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="boleta-modal-actions" style="margin-top: 15px;">
+                    <button type="button" id="btnAplicarFaltasPlanejamentoSemana" class="btn-glass btn-red faltas-aplicar-btn">
+                        <i class="fa-solid fa-check"></i> Aplicar
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.closest('#btnFecharFaltasPlanejamentoSemana')) {
+                modal.classList.add('hidden');
+            }
+        });
+
+        modal.querySelector('#btnAplicarFaltasPlanejamentoSemana').addEventListener('click', aplicarFaltaPlanejamentoSemana);
+        modal.querySelector('#faltasPlanFuncao').addEventListener('change', atualizarListaFuncionariosFaltasPlan);
+
+        return modal;
+    }
+
+    function atualizarListaFuncionariosFaltasPlan() {
+        const modal = ensureModalFaltasPlanejamentoSemana();
+        const funcao = modal.querySelector('#faltasPlanFuncao')?.value;
+        const origem = document.getElementById(funcao === 'auxiliar' ? 'listaAuxiliares' : 'listaMotoristas');
+        const destino = document.getElementById('listaFuncionariosFaltasPlan');
+        if (destino) destino.innerHTML = origem?.innerHTML || '';
+    }
+
+    function abrirModalFaltasPlanejamentoSemana() {
+        const semana = selectSemana.value;
+        if (!semana) return alert('Selecione uma semana.');
+
+        const modal = ensureModalFaltasPlanejamentoSemana();
+        modal.querySelector('#faltasPlanejamentoContexto').textContent = semana;
+        modal.querySelector('#faltasPlanFuncao').value = 'motorista';
+        modal.querySelector('#faltasPlanNome').value = '';
+        modal.querySelector('#faltasPlanMotivo').value = 'FALTA';
+        modal.querySelector('#faltasPlanComplemento').value = '';
+        modal.querySelectorAll('.faltas-plan-dia').forEach(chk => chk.checked = false);
+        atualizarListaFuncionariosFaltasPlan();
+        modal.classList.remove('hidden');
+    }
+
+    async function aplicarFaltaPlanejamentoSemana() {
+        const semana = selectSemana.value;
+        if (!semana) return;
+
+        const modal = ensureModalFaltasPlanejamentoSemana();
+        const nome = cleanImportValue(modal.querySelector('#faltasPlanNome')?.value);
+        if (!nome) return alert('Informe o funcionário.');
+
+        const funcao = modal.querySelector('#faltasPlanFuncao')?.value;
+        const motivoBase = cleanImportValue(modal.querySelector('#faltasPlanMotivo')?.value) || 'FALTA';
+        const complemento = cleanImportValue(modal.querySelector('#faltasPlanComplemento')?.value);
+        const motivo = complemento ? `${motivoBase} - ${complemento}` : motivoBase;
+
+        const diasSelecionados = Array.from(modal.querySelectorAll('.faltas-plan-dia:checked')).map(chk => chk.value);
+        if (diasSelecionados.length === 0) return alert('Selecione ao menos um dia da semana.');
+
+        const filial = getFilialEscala();
+        const campoFalta = funcao === 'motorista' ? 'motorista_ausente' : 'auxiliar_ausente';
+        const campoMotivo = funcao === 'motorista' ? 'motivo_motorista' : 'motivo_auxiliar';
+        const nomeNormalizado = normalizeString(nome);
+
+        const btnAplicar = modal.querySelector('#btnAplicarFaltasPlanejamentoSemana');
+        if (btnAplicar) btnAplicar.disabled = true;
+
+        try {
+            for (const dia of diasSelecionados) {
+                const dataISO = getDataSemanaDia(semana, dia).toISOString().split('T')[0];
+
+                const { data: escalaDia, error: escalaError } = await aplicarFiltroFilial(
+                    supabaseClient.from('escala').select('*').eq('data_escala', dataISO)
+                );
+                if (escalaError) throw escalaError;
+
+                const linhasParaLimpar = (escalaDia || []).filter(row => normalizeString(row[funcao] || '') === nomeNormalizado);
+                for (const linha of linhasParaLimpar) {
+                    const { error: limparError } = await supabaseClient
+                        .from('escala')
+                        .update(comAuditoria({ [funcao]: null }))
+                        .eq('id', linha.id);
+                    if (limparError) throw limparError;
+                }
+
+                const payload = comAuditoria({
+                    semana_nome: semana,
+                    data_escala: dataISO,
+                    filial,
+                    [campoFalta]: nome,
+                    [campoMotivo]: motivo
+                });
+
+                const { error: insertError } = await supabaseClient.from('faltas_afastamentos').insert([payload]);
+                if (insertError) throw insertError;
+            }
+
+            modal.classList.add('hidden');
+            await carregarFaltasPlanejamento(semana);
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (activeTab?.dataset.dia && diasSelecionados.includes(activeTab.dataset.dia)) {
+                await carregarDadosDia(activeTab.dataset.dia, semana);
+            }
+            alert(`${nome} lançado em ${motivo} para ${diasSelecionados.length} dia(s).`);
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao lançar falta: ' + err.message);
+        } finally {
+            if (btnAplicar) btnAplicar.disabled = false;
+        }
+    }
+
+    const btnAdicionarFaltaPlanejamento = document.getElementById('btnAdicionarFaltaPlanejamento');
+    if (btnAdicionarFaltaPlanejamento) {
+        btnAdicionarFaltaPlanejamento.addEventListener('click', abrirModalFaltasPlanejamentoSemana);
     }
 
     function renderLinhaPlanejamento(item, tbody) {
