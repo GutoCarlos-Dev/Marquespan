@@ -43,6 +43,20 @@ function normalizarFilialLavagem(filial) {
     return (filial || '').toString().trim().toUpperCase();
 }
 
+function normalizarTextoLavagem(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toUpperCase();
+}
+
+function normalizarFornecedorLavagem(value) {
+    const texto = normalizarTextoLavagem(value);
+    return texto || null;
+}
+
 function getUsuarioFilialLavagem() {
     return normalizarFilialLavagem(usuarioLogadoLavagem?.filial);
 }
@@ -944,6 +958,8 @@ window.abrirDetalhesLista = async function(id, nome) {
             }
         }
 
+        if (precosCache.length === 0) await carregarPrecos();
+
         currentListItems = data.map(item => ({
             ...item,
             tipo_veiculo: veiculoMap.get(item.placa) || '-'
@@ -1025,7 +1041,12 @@ function renderizarItensDetalhes(itens) {
         if (item.fornecedor && precosCache) {
             // Filtra os preços para o fornecedor do item e pega os tipos de lavagem únicos
             tiposLavagemDisponiveis = [...new Set(
-                precosCache.filter(p => p.fornecedor === item.fornecedor).map(p => p.tipoLavagem)
+                precosCache
+                    .filter(p =>
+                        normalizarFornecedorLavagem(p.fornecedor) === normalizarFornecedorLavagem(item.fornecedor) &&
+                        (!currentListFilial || normalizarFilialLavagem(p.filial) === currentListFilial)
+                    )
+                    .map(p => p.tipoLavagem)
             )].sort();
         }
 
@@ -1070,7 +1091,8 @@ function renderizarItensDetalhes(itens) {
         const isDuplicada = contagemPlacas[item.placa] > 1;
         const stylePlaca = isDuplicada ? 'color: red; font-weight: bold;' : '';
 
-        const valorFormatado = item.valor ? Number(item.valor).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : '-';
+        const valorItem = obterValorExibicaoLavagem(item);
+        const valorFormatado = valorItem > 0 ? valorItem.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : '-';
 
         tr.innerHTML = `
             <td style="text-align:center;"><input type="checkbox" class="chk-item-detalhe" value="${item.id}" ${isFinalizada ? 'disabled' : ''}></td>
@@ -1195,15 +1217,34 @@ function calcularValorPeloPrecoAtual(item) {
     let total = 0;
     
     tipos.forEach(tipo => {
-        const p = precosCache.find(x => 
-            (x.tipoVeiculo || '').toUpperCase() === (item.tipo_veiculo || '').toUpperCase() && 
-            x.tipoLavagem === tipo &&
-            (x.fornecedor === item.fornecedor || (!x.fornecedor && !item.fornecedor)) &&
-            (!currentListFilial || normalizarFilialLavagem(x.filial) === currentListFilial)
-        );
+        const p = buscarPrecoLavagem(item, tipo, currentListFilial);
         if (p) total += p.valor;
     });
     return total;
+}
+
+function buscarPrecoLavagem(item, tipoLavagem, filialReferencia = currentListFilial) {
+    const tipoVeiculoItem = normalizarTextoLavagem(item.tipo_veiculo);
+    const tipoLavagemItem = normalizarTextoLavagem(tipoLavagem);
+    const fornecedorItem = normalizarFornecedorLavagem(item.fornecedor);
+    const filialItem = normalizarFilialLavagem(filialReferencia);
+
+    return precosCache.find(preco =>
+        normalizarTextoLavagem(preco.tipoVeiculo) === tipoVeiculoItem &&
+        normalizarTextoLavagem(preco.tipoLavagem) === tipoLavagemItem &&
+        normalizarFornecedorLavagem(preco.fornecedor) === fornecedorItem &&
+        (!filialItem || normalizarFilialLavagem(preco.filial) === filialItem)
+    );
+}
+
+function obterValorExibicaoLavagem(item) {
+    if (item.valor !== null && item.valor !== undefined && item.valor !== '') {
+        return Number(item.valor) || 0;
+    }
+
+    const status = normalizarTextoLavagem(item.status);
+    if (status !== 'REALIZADO' && status !== 'OK') return 0;
+    return calcularValorPeloPrecoAtual(item);
 }
 
 window.toggleStatusItem = async function(id, statusAtual) {
@@ -1514,12 +1555,10 @@ window.gerarPDFListaPorId = async function(id, nomeLista, itensFromModal = null)
                 const breakdown = [];
 
                 tipos.forEach(tipo => {
-                    const precoObj = precosCache.find(p => 
-                        (p.tipoVeiculo || '').toUpperCase() === (tipoVeiculo || '').toUpperCase() && 
-                        p.tipoLavagem === tipo &&
-                        (p.fornecedor === item.fornecedor || (!p.fornecedor && !item.fornecedor)) &&
-                        (!filialListaPdf || normalizarFilialLavagem(p.filial) === filialListaPdf)
-                    );
+                    const precoObj = buscarPrecoLavagem({
+                        ...item,
+                        tipo_veiculo: tipoVeiculo
+                    }, tipo, filialListaPdf);
                     const valorTipo = precoObj ? precoObj.valor : 0;
                     valorCalculadoAtual += valorTipo;
                     breakdown.push({ tipo, valorBase: valorTipo });
@@ -2366,12 +2405,10 @@ async function gerarRelatorio() {
                         if (tiposLavagemStr) {
                             const tipos = tiposLavagemStr.split(',').map(t => t.trim()).filter(t => t);
                             tipos.forEach(tipo => {
-                                const precoObj = precosCache.find(p => 
-                                    p.tipoVeiculo === tipoVeiculo.toUpperCase() && 
-                                    p.tipoLavagem === tipo &&
-                                    (p.fornecedor === item.fornecedor || (!p.fornecedor && !item.fornecedor)) &&
-                                    normalizarFilialLavagem(p.filial) === normalizarFilialLavagem(lista.filial)
-                                );
+                                const precoObj = buscarPrecoLavagem({
+                                    ...item,
+                                    tipo_veiculo: tipoVeiculo
+                                }, tipo, lista.filial);
                                 if (precoObj) valorLista += precoObj.valor;
                             });
                         }
