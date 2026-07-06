@@ -776,14 +776,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const linhas = resumo.itens.map(item => {
                     const produto = item.produtos_camara_fria || {};
                     const caixas = Number(item.quantidade_caixas) || 0;
-                    const paletes = this.calcularPaletesPorCaixas(caixas, produto.caixas_por_palete);
+                    const quantidades = this.calcularQuantidadesPDF(caixas, produto.caixas_por_palete);
                     const pesoTotal = caixas * (Number(produto.peso_caixa) || 0);
                     return [
                         produto.codigo || '-',
                         produto.nome || '-',
                         produto.tipo || '-',
-                        String(paletes),
-                        String(caixas),
+                        String(quantidades.paletes),
+                        String(quantidades.caixasAvulsas),
+                        String(quantidades.totalCaixas),
                         `${this.formatPeso(pesoTotal)} KG`,
                         item.observacao || ''
                     ];
@@ -791,12 +792,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const totais = resumo.itens.reduce((acc, item) => {
                     const pesoCaixa = Number(item.produtos_camara_fria?.peso_caixa) || 0;
                     const caixas = Number(item.quantidade_caixas) || 0;
-                    acc.caixas += caixas;
-                    acc.paletes += this.calcularPaletesPorCaixas(caixas, item.produtos_camara_fria?.caixas_por_palete);
+                    const quantidades = this.calcularQuantidadesPDF(caixas, item.produtos_camara_fria?.caixas_por_palete);
+                    acc.paletes += quantidades.paletes;
+                    acc.caixasAvulsas += quantidades.caixasAvulsas;
+                    acc.caixas += quantidades.totalCaixas;
                     acc.peso += caixas * pesoCaixa;
                     if (caixas > 0) acc.itens += 1;
                     return acc;
-                }, { paletes: 0, caixas: 0, peso: 0, itens: 0 });
+                }, { paletes: 0, caixasAvulsas: 0, caixas: 0, peso: 0, itens: 0 });
 
                 doc.setFontSize(16);
                 doc.setTextColor(0, 105, 55);
@@ -805,23 +808,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 doc.setTextColor(40);
                 doc.text(`Filial: ${resumo.contagem.filial} | Semana: ${resumo.contagem.semana} | Fabrica: ${fabrica}`, 14, 35);
                 doc.text(`Funcionario: ${resumo.contagem.funcionario || '-'} | Status: ${resumo.contagem.status === 'FINALIZADA' ? 'Finalizada' : 'Em andamento'}`, 14, 41);
-                doc.text(`Total paletes: ${totais.paletes} | Total caixas: ${totais.caixas} | Peso total: ${this.formatPeso(totais.peso)} KG | Itens contados: ${totais.itens}`, 14, 47);
+                doc.text(`Paletes: ${totais.paletes} | Caixas avulsas: ${totais.caixasAvulsas} | Total caixas: ${totais.caixas} | Peso: ${this.formatPeso(totais.peso)} KG`, 14, 47);
 
                 doc.autoTable({
-                    head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Peso Total', 'Observacao']],
-                    body: linhas.length ? linhas : [['-', 'Nenhum item contado', '-', '0', '0', '0,000 KG', '']],
+                    head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Total Caixas', 'Peso Total', 'Observacao']],
+                    body: linhas.length ? linhas : [['-', 'Nenhum item contado', '-', '0', '0', '0', '0,000 KG', '']],
                     startY: 54,
                     theme: 'grid',
                     headStyles: { fillColor: [0, 105, 55], textColor: [255, 255, 255], fontSize: 8 },
                     styles: { fontSize: 8, cellPadding: 2 },
                     columnStyles: {
-                        0: { cellWidth: 22 },
-                        1: { cellWidth: 48 },
-                        2: { cellWidth: 25 },
-                        3: { halign: 'right', cellWidth: 18 },
-                        4: { halign: 'right', cellWidth: 18 },
-                        5: { halign: 'right', cellWidth: 25 },
-                        6: { cellWidth: 34 }
+                        0: { cellWidth: 18 },
+                        1: { cellWidth: 42 },
+                        2: { cellWidth: 22 },
+                        3: { halign: 'right', cellWidth: 16 },
+                        4: { halign: 'right', cellWidth: 16 },
+                        5: { halign: 'right', cellWidth: 21 },
+                        6: { halign: 'right', cellWidth: 24 },
+                        7: { cellWidth: 31 }
                     },
                     didParseCell: data => {
                         if (data.section === 'body' && data.row.index % 2 === 1) {
@@ -872,11 +876,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return { contagem: contagemResult.data, itens: itensResult.data || [] };
         },
 
-        calcularPaletesPorCaixas(caixas, caixasPorPalete) {
+        calcularQuantidadesPDF(caixas, caixasPorPalete) {
             const totalCaixas = Number(caixas) || 0;
             const capacidadePalete = Number(caixasPorPalete) || 0;
-            if (!totalCaixas || !capacidadePalete) return 0;
-            return Math.floor(totalCaixas / capacidadePalete);
+            if (!totalCaixas || !capacidadePalete) {
+                return { paletes: 0, caixasAvulsas: totalCaixas, totalCaixas };
+            }
+            return {
+                paletes: Math.floor(totalCaixas / capacidadePalete),
+                caixasAvulsas: totalCaixas % capacidadePalete,
+                totalCaixas
+            };
         },
 
         getLogoBase64PDF() {

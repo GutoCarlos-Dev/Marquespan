@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const produto = item.produtos_camara_fria;
             const caixas = Number(item.quantidade_caixas) || 0;
             const pesoCaixa = Number(produto.peso_caixa) || 0;
-            const paletes = this.calcularPaletesPorCaixas(caixas, produto.caixas_por_palete);
+            const quantidades = this.calcularQuantidadesPDF(caixas, produto.caixas_por_palete);
             return {
                 filial: contagem.filial || '-',
                 semana: contagem.semana || '-',
@@ -198,8 +198,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 produtoNome: produto.nome || '-',
                 produtoTipo: produto.tipo || '-',
                 produtoFilial: produto.filial || 'TODAS',
-                paletes,
-                caixas,
+                paletes: quantidades.paletes,
+                caixasAvulsas: quantidades.caixasAvulsas,
+                caixas: quantidades.totalCaixas,
                 pesoTotal: caixas * pesoCaixa
             };
         },
@@ -215,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         produtoTipo: row.produtoTipo,
                         produtoFilial: row.produtoFilial,
                         paletes: 0,
+                        caixasAvulsas: 0,
                         caixas: 0,
                         pesoTotal: 0,
                         contagens: new Set()
@@ -222,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 const item = mapa.get(key);
                 item.paletes += row.paletes;
+                item.caixasAvulsas += row.caixasAvulsas;
                 item.caixas += row.caixas;
                 item.pesoTotal += row.pesoTotal;
                 item.contagens.add(`${row.filial}|${row.semana}|${row.fabrica}`);
@@ -280,6 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderKPIs() {
             const totalCaixas = this.resumoRows.reduce((acc, row) => acc + row.caixas, 0);
             const totalPaletes = this.resumoRows.reduce((acc, row) => acc + row.paletes, 0);
+            const totalCaixasAvulsas = this.resumoRows.reduce((acc, row) => acc + row.caixasAvulsas, 0);
             const totalPeso = this.resumoRows.reduce((acc, row) => acc + row.pesoTotal, 0);
             const totalContagens = new Set(this.detalheRows.map(row => `${row.filial}|${row.semana}|${row.fabrica}`)).size;
 
@@ -288,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.kpiProdutos.textContent = String(this.resumoRows.length);
             this.kpiContagens.textContent = String(totalContagens);
             this.totalPaletesPDF = totalPaletes;
+            this.totalCaixasAvulsasPDF = totalCaixasAvulsas;
         },
 
         limparFiltros() {
@@ -348,15 +353,17 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.setTextColor(40);
             doc.text(`Filtros: ${this.getDescricaoFiltros()}`, 14, 35);
             const totalPaletes = this.resumoRows.reduce((acc, row) => acc + row.paletes, 0);
-            doc.text(`Total paletes: ${totalPaletes} | Total caixas: ${this.kpiCaixas.textContent} | Peso total: ${this.kpiPeso.textContent} | Produtos: ${this.kpiProdutos.textContent}`, 14, 41);
+            const totalCaixasAvulsas = this.resumoRows.reduce((acc, row) => acc + row.caixasAvulsas, 0);
+            doc.text(`Paletes: ${totalPaletes} | Caixas avulsas: ${totalCaixasAvulsas} | Total caixas: ${this.kpiCaixas.textContent} | Produtos: ${this.kpiProdutos.textContent}`, 14, 41);
 
             doc.autoTable({
-                head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Peso Total', 'Contagens']],
+                head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Total Caixas', 'Peso Total', 'Contagens']],
                 body: this.resumoRows.map(row => [
                     row.produtoCodigo,
                     row.produtoNome,
                     row.produtoTipo,
                     String(row.paletes),
+                    String(row.caixasAvulsas),
                     String(row.caixas),
                     `${this.formatPeso(row.pesoTotal)} KG`,
                     String(row.totalContagens)
@@ -369,7 +376,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     3: { halign: 'right' },
                     4: { halign: 'right' },
                     5: { halign: 'right' },
-                    6: { halign: 'right' }
+                    6: { halign: 'right' },
+                    7: { halign: 'right' }
                 }
             });
 
@@ -395,11 +403,17 @@ document.addEventListener('DOMContentLoaded', () => {
             ].join(' | ');
         },
 
-        calcularPaletesPorCaixas(caixas, caixasPorPalete) {
+        calcularQuantidadesPDF(caixas, caixasPorPalete) {
             const totalCaixas = Number(caixas) || 0;
             const capacidadePalete = Number(caixasPorPalete) || 0;
-            if (!totalCaixas || !capacidadePalete) return 0;
-            return Math.floor(totalCaixas / capacidadePalete);
+            if (!totalCaixas || !capacidadePalete) {
+                return { paletes: 0, caixasAvulsas: totalCaixas, totalCaixas };
+            }
+            return {
+                paletes: Math.floor(totalCaixas / capacidadePalete),
+                caixasAvulsas: totalCaixas % capacidadePalete,
+                totalCaixas
+            };
         },
 
         setLoading(loading) {

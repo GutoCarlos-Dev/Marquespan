@@ -608,23 +608,26 @@ async function gerarResumoPDF() {
         const totais = resumo.itens.reduce((acc, item) => {
             const pesoCaixa = Number(item.produtos_camara_fria?.peso_caixa) || 0;
             const caixas = Number(item.quantidade_caixas) || 0;
-            acc.caixas += caixas;
-            acc.paletes += calcularPaletesPorCaixas(caixas, item.produtos_camara_fria?.caixas_por_palete);
+            const quantidades = calcularQuantidadesPDF(caixas, item.produtos_camara_fria?.caixas_por_palete);
+            acc.paletes += quantidades.paletes;
+            acc.caixasAvulsas += quantidades.caixasAvulsas;
+            acc.caixas += quantidades.totalCaixas;
             acc.peso += caixas * pesoCaixa;
             if (caixas > 0) acc.itens += 1;
             return acc;
-        }, { paletes: 0, caixas: 0, peso: 0, itens: 0 });
+        }, { paletes: 0, caixasAvulsas: 0, caixas: 0, peso: 0, itens: 0 });
 
         const linhas = resumo.itens.map(item => {
             const produto = item.produtos_camara_fria || {};
             const caixas = Number(item.quantidade_caixas) || 0;
-            const paletes = calcularPaletesPorCaixas(caixas, produto.caixas_por_palete);
+            const quantidades = calcularQuantidadesPDF(caixas, produto.caixas_por_palete);
             return [
                 produto.codigo || '-',
                 produto.nome || '-',
                 produto.tipo || '-',
-                String(paletes),
-                String(caixas),
+                String(quantidades.paletes),
+                String(quantidades.caixasAvulsas),
+                String(quantidades.totalCaixas),
                 `${formatPeso(caixas * (Number(produto.peso_caixa) || 0))} KG`,
                 item.observacao || ''
             ];
@@ -637,11 +640,11 @@ async function gerarResumoPDF() {
         doc.setTextColor(40);
         doc.text(`Filial: ${resumo.contagem.filial} | Semana: ${formatSemanaDisplay(resumo.contagem.semana)} | Fabrica: ${fabrica}`, 14, 35);
         doc.text(`Funcionario: ${resumo.contagem.funcionario || '-'} | Status: ${resumo.contagem.status === 'FINALIZADA' ? 'Finalizada' : 'Em andamento'}`, 14, 41);
-        doc.text(`Total paletes: ${totais.paletes} | Total caixas: ${totais.caixas} | Peso total: ${formatPeso(totais.peso)} KG | Itens contados: ${totais.itens}`, 14, 47);
+        doc.text(`Paletes: ${totais.paletes} | Caixas avulsas: ${totais.caixasAvulsas} | Total caixas: ${totais.caixas} | Peso: ${formatPeso(totais.peso)} KG`, 14, 47);
 
         doc.autoTable({
-            head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Peso Total', 'Observacao']],
-            body: linhas.length ? linhas : [['-', 'Nenhum item contado', '-', '0', '0', '0,000 KG', '']],
+            head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Total Caixas', 'Peso Total', 'Observacao']],
+            body: linhas.length ? linhas : [['-', 'Nenhum item contado', '-', '0', '0', '0', '0,000 KG', '']],
             startY: 54,
             theme: 'grid',
             headStyles: { fillColor: [0, 105, 55], textColor: [255, 255, 255], fontSize: 8 },
@@ -676,11 +679,17 @@ async function buscarDadosResumo(id) {
     return { contagem: contagemResult.data, itens: itensResult.data || [] };
 }
 
-function calcularPaletesPorCaixas(caixas, caixasPorPalete) {
+function calcularQuantidadesPDF(caixas, caixasPorPalete) {
     const totalCaixas = Number(caixas) || 0;
     const capacidadePalete = Number(caixasPorPalete) || 0;
-    if (!totalCaixas || !capacidadePalete) return 0;
-    return Math.floor(totalCaixas / capacidadePalete);
+    if (!totalCaixas || !capacidadePalete) {
+        return { paletes: 0, caixasAvulsas: totalCaixas, totalCaixas };
+    }
+    return {
+        paletes: Math.floor(totalCaixas / capacidadePalete),
+        caixasAvulsas: totalCaixas % capacidadePalete,
+        totalCaixas
+    };
 }
 
 function getCaixasCard(card) {
