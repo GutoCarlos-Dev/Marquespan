@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estoque Semanal - Camara Fria - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/menu.css" />
+  <link rel="stylesheet" href="css/cadastro-produtos-camara-fria.css" />
+  <link rel="stylesheet" href="css/estoque-camara-fria.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+
+    <div class="main-content">
+      <header class="header glass-header">
+        <h1><i class="fas fa-warehouse"></i> Estoque Semanal - Camara Fria</h1>
+      </header>
+
+      <div class="produtos-top-grid estoque-top-grid">
+        <section class="glass-panel">
+          <h3><i class="fas fa-clipboard-list"></i> Registro Semanal</h3>
+          <div class="filtros-container estoque-filtros">
+            <div class="form-group-filter">
+              <label for="estoqueFilial">Filial</label>
+              <select id="estoqueFilial" class="glass-input" required>
+                <option value="">Selecione</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
+              <label for="estoqueSemana">Semana</label>
+              <input type="week" id="estoqueSemana" class="glass-input" required>
+            </div>
+            <div class="form-group-filter">
+              <label for="estoqueFabrica">Fabrica</label>
+              <div class="tipo-input-row">
+                <select id="estoqueFabrica" class="glass-input" required>
+                  <option value="">Selecione</option>
+                </select>
+                <button type="button" id="btnAbrirCadastroFabrica" class="btn-add-inline" title="Cadastrar fabrica" aria-label="Cadastrar fabrica"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass-panel acoes-panel">
+          <h3><i class="fas fa-cogs"></i> Acoes</h3>
+          <div class="acoes-grid estoque-acoes-grid">
+            <button type="button" id="btnCarregarEstoque" class="btn-glass btn-blue"><i class="fas fa-search"></i> Carregar</button>
+            <button type="button" id="btnSalvarEstoque" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" id="btnLimparLancamento" class="btn-glass btn-red"><i class="fas fa-eraser"></i> Limpar</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="kpi-grid-camara">
+        <div class="kpi-mini-card">
+          <span>Total Caixas</span>
+          <strong id="kpiTotalCaixas">0</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Peso Total</span>
+          <strong id="kpiPesoTotal">0,000 KG</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Produtos Registrados</span>
+          <strong id="kpiProdutosRegistrados">0</strong>
+        </div>
+      </div>
+
+      <div class="glass-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-boxes-stacked"></i> Produtos da Semana</h3>
+          <span id="estoqueRecordsCount" class="produtos-count-badge"></span>
+        </div>
+        <div class="table-responsive produtos-table-container estoque-table-container">
+          <table class="glass-table">
+            <thead class="produtos-table-head">
+              <tr>
+                <th>Codigo</th>
+                <th>Produto</th>
+                <th>Tipo</th>
+                <th>Peso Caixa</th>
+                <th>Caixas/Palete</th>
+                <th>Caixas</th>
+                <th>Peso Total</th>
+                <th>Observacao</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyEstoqueCamara">
+              <tr><td colspan="8" style="text-align:center;">Selecione Filial, Semana e Fabrica para carregar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="glass-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-clock-rotate-left"></i> Historico Registrado</h3>
+          <span id="historicoRecordsCount" class="produtos-count-badge"></span>
+        </div>
+        <div class="table-responsive estoque-historico-container">
+          <table class="glass-table table-compact">
+            <thead>
+              <tr>
+                <th>Filial</th>
+                <th>Semana</th>
+                <th>Fabrica</th>
+                <th>Codigo</th>
+                <th>Produto</th>
+                <th>Caixas</th>
+                <th>Peso Total</th>
+                <th>Usuario</th>
+                <th style="width: 70px; text-align: center;">Acoes</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyHistoricoEstoqueCamara">
+              <tr><td colspan="9" style="text-align:center;">Nenhum registro carregado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalCadastroFabrica" class="modal-backdrop hidden">
+    <div class="glass-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-industry"></i> Cadastro de Fabrica</h3>
+        <button type="button" id="btnCloseCadastroFabrica" class="close-button" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="formCadastroFabrica">
+          <input type="hidden" id="fabricaEditingId">
+          <div class="form-group full-width">
+            <label for="fabricaNome">Nome da Fabrica</label>
+            <input type="text" id="fabricaNome" required class="glass-input" placeholder="Ex: Fabrica 1">
+          </div>
+          <div class="form-actions">
+            <button type="button" id="btnCancelarCadastroFabrica" class="btn-glass btn-red">Cancelar</button>
+            <button type="submit" id="btnSalvarCadastroFabrica" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Fabrica</button>
+          </div>
+        </form>
+
+        <div class="tipo-grid-section">
+          <h4><i class="fas fa-list"></i> Fabricas Cadastradas</h4>
+          <div class="table-responsive">
+            <table class="glass-table table-compact">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th style="width: 70px; text-align: center;">Acoes</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyFabricasCadastradas"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="script/estoque-camara-fria.js?v=20260706-1" defer></script>
+</body>
+</html>
