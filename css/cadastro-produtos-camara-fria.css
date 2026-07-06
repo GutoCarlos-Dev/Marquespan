@@ -141,6 +141,26 @@
     border-radius: 8px;
 }
 
+.produtos-table-container .glass-table {
+    font-size: 0.76rem;
+}
+
+.produtos-table-container .glass-table th {
+    padding: 8px 10px;
+    line-height: 1.15;
+}
+
+.produtos-table-container .glass-table td {
+    padding: 6px 10px;
+    line-height: 1.2;
+    vertical-align: middle;
+}
+
+.produtos-table-container .btn-icon {
+    font-size: 0.95rem;
+    padding: 3px;
+}
+
 .produtos-table-head th {
     position: sticky;
     top: 0;
