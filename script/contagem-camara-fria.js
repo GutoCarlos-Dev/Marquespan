@@ -775,12 +775,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fabrica = resumo.contagem.fabricas_camara_fria?.nome || '-';
                 const linhas = resumo.itens.map(item => {
                     const produto = item.produtos_camara_fria || {};
-                    const pesoTotal = (Number(item.quantidade_caixas) || 0) * (Number(produto.peso_caixa) || 0);
+                    const caixas = Number(item.quantidade_caixas) || 0;
+                    const paletes = this.calcularPaletesPorCaixas(caixas, produto.caixas_por_palete);
+                    const pesoTotal = caixas * (Number(produto.peso_caixa) || 0);
                     return [
                         produto.codigo || '-',
                         produto.nome || '-',
                         produto.tipo || '-',
-                        String(item.quantidade_caixas || 0),
+                        String(paletes),
+                        String(caixas),
                         `${this.formatPeso(pesoTotal)} KG`,
                         item.observacao || ''
                     ];
@@ -789,10 +792,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const pesoCaixa = Number(item.produtos_camara_fria?.peso_caixa) || 0;
                     const caixas = Number(item.quantidade_caixas) || 0;
                     acc.caixas += caixas;
+                    acc.paletes += this.calcularPaletesPorCaixas(caixas, item.produtos_camara_fria?.caixas_por_palete);
                     acc.peso += caixas * pesoCaixa;
                     if (caixas > 0) acc.itens += 1;
                     return acc;
-                }, { caixas: 0, peso: 0, itens: 0 });
+                }, { paletes: 0, caixas: 0, peso: 0, itens: 0 });
 
                 doc.setFontSize(16);
                 doc.setTextColor(0, 105, 55);
@@ -801,22 +805,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 doc.setTextColor(40);
                 doc.text(`Filial: ${resumo.contagem.filial} | Semana: ${resumo.contagem.semana} | Fabrica: ${fabrica}`, 14, 35);
                 doc.text(`Funcionario: ${resumo.contagem.funcionario || '-'} | Status: ${resumo.contagem.status === 'FINALIZADA' ? 'Finalizada' : 'Em andamento'}`, 14, 41);
-                doc.text(`Total caixas: ${totais.caixas} | Peso total: ${this.formatPeso(totais.peso)} KG | Itens contados: ${totais.itens}`, 14, 47);
+                doc.text(`Total paletes: ${totais.paletes} | Total caixas: ${totais.caixas} | Peso total: ${this.formatPeso(totais.peso)} KG | Itens contados: ${totais.itens}`, 14, 47);
 
                 doc.autoTable({
-                    head: [['Codigo', 'Produto', 'Tipo', 'Caixas', 'Peso Total', 'Observacao']],
-                    body: linhas.length ? linhas : [['-', 'Nenhum item contado', '-', '0', '0,000 KG', '']],
+                    head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Peso Total', 'Observacao']],
+                    body: linhas.length ? linhas : [['-', 'Nenhum item contado', '-', '0', '0', '0,000 KG', '']],
                     startY: 54,
                     theme: 'grid',
                     headStyles: { fillColor: [0, 105, 55], textColor: [255, 255, 255], fontSize: 8 },
                     styles: { fontSize: 8, cellPadding: 2 },
                     columnStyles: {
                         0: { cellWidth: 22 },
-                        1: { cellWidth: 55 },
-                        2: { cellWidth: 28 },
-                        3: { halign: 'right', cellWidth: 20 },
-                        4: { halign: 'right', cellWidth: 28 },
-                        5: { cellWidth: 38 }
+                        1: { cellWidth: 48 },
+                        2: { cellWidth: 25 },
+                        3: { halign: 'right', cellWidth: 18 },
+                        4: { halign: 'right', cellWidth: 18 },
+                        5: { halign: 'right', cellWidth: 25 },
+                        6: { cellWidth: 34 }
                     },
                     didParseCell: data => {
                         if (data.section === 'body' && data.row.index % 2 === 1) {
@@ -858,13 +863,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     .single(),
                 supabaseClient
                     .from('contagem_camara_fria_itens')
-                    .select('quantidade_caixas, observacao, produtos_camara_fria(codigo, nome, tipo, peso_caixa)')
+                    .select('quantidade_caixas, observacao, produtos_camara_fria(codigo, nome, tipo, peso_caixa, caixas_por_palete)')
                     .eq('contagem_id', id)
                     .order('quantidade_caixas', { ascending: false })
             ]);
             if (contagemResult.error) throw contagemResult.error;
             if (itensResult.error) throw itensResult.error;
             return { contagem: contagemResult.data, itens: itensResult.data || [] };
+        },
+
+        calcularPaletesPorCaixas(caixas, caixasPorPalete) {
+            const totalCaixas = Number(caixas) || 0;
+            const capacidadePalete = Number(caixasPorPalete) || 0;
+            if (!totalCaixas || !capacidadePalete) return 0;
+            return Math.floor(totalCaixas / capacidadePalete);
         },
 
         getLogoBase64PDF() {
