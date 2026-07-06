@@ -4,7 +4,22 @@ import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 let currentListId = null;
 let currentItems = [];
 let currentFilter = 'TODOS';
+let usuarioLogadoMobileLavagem = null;
 const NIVEIS_BLOQUEIO_LOCALIZACAO_MOBILE = new Set(['equipe_sabado', 'coleta_km']);
+
+function normalizarFilialLavagemMobile(filial) {
+    return (filial || '').toString().trim().toUpperCase();
+}
+
+function getUsuarioFilialLavagemMobile() {
+    return normalizarFilialLavagemMobile(usuarioLogadoMobileLavagem?.filial);
+}
+
+function filialPermitidaLavagemMobile(filial) {
+    const filialUsuario = getUsuarioFilialLavagemMobile();
+    if (!filialUsuario) return true;
+    return normalizarFilialLavagemMobile(filial) === filialUsuario;
+}
 
 function getNivelUsuarioMobile() {
     try {
@@ -22,6 +37,7 @@ function localizacaoBloqueadaMobile() {
 document.addEventListener('DOMContentLoaded', async () => {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     if (!usuario) { window.location.href = 'index.html'; return; }
+    usuarioLogadoMobileLavagem = usuario;
 
     await carregarListasAbertas();
 
@@ -85,12 +101,16 @@ async function carregarListasAbertas() {
     container.innerHTML = '<div class="loading">Carregando...</div>';
 
     try {
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('lavagem_listas')
             .select('*')
             .eq('status', 'ABERTA')
             .order('created_at', { ascending: false });
 
+        const filialUsuario = getUsuarioFilialLavagemMobile();
+        if (filialUsuario) query = query.eq('filial', filialUsuario);
+
+        const { data, error } = await query;
         if (error) throw error;
 
         container.innerHTML = '';
@@ -104,6 +124,7 @@ async function carregarListasAbertas() {
             card.className = 'card status-aberta';
             card.innerHTML = `
                 <h4>${lista.nome}</h4>
+                <p><i class="fas fa-map-marker-alt"></i> ${normalizarFilialLavagemMobile(lista.filial) || '-'}</p>
                 <p><i class="far fa-calendar-alt"></i> ${new Date(lista.data_lista).toLocaleDateString('pt-BR')}</p>
                 <span class="status">ABERTA</span>
             `;
@@ -118,6 +139,12 @@ async function carregarListasAbertas() {
 }
 
 async function abrirLista(lista) {
+    if (!filialPermitidaLavagemMobile(lista?.filial)) {
+        alert('Esta lista pertence a outra filial.');
+        await carregarListasAbertas();
+        return;
+    }
+
     currentListId = lista.id;
     document.getElementById('tituloListaAtual').textContent = lista.nome;
     
