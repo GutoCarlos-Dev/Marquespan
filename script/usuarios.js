@@ -414,7 +414,7 @@ async function salvarRegraInatividadeUsuario(usuario, select) {
         select.classList.toggle('isento', novoValor === 0);
         registrarAuditoria(
             'ALTERAR',
-            'Usuarios',
+            'Usuários',
             `Regra de inatividade de ${usuario.nome}: ${descreverRegraInatividade(novoValor)}`
         );
     } catch (error) {

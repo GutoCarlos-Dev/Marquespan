@@ -346,7 +346,7 @@ async function renomearNivel(nivelAtual) {
         return;
     }
 
-    registrarAuditoria('ALTERAR', 'Permissoes', `Renomeacao do nivel de acesso: ${nivelAtual} para ${novoNivel}`);
+    registrarAuditoria('ALTERAR', 'Permissões', `Renomeacao do nivel de acesso: ${nivelAtual} para ${novoNivel}`);
     nivelSelecionado = novoNivel;
     await carregarNiveis();
     await selecionarNivel(novoNivel);
@@ -390,7 +390,7 @@ async function excluirNivel(nivel) {
         return;
     }
 
-    registrarAuditoria('EXCLUIR', 'Permissoes', `Exclusao do nivel de acesso: ${nivel}`);
+    registrarAuditoria('EXCLUIR', 'Permissões', `Exclusao do nivel de acesso: ${nivel}`);
     nivelSelecionado = null;
     await carregarNiveis();
     alert('Nivel excluido com sucesso!');

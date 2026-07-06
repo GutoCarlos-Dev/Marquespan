@@ -422,7 +422,7 @@ async function salvarCadastroFinanceiroDiaria(event) {
             if (error) throw error;
         }
 
-        registrarAuditoria('INCLUIR', 'Diaria', `Cadastro financeiro de diaria - Filial: ${filial}`);
+        registrarAuditoria('INCLUIR', 'Diária', `Cadastro financeiro de diaria - Filial: ${filial}`);
         await carregarCadastroFinanceiroDiaria();
         limparFormularioFinanceiroDiaria();
         aplicarCadastroFinanceiroNaDiaria();
@@ -458,7 +458,7 @@ async function excluirCadastroFinanceiroDiaria(id) {
             .eq('id', id);
         if (error) throw error;
 
-        registrarAuditoria('EXCLUIR', 'Diaria', `Cadastro financeiro de diaria - Filial: ${item.filial}`);
+        registrarAuditoria('EXCLUIR', 'Diária', `Cadastro financeiro de diaria - Filial: ${item.filial}`);
         await carregarCadastroFinanceiroDiaria();
         limparFormularioFinanceiroDiaria();
         setText('diariaFinanceiroStatus', 'Cadastro financeiro excluido com sucesso.');
@@ -668,7 +668,7 @@ async function excluirHistoricoJantaPernoite(id) {
 
         if (error) throw error;
 
-        registrarAuditoria('EXCLUIR', 'Diaria', `Janta e pernoite - Data: ${formatDataISOBR(item.data_ref)}, Filial: ${item.filial}`);
+        registrarAuditoria('EXCLUIR', 'Diária', `Janta e pernoite - Data: ${formatDataISOBR(item.data_ref)}, Filial: ${item.filial}`);
         await carregarHistoricoJantaPernoite();
         alert('Historico excluido com sucesso.');
     } catch (error) {
@@ -1037,7 +1037,7 @@ async function salvarJantaPernoite() {
             .insert(itens.map(item => comAuditoria({ ...item, lancamento_id: lancamento.id })));
         if (insertError) throw insertError;
 
-        registrarAuditoria('INCLUIR', 'Diaria', `Janta e pernoite - Data: ${formatDataISOBR(dataRef)}, Filial: ${filial}`);
+        registrarAuditoria('INCLUIR', 'Diária', `Janta e pernoite - Data: ${formatDataISOBR(dataRef)}, Filial: ${filial}`);
         await carregarHistoricoJantaPernoite();
         alert('Janta e pernoite salvos com sucesso.');
     } catch (error) {
@@ -1490,7 +1490,7 @@ async function excluirHistoricoDiaria(id) {
 
         if (error) throw error;
 
-        registrarAuditoria('EXCLUIR', 'Diaria', `Historico de diaria - Semana: ${item.semana_nome}, Filial: ${item.filial}`);
+        registrarAuditoria('EXCLUIR', 'Diária', `Historico de diaria - Semana: ${item.semana_nome}, Filial: ${item.filial}`);
         await carregarHistoricoDiaria();
         alert('Historico excluido com sucesso.');
     } catch (error) {
