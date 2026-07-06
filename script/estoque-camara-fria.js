@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.modalFabrica = document.getElementById('modalCadastroFabrica');
             this.formFabrica = document.getElementById('formCadastroFabrica');
             this.fabricaEditingId = document.getElementById('fabricaEditingId');
+            this.fabricaFilial = document.getElementById('fabricaFilial');
             this.fabricaNome = document.getElementById('fabricaNome');
             this.btnCloseCadastroFabrica = document.getElementById('btnCloseCadastroFabrica');
             this.btnCancelarCadastroFabrica = document.getElementById('btnCancelarCadastroFabrica');
@@ -48,7 +49,14 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnCarregar.addEventListener('click', () => this.carregarLancamento());
             this.btnSalvar.addEventListener('click', () => this.salvarEstoque());
             this.btnLimpar.addEventListener('click', () => this.limparLancamento());
-            [this.filialSelect, this.semanaInput, this.fabricaSelect].forEach(el => {
+            this.filialSelect.addEventListener('change', async () => {
+                this.fabricaSelect.value = '';
+                if (this.fabricaFilial) this.fabricaFilial.value = this.filialSelect.value;
+                await this.loadFabricas();
+                this.renderHistorico();
+                if (this.formularioBaseValido(false)) this.carregarLancamento();
+            });
+            [this.semanaInput, this.fabricaSelect].forEach(el => {
                 el.addEventListener('change', () => {
                     this.renderHistorico();
                     if (this.formularioBaseValido(false)) this.carregarLancamento();
@@ -97,6 +105,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 this.filialSelect.innerHTML = '<option value="">Selecione</option>'
                     + (data || []).map(f => `<option value="${this.escapeHtml(f.sigla || f.nome)}">${this.escapeHtml(f.sigla ? `${f.nome} (${f.sigla})` : f.nome)}</option>`).join('');
+                if (this.fabricaFilial) {
+                    this.fabricaFilial.innerHTML = '<option value="">Selecione</option>'
+                        + (data || []).map(f => `<option value="${this.escapeHtml(f.sigla || f.nome)}">${this.escapeHtml(f.sigla ? `${f.nome} (${f.sigla})` : f.nome)}</option>`).join('');
+                }
 
                 if (this.filialRestrita) {
                     if (!Array.from(this.filialSelect.options).some(o => o.value === this.filialRestrita)) {
@@ -104,8 +116,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     this.filialSelect.value = this.filialRestrita;
                     this.filialSelect.disabled = true;
+                    if (this.fabricaFilial) {
+                        this.fabricaFilial.value = this.filialRestrita;
+                        this.fabricaFilial.disabled = true;
+                    }
                 }
 
+                await this.loadFabricas();
                 if (this.formularioBaseValido(false)) this.carregarLancamento();
             } catch (error) {
                 console.error('Erro ao carregar filiais:', error);
@@ -114,18 +131,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async loadFabricas() {
             try {
-                const { data, error } = await supabaseClient
+                let query = supabaseClient
                     .from('fabricas_camara_fria')
-                    .select('id, nome, ativo')
+                    .select('id, filial, nome, ativo')
                     .eq('ativo', true)
                     .order('nome');
+                if (this.filialSelect.value) query = query.eq('filial', this.filialSelect.value);
+
+                const { data, error } = await query;
                 if (error) throw error;
 
                 this.fabricasCache = data || [];
                 const valorAtual = this.fabricaSelect.value;
                 this.fabricaSelect.innerHTML = '<option value="">Selecione</option>'
                     + this.fabricasCache.map(f => `<option value="${f.id}">${this.escapeHtml(f.nome)}</option>`).join('');
-                if (valorAtual) this.fabricaSelect.value = valorAtual;
+                if (valorAtual && this.fabricasCache.some(f => String(f.id) === String(valorAtual))) {
+                    this.fabricaSelect.value = valorAtual;
+                }
 
                 this.renderFabricasGrid();
             } catch (error) {
@@ -408,6 +430,12 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         openCadastroFabrica() {
+            if (!this.filialSelect.value && !this.filialRestrita) {
+                alert('Selecione a filial antes de cadastrar uma fabrica.');
+                this.filialSelect.focus();
+                return;
+            }
+            if (this.fabricaFilial) this.fabricaFilial.value = this.filialSelect.value || this.filialRestrita;
             this.modalFabrica.classList.remove('hidden');
             this.fabricaNome.focus();
         },
@@ -420,12 +448,19 @@ document.addEventListener('DOMContentLoaded', () => {
         clearFabricaForm() {
             this.formFabrica.reset();
             this.fabricaEditingId.value = '';
+            if (this.fabricaFilial) this.fabricaFilial.value = this.filialSelect.value || this.filialRestrita || '';
             this.btnSalvarCadastroFabrica.innerHTML = '<i class="fas fa-save"></i> Salvar Fabrica';
         },
 
         async handleFabricaSubmit(e) {
             e.preventDefault();
+            if (!this.fabricaFilial.value) {
+                alert('Selecione a filial da fabrica.');
+                this.fabricaFilial.focus();
+                return;
+            }
             const payload = {
+                filial: this.fabricaFilial.value,
                 nome: this.fabricaNome.value.trim(),
                 ativo: true,
                 updated_at: new Date().toISOString()
@@ -447,6 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tbodyFabricas.innerHTML = this.fabricasCache.length
                 ? this.fabricasCache.map(fabrica => `
                     <tr>
+                        <td>${this.escapeHtml(fabrica.filial || '-')}</td>
                         <td>${this.escapeHtml(fabrica.nome)}</td>
                         <td class="actions-cell">
                             <button class="btn-icon edit" data-id="${fabrica.id}" title="Editar"><i class="fas fa-pen"></i></button>
@@ -454,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </td>
                     </tr>
                 `).join('')
-                : '<tr><td colspan="2" style="text-align:center;">Nenhuma fabrica cadastrada.</td></tr>';
+                : '<tr><td colspan="3" style="text-align:center;">Nenhuma fabrica cadastrada para esta filial.</td></tr>';
         },
 
         handleFabricasGridClick(e) {
@@ -465,6 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (button.classList.contains('edit')) {
                 this.fabricaEditingId.value = fabrica.id;
+                if (this.fabricaFilial) this.fabricaFilial.value = fabrica.filial || this.filialSelect.value || '';
                 this.fabricaNome.value = fabrica.nome;
                 this.btnSalvarCadastroFabrica.innerHTML = '<i class="fas fa-save"></i> Atualizar Fabrica';
             } else if (button.classList.contains('delete')) {

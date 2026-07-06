@@ -138,6 +138,12 @@
         <form id="formCadastroFabrica">
           <input type="hidden" id="fabricaEditingId">
           <div class="form-group full-width">
+            <label for="fabricaFilial">Filial da Fabrica</label>
+            <select id="fabricaFilial" required class="glass-input">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
             <label for="fabricaNome">Nome da Fabrica</label>
             <input type="text" id="fabricaNome" required class="glass-input" placeholder="Ex: Fabrica 1">
           </div>
@@ -153,6 +159,7 @@
             <table class="glass-table table-compact">
               <thead>
                 <tr>
+                  <th>Filial</th>
                   <th>Nome</th>
                   <th style="width: 70px; text-align: center;">Acoes</th>
                 </tr>

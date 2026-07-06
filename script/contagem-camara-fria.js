@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnIniciar = document.getElementById('btnIniciarContagem');
             this.btnSalvar = document.getElementById('btnSalvarContagem');
             this.btnFinalizar = document.getElementById('btnFinalizarContagem');
+            this.btnReabrir = document.getElementById('btnReabrirContagem');
             this.btnCancelar = document.getElementById('btnCancelarContagem');
             this.btnPDF = document.getElementById('btnResumoContagemPDF');
             this.tableBody = document.getElementById('tableBodyContagemCamara');
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnModalFechar = document.getElementById('btnModalFecharContagem');
             this.btnModalSalvar = document.getElementById('btnModalSalvarContagem');
             this.btnModalFinalizar = document.getElementById('btnModalFinalizarContagem');
+            this.btnModalReabrir = document.getElementById('btnModalReabrirContagem');
             this.recentesBody = document.getElementById('tableBodyContagensRecentes');
             this.recordsCount = document.getElementById('contagemRecordsCount');
             this.recentesCount = document.getElementById('contagensRecentesCount');
@@ -56,12 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnIniciar.addEventListener('click', () => this.iniciarContagem());
             this.btnSalvar.addEventListener('click', () => this.salvarItens());
             this.btnFinalizar.addEventListener('click', () => this.finalizarContagem());
+            this.btnReabrir.addEventListener('click', () => this.reabrirContagem());
             this.btnCancelar.addEventListener('click', () => this.cancelarContagem());
             this.btnPDF.addEventListener('click', () => this.gerarResumoPDF());
             this.btnCloseModalContagem.addEventListener('click', () => this.closeModalContagem());
             this.btnModalFechar.addEventListener('click', () => this.closeModalContagem());
             this.btnModalSalvar.addEventListener('click', () => this.salvarItens());
             this.btnModalFinalizar.addEventListener('click', () => this.finalizarContagem());
+            this.btnModalReabrir.addEventListener('click', () => this.reabrirContagem());
             this.modalContagem.addEventListener('click', (event) => {
                 if (event.target === this.modalContagem) this.closeModalContagem();
             });
@@ -525,6 +529,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        async reabrirContagem(id = null) {
+            const contagemId = id || this.contagemAtual?.id;
+            if (!contagemId) return alert('Selecione uma contagem para reabrir.');
+            if (!confirm('Reabrir esta contagem? Os campos voltarao a ficar liberados para edicao.')) return;
+
+            this.btnReabrir.disabled = true;
+            if (this.btnModalReabrir) this.btnModalReabrir.disabled = true;
+            this.btnReabrir.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reabrindo...';
+            try {
+                const agora = new Date().toISOString();
+                const { error } = await supabaseClient
+                    .from('contagens_camara_fria')
+                    .update({ status: 'EM_ANDAMENTO', finalizada_em: null, updated_at: agora })
+                    .eq('id', contagemId);
+                if (error) throw error;
+
+                if (!this.contagemAtual || String(this.contagemAtual.id) !== String(contagemId)) {
+                    await this.abrirContagemPorId(contagemId);
+                } else {
+                    await this.recarregarContagemAtual();
+                    await this.carregarItensContagem();
+                    this.openModalContagem();
+                    this.atualizarEstado();
+                }
+
+                await this.renderContagensRecentes();
+                alert('Contagem reaberta com sucesso.');
+            } catch (error) {
+                console.error('Erro ao reabrir contagem:', error);
+                alert('Erro ao reabrir contagem: ' + error.message);
+            } finally {
+                this.btnReabrir.innerHTML = '<i class="fas fa-lock-open"></i> Reabrir';
+                this.atualizarEstado();
+            }
+        },
+
         async cancelarContagem() {
             if (!this.contagemAtual) return alert('Nenhuma contagem iniciada para cancelar.');
             if (this.contagemAtual.status === 'FINALIZADA') {
@@ -579,10 +619,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.btnSalvar.disabled = !temContagem || finalizada;
             this.btnFinalizar.disabled = !temContagem || finalizada;
+            this.btnReabrir.disabled = !temContagem || !finalizada;
             this.btnCancelar.disabled = !temContagem || finalizada;
             this.btnPDF.disabled = !temContagem;
             if (this.btnModalSalvar) this.btnModalSalvar.disabled = !temContagem || finalizada;
             if (this.btnModalFinalizar) this.btnModalFinalizar.disabled = !temContagem || finalizada;
+            if (this.btnModalReabrir) this.btnModalReabrir.disabled = !temContagem || !finalizada;
 
             this.statusBadge.className = 'contagem-status-badge';
             if (!temContagem) {
@@ -633,6 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${this.formatDateTime(contagem.updated_at)}</td>
                         <td class="actions-cell">
                             <button class="btn-icon edit" data-action="abrir" data-id="${contagem.id}" title="Abrir"><i class="fas fa-folder-open"></i></button>
+                            ${contagem.status === 'FINALIZADA' ? `<button class="btn-icon edit" data-action="reabrir" data-id="${contagem.id}" title="Reabrir"><i class="fas fa-lock-open"></i></button>` : ''}
                             <button class="btn-icon" data-action="pdf" data-id="${contagem.id}" title="Gerar PDF"><i class="fas fa-file-pdf"></i></button>
                             <button class="btn-icon delete" data-action="excluir" data-id="${contagem.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                         </td>
@@ -649,6 +692,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (button.dataset.action === 'abrir') {
                 await this.abrirContagemPorId(button.dataset.id);
+            } else if (button.dataset.action === 'reabrir') {
+                await this.reabrirContagem(button.dataset.id);
             } else if (button.dataset.action === 'pdf') {
                 await this.gerarResumoPDF(button.dataset.id);
             } else if (button.dataset.action === 'excluir') {
