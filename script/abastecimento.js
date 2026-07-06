@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 import XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
 import {
     exportarAuditoriaEstoquePDF as gerarAuditoriaEstoquePDF,
@@ -1112,6 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { error } = await supabaseClient.from('abastecimentos').insert(ajustes);
                 if (error) throw error;
 
+                registrarAuditoria('INCLUIR', 'Abastecimento', `Ajuste de estoque em ${ajustes.length} tanque(s)`);
                 alert('Ajuste(s) de estoque salvo(s) com sucesso!');
                 await this.loadEstoqueAtual(); // Recarrega para mostrar os novos valores calculados
                 if (this.canViewEstoqueAuditoria() && this.auditoriaEstoqueDataInicial?.value && this.auditoriaEstoqueDataFinal?.value) {
@@ -1306,6 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
 
+                registrarAuditoria('ALTERAR', 'Abastecimento', `Alteração de ajuste de estoque ID ${id}`);
                 alert('Ajuste atualizado com sucesso!');
                 if (this.returnAfterSaveIfNeeded()) return;
                 await this.renderAuditoriaEstoque();
@@ -1328,6 +1331,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
 
+                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de ajuste de estoque ID ${id}`);
                 alert('Ajuste excluído com sucesso!');
                 await this.renderAuditoriaEstoque();
                 await this.loadEstoqueAtual();
@@ -1484,6 +1488,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { error } = await supabaseClient.from('abastecimentos').insert(payloads);
                 if (error) throw error;
 
+                registrarAuditoria(
+                    this.editingIdInput.value ? 'ALTERAR' : 'INCLUIR',
+                    'Abastecimento',
+                    `${this.editingIdInput.value ? 'Atualização' : 'Registro'} de entrada - NF: ${this.notaInput.value}`
+                );
                 alert(`Abastecimento ${this.editingIdInput.value ? 'atualizado' : 'registrado'} com sucesso!`);
                 if (this.returnAfterSaveIfNeeded()) return;
                 this.clearForm();
@@ -1525,6 +1534,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         const { error } = await supabaseClient.from('abastecimentos').delete().eq('id', id);
                         if (error) throw error;
+                        registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de entrada de abastecimento ID ${id}`);
                         this.renderTable();
                         await this.loadEstoqueAtual(false);
                     } catch (error) {
@@ -1732,6 +1742,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (error) throw error;
                 }
 
+                registrarAuditoria(
+                    this.saidaEditingId.value ? 'ALTERAR' : 'INCLUIR',
+                    'Abastecimento',
+                    `${this.saidaEditingId.value ? 'Atualização' : 'Registro'} de saída - Placa: ${placaInput}`
+                );
                 alert(`Abastecimento(s) ${this.saidaEditingId.value ? 'atualizado' : 'registrado'} com sucesso!`);
                 if (this.returnAfterSaveIfNeeded()) return;
                 this.clearSaidaForm();
@@ -1837,6 +1852,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const { error } = await supabaseClient.from('saidas_combustivel').delete().eq('id', id);
                 if (error) throw error;
+                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de saída de combustível ID ${id}`);
                 alert('Registro de saída excluído com sucesso!');
                 this.renderSaidasTable();
                 await this.loadEstoqueAtual(false);
@@ -2092,6 +2108,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (importedRows.length > 0) {
+                    registrarAuditoria('IMPORTAR', 'Abastecimento', `Importação de ${importedRows.length} abastecimento(s) externo(s) (${rejectedRows.length} rejeitados)`);
                     alert(`Importação concluída com sucesso!\n${importedRows.length} registros inseridos.\n${rejectedRows.length} registros rejeitados.\n\nUm arquivo .txt com o resumo detalhado será baixado.`);
                     baixarRelatorioImportacaoExterna(importedRows, rejectedRows);
                     this.renderExtTable();
@@ -2154,6 +2171,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (error) {
                     alert('Erro ao salvar: ' + error.message);
                 } else {
+                    registrarAuditoria(
+                        this.extEditingId ? 'ALTERAR' : 'INCLUIR',
+                        'Abastecimento',
+                        `${this.extEditingId ? 'Atualização' : 'Registro'} de abastecimento externo - Placa: ${this.extVeiculo.value}`
+                    );
                     alert(`Abastecimento externo ${this.extEditingId ? 'atualizado' : 'registrado'}!`);
                     if (this.returnAfterSaveIfNeeded()) return;
                     this.resetExtForm();
@@ -2282,7 +2304,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!confirm('Deseja excluir este registro?')) return;
             const { error } = await supabaseClient.from('abastecimento_externo').delete().eq('id', id);
             if (error) alert('Erro ao excluir: ' + error.message);
-            else this.renderExtTable();
+            else {
+                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de abastecimento externo ID ${id}`);
+                this.renderExtTable();
+            }
         },
 
         resetExtForm() {
@@ -2311,6 +2336,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
 
+                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão em lote de ${ids.length} registro(s) de abastecimento externo`);
                 alert('Registros excluídos com sucesso!');
                 this.renderExtTable(); // Refresh table
                 
@@ -2342,6 +2368,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { importados, duplicados } = await importarPostos({ file, XLSX, supabaseClient });
 
                 if (importados > 0) {
+                    registrarAuditoria('IMPORTAR', 'Abastecimento', `Importação de ${importados} posto(s) (${duplicados} duplicados ignorados)`);
                     let msg = `Importação concluída! ${importados} postos cadastrados.`;
                     if (duplicados > 0) msg += `\n(${duplicados} ignorados por CNPJ duplicado)`;
                     alert(msg);
@@ -2409,6 +2436,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) {
                 alert('Erro ao salvar posto: ' + error.message);
             } else {
+                registrarAuditoria(
+                    this.postoEditingId ? 'ALTERAR' : 'INCLUIR',
+                    'Abastecimento',
+                    `${this.postoEditingId ? 'Atualização' : 'Cadastro'} de posto: ${this.postoRazao.value}`
+                );
                 alert(`Posto ${this.postoEditingId ? 'atualizado' : 'cadastrado'} com sucesso!`);
                 this.resetPostoForm();
                 this.renderPostosTable();
@@ -2510,6 +2542,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { error } = await supabaseClient.from('postos').delete().eq('id', id);
                 if(error) alert('Erro ao excluir: ' + error.message);
                 else {
+                    registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de posto ID ${id}`);
                     this.renderPostosTable();
                     this.loadPostosOptions();
                 }
@@ -2540,7 +2573,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (payloads.length > 0) {
                     const { error } = await supabaseClient.from('saidas_combustivel').insert(payloads);
                     if (error) throw error;
-                    
+
+                    registrarAuditoria('IMPORTAR', 'Abastecimento', `Importação de ${importedRows.length} saída(s) de combustível (${rejectedRows.length} rejeitados)`);
                     alert(`Importação concluída com sucesso!\n${importedRows.length} registros de saída inseridos.\n${rejectedRows.length} registros rejeitados.\n\nUm arquivo .txt com o resumo detalhado será baixado.`);
                     baixarRelatorioImportacaoSaida(importedRows, rejectedRows);
                     this.renderSaidasTable();
