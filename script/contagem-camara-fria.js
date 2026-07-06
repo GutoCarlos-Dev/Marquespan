@@ -76,10 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
             this.tableBody.addEventListener('input', (event) => {
-                if (event.target.matches('.input-caixas-estoque')) this.atualizarLinha(event.target.closest('tr'));
+                if (event.target.matches('.input-paletes-estoque, .input-caixas-estoque')) this.atualizarLinha(event.target.closest('tr'));
             });
             this.modalTableBody.addEventListener('input', (event) => {
-                if (event.target.matches('.input-caixas-estoque')) {
+                if (event.target.matches('.input-paletes-estoque, .input-caixas-estoque')) {
                     this.atualizarLinha(event.target.closest('tr'));
                     this.sincronizarPreviaComModal();
                 }
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (this.produtosCache.length === 0) {
-                const vazio = '<tr><td colspan="8" style="text-align:center;">Nenhum produto cadastrado para esta filial.</td></tr>';
+                const vazio = '<tr><td colspan="9" style="text-align:center;">Nenhum produto cadastrado para esta filial.</td></tr>';
                 this.tableBody.innerHTML = vazio;
                 this.modalTableBody.innerHTML = vazio;
                 this.atualizarTotais();
@@ -263,18 +263,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const linhasHtml = this.produtosCache.map(produto => {
                 const item = this.itensCache.get(String(produto.id));
                 const caixas = item?.quantidade_caixas ?? '';
+                const caixasPorPalete = Number(produto.caixas_por_palete) || 0;
+                const quantidades = this.calcularQuantidadesPelasCaixas(caixas, caixasPorPalete);
                 const observacao = item?.observacao || '';
                 return `
-                    <tr data-produto-id="${produto.id}" data-item-id="${item?.id || ''}" data-peso-caixa="${produto.peso_caixa || 0}">
+                    <tr data-produto-id="${produto.id}" data-item-id="${item?.id || ''}" data-peso-caixa="${produto.peso_caixa || 0}" data-caixas-por-palete="${caixasPorPalete}">
                         <td>${this.escapeHtml(produto.codigo) || '-'}</td>
                         <td>
                             <strong>${this.escapeHtml(produto.nome)}</strong>
-                            <div class="produto-meta">${this.escapeHtml(produto.filial || 'TODAS')}</div>
+                            <div class="produto-meta">${this.escapeHtml(produto.filial || 'TODAS')} | ${caixasPorPalete || '-'} caixas/palete</div>
                         </td>
                         <td>${this.escapeHtml(produto.tipo) || '-'}</td>
                         <td>${produto.peso_caixa != null ? `${this.formatPeso(produto.peso_caixa)} KG` : '-'}</td>
-                        <td>${produto.caixas_por_palete || '-'}</td>
-                        <td><input type="number" min="0" step="1" class="input-caixas-estoque" value="${caixas}" ${bloqueado}></td>
+                        <td><input type="number" min="0" step="1" class="input-paletes-estoque" value="${quantidades.paletes}" ${bloqueado}></td>
+                        <td><input type="number" min="0" step="1" class="input-caixas-estoque" value="${quantidades.caixasAvulsas}" ${bloqueado}></td>
+                        <td class="estoque-qtd-caixas">${caixas || 0}</td>
                         <td class="estoque-peso-total">0,000 KG</td>
                         <td><input type="text" class="input-observacao-estoque" value="${this.escapeHtml(observacao)}" placeholder="Opcional" ${bloqueado}></td>
                     </tr>
@@ -288,8 +291,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         renderTabelaInicial() {
-            this.tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Selecione os campos e clique em Iniciar.</td></tr>';
-            this.modalTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Inicie uma contagem para carregar os produtos.</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Selecione os campos e clique em Iniciar.</td></tr>';
+            this.modalTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Inicie uma contagem para carregar os produtos.</td></tr>';
             if (this.recordsCount) this.recordsCount.textContent = '';
             this.atualizarTotais();
         },
@@ -299,6 +302,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const caixas = this.getCaixasLinha(tr);
             const pesoCaixa = Number(tr.dataset.pesoCaixa) || 0;
             const pesoTotal = caixas * pesoCaixa;
+            const cellCaixas = tr.querySelector('.estoque-qtd-caixas');
+            if (cellCaixas) cellCaixas.textContent = String(caixas);
             const cellPeso = tr.querySelector('.estoque-peso-total');
             if (cellPeso) cellPeso.textContent = `${this.formatPeso(pesoTotal)} KG`;
             this.atualizarTotais();
@@ -311,8 +316,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let itensContados = 0;
 
             linhas.forEach(tr => {
-                const input = tr.querySelector('.input-caixas-estoque');
-                const preenchido = String(input?.value || '').trim() !== '';
+                const inputPaletes = tr.querySelector('.input-paletes-estoque');
+                const inputCaixas = tr.querySelector('.input-caixas-estoque');
+                const preenchido = String(inputPaletes?.value || '').trim() !== '' || String(inputCaixas?.value || '').trim() !== '';
                 const caixas = this.getCaixasLinha(tr);
                 const pesoCaixa = Number(tr.dataset.pesoCaixa) || 0;
                 if (preenchido) itensContados++;
@@ -371,8 +377,33 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         getCaixasLinha(tr) {
+            const paletes = this.getPaletesLinha(tr);
+            const caixasAvulsas = this.getCaixasAvulsasLinha(tr);
+            const caixasPorPalete = Number(tr.dataset.caixasPorPalete) || 0;
+            const caixas = (paletes * caixasPorPalete) + caixasAvulsas;
+            return Number.isFinite(caixas) && caixas >= 0 ? caixas : 0;
+        },
+
+        getPaletesLinha(tr) {
+            const numero = parseInt(tr.querySelector('.input-paletes-estoque')?.value, 10);
+            return Number.isFinite(numero) && numero >= 0 ? numero : 0;
+        },
+
+        getCaixasAvulsasLinha(tr) {
             const numero = parseInt(tr.querySelector('.input-caixas-estoque')?.value, 10);
             return Number.isFinite(numero) && numero >= 0 ? numero : 0;
+        },
+
+        calcularQuantidadesPelasCaixas(caixas, caixasPorPalete) {
+            const totalCaixas = Number(caixas) || 0;
+            if (!totalCaixas) return { paletes: '', caixasAvulsas: '' };
+            if (!caixasPorPalete) return { paletes: '', caixasAvulsas: String(totalCaixas) };
+            const paletes = Math.floor(totalCaixas / caixasPorPalete);
+            const caixasAvulsas = totalCaixas % caixasPorPalete;
+            return {
+                paletes: paletes ? String(paletes) : '',
+                caixasAvulsas: caixasAvulsas ? String(caixasAvulsas) : ''
+            };
         },
 
         async salvarItens(mostrarAlerta = true) {
@@ -384,20 +415,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const deletarIds = [];
 
             for (const tr of linhas) {
-                const valorTexto = String(tr.querySelector('.input-caixas-estoque')?.value || '').trim();
+                const inputPaletes = tr.querySelector('.input-paletes-estoque');
+                const inputCaixas = tr.querySelector('.input-caixas-estoque');
+                const valorPaletes = String(inputPaletes?.value || '').trim();
+                const valorCaixas = String(inputCaixas?.value || '').trim();
                 const itemId = tr.dataset.itemId;
 
-                if (!valorTexto) {
+                if (!valorPaletes && !valorCaixas) {
                     if (itemId) deletarIds.push(itemId);
                     continue;
                 }
 
-                const quantidade = parseInt(valorTexto, 10);
-                if (!Number.isFinite(quantidade) || quantidade < 0) {
-                    alert('Informe apenas quantidades validas.');
-                    tr.querySelector('.input-caixas-estoque')?.focus();
+                const paletes = this.getPaletesLinha(tr);
+                const caixasAvulsas = this.getCaixasAvulsasLinha(tr);
+                const caixasPorPalete = Number(tr.dataset.caixasPorPalete) || 0;
+                if (!Number.isFinite(paletes) || paletes < 0 || !Number.isFinite(caixasAvulsas) || caixasAvulsas < 0) {
+                    alert('Informe quantidades validas.');
+                    inputPaletes?.focus();
                     return;
                 }
+                if (paletes > 0 && caixasPorPalete <= 0) {
+                    alert('Para informar paletes, cadastre a quantidade de Caixas/Palete do produto.');
+                    inputPaletes?.focus();
+                    return;
+                }
+                const quantidade = this.getCaixasLinha(tr);
 
                 upserts.push({
                     contagem_id: this.contagemAtual.id,

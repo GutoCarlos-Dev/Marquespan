@@ -54,7 +54,8 @@
     border-radius: 8px;
 }
 
-.input-caixas-estoque {
+.input-caixas-estoque,
+.input-paletes-estoque {
     width: 110px;
     height: 36px;
     padding: 8px 10px;
@@ -75,6 +76,13 @@
 .estoque-peso-total {
     font-weight: 700;
     color: var(--primary-color);
+    white-space: nowrap;
+}
+
+.estoque-qtd-caixas {
+    font-weight: 700;
+    text-align: right;
+    color: #2f3d4a;
     white-space: nowrap;
 }
 
@@ -165,7 +173,8 @@
     z-index: 3;
 }
 
-.contagem-modal-table-container .input-caixas-estoque {
+.contagem-modal-table-container .input-caixas-estoque,
+.contagem-modal-table-container .input-paletes-estoque {
     width: 96px;
 }
 
