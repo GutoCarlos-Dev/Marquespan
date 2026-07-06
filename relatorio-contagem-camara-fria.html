@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatorio de Contagem - Camara Fria - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/menu.css">
+  <link rel="stylesheet" href="css/cadastro-produtos-camara-fria.css">
+  <link rel="stylesheet" href="css/estoque-camara-fria.css">
+  <link rel="stylesheet" href="css/relatorio-contagem-camara-fria.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+
+    <main class="main-content">
+      <header class="header glass-header">
+        <h1><i class="fas fa-chart-column"></i> Relatorio de Contagem - Camara Fria</h1>
+      </header>
+
+      <section class="glass-panel">
+        <h3><i class="fas fa-filter"></i> Filtros</h3>
+        <div class="relatorio-contagem-filtros">
+          <div class="form-group-filter">
+            <label for="relatorioContagemFilial">Filial</label>
+            <select id="relatorioContagemFilial" class="glass-input">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="form-group-filter">
+            <label for="relatorioContagemSemana">Semana</label>
+            <input type="week" id="relatorioContagemSemana" class="glass-input">
+          </div>
+          <div class="form-group-filter">
+            <label for="relatorioContagemFabrica">Fabrica</label>
+            <select id="relatorioContagemFabrica" class="glass-input">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="form-group-filter">
+            <label for="relatorioContagemProduto">Produto</label>
+            <select id="relatorioContagemProduto" class="glass-input">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="form-group-filter">
+            <label for="relatorioContagemStatus">Status</label>
+            <select id="relatorioContagemStatus" class="glass-input">
+              <option value="">Todos</option>
+              <option value="EM_ANDAMENTO">Em andamento</option>
+              <option value="FINALIZADA" selected>Finalizada</option>
+            </select>
+          </div>
+        </div>
+        <div class="relatorio-contagem-actions">
+          <button type="button" id="btnFiltrarRelatorioContagem" class="btn-glass btn-blue">
+            <i class="fas fa-search"></i> Filtrar
+          </button>
+          <button type="button" id="btnLimparRelatorioContagem" class="btn-glass btn-red">
+            <i class="fas fa-eraser"></i> Limpar
+          </button>
+          <button type="button" id="btnExportarRelatorioContagemExcel" class="btn-glass btn-green">
+            <i class="fas fa-file-excel"></i> Excel
+          </button>
+          <button type="button" id="btnExportarRelatorioContagemPDF" class="btn-glass btn-red">
+            <i class="fas fa-file-pdf"></i> PDF
+          </button>
+        </div>
+      </section>
+
+      <div class="kpi-grid-camara">
+        <div class="kpi-mini-card">
+          <span>Total Caixas</span>
+          <strong id="relatorioKpiCaixas">0</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Peso Total</span>
+          <strong id="relatorioKpiPeso">0,000 KG</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Produtos Contados</span>
+          <strong id="relatorioKpiProdutos">0</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Contagens</span>
+          <strong id="relatorioKpiContagens">0</strong>
+        </div>
+      </div>
+
+      <section class="glass-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-boxes-stacked"></i> Resumo por Produto</h3>
+          <span id="relatorioResumoCount" class="produtos-count-badge"></span>
+        </div>
+        <div class="table-responsive relatorio-contagem-table">
+          <table class="glass-table">
+            <thead>
+              <tr>
+                <th>Codigo</th>
+                <th>Produto</th>
+                <th>Tipo</th>
+                <th>Filial Produto</th>
+                <th>Total Caixas</th>
+                <th>Peso Total</th>
+                <th>Contagens</th>
+              </tr>
+            </thead>
+            <tbody id="relatorioResumoBody">
+              <tr><td colspan="7" style="text-align:center;">Use os filtros para carregar o relatorio.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="glass-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-list-check"></i> Detalhe das Contagens</h3>
+          <span id="relatorioDetalheCount" class="produtos-count-badge"></span>
+        </div>
+        <div class="table-responsive relatorio-contagem-table">
+          <table class="glass-table table-compact">
+            <thead>
+              <tr>
+                <th>Filial</th>
+                <th>Semana</th>
+                <th>Fabrica</th>
+                <th>Status</th>
+                <th>Produto</th>
+                <th>Caixas</th>
+                <th>Peso Total</th>
+                <th>Funcionario</th>
+                <th>Atualizado</th>
+              </tr>
+            </thead>
+            <tbody id="relatorioDetalheBody">
+              <tr><td colspan="9" style="text-align:center;">Nenhuma informacao carregada.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="script/relatorio-contagem-camara-fria.js?v=20260706-1" defer></script>
+</body>
+</html>
