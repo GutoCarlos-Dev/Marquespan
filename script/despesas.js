@@ -103,7 +103,10 @@ const DespesasUI = {
         this.searchInput.addEventListener('input', () => this.renderGrid());
         this.btnToggleMenuLateral?.addEventListener('click', () => this.toggleMenuLateral());
 
-        this.filialSelect?.addEventListener('change', () => this.loadRotasPorFilial(this.filialSelect.value));
+        this.filialSelect?.addEventListener('change', () => {
+            if (this.filialSelect.value) this.filialSelect.classList.remove('campo-invalido');
+            this.loadRotasPorFilial(this.filialSelect.value);
+        });
 
         // ** Adiciona os listeners para o cálculo automático do valor total **
         this.qtdDiariasInput.addEventListener('input', () => {
@@ -479,6 +482,14 @@ const DespesasUI = {
     validarCamposObrigatorios() {
         const erros = [];
         const func1Input = document.getElementById('despesaFuncionario1Input');
+
+        // Filial
+        if (!this.filialSelect?.value) {
+            erros.push('Filial');
+            this.filialSelect?.classList.add('campo-invalido');
+        } else {
+            this.filialSelect.classList.remove('campo-invalido');
+        }
 
         // Hotel
         const hoteisSelecionados = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
