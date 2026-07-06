@@ -99,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.filtroExtDataInicial) this.filtroExtDataInicial.value = new Date().toISOString().slice(0, 10);
             if (this.filtroExtDataFinal) this.filtroExtDataFinal.value = new Date().toISOString().slice(0, 10);
 
+            await this.loadFiliaisOptions();
             await this.loadTanques();
             this.renderTable();
             await this.initSaida(); // Inicializa a aba de saída
@@ -453,7 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.extMotorista) this.extMotorista.addEventListener('input', (e) => e.target.value = e.target.value.toUpperCase());
 
             // Inicialização das novas abas
-            this.loadFiliaisOptions();
             this.loadRotasOptions();
             if (this.tableBodyPostos) this.renderPostosTable();
             if (this.tableBodyExt) this.renderExtTable();
@@ -781,7 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async loadTanques() {
             try {
-                this.tanquesDisponiveis = await buscarTanques(supabaseClient, this.getUserFilial());
+                this.tanquesDisponiveis = await buscarTanques(supabaseClient, this.getValoresFilialUsuario());
                 this.preencherFiltroTanqueSaida();
                 this.adicionarLinhaTanque(); // Adiciona a primeira linha para a ENTRADA
             } catch (error) {
@@ -1026,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                const estoqueCalculado = await calcularEstoqueAtual(supabaseClient, this.getUserFilial());
+                const estoqueCalculado = await calcularEstoqueAtual(supabaseClient, this.getValoresFilialUsuario());
                 // 5. Renderizar a tabela
                 this.tbodyEstoque.innerHTML = montarHtmlEstoque(estoqueCalculado, {
                     canViewAuditoria,
@@ -1350,7 +1350,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Carregar Veiculos
             try {
-                this.veiculosDisponiveis = await buscarVeiculos(supabaseClient, this.getUserFilial());
+                this.veiculosDisponiveis = await buscarVeiculos(supabaseClient, this.getValoresFilialUsuario());
                 this.listaVeiculos.innerHTML = this.veiculosDisponiveis.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
             } catch (e) { console.error('Erro ao carregar veiculos', e); }
 
@@ -1374,7 +1374,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async loadBicos() {
             if (!this.saidaBico) return;
             try {
-                this.bicosDisponiveis = await buscarBicos(supabaseClient, this.getUserFilial());
+                this.bicosDisponiveis = await buscarBicos(supabaseClient, this.getValoresFilialUsuario());
                 this.saidaBico.innerHTML = '<option value="">-- Selecione o Bico --</option>';
                 if (this.saidaBico2) this.saidaBico2.innerHTML = '<option value="">-- Selecione o Bico --</option>';
                 this.bicosDisponiveis.forEach(bico => {

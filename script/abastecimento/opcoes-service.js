@@ -1,9 +1,10 @@
 export async function buscarTanques(supabaseClient, filial) {
+    const filiais = Array.isArray(filial) ? filial.filter(Boolean) : (filial ? [filial] : []);
     let query = supabaseClient
         .from('tanques')
         .select('id, nome, tipo_combustivel');
 
-    if (filial) query = query.eq('filial', filial);
+    if (filiais.length > 0) query = query.in('filial', filiais);
 
     const { data, error } = await query.order('nome');
     if (error) throw error;
@@ -21,11 +22,12 @@ export async function buscarFiliais(supabaseClient) {
 }
 
 export async function buscarBicos(supabaseClient, filial) {
+    const filiais = Array.isArray(filial) ? filial.filter(Boolean) : (filial ? [filial] : []);
     let query = supabaseClient
         .from('bicos')
         .select('id, nome, bombas!inner(nome, tanques!inner(nome, filial))');
 
-    if (filial) query = query.eq('bombas.tanques.filial', filial);
+    if (filiais.length > 0) query = query.in('bombas.tanques.filial', filiais);
 
     const { data, error } = await query.order('nome');
     if (error) throw error;
@@ -36,11 +38,12 @@ export async function buscarBicos(supabaseClient, filial) {
 }
 
 export async function buscarVeiculos(supabaseClient, filial) {
+    const filiais = Array.isArray(filial) ? filial.filter(Boolean) : (filial ? [filial] : []);
     let query = supabaseClient
         .from('veiculos')
         .select('placa, modelo, tipo, volume_tanque');
 
-    if (filial) query = query.eq('filial', filial);
+    if (filiais.length > 0) query = query.in('filial', filiais);
 
     const { data, error } = await query.order('placa');
 

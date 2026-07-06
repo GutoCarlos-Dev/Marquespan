@@ -1,6 +1,7 @@
 import { supabaseClient } from './supabase.js';
 import { calcularEstoqueAtual } from './abastecimento/estoque-service.js';
 import { registrarAuditoria } from './auditoria-utils.js';
+import { getValoresFilialRelacionados } from './shared/filial-utils.js';
 
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
 const OFFSET_SAO_PAULO = '-03:00';
@@ -55,6 +56,7 @@ function iniciarRelogioLancamentoSaida() {
 let tanquesDisponiveis = []; // Armazena os tanques para uso na distribuição
 let veiculosDisponiveisCache = []; // Cache para validação de placa
 let saidaVeiculoLookupTimer = null;
+let filiaisCache = null;
 
 function getUserFilial() {
     try {
@@ -64,6 +66,32 @@ function getUserFilial() {
         console.error('Erro ao identificar a filial do usuário:', e);
         return '';
     }
+}
+
+async function getFiliaisCache() {
+    if (filiaisCache) return filiaisCache;
+
+    const { data, error } = await supabaseClient
+        .from('filiais')
+        .select('nome, sigla');
+
+    if (error) {
+        console.warn('Nao foi possivel carregar filiais para filtros mobile:', error);
+        filiaisCache = [];
+    } else {
+        filiaisCache = data || [];
+    }
+
+    return filiaisCache;
+}
+
+async function getValoresFilialUsuario() {
+    const filialUsuario = getUserFilial();
+    if (!filialUsuario) return [];
+
+    const filiais = await getFiliaisCache();
+    const valores = getValoresFilialRelacionados(filialUsuario, filiais);
+    return valores.length ? valores : [filialUsuario];
 }
 
 function formatarLitrosMobile(valor) {
@@ -256,9 +284,9 @@ async function carregarDadosIniciais() {
             .from('bicos')
             .select('id, nome, bomba_id, bombas!inner(tanque_id, tanques!inner(nome, tipo_combustivel, filial))');
 
-        const filialUsuario = getUserFilial();
-        if (filialUsuario) {
-            queryBicos = queryBicos.eq('bombas.tanques.filial', filialUsuario);
+        const filiaisUsuario = await getValoresFilialUsuario();
+        if (filiaisUsuario.length > 0) {
+            queryBicos = queryBicos.in('bombas.tanques.filial', filiaisUsuario);
         }
 
         const { data: bicos, error: errBicos } = await queryBicos.order('nome');
@@ -293,9 +321,9 @@ async function carregarDadosIniciais() {
             .from('veiculos')
             .select('placa, modelo, tipo, volume_tanque');
 
-        const filialUsuario = getUserFilial();
-        if (filialUsuario) {
-            queryVeiculos = queryVeiculos.eq('filial', filialUsuario);
+        const filiaisUsuario = await getValoresFilialUsuario();
+        if (filiaisUsuario.length > 0) {
+            queryVeiculos = queryVeiculos.in('filial', filiaisUsuario);
         }
 
         const { data: veiculos, error: errVeic } = await queryVeiculos.order('placa');
@@ -524,13 +552,13 @@ async function carregarHistoricoRecente() {
     lista.innerHTML = '<p style="text-align:center; color:#666;">Atualizando...</p>';
 
     try {
-        const filialUsuario = getUserFilial();
+        const filiaisUsuario = await getValoresFilialUsuario();
         let queryHistorico = supabaseClient
             .from('saidas_combustivel')
             .select('*, bicos!inner(bombas!inner(tanques!inner(filial)))');
 
-        if (filialUsuario) {
-            queryHistorico = queryHistorico.eq('bicos.bombas.tanques.filial', filialUsuario);
+        if (filiaisUsuario.length > 0) {
+            queryHistorico = queryHistorico.in('bicos.bombas.tanques.filial', filiaisUsuario);
         }
 
         const { data, error } = await queryHistorico
@@ -582,8 +610,8 @@ async function carregarEstoque() {
 
     try {
         // 1. Calcular estoque usando o serviço compartilhado (com paginação completa)
-        const filialUsuario = getUserFilial();
-        const tanquesComEstoque = await calcularEstoqueAtual(supabaseClient, filialUsuario || null);
+        const filiaisUsuario = await getValoresFilialUsuario();
+        const tanquesComEstoque = await calcularEstoqueAtual(supabaseClient, filiaisUsuario);
 
         tanquesDisponiveis = tanquesComEstoque;
         const tanqueIds = tanquesDisponiveis.map(tanque => tanque.id);
@@ -889,15 +917,15 @@ async function carregarHistoricoMovimentacao() {
     lista.innerHTML = '<p style="text-align:center; color:#666;">Atualizando...</p>';
 
     try {
-        const filialUsuario = getUserFilial();
+        const filiaisUsuario = await getValoresFilialUsuario();
 
         // 1. Buscar Entradas e Ajustes (Tabela abastecimentos)
         let queryEntradas = supabaseClient
             .from('abastecimentos')
             .select('id, data, numero_nota, qtd_litros, valor_litro, valor_total, usuario, tanques!inner(nome, filial)');
 
-        if (filialUsuario) {
-            queryEntradas = queryEntradas.eq('tanques.filial', filialUsuario);
+        if (filiaisUsuario.length > 0) {
+            queryEntradas = queryEntradas.in('tanques.filial', filiaisUsuario);
         }
 
         const { data: entradas, error: errEntradas } = await queryEntradas
@@ -911,8 +939,8 @@ async function carregarHistoricoMovimentacao() {
             .from('saidas_combustivel')
             .select('id, data_hora, veiculo_placa, qtd_litros, usuario, bicos!inner(bombas!inner(tanques!inner(nome, filial)))');
 
-        if (filialUsuario) {
-            querySaidas = querySaidas.eq('bicos.bombas.tanques.filial', filialUsuario);
+        if (filiaisUsuario.length > 0) {
+            querySaidas = querySaidas.in('bicos.bombas.tanques.filial', filiaisUsuario);
         }
 
         const { data: saidas, error: errSaidas } = await querySaidas

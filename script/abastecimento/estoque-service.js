@@ -116,18 +116,19 @@ function calcularEstoquePorMovimentos(tanques, entradas, saidas) {
 }
 
 export async function calcularEstoqueAtual(supabaseClient, filial) {
+    const filiais = Array.isArray(filial) ? filial.filter(Boolean) : (filial ? [filial] : []);
     const tanques = await fetchAll(() => {
         let query = supabaseClient
             .from('tanques')
             .select('id, nome, capacidade, tipo_combustivel')
             .order('nome');
 
-        if (filial) query = query.eq('filial', filial);
+        if (filiais.length > 0) query = query.in('filial', filiais);
         return query;
     });
 
     const tanqueIds = (tanques || []).map(tanque => tanque.id).filter(id => id !== null && id !== undefined);
-    if (filial && tanqueIds.length === 0) {
+    if (filiais.length > 0 && tanqueIds.length === 0) {
         return calcularEstoquePorMovimentos(tanques, [], []);
     }
 
@@ -138,18 +139,18 @@ export async function calcularEstoqueAtual(supabaseClient, filial) {
                 .select('tanque_id, qtd_litros, data, numero_nota, valor_litro, valor_total')
                 .order('data', { ascending: true });
 
-            if (filial) query = query.in('tanque_id', tanqueIds);
+            if (filiais.length > 0) query = query.in('tanque_id', tanqueIds);
             return query;
         }),
         fetchAll(() => {
             let query = supabaseClient
                 .from('saidas_combustivel')
-                .select(filial
+                .select(filiais.length > 0
                     ? 'qtd_litros, data_hora, bicos!inner(bombas!inner(tanque_id, tanques!inner(id, filial)))'
                     : 'qtd_litros, data_hora, bicos(bombas(tanque_id))')
                 .order('data_hora', { ascending: true });
 
-            if (filial) query = query.eq('bicos.bombas.tanques.filial', filial);
+            if (filiais.length > 0) query = query.in('bicos.bombas.tanques.filial', filiais);
             return query;
         })
     ]);

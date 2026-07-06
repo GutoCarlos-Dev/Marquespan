@@ -1,8 +1,10 @@
 import { supabaseClient } from './supabase.js';
+import { getValoresFilialRelacionados } from './shared/filial-utils.js';
 
 let html5QrCode = null;
 let isScanning = false;
 let scanContext = 'veiculo'; // 'veiculo' | 'bico1' | 'bico2'
+let filiaisCache = null;
 
 function getUserFilial() {
     try {
@@ -12,6 +14,32 @@ function getUserFilial() {
         console.error('Erro ao identificar a filial do usuário:', e);
         return '';
     }
+}
+
+async function getFiliaisCache() {
+    if (filiaisCache) return filiaisCache;
+
+    const { data, error } = await supabaseClient
+        .from('filiais')
+        .select('nome, sigla');
+
+    if (error) {
+        console.warn('Nao foi possivel carregar filiais para validar QR Code:', error);
+        filiaisCache = [];
+    } else {
+        filiaisCache = data || [];
+    }
+
+    return filiaisCache;
+}
+
+async function getValoresFilialUsuario() {
+    const filialUsuario = getUserFilial();
+    if (!filialUsuario) return [];
+
+    const filiais = await getFiliaisCache();
+    const valores = getValoresFilialRelacionados(filialUsuario, filiais);
+    return valores.length ? valores : [filialUsuario];
 }
 
 function placaDisponivelParaUsuario(placa) {
@@ -160,12 +188,13 @@ async function onScanSuccess(decodedText) {
             .select('placa')
             .eq('qrcode', qrCode);
 
-        const filialUsuario = getUserFilial();
-        if (filialUsuario) {
-            queryVeiculo = queryVeiculo.eq('filial', filialUsuario);
+        const filiaisUsuario = await getValoresFilialUsuario();
+        if (filiaisUsuario.length > 0) {
+            queryVeiculo = queryVeiculo.in('filial', filiaisUsuario);
         }
 
-        const { data: veiculo } = await queryVeiculo.single();
+        const { data: veiculo, error } = await queryVeiculo.maybeSingle();
+        if (error) throw error;
 
         if (veiculo) {
             preencherVeiculo(veiculo.placa);
@@ -249,19 +278,45 @@ async function realizarVinculo() {
     }
 
     try {
+        const filiaisUsuario = await getValoresFilialUsuario();
+        const rpcResult = await supabaseClient.rpc('vincular_qrcode_veiculo', {
+            p_placa: placa,
+            p_qrcode: qrCode,
+            p_filiais: filiaisUsuario.length > 0 ? filiaisUsuario : null
+        });
+
+        if (!rpcResult.error) {
+            if (!rpcResult.data || rpcResult.data.length === 0) {
+                alert('QR Code nao foi vinculado. A placa nao foi encontrada para a filial do usuario.');
+                return;
+            }
+
+            alert('QR Code vinculado com sucesso!');
+            document.getElementById('modalVincular').classList.add('hidden');
+            preencherVeiculo(placa);
+            return;
+        }
+
+        if (rpcResult.error.code !== 'PGRST202' && rpcResult.error.code !== '42883') {
+            throw rpcResult.error;
+        }
+
         let queryVinculo = supabaseClient
             .from('veiculos')
             .update({ qrcode: qrCode })
             .eq('placa', placa);
 
-        const filialUsuario = getUserFilial();
-        if (filialUsuario) {
-            queryVinculo = queryVinculo.eq('filial', filialUsuario);
+        if (filiaisUsuario.length > 0) {
+            queryVinculo = queryVinculo.in('filial', filiaisUsuario);
         }
 
-        const { error } = await queryVinculo;
+        const { data, error } = await queryVinculo.select('placa').maybeSingle();
 
         if (error) throw error;
+        if (!data) {
+            alert('QR Code nao foi vinculado. A placa nao foi encontrada para a filial do usuario.');
+            return;
+        }
 
         alert('QR Code vinculado com sucesso!');
         document.getElementById('modalVincular').classList.add('hidden');
