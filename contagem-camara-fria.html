@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contagem - Camara Fria - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/menu.css" />
+  <link rel="stylesheet" href="css/cadastro-produtos-camara-fria.css" />
+  <link rel="stylesheet" href="css/estoque-camara-fria.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+
+    <div class="main-content">
+      <header class="header glass-header">
+        <h1><i class="fas fa-clipboard-check"></i> Contagem - Camara Fria</h1>
+      </header>
+
+      <div class="produtos-top-grid estoque-top-grid">
+        <section class="glass-panel">
+          <h3><i class="fas fa-play-circle"></i> Iniciar Contagem</h3>
+          <div class="filtros-container contagem-filtros">
+            <div class="form-group-filter">
+              <label for="contagemFilial">Filial</label>
+              <select id="contagemFilial" class="glass-input" required>
+                <option value="">Selecione</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
+              <label for="contagemSemana">Semana</label>
+              <input type="week" id="contagemSemana" class="glass-input" required>
+            </div>
+            <div class="form-group-filter">
+              <label for="contagemFabrica">Fabrica</label>
+              <select id="contagemFabrica" class="glass-input" required>
+                <option value="">Selecione</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
+              <label for="contagemFuncionario">Funcionario</label>
+              <input type="text" id="contagemFuncionario" class="glass-input" readonly>
+            </div>
+          </div>
+          <div class="contagem-status-row">
+            <span id="contagemStatusBadge" class="contagem-status-badge">Nenhuma contagem iniciada</span>
+            <span id="contagemInfo" class="contagem-info-text"></span>
+          </div>
+        </section>
+
+        <section class="glass-panel acoes-panel">
+          <h3><i class="fas fa-cogs"></i> Acoes</h3>
+          <div class="acoes-grid estoque-acoes-grid">
+            <button type="button" id="btnIniciarContagem" class="btn-glass btn-blue"><i class="fas fa-play"></i> Iniciar</button>
+            <button type="button" id="btnSalvarContagem" class="btn-glass btn-green" disabled><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" id="btnFinalizarContagem" class="btn-glass btn-red" disabled><i class="fas fa-check"></i> Finalizar</button>
+            <button type="button" id="btnCancelarContagem" class="btn-glass btn-red" disabled><i class="fas fa-ban"></i> Cancelar</button>
+            <button type="button" id="btnResumoContagemPDF" class="btn-glass btn-blue" disabled><i class="fas fa-file-pdf"></i> PDF</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="kpi-grid-camara">
+        <div class="kpi-mini-card">
+          <span>Total Caixas</span>
+          <strong id="kpiContagemCaixas">0</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Peso Total</span>
+          <strong id="kpiContagemPeso">0,000 KG</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Itens Contados</span>
+          <strong id="kpiContagemItens">0</strong>
+        </div>
+      </div>
+
+      <div class="glass-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-list-check"></i> Produtos para Contagem</h3>
+          <span id="contagemRecordsCount" class="produtos-count-badge"></span>
+        </div>
+        <div class="table-responsive produtos-table-container estoque-table-container">
+          <table class="glass-table">
+            <thead class="produtos-table-head">
+              <tr>
+                <th>Codigo</th>
+                <th>Produto</th>
+                <th>Tipo</th>
+                <th>Peso Caixa</th>
+                <th>Caixas/Palete</th>
+                <th>Qtd Contada</th>
+                <th>Peso Total</th>
+                <th>Observacao</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyContagemCamara">
+              <tr><td colspan="8" style="text-align:center;">Selecione os campos e clique em Iniciar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="glass-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-clock-rotate-left"></i> Contagens Recentes</h3>
+          <span id="contagensRecentesCount" class="produtos-count-badge"></span>
+        </div>
+        <div class="table-responsive estoque-historico-container">
+          <table class="glass-table table-compact">
+            <thead>
+              <tr>
+                <th>Filial</th>
+                <th>Semana</th>
+                <th>Fabrica</th>
+                <th>Funcionario</th>
+                <th>Status</th>
+                <th>Atualizado</th>
+                <th style="width: 100px; text-align: center;">Acoes</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyContagensRecentes">
+              <tr><td colspan="7" style="text-align:center;">Nenhuma contagem encontrada.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="script/contagem-camara-fria.js?v=20260706-1" defer></script>
+</body>
+</html>
