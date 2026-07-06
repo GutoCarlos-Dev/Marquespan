@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carregamento - Camara Fria - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/menu.css" />
+  <link rel="stylesheet" href="css/cadastro-produtos-camara-fria.css" />
+  <link rel="stylesheet" href="css/estoque-camara-fria.css" />
+  <link rel="stylesheet" href="css/carregamento-camara-fria.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+
+    <main class="main-content">
+      <header class="header glass-header">
+        <h1><i class="fas fa-truck-ramp-box"></i> Carregamento - Camara Fria</h1>
+      </header>
+
+      <div class="produtos-top-grid carregamento-top-grid">
+        <section class="glass-panel">
+          <h3><i class="fas fa-clipboard-list"></i> Dados do Carregamento</h3>
+          <div class="filtros-container carregamento-filtros">
+            <div class="form-group-filter">
+              <label for="carregamentoFilial">Filial</label>
+              <select id="carregamentoFilial" class="glass-input" required>
+                <option value="">Selecione</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
+              <label for="carregamentoFabrica">Fabrica</label>
+              <select id="carregamentoFabrica" class="glass-input" required>
+                <option value="">Selecione</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
+              <label for="carregamentoData">Data</label>
+              <input type="date" id="carregamentoData" class="glass-input" required>
+            </div>
+            <div class="form-group-filter">
+              <label for="carregamentoUsuario">Usuario</label>
+              <input type="text" id="carregamentoUsuario" class="glass-input" readonly>
+            </div>
+          </div>
+          <div class="contagem-status-row">
+            <span id="carregamentoContagemBadge" class="contagem-status-badge">Nenhuma contagem carregada</span>
+            <span id="carregamentoContagemInfo" class="contagem-info-text"></span>
+          </div>
+        </section>
+
+        <section class="glass-panel acoes-panel">
+          <h3><i class="fas fa-cogs"></i> Acoes</h3>
+          <div class="acoes-grid estoque-acoes-grid">
+            <button type="button" id="btnCarregarProdutosCarregamento" class="btn-glass btn-blue"><i class="fas fa-search"></i> Carregar</button>
+            <button type="button" id="btnSalvarCarregamento" class="btn-glass btn-green" disabled><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" id="btnLimparCarregamento" class="btn-glass btn-red" disabled><i class="fas fa-eraser"></i> Limpar</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="kpi-grid-camara">
+        <div class="kpi-mini-card">
+          <span>Necessario</span>
+          <strong id="kpiCarregamentoNecessario">0</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Estoque Contagem</span>
+          <strong id="kpiCarregamentoEstoque">0</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Faltam</span>
+          <strong id="kpiCarregamentoFaltam">0</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Sobrando</span>
+          <strong id="kpiCarregamentoSobrando">0</strong>
+        </div>
+      </div>
+
+      <section class="glass-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-boxes-stacked"></i> Produtos para Carregar</h3>
+          <span id="carregamentoRecordsCount" class="produtos-count-badge"></span>
+        </div>
+        <div class="table-responsive produtos-table-container carregamento-table-container">
+          <table class="glass-table">
+            <thead class="produtos-table-head">
+              <tr>
+                <th>Codigo</th>
+                <th>Produto</th>
+                <th>Tipo</th>
+                <th>Caixas/Palete</th>
+                <th>Qtd Paletes</th>
+                <th>Qtd Caixas</th>
+                <th>Total Necessario</th>
+                <th>Estoque Contagem</th>
+                <th>Diferenca</th>
+                <th>Observacao</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyCarregamentoCamara">
+              <tr><td colspan="10" style="text-align:center;">Selecione Filial e Fabrica para carregar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="glass-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-clock-rotate-left"></i> Carregamentos Recentes</h3>
+          <span id="carregamentosRecentesCount" class="produtos-count-badge"></span>
+        </div>
+        <div class="table-responsive estoque-historico-container">
+          <table class="glass-table table-compact">
+            <thead>
+              <tr>
+                <th>Filial</th>
+                <th>Fabrica</th>
+                <th>Data</th>
+                <th>Contagem Ref.</th>
+                <th>Usuario</th>
+                <th>Status</th>
+                <th>Acoes</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyCarregamentosRecentes">
+              <tr><td colspan="7" style="text-align:center;">Nenhum carregamento encontrado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="script/carregamento-camara-fria.js?v=20260706-1" defer></script>
+</body>
+</html>

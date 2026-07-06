@@ -1,0 +1,64 @@
+.carregamento-top-grid {
+    grid-template-columns: minmax(0, 3fr) minmax(260px, 1fr);
+}
+
+.carregamento-filtros {
+    grid-template-columns: minmax(140px, 1fr) minmax(180px, 1fr) minmax(150px, 1fr) minmax(220px, 1.2fr);
+}
+
+.carregamento-table-container {
+    max-height: 560px;
+}
+
+.carregamento-table-container .glass-table th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+.carregamento-total,
+.carregamento-estoque,
+.carregamento-diferenca {
+    font-weight: 800;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.carregamento-diferenca.falta {
+    color: #bd2130;
+}
+
+.carregamento-diferenca.sobra {
+    color: #1e7e34;
+}
+
+.carregamento-diferenca.zerado {
+    color: #495057;
+}
+
+.carregamento-status-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.carregamento-status-pill.aberto {
+    background: rgba(0, 123, 255, 0.12);
+    color: #0056b3;
+}
+
+.carregamento-status-pill.finalizado {
+    background: rgba(40, 167, 69, 0.14);
+    color: #1e7e34;
+}
+
+@media (max-width: 1024px) {
+    .carregamento-top-grid,
+    .carregamento-filtros {
+        grid-template-columns: 1fr;
+    }
+}
