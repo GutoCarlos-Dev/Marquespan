@@ -270,7 +270,9 @@
                 try {
                     let query = supabaseClient.from('veiculos')
                         .select('tipo')
-                        .not('tipo', 'in', '("EMPILHADEIRA","GERADOR")');
+                        .or('situacao.is.null,situacao.not.in.(inativo,INATIVO,Inativo)')
+                        .not('tipo', 'in', '("SEMI-REBOQUE","EMPILHADEIRA","GERADOR")')
+                        .neq('filial', 'RS');
                     
                     if (filial) {
                         query = query.eq('filial', filial);

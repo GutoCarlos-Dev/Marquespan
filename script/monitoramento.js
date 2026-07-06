@@ -451,6 +451,7 @@ async function carregarTotalFrota(filial) {
         let query = supabaseClient
             .from('veiculos')
             .select('*', { count: 'exact', head: true })
+            .or('situacao.is.null,situacao.not.in.(inativo,INATIVO,Inativo)')
             .not('tipo', 'in', '("SEMI-REBOQUE","EMPILHADEIRA","GERADOR")') // Exclui semi-reboques e equipamentos de apoio
             .neq('filial', 'RS'); // Filial RS não entra na contagem de frota
 
