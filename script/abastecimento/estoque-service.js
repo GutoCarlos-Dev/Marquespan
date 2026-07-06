@@ -16,6 +16,31 @@ function getEstoqueInformadoAjuste(entrada) {
     return diferencaLegada !== 0 ? Math.abs(diferencaLegada) : null;
 }
 
+function getDataOrdenacaoMovimento(movimento) {
+    const data = String(movimento.data || '').trim();
+    if (!data) return 0;
+
+    const temHora = /T|\s\d{2}:\d{2}/.test(data);
+    const dataNormalizada = temHora ? data : `${data}T23:59:59.999`;
+    const timestamp = new Date(dataNormalizada).getTime();
+    return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function getPrioridadeMovimento(movimento) {
+    if (movimento.tipo === 'AJUSTE') return 1;
+    if (movimento.tipo === 'ENTRADA') return 2;
+    if (movimento.tipo === 'SAIDA') return 3;
+    return 9;
+}
+
+function ordenarMovimentosEstoque(a, b) {
+    const dataA = getDataOrdenacaoMovimento(a);
+    const dataB = getDataOrdenacaoMovimento(b);
+
+    if (dataA !== dataB) return dataA - dataB;
+    return getPrioridadeMovimento(a) - getPrioridadeMovimento(b);
+}
+
 async function fetchAll(buildQuery) {
     const rows = [];
     let from = 0;
@@ -89,7 +114,7 @@ function calcularEstoquePorMovimentos(tanques, entradas, saidas) {
 
         movimentos
             .filter(movimento => movimento.data)
-            .sort((a, b) => new Date(a.data) - new Date(b.data))
+            .sort(ordenarMovimentosEstoque)
             .forEach(movimento => {
                 if (movimento.tipo === 'SAIDA') {
                     tanque.saidas_total += movimento.litros;
