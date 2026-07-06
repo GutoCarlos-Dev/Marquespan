@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const ProdutoCamaraFriaUI = {
@@ -220,6 +221,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { error } = await supabaseClient.from('produtos_camara_fria').upsert(payload);
                 if (error) throw error;
 
+                registrarAuditoria(
+                    this.editingIdInput.value ? 'ALTERAR' : 'INCLUIR',
+                    'Câmara Fria',
+                    `${this.editingIdInput.value ? 'Atualização' : 'Cadastro'} de produto: ${payload.nome}`
+                );
                 alert(`Produto ${this.editingIdInput.value ? 'atualizado' : 'salvo'} com sucesso!`);
                 this.closeModalProduto();
                 this.renderTable();
@@ -344,8 +350,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async deleteProduto(id) {
             try {
+                const produto = (this.produtosCache || []).find(item => String(item.id) === String(id));
                 const { error } = await supabaseClient.from('produtos_camara_fria').delete().eq('id', id);
                 if (error) throw error;
+                registrarAuditoria('EXCLUIR', 'Câmara Fria', `Exclusão de produto: ${produto?.nome || id}`);
                 this.renderTable();
             } catch (error) {
                 console.error('Erro ao excluir produto:', error);
@@ -391,6 +399,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { error } = await supabaseClient.from('tipos_produto_camara_fria').upsert(payload);
                 if (error) throw error;
 
+                registrarAuditoria(
+                    payload.id ? 'ALTERAR' : 'INCLUIR',
+                    'Câmara Fria',
+                    `${payload.id ? 'Atualização' : 'Cadastro'} de tipo de produto: ${payload.nome}`
+                );
                 this.clearCadastroTipoForm();
                 await this.loadTipos();
             } catch (error) {
@@ -450,6 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { error } = await supabaseClient.from('tipos_produto_camara_fria').delete().eq('id', tipo.id);
                 if (error) throw error;
 
+                registrarAuditoria('EXCLUIR', 'Câmara Fria', `Exclusão de tipo de produto: ${tipo.nome}`);
                 await this.loadTipos();
             } catch (error) {
                 console.error('Erro ao excluir tipo:', error);

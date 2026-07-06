@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const ContagemCamaraFriaUI = {
@@ -192,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         .single();
                     if (error) throw error;
                     this.contagemAtual = data;
+                    registrarAuditoria('INCLUIR', 'Câmara Fria', `Início de contagem - Filial: ${payload.filial}, Semana: ${payload.semana}`);
                 }
 
                 await this.carregarItensContagem();
@@ -480,6 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .eq('id', this.contagemAtual.id);
                 if (updateError) throw updateError;
 
+                registrarAuditoria('ALTERAR', 'Câmara Fria', `Itens de contagem salvos - Filial: ${this.contagemAtual.filial}, Semana: ${this.contagemAtual.semana}`);
                 await this.recarregarContagemAtual();
                 await this.carregarItensContagem();
                 await this.renderContagensRecentes();
@@ -517,6 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .eq('id', this.contagemAtual.id);
                 if (error) throw error;
 
+                registrarAuditoria('ALTERAR', 'Câmara Fria', `Contagem finalizada - Filial: ${this.contagemAtual.filial}, Semana: ${this.contagemAtual.semana}`);
                 await this.recarregarContagemAtual();
                 await this.carregarItensContagem();
                 await this.renderContagensRecentes();
@@ -545,6 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .eq('id', contagemId);
                 if (error) throw error;
 
+                registrarAuditoria('ALTERAR', 'Câmara Fria', `Contagem reaberta ID ${contagemId}`);
                 if (!this.contagemAtual || String(this.contagemAtual.id) !== String(contagemId)) {
                     await this.abrirContagemPorId(contagemId);
                 } else {
@@ -580,12 +585,15 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnCancelar.disabled = true;
             this.btnCancelar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cancelando...';
             try {
+                const filialCancelada = this.contagemAtual.filial;
+                const semanaCancelada = this.contagemAtual.semana;
                 const { error } = await supabaseClient
                     .from('contagens_camara_fria')
                     .delete()
                     .eq('id', this.contagemAtual.id);
                 if (error) throw error;
 
+                registrarAuditoria('EXCLUIR', 'Câmara Fria', `Contagem cancelada - Filial: ${filialCancelada}, Semana: ${semanaCancelada}`);
                 this.contagemAtual = null;
                 this.itensCache = new Map();
                 this.produtosCache = [];
@@ -711,6 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .eq('id', id);
                 if (error) throw error;
 
+                registrarAuditoria('EXCLUIR', 'Câmara Fria', `Exclusão de contagem ID ${id}`);
                 if (String(this.contagemAtual?.id || '') === String(id)) {
                     this.contagemAtual = null;
                     this.itensCache = new Map();

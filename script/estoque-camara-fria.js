@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const EstoqueCamaraFriaUI = {
@@ -343,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (error) throw error;
                 }
 
+                registrarAuditoria('ALTERAR', 'Câmara Fria', `Estoque semanal salvo - Filial: ${this.filialSelect.value}, Semana: ${this.semanaInput.value}`);
                 alert('Estoque semanal salvo com sucesso!');
                 await this.carregarLancamento();
             } catch (error) {
@@ -422,6 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .delete()
                     .eq('id', btn.dataset.id);
                 if (error) throw error;
+                registrarAuditoria('EXCLUIR', 'Câmara Fria', `Exclusão de registro de estoque ID ${btn.dataset.id}`);
                 await this.carregarLancamento();
             } catch (error) {
                 console.error('Erro ao excluir registro:', error);
@@ -470,6 +473,11 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const { error } = await supabaseClient.from('fabricas_camara_fria').upsert(payload);
                 if (error) throw error;
+                registrarAuditoria(
+                    this.fabricaEditingId.value ? 'ALTERAR' : 'INCLUIR',
+                    'Câmara Fria',
+                    `${this.fabricaEditingId.value ? 'Atualização' : 'Cadastro'} de fábrica: ${payload.nome}`
+                );
                 this.clearFabricaForm();
                 await this.loadFabricas();
             } catch (error) {
@@ -530,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .eq('id', fabrica.id);
                 if (error) throw error;
 
+                registrarAuditoria('EXCLUIR', 'Câmara Fria', `Exclusão de fábrica: ${fabrica.nome}`);
                 await this.loadFabricas();
             } catch (error) {
                 console.error('Erro ao excluir fabrica:', error);

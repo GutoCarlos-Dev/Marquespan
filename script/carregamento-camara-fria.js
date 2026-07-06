@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const CarregamentoCamaraFriaUI = {
@@ -336,6 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .insert(itensPayload);
                 if (itensError) throw itensError;
 
+                registrarAuditoria('INCLUIR', 'Câmara Fria', `Carregamento registrado - Filial: ${payload.filial}, Data: ${payload.data_carregamento}`);
                 alert('Carregamento salvo com sucesso!');
                 this.limparLancamento(false);
                 await this.renderCarregamentosRecentes();
@@ -439,6 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .delete()
                     .eq('id', button.dataset.id);
                 if (error) throw error;
+                registrarAuditoria('EXCLUIR', 'Câmara Fria', `Exclusão de carregamento ID ${button.dataset.id}`);
                 await this.renderCarregamentosRecentes();
             } catch (error) {
                 console.error('Erro ao excluir carregamento:', error);

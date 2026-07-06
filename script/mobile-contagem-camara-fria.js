@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { registrarAuditoria } from './auditoria-utils.js';
 
 const state = {
     filialRestrita: '',
@@ -183,6 +184,7 @@ async function iniciarContagem() {
                 .single();
             if (error) throw error;
             state.contagemAtual = data;
+            registrarAuditoria('INCLUIR', 'Câmara Fria', `Início de contagem via mobile - Filial: ${payload.filial}, Semana: ${payload.semana}`);
         }
 
         await carregarProdutosEItens();
@@ -433,6 +435,7 @@ async function salvarItens(mostrarAlerta = true) {
             .eq('id', state.contagemAtual.id);
         if (updateError) throw updateError;
 
+        registrarAuditoria('ALTERAR', 'Câmara Fria', `Itens de contagem salvos via mobile - Filial: ${state.contagemAtual.filial}, Semana: ${state.contagemAtual.semana}`);
         await recarregarContagemAtual();
         await carregarProdutosEItens();
         await renderContagensRecentes();
@@ -465,6 +468,7 @@ async function finalizarContagem() {
             .eq('id', state.contagemAtual.id);
         if (error) throw error;
 
+        registrarAuditoria('ALTERAR', 'Câmara Fria', `Contagem finalizada via mobile - Filial: ${state.contagemAtual.filial}, Semana: ${state.contagemAtual.semana}`);
         await recarregarContagemAtual();
         await carregarProdutosEItens();
         await renderContagensRecentes();
@@ -493,12 +497,15 @@ async function cancelarContagem() {
 
     setLoadingButton(el.btnCancelar, true, '<i class="fas fa-spinner fa-spin"></i> Cancelando...');
     try {
+        const filialCancelada = state.contagemAtual.filial;
+        const semanaCancelada = state.contagemAtual.semana;
         const { error } = await supabaseClient
             .from('contagens_camara_fria')
             .delete()
             .eq('id', state.contagemAtual.id);
         if (error) throw error;
 
+        registrarAuditoria('EXCLUIR', 'Câmara Fria', `Contagem cancelada via mobile - Filial: ${filialCancelada}, Semana: ${semanaCancelada}`);
         state.contagemAtual = null;
         state.produtos = [];
         state.itens = new Map();
