@@ -135,6 +135,60 @@
     </div>
   </div>
 
+  <div id="modalContagemProdutos" class="modal-backdrop hidden">
+    <div class="glass-modal contagem-produtos-modal">
+      <div class="modal-header contagem-modal-header">
+        <div>
+          <h3><i class="fas fa-clipboard-list"></i> Produtos da Contagem</h3>
+          <p id="modalContagemSubtitulo" class="contagem-modal-subtitle">Filial, semana e fabrica</p>
+        </div>
+        <button type="button" id="btnCloseModalContagem" class="close-button" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body contagem-modal-body">
+        <div class="kpi-grid-camara contagem-modal-kpis">
+          <div class="kpi-mini-card">
+            <span>Total Caixas</span>
+            <strong id="modalKpiContagemCaixas">0</strong>
+          </div>
+          <div class="kpi-mini-card">
+            <span>Peso Total</span>
+            <strong id="modalKpiContagemPeso">0,000 KG</strong>
+          </div>
+          <div class="kpi-mini-card">
+            <span>Itens Contados</span>
+            <strong id="modalKpiContagemItens">0</strong>
+          </div>
+        </div>
+
+        <div class="table-responsive contagem-modal-table-container">
+          <table class="glass-table">
+            <thead class="produtos-table-head">
+              <tr>
+                <th>Codigo</th>
+                <th>Produto</th>
+                <th>Tipo</th>
+                <th>Peso Caixa</th>
+                <th>Caixas/Palete</th>
+                <th>Qtd Contada</th>
+                <th>Peso Total</th>
+                <th>Observacao</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyModalContagemCamara">
+              <tr><td colspan="8" style="text-align:center;">Carregando produtos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-actions contagem-modal-actions">
+          <button type="button" id="btnModalSalvarContagem" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
+          <button type="button" id="btnModalFinalizarContagem" class="btn-glass btn-red"><i class="fas fa-check"></i> Finalizar</button>
+          <button type="button" id="btnModalFecharContagem" class="btn-glass btn-blue"><i class="fas fa-times"></i> Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>

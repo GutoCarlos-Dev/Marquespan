@@ -34,6 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnCancelar = document.getElementById('btnCancelarContagem');
             this.btnPDF = document.getElementById('btnResumoContagemPDF');
             this.tableBody = document.getElementById('tableBodyContagemCamara');
+            this.modalContagem = document.getElementById('modalContagemProdutos');
+            this.modalSubtitulo = document.getElementById('modalContagemSubtitulo');
+            this.modalTableBody = document.getElementById('tableBodyModalContagemCamara');
+            this.modalKpiCaixas = document.getElementById('modalKpiContagemCaixas');
+            this.modalKpiPeso = document.getElementById('modalKpiContagemPeso');
+            this.modalKpiItens = document.getElementById('modalKpiContagemItens');
+            this.btnCloseModalContagem = document.getElementById('btnCloseModalContagem');
+            this.btnModalFechar = document.getElementById('btnModalFecharContagem');
+            this.btnModalSalvar = document.getElementById('btnModalSalvarContagem');
+            this.btnModalFinalizar = document.getElementById('btnModalFinalizarContagem');
             this.recentesBody = document.getElementById('tableBodyContagensRecentes');
             this.recordsCount = document.getElementById('contagemRecordsCount');
             this.recentesCount = document.getElementById('contagensRecentesCount');
@@ -48,10 +58,18 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnFinalizar.addEventListener('click', () => this.finalizarContagem());
             this.btnCancelar.addEventListener('click', () => this.cancelarContagem());
             this.btnPDF.addEventListener('click', () => this.gerarResumoPDF());
+            this.btnCloseModalContagem.addEventListener('click', () => this.closeModalContagem());
+            this.btnModalFechar.addEventListener('click', () => this.closeModalContagem());
+            this.btnModalSalvar.addEventListener('click', () => this.salvarItens());
+            this.btnModalFinalizar.addEventListener('click', () => this.finalizarContagem());
+            this.modalContagem.addEventListener('click', (event) => {
+                if (event.target === this.modalContagem) this.closeModalContagem();
+            });
             [this.filialSelect, this.semanaInput, this.fabricaSelect].forEach(el => {
                 el.addEventListener('change', () => {
                     this.contagemAtual = null;
                     this.itensCache = new Map();
+                    this.closeModalContagem();
                     this.renderTabelaInicial();
                     this.atualizarEstado();
                     this.renderContagensRecentes();
@@ -59,6 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             this.tableBody.addEventListener('input', (event) => {
                 if (event.target.matches('.input-caixas-estoque')) this.atualizarLinha(event.target.closest('tr'));
+            });
+            this.modalTableBody.addEventListener('input', (event) => {
+                if (event.target.matches('.input-caixas-estoque')) {
+                    this.atualizarLinha(event.target.closest('tr'));
+                    this.sincronizarPreviaComModal();
+                }
             });
             this.recentesBody.addEventListener('click', this.handleRecentesClick.bind(this));
         },
@@ -167,6 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 await this.carregarItensContagem();
+                this.openModalContagem();
                 await this.renderContagensRecentes();
             } catch (error) {
                 console.error('Erro ao iniciar contagem:', error);
@@ -227,13 +252,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (this.produtosCache.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum produto cadastrado para esta filial.</td></tr>';
+                const vazio = '<tr><td colspan="8" style="text-align:center;">Nenhum produto cadastrado para esta filial.</td></tr>';
+                this.tableBody.innerHTML = vazio;
+                this.modalTableBody.innerHTML = vazio;
                 this.atualizarTotais();
                 return;
             }
 
             const bloqueado = this.contagemAtual?.status === 'FINALIZADA' ? 'disabled' : '';
-            this.tableBody.innerHTML = this.produtosCache.map(produto => {
+            const linhasHtml = this.produtosCache.map(produto => {
                 const item = this.itensCache.get(String(produto.id));
                 const caixas = item?.quantidade_caixas ?? '';
                 const observacao = item?.observacao || '';
@@ -254,11 +281,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }).join('');
 
-            this.tableBody.querySelectorAll('tr[data-produto-id]').forEach(tr => this.atualizarLinha(tr));
+            this.modalTableBody.innerHTML = linhasHtml;
+            this.modalTableBody.querySelectorAll('tr[data-produto-id]').forEach(tr => this.atualizarLinha(tr));
+            this.sincronizarPreviaComModal();
+            this.atualizarModalInfo();
         },
 
         renderTabelaInicial() {
             this.tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Selecione os campos e clique em Iniciar.</td></tr>';
+            this.modalTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Inicie uma contagem para carregar os produtos.</td></tr>';
             if (this.recordsCount) this.recordsCount.textContent = '';
             this.atualizarTotais();
         },
@@ -274,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         atualizarTotais() {
-            const linhas = Array.from(this.tableBody.querySelectorAll('tr[data-produto-id]'));
+            const linhas = this.getLinhasContagem();
             let totalCaixas = 0;
             let totalPeso = 0;
             let itensContados = 0;
@@ -292,6 +323,51 @@ document.addEventListener('DOMContentLoaded', () => {
             this.kpiCaixas.textContent = String(totalCaixas);
             this.kpiPeso.textContent = `${this.formatPeso(totalPeso)} KG`;
             this.kpiItens.textContent = String(itensContados);
+            if (this.modalKpiCaixas) this.modalKpiCaixas.textContent = String(totalCaixas);
+            if (this.modalKpiPeso) this.modalKpiPeso.textContent = `${this.formatPeso(totalPeso)} KG`;
+            if (this.modalKpiItens) this.modalKpiItens.textContent = String(itensContados);
+        },
+
+        getLinhasContagem() {
+            const linhasModal = Array.from(this.modalTableBody?.querySelectorAll('tr[data-produto-id]') || []);
+            if (linhasModal.length > 0) return linhasModal;
+            return Array.from(this.tableBody.querySelectorAll('tr[data-produto-id]'));
+        },
+
+        sincronizarPreviaComModal() {
+            if (!this.modalTableBody || !this.tableBody) return;
+            const linhasModal = this.modalTableBody.querySelectorAll('tr[data-produto-id]');
+            if (linhasModal.length === 0) {
+                this.tableBody.innerHTML = this.modalTableBody.innerHTML;
+                return;
+            }
+
+            this.tableBody.innerHTML = this.modalTableBody.innerHTML;
+            this.tableBody.querySelectorAll('input').forEach(input => {
+                input.disabled = true;
+            });
+        },
+
+        atualizarModalInfo() {
+            if (!this.modalSubtitulo) return;
+            const filial = this.filialSelect.value || '-';
+            const semana = this.formatSemanaDisplay(this.semanaInput.value);
+            const fabrica = this.fabricaSelect.options[this.fabricaSelect.selectedIndex]?.text || '-';
+            const funcionario = this.funcionarioInput.value || '-';
+            this.modalSubtitulo.textContent = `Filial: ${filial} | Semana: ${semana} | Fabrica: ${fabrica} | Funcionario: ${funcionario}`;
+        },
+
+        openModalContagem() {
+            if (!this.modalContagem) return;
+            this.atualizarModalInfo();
+            this.modalContagem.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        },
+
+        closeModalContagem() {
+            if (!this.modalContagem) return;
+            this.modalContagem.classList.add('hidden');
+            document.body.style.overflow = '';
         },
 
         getCaixasLinha(tr) {
@@ -303,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.contagemAtual) return alert('Inicie a contagem antes de salvar.');
             if (this.contagemAtual.status === 'FINALIZADA') return alert('Esta contagem ja foi finalizada.');
 
-            const linhas = Array.from(this.tableBody.querySelectorAll('tr[data-produto-id]'));
+            const linhas = this.getLinhasContagem();
             const upserts = [];
             const deletarIds = [];
 
@@ -333,7 +409,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             this.btnSalvar.disabled = true;
+            if (this.btnModalSalvar) this.btnModalSalvar.disabled = true;
             this.btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+            if (this.btnModalSalvar) this.btnModalSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
             try {
                 if (upserts.length > 0) {
                     const { error } = await supabaseClient
@@ -369,6 +447,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 this.btnSalvar.disabled = false;
                 this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar';
+                if (this.btnModalSalvar) {
+                    this.btnModalSalvar.disabled = false;
+                    this.btnModalSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar';
+                }
                 this.atualizarEstado();
             }
         },
@@ -378,8 +460,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.contagemAtual.status === 'FINALIZADA') return alert('Esta contagem ja esta finalizada.');
             if (!confirm('Finalizar esta contagem? Apos finalizar, os campos ficarao bloqueados.')) return;
 
-            await this.salvarItens(false);
             try {
+                const salvou = await this.salvarItens(false);
+                if (!salvou) return;
+
                 const agora = new Date().toISOString();
                 const { error } = await supabaseClient
                     .from('contagens_camara_fria')
@@ -423,6 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.contagemAtual = null;
                 this.itensCache = new Map();
                 this.produtosCache = [];
+                this.closeModalContagem();
                 this.renderTabelaInicial();
                 await this.renderContagensRecentes();
                 alert('Contagem cancelada com sucesso.');
@@ -454,6 +539,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnFinalizar.disabled = !temContagem || finalizada;
             this.btnCancelar.disabled = !temContagem || finalizada;
             this.btnPDF.disabled = !temContagem;
+            if (this.btnModalSalvar) this.btnModalSalvar.disabled = !temContagem || finalizada;
+            if (this.btnModalFinalizar) this.btnModalFinalizar.disabled = !temContagem || finalizada;
 
             this.statusBadge.className = 'contagem-status-badge';
             if (!temContagem) {
@@ -541,6 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.contagemAtual = null;
                     this.itensCache = new Map();
                     this.produtosCache = [];
+                    this.closeModalContagem();
                     this.renderTabelaInicial();
                     this.atualizarEstado();
                 }
@@ -568,6 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.fabricaSelect.value = data.fabrica_id;
                 this.funcionarioInput.value = data.funcionario || this.funcionarioInput.value;
                 await this.carregarItensContagem();
+                this.openModalContagem();
                 this.atualizarEstado();
             } catch (error) {
                 console.error('Erro ao abrir contagem:', error);

@@ -124,6 +124,64 @@
     transform: none;
 }
 
+.contagem-produtos-modal {
+    width: min(1180px, 96vw);
+    max-width: 1180px;
+    overflow: hidden;
+}
+
+.contagem-modal-header {
+    align-items: flex-start;
+    background: #ffffff;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.contagem-modal-subtitle {
+    margin: 6px 0 0;
+    color: #666;
+    font-size: 0.88rem;
+}
+
+.contagem-modal-body {
+    padding-top: 18px;
+    background: #f8faf9;
+}
+
+.contagem-modal-kpis {
+    margin-bottom: 16px;
+}
+
+.contagem-modal-table-container {
+    max-height: min(58vh, 560px);
+    overflow: auto;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    background: #ffffff;
+}
+
+.contagem-modal-table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+.contagem-modal-table-container .input-caixas-estoque {
+    width: 96px;
+}
+
+.contagem-modal-table-container .input-observacao-estoque {
+    min-width: 210px;
+}
+
+.contagem-modal-actions {
+    position: sticky;
+    bottom: 0;
+    background: #ffffff;
+    z-index: 4;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
+}
+
 @media (max-width: 1024px) {
     .estoque-top-grid,
     .estoque-filtros,
