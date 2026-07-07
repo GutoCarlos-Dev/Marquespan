@@ -427,16 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 ]),
                 startY: 48,
                 theme: 'grid',
-                headStyles: { fillColor: [0, 105, 55], textColor: [255, 255, 255], fontSize: 8 },
-                styles: { fontSize: 8, cellPadding: 2 },
-                columnStyles: {
-                    3: { halign: 'right' },
-                    4: { halign: 'right' },
-                    5: { halign: 'right' },
-                    6: { halign: 'right' },
-                    7: { halign: 'right' },
-                    8: { halign: 'right' }
-                }
+                headStyles: { fillColor: [0, 105, 55], textColor: [255, 255, 255], fontSize: 8, halign: 'center', valign: 'middle' },
+                styles: { fontSize: 8, cellPadding: 2, halign: 'center', valign: 'middle' },
+                bodyStyles: { fillColor: [255, 255, 255] },
+                alternateRowStyles: { fillColor: [232, 245, 238] }
             });
 
             doc.save(`Relatorio_Contagem_Camara_Fria_${this.getDataArquivo()}.pdf`);
