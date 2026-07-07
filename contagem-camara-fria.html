@@ -40,6 +40,19 @@
               <input type="week" id="contagemSemana" class="glass-input" required>
             </div>
             <div class="form-group-filter">
+              <label for="contagemDiaSemana">Dia da Semana</label>
+              <select id="contagemDiaSemana" class="glass-input" required>
+                <option value="">Selecione</option>
+                <option value="SEGUNDA">SEGUNDA</option>
+                <option value="TERCA">TERÇA</option>
+                <option value="QUARTA">QUARTA</option>
+                <option value="QUINTA">QUINTA</option>
+                <option value="SEXTA">SEXTA</option>
+                <option value="SABADO">SÁBADO</option>
+                <option value="DOMINGO">DOMINGO</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
               <label for="contagemFabrica">Fabrica</label>
               <select id="contagemFabrica" class="glass-input" required>
                 <option value="">Selecione</option>
@@ -122,6 +135,7 @@
               <tr>
                 <th>Filial</th>
                 <th>Semana</th>
+                <th>Dia</th>
                 <th>Fabrica</th>
                 <th>Funcionario</th>
                 <th>Status</th>
@@ -130,7 +144,7 @@
               </tr>
             </thead>
             <tbody id="tableBodyContagensRecentes">
-              <tr><td colspan="7" style="text-align:center;">Nenhuma contagem encontrada.</td></tr>
+              <tr><td colspan="8" style="text-align:center;">Nenhuma contagem encontrada.</td></tr>
             </tbody>
           </table>
         </div>
@@ -143,7 +157,7 @@
       <div class="modal-header contagem-modal-header">
         <div>
           <h3><i class="fas fa-clipboard-list"></i> Produtos da Contagem</h3>
-          <p id="modalContagemSubtitulo" class="contagem-modal-subtitle">Filial, semana e fabrica</p>
+          <p id="modalContagemSubtitulo" class="contagem-modal-subtitle">Filial, semana, dia e fabrica</p>
         </div>
         <button type="button" id="btnCloseModalContagem" class="close-button" aria-label="Fechar">&times;</button>
       </div>
@@ -197,6 +211,6 @@
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/contagem-camara-fria.js?v=20260706-1" defer></script>
+  <script type="module" src="script/contagem-camara-fria.js?v=20260707-dia-semana" defer></script>
 </body>
 </html>

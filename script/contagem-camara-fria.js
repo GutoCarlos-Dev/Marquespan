@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cache() {
             this.filialSelect = document.getElementById('contagemFilial');
             this.semanaInput = document.getElementById('contagemSemana');
+            this.diaSemanaSelect = document.getElementById('contagemDiaSemana');
             this.fabricaSelect = document.getElementById('contagemFabrica');
             this.funcionarioInput = document.getElementById('contagemFuncionario');
             this.statusBadge = document.getElementById('contagemStatusBadge');
@@ -70,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.modalContagem.addEventListener('click', (event) => {
                 if (event.target === this.modalContagem) this.closeModalContagem();
             });
-            [this.filialSelect, this.semanaInput, this.fabricaSelect].forEach(el => {
+            [this.filialSelect, this.semanaInput, this.diaSemanaSelect, this.fabricaSelect].forEach(el => {
                 el.addEventListener('change', () => {
                     this.contagemAtual = null;
                     this.itensCache = new Map();
@@ -157,8 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         formularioBaseValido() {
-            if (!this.filialSelect.value || !this.semanaInput.value || !this.fabricaSelect.value) {
-                alert('Preencha Filial, Semana e Fabrica.');
+            if (!this.filialSelect.value || !this.semanaInput.value || !this.diaSemanaSelect.value || !this.fabricaSelect.value) {
+                alert('Preencha Filial, Semana, Dia da Semana e Fabrica.');
                 return false;
             }
             if (!this.funcionarioInput.value.trim()) {
@@ -181,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const payload = {
                         filial: this.filialSelect.value,
                         semana: this.semanaInput.value,
+                        dia_semana: this.diaSemanaSelect.value,
                         fabrica_id: this.fabricaSelect.value,
                         funcionario: this.funcionarioInput.value.trim(),
                         status: 'EM_ANDAMENTO',
@@ -189,11 +191,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const { data, error } = await supabaseClient
                         .from('contagens_camara_fria')
                         .insert(payload)
-                        .select('id, filial, semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
+                        .select('id, filial, semana, dia_semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
                         .single();
                     if (error) throw error;
                     this.contagemAtual = data;
-                    registrarAuditoria('INCLUIR', 'Câmara Fria', `Início de contagem - Filial: ${payload.filial}, Semana: ${payload.semana}`);
+                    registrarAuditoria('INCLUIR', 'Câmara Fria', `Início de contagem - Filial: ${payload.filial}, Semana: ${payload.semana}, Dia: ${this.formatDiaSemana(payload.dia_semana)}`);
                 }
 
                 await this.carregarItensContagem();
@@ -212,9 +214,10 @@ document.addEventListener('DOMContentLoaded', () => {
         async buscarContagemAtual() {
             const { data, error } = await supabaseClient
                 .from('contagens_camara_fria')
-                .select('id, filial, semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
+                .select('id, filial, semana, dia_semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
                 .eq('filial', this.filialSelect.value)
                 .eq('semana', this.semanaInput.value)
+                .eq('dia_semana', this.diaSemanaSelect.value)
                 .eq('fabrica_id', this.fabricaSelect.value)
                 .maybeSingle();
             if (error) throw error;
@@ -224,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async carregarItensContagem() {
             if (!this.contagemAtual) return;
 
-            this.tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando produtos...</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando produtos...</td></tr>';
             const [produtosResult, itensResult] = await Promise.all([
                 this.buscarProdutos(),
                 supabaseClient
@@ -364,9 +367,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.modalSubtitulo) return;
             const filial = this.filialSelect.value || '-';
             const semana = this.formatSemanaDisplay(this.semanaInput.value);
+            const diaSemana = this.formatDiaSemana(this.diaSemanaSelect.value || this.contagemAtual?.dia_semana);
             const fabrica = this.fabricaSelect.options[this.fabricaSelect.selectedIndex]?.text || '-';
             const funcionario = this.funcionarioInput.value || '-';
-            this.modalSubtitulo.textContent = `Filial: ${filial} | Semana: ${semana} | Fabrica: ${fabrica} | Funcionario: ${funcionario}`;
+            this.modalSubtitulo.textContent = `Filial: ${filial} | Semana: ${semana} | Dia: ${diaSemana} | Fabrica: ${fabrica} | Funcionario: ${funcionario}`;
         },
 
         openModalContagem() {
@@ -482,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .eq('id', this.contagemAtual.id);
                 if (updateError) throw updateError;
 
-                registrarAuditoria('ALTERAR', 'Câmara Fria', `Itens de contagem salvos - Filial: ${this.contagemAtual.filial}, Semana: ${this.contagemAtual.semana}`);
+                registrarAuditoria('ALTERAR', 'Câmara Fria', `Itens de contagem salvos - Filial: ${this.contagemAtual.filial}, Semana: ${this.contagemAtual.semana}, Dia: ${this.formatDiaSemana(this.contagemAtual.dia_semana)}`);
                 await this.recarregarContagemAtual();
                 await this.carregarItensContagem();
                 await this.renderContagensRecentes();
@@ -520,7 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .eq('id', this.contagemAtual.id);
                 if (error) throw error;
 
-                registrarAuditoria('ALTERAR', 'Câmara Fria', `Contagem finalizada - Filial: ${this.contagemAtual.filial}, Semana: ${this.contagemAtual.semana}`);
+                registrarAuditoria('ALTERAR', 'Câmara Fria', `Contagem finalizada - Filial: ${this.contagemAtual.filial}, Semana: ${this.contagemAtual.semana}, Dia: ${this.formatDiaSemana(this.contagemAtual.dia_semana)}`);
                 await this.recarregarContagemAtual();
                 await this.carregarItensContagem();
                 await this.renderContagensRecentes();
@@ -614,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.contagemAtual?.id) return;
             const { data, error } = await supabaseClient
                 .from('contagens_camara_fria')
-                .select('id, filial, semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
+                .select('id, filial, semana, dia_semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
                 .eq('id', this.contagemAtual.id)
                 .single();
             if (error) throw error;
@@ -648,19 +652,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.statusBadge.classList.add('em-andamento');
                 this.statusBadge.textContent = 'Em andamento';
             }
-            this.infoText.textContent = `Funcionario: ${this.contagemAtual.funcionario || '-'} | Iniciada em: ${this.formatDateTime(this.contagemAtual.iniciada_em)}`;
+            this.infoText.textContent = `Dia: ${this.formatDiaSemana(this.contagemAtual.dia_semana)} | Funcionario: ${this.contagemAtual.funcionario || '-'} | Iniciada em: ${this.formatDateTime(this.contagemAtual.iniciada_em)}`;
         },
 
         async renderContagensRecentes() {
             try {
                 let query = supabaseClient
                     .from('contagens_camara_fria')
-                    .select('id, filial, semana, funcionario, status, updated_at, fabricas_camara_fria(nome)')
+                    .select('id, filial, semana, dia_semana, funcionario, status, updated_at, fabricas_camara_fria(nome)')
                     .order('updated_at', { ascending: false })
                     .limit(100);
 
                 if (this.filialSelect?.value) query = query.eq('filial', this.filialSelect.value);
                 if (this.semanaInput?.value) query = query.eq('semana', this.semanaInput.value);
+                if (this.diaSemanaSelect?.value) query = query.eq('dia_semana', this.diaSemanaSelect.value);
                 if (this.fabricaSelect?.value) query = query.eq('fabrica_id', this.fabricaSelect.value);
 
                 const { data, error } = await query;
@@ -669,7 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (this.recentesCount) this.recentesCount.textContent = `${contagens.length} contagem${contagens.length === 1 ? '' : 's'}`;
 
                 if (contagens.length === 0) {
-                    this.recentesBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhuma contagem encontrada.</td></tr>';
+                    this.recentesBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhuma contagem encontrada.</td></tr>';
                     return;
                 }
 
@@ -677,6 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <td>${this.escapeHtml(contagem.filial)}</td>
                         <td>${this.escapeHtml(this.formatSemanaDisplay(contagem.semana))}</td>
+                        <td>${this.escapeHtml(this.formatDiaSemana(contagem.dia_semana))}</td>
                         <td>${this.escapeHtml(contagem.fabricas_camara_fria?.nome || '-')}</td>
                         <td>${this.escapeHtml(contagem.funcionario || '-')}</td>
                         <td>${contagem.status === 'FINALIZADA' ? 'Finalizada' : 'Em andamento'}</td>
@@ -741,7 +747,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const { data, error } = await supabaseClient
                     .from('contagens_camara_fria')
-                    .select('id, filial, semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
+                    .select('id, filial, semana, dia_semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
                     .eq('id', id)
                     .single();
                 if (error) throw error;
@@ -749,6 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.contagemAtual = data;
                 this.filialSelect.value = data.filial;
                 this.semanaInput.value = data.semana;
+                this.diaSemanaSelect.value = data.dia_semana || '';
                 this.fabricaSelect.value = data.fabrica_id;
                 this.funcionarioInput.value = data.funcionario || this.funcionarioInput.value;
                 await this.carregarItensContagem();
@@ -815,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 doc.text('RESUMO DA CONTAGEM - CAMARA FRIA', 14, 28);
                 doc.setFontSize(10);
                 doc.setTextColor(40);
-                doc.text(`Filial: ${resumo.contagem.filial} | Semana: ${resumo.contagem.semana} | Fabrica: ${fabrica}`, 14, 35);
+                doc.text(`Filial: ${resumo.contagem.filial} | Semana: ${this.formatSemanaDisplay(resumo.contagem.semana)} | Dia: ${this.formatDiaSemana(resumo.contagem.dia_semana)} | Fabrica: ${fabrica}`, 14, 35);
                 doc.text(`Funcionario: ${resumo.contagem.funcionario || '-'} | Status: ${resumo.contagem.status === 'FINALIZADA' ? 'Finalizada' : 'Em andamento'}`, 14, 41);
                 doc.text(`Paletes: ${totais.paletes} | Caixas avulsas: ${totais.caixasAvulsas} | Total caixas: ${totais.caixas} | Peso: ${this.formatPeso(totais.peso)} KG`, 14, 47);
 
@@ -854,7 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     doc.text(`Pagina ${page} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
                 }
 
-                const nomeArquivo = `Resumo_Contagem_Camara_Fria_${resumo.contagem.filial}_${resumo.contagem.semana}.pdf`.replace(/[^a-z0-9_.-]+/gi, '_');
+                const nomeArquivo = `Resumo_Contagem_Camara_Fria_${resumo.contagem.filial}_${resumo.contagem.semana}_${resumo.contagem.dia_semana || 'DIA'}.pdf`.replace(/[^a-z0-9_.-]+/gi, '_');
                 doc.save(nomeArquivo);
             } catch (error) {
                 console.error('Erro ao gerar resumo PDF:', error);
@@ -871,7 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const [contagemResult, itensResult] = await Promise.all([
                 supabaseClient
                     .from('contagens_camara_fria')
-                    .select('id, filial, semana, funcionario, status, iniciada_em, finalizada_em, fabricas_camara_fria(nome)')
+                    .select('id, filial, semana, dia_semana, funcionario, status, iniciada_em, finalizada_em, fabricas_camara_fria(nome)')
                     .eq('id', id)
                     .single(),
                 supabaseClient
@@ -933,6 +940,19 @@ document.addEventListener('DOMContentLoaded', () => {
         formatSemanaDisplay(value) {
             const match = String(value || '').match(/^(\d{4})-W(\d{2})$/);
             return match ? `${match[2]}-${match[1]}` : (value || '-');
+        },
+
+        formatDiaSemana(value) {
+            const labels = {
+                SEGUNDA: 'SEGUNDA',
+                TERCA: 'TERÇA',
+                QUARTA: 'QUARTA',
+                QUINTA: 'QUINTA',
+                SEXTA: 'SEXTA',
+                SABADO: 'SÁBADO',
+                DOMINGO: 'DOMINGO'
+            };
+            return labels[String(value || '').trim().toUpperCase()] || '-';
         },
 
         escapeHtml(value) {

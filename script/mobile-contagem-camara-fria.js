@@ -11,6 +11,8 @@ const state = {
     busca: ''
 };
 
+const DIA_SEMANA_PADRAO_MOBILE = 'SEGUNDA';
+
 const el = {};
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -172,6 +174,7 @@ async function iniciarContagem() {
             const payload = {
                 filial: el.filial.value,
                 semana: el.semana.value,
+                dia_semana: DIA_SEMANA_PADRAO_MOBILE,
                 fabrica_id: el.fabrica.value,
                 funcionario: el.funcionario.value.trim(),
                 status: 'EM_ANDAMENTO',
@@ -180,7 +183,7 @@ async function iniciarContagem() {
             const { data, error } = await supabaseClient
                 .from('contagens_camara_fria')
                 .insert(payload)
-                .select('id, filial, semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
+                .select('id, filial, semana, dia_semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
                 .single();
             if (error) throw error;
             state.contagemAtual = data;
@@ -201,9 +204,10 @@ async function iniciarContagem() {
 async function buscarContagemAtual() {
     const { data, error } = await supabaseClient
         .from('contagens_camara_fria')
-        .select('id, filial, semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
+        .select('id, filial, semana, dia_semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
         .eq('filial', el.filial.value)
         .eq('semana', el.semana.value)
+        .eq('dia_semana', DIA_SEMANA_PADRAO_MOBILE)
         .eq('fabrica_id', el.fabrica.value)
         .maybeSingle();
     if (error) throw error;
@@ -525,7 +529,7 @@ async function recarregarContagemAtual() {
     if (!state.contagemAtual?.id) return;
     const { data, error } = await supabaseClient
         .from('contagens_camara_fria')
-        .select('id, filial, semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
+        .select('id, filial, semana, dia_semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
         .eq('id', state.contagemAtual.id)
         .single();
     if (error) throw error;
@@ -536,7 +540,7 @@ async function renderContagensRecentes() {
     try {
         let query = supabaseClient
             .from('contagens_camara_fria')
-            .select('id, filial, semana, funcionario, status, updated_at, fabrica_id, fabricas_camara_fria(nome)')
+            .select('id, filial, semana, dia_semana, funcionario, status, updated_at, fabrica_id, fabricas_camara_fria(nome)')
             .order('updated_at', { ascending: false })
             .limit(50);
 
@@ -557,7 +561,7 @@ async function renderContagensRecentes() {
             <article class="card recent-card ${contagem.status === 'FINALIZADA' ? 'finalizada' : 'em-andamento'}" data-id="${contagem.id}">
                 <div class="card-header-row">
                     <div>
-                        <h4>${escapeHtml(contagem.filial)} | Semana ${escapeHtml(formatSemanaDisplay(contagem.semana))}</h4>
+                        <h4>${escapeHtml(contagem.filial)} | Semana ${escapeHtml(formatSemanaDisplay(contagem.semana))} | ${escapeHtml(formatDiaSemana(contagem.dia_semana))}</h4>
                         <p>${escapeHtml(contagem.fabricas_camara_fria?.nome || '-')}</p>
                         <small>${escapeHtml(contagem.funcionario || '-')} | ${formatDateTime(contagem.updated_at)}</small>
                     </div>
@@ -581,7 +585,7 @@ async function abrirContagemPorId(id) {
     try {
         const { data, error } = await supabaseClient
             .from('contagens_camara_fria')
-            .select('id, filial, semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
+            .select('id, filial, semana, dia_semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
             .eq('id', id)
             .single();
         if (error) throw error;
@@ -672,7 +676,7 @@ async function buscarDadosResumo(id) {
     const [contagemResult, itensResult] = await Promise.all([
         supabaseClient
             .from('contagens_camara_fria')
-            .select('id, filial, semana, funcionario, status, iniciada_em, finalizada_em, fabricas_camara_fria(nome)')
+            .select('id, filial, semana, dia_semana, funcionario, status, iniciada_em, finalizada_em, fabricas_camara_fria(nome)')
             .eq('id', id)
             .single(),
         supabaseClient
@@ -744,6 +748,19 @@ function formatDateTime(value) {
 function formatSemanaDisplay(value) {
     const match = String(value || '').match(/^(\d{4})-W(\d{2})$/);
     return match ? `${match[2]}-${match[1]}` : (value || '-');
+}
+
+function formatDiaSemana(value) {
+    const labels = {
+        SEGUNDA: 'SEGUNDA',
+        TERCA: 'TERÇA',
+        QUARTA: 'QUARTA',
+        QUINTA: 'QUINTA',
+        SEXTA: 'SEXTA',
+        SABADO: 'SÁBADO',
+        DOMINGO: 'DOMINGO'
+    };
+    return labels[String(value || '').trim().toUpperCase()] || '-';
 }
 
 function formatPeso(value) {

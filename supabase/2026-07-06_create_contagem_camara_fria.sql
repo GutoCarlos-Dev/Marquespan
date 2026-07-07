@@ -5,6 +5,7 @@ create table if not exists public.contagens_camara_fria (
     id uuid primary key default gen_random_uuid(),
     filial text not null,
     semana text not null,
+    dia_semana text not null default 'SEGUNDA',
     fabrica_id uuid not null references public.fabricas_camara_fria(id) on update cascade on delete restrict,
     funcionario text not null,
     status text not null default 'EM_ANDAMENTO',
@@ -12,8 +13,9 @@ create table if not exists public.contagens_camara_fria (
     finalizada_em timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
-    constraint contagens_camara_fria_unica unique (filial, semana, fabrica_id),
+    constraint contagens_camara_fria_unica unique (filial, semana, dia_semana, fabrica_id),
     constraint contagens_camara_fria_semana_check check (semana ~ '^[0-9]{4}-W[0-9]{2}$'),
+    constraint contagens_camara_fria_dia_semana_check check (dia_semana in ('SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO')),
     constraint contagens_camara_fria_status_check check (status in ('EM_ANDAMENTO', 'FINALIZADA'))
 );
 
@@ -28,8 +30,8 @@ create table if not exists public.contagem_camara_fria_itens (
     constraint contagem_camara_fria_itens_unico unique (contagem_id, produto_id)
 );
 
-create index if not exists idx_contagens_camara_fria_filial_semana
-    on public.contagens_camara_fria (filial, semana);
+create index if not exists idx_contagens_camara_fria_filial_semana_dia
+    on public.contagens_camara_fria (filial, semana, dia_semana);
 
 create index if not exists idx_contagens_camara_fria_fabrica
     on public.contagens_camara_fria (fabrica_id);
