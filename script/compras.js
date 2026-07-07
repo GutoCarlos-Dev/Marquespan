@@ -27,6 +27,12 @@ class SupabaseService {
     return data;
   }
 
+  static async upsert(table, payload, opts={}){
+    const { data, error } = await supabaseClient.from(table).upsert(payload, opts).select();
+    if (error) throw error;
+    return data;
+  }
+
   static async update(table, payload, key){
     const { data, error } = await supabaseClient.from(table).update(payload).eq(key.field, key.value).select();
     if (error) throw error;
@@ -815,8 +821,11 @@ const UI = {
       }
       const cotacaoId = cot[0].id;
 
-      const itens = this.cart.items.map(i=>({ id_cotacao:cotacaoId, id_produto:i.id, quantidade:i.qtd }));
-      await SupabaseService.insert('cotacao_itens', itens);
+      const itens = this.montarItensCotacao(cotacaoId);
+      if (itens.length === 0) {
+        throw new Error('Nenhum item valido para registrar na cotacao.');
+      }
+      await SupabaseService.upsert('cotacao_itens', itens, { onConflict: 'id_cotacao,id_produto' });
 
       for(let idx=1;idx<=3;idx++){
         const fornecedorId = document.getElementById(`empresa${idx}Cot`).value;
@@ -840,7 +849,32 @@ const UI = {
       registrarAuditoria(this.editingQuotationId ? 'ALTERAR' : 'INCLUIR', 'Compras', `${this.editingQuotationId ? 'Alteração' : 'Inclusão'} de cotação`);
       alert(`Cotação ${this.editingQuotationId ? 'atualizada' : 'registrada'} com sucesso!`);
       this.clearQuotationForm(); this.renderSavedQuotations();
-    }catch(e){console.error('Erro registrar cotação',e); alert('Erro ao registrar. Verifique console.')}
+    } catch(e) {
+      console.error('Erro registrar cotação', e);
+      alert('Erro ao registrar cotação: ' + this.getSupabaseErrorMessage(e));
+    }
+  },
+
+  montarItensCotacao(cotacaoId) {
+    const itensPorProduto = new Map();
+
+    this.cart.items.forEach(item => {
+      const idProduto = String(item.id || '').trim();
+      const quantidade = Number(item.qtd) || 0;
+      if (!idProduto || quantidade <= 0) return;
+
+      itensPorProduto.set(idProduto, (itensPorProduto.get(idProduto) || 0) + quantidade);
+    });
+
+    return Array.from(itensPorProduto.entries()).map(([idProduto, quantidade]) => ({
+      id_cotacao: cotacaoId,
+      id_produto: idProduto,
+      quantidade
+    }));
+  },
+
+  getSupabaseErrorMessage(error) {
+    return error?.message || error?.details || error?.hint || error?.code || 'verifique o console para mais detalhes.';
   },
 
   clearQuotationForm(){ 
