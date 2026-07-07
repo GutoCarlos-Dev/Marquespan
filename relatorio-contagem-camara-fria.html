@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="css/menu.css">
   <link rel="stylesheet" href="css/cadastro-produtos-camara-fria.css">
   <link rel="stylesheet" href="css/estoque-camara-fria.css">
-  <link rel="stylesheet" href="css/relatorio-contagem-camara-fria.css?v=20260707-resumo-sort">
+  <link rel="stylesheet" href="css/relatorio-contagem-camara-fria.css?v=20260707-filtros-acoes">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -26,55 +26,74 @@
         <h1><i class="fas fa-chart-column"></i> Relatorio de Contagem - Camara Fria</h1>
       </header>
 
-      <section class="glass-panel">
-        <h3><i class="fas fa-filter"></i> Filtros</h3>
-        <div class="relatorio-contagem-filtros">
-          <div class="form-group-filter">
-            <label for="relatorioContagemFilial">Filial</label>
-            <select id="relatorioContagemFilial" class="glass-input">
-              <option value="">Todas</option>
-            </select>
+      <div class="relatorio-contagem-top-grid">
+        <section class="glass-panel relatorio-filtros-panel">
+          <h3><i class="fas fa-filter"></i> Filtros</h3>
+          <div class="relatorio-contagem-filtros">
+            <div class="form-group-filter">
+              <label for="relatorioContagemFilial">Filial</label>
+              <select id="relatorioContagemFilial" class="glass-input">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
+              <label for="relatorioContagemSemana">Semana</label>
+              <input type="week" id="relatorioContagemSemana" class="glass-input">
+            </div>
+            <div class="form-group-filter">
+              <label for="relatorioContagemDiaSemana">Dia da Semana</label>
+              <select id="relatorioContagemDiaSemana" class="glass-input">
+                <option value="">Todos</option>
+                <option value="SEGUNDA">Segunda</option>
+                <option value="TERCA">Ter&ccedil;a</option>
+                <option value="QUARTA">Quarta</option>
+                <option value="QUINTA">Quinta</option>
+                <option value="SEXTA">Sexta</option>
+                <option value="SABADO">S&aacute;bado</option>
+                <option value="DOMINGO">Domingo</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
+              <label for="relatorioContagemFabrica">Fabrica</label>
+              <select id="relatorioContagemFabrica" class="glass-input">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
+              <label for="relatorioContagemProduto">Produto</label>
+              <select id="relatorioContagemProduto" class="glass-input">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
+              <label for="relatorioContagemStatus">Status</label>
+              <select id="relatorioContagemStatus" class="glass-input">
+                <option value="">Todos</option>
+                <option value="EM_ANDAMENTO">Em andamento</option>
+                <option value="FINALIZADA" selected>Finalizada</option>
+              </select>
+            </div>
           </div>
-          <div class="form-group-filter">
-            <label for="relatorioContagemSemana">Semana</label>
-            <input type="week" id="relatorioContagemSemana" class="glass-input">
+        </section>
+
+        <section class="glass-panel relatorio-acoes-panel">
+          <h3><i class="fas fa-cogs"></i> A&ccedil;&otilde;es</h3>
+          <div class="relatorio-contagem-actions">
+            <button type="button" id="btnFiltrarRelatorioContagem" class="btn-glass btn-blue">
+              <i class="fas fa-search"></i> Filtrar
+            </button>
+            <button type="button" id="btnLimparRelatorioContagem" class="btn-glass btn-red">
+              <i class="fas fa-eraser"></i> Limpar
+            </button>
+            <button type="button" id="btnExportarRelatorioContagemExcel" class="btn-glass btn-green">
+              <i class="fas fa-file-excel"></i> Excel
+            </button>
+            <button type="button" id="btnExportarRelatorioContagemPDF" class="btn-glass btn-red">
+              <i class="fas fa-file-pdf"></i> PDF
+            </button>
           </div>
-          <div class="form-group-filter">
-            <label for="relatorioContagemFabrica">Fabrica</label>
-            <select id="relatorioContagemFabrica" class="glass-input">
-              <option value="">Todas</option>
-            </select>
-          </div>
-          <div class="form-group-filter">
-            <label for="relatorioContagemProduto">Produto</label>
-            <select id="relatorioContagemProduto" class="glass-input">
-              <option value="">Todos</option>
-            </select>
-          </div>
-          <div class="form-group-filter">
-            <label for="relatorioContagemStatus">Status</label>
-            <select id="relatorioContagemStatus" class="glass-input">
-              <option value="">Todos</option>
-              <option value="EM_ANDAMENTO">Em andamento</option>
-              <option value="FINALIZADA" selected>Finalizada</option>
-            </select>
-          </div>
-        </div>
-        <div class="relatorio-contagem-actions">
-          <button type="button" id="btnFiltrarRelatorioContagem" class="btn-glass btn-blue">
-            <i class="fas fa-search"></i> Filtrar
-          </button>
-          <button type="button" id="btnLimparRelatorioContagem" class="btn-glass btn-red">
-            <i class="fas fa-eraser"></i> Limpar
-          </button>
-          <button type="button" id="btnExportarRelatorioContagemExcel" class="btn-glass btn-green">
-            <i class="fas fa-file-excel"></i> Excel
-          </button>
-          <button type="button" id="btnExportarRelatorioContagemPDF" class="btn-glass btn-red">
-            <i class="fas fa-file-pdf"></i> PDF
-          </button>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <div class="kpi-grid-camara">
         <div class="kpi-mini-card">
@@ -154,6 +173,6 @@
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/relatorio-contagem-camara-fria.js?v=20260707-pdf-zebrado" defer></script>
+  <script type="module" src="script/relatorio-contagem-camara-fria.js?v=20260707-filtro-dia-semana" defer></script>
 </body>
 </html>

@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cache() {
             this.filialSelect = document.getElementById('relatorioContagemFilial');
             this.semanaInput = document.getElementById('relatorioContagemSemana');
+            this.diaSemanaSelect = document.getElementById('relatorioContagemDiaSemana');
             this.fabricaSelect = document.getElementById('relatorioContagemFabrica');
             this.produtoSelect = document.getElementById('relatorioContagemProduto');
             this.statusSelect = document.getElementById('relatorioContagemStatus');
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnLimpar.addEventListener('click', () => this.limparFiltros());
             this.btnExcel.addEventListener('click', () => this.exportarExcel());
             this.btnPDF.addEventListener('click', () => this.exportarPDF());
-            [this.filialSelect, this.semanaInput, this.fabricaSelect, this.produtoSelect, this.statusSelect].forEach(input => {
+            [this.filialSelect, this.semanaInput, this.diaSemanaSelect, this.fabricaSelect, this.produtoSelect, this.statusSelect].forEach(input => {
                 input.addEventListener('change', () => this.carregarRelatorio());
             });
             this.resumoSortableHeaders.forEach(th => {
@@ -158,11 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
         async buscarContagens() {
             let query = supabaseClient
                 .from('contagens_camara_fria')
-                .select('id, filial, semana, fabrica_id, funcionario, status, updated_at, fabricas_camara_fria(nome)')
+                .select('id, filial, semana, dia_semana, fabrica_id, funcionario, status, updated_at, fabricas_camara_fria(nome)')
                 .order('semana', { ascending: false });
 
             if (this.filialSelect.value) query = query.eq('filial', this.filialSelect.value);
             if (this.semanaInput.value) query = query.eq('semana', this.semanaInput.value);
+            if (this.diaSemanaSelect.value) query = query.eq('dia_semana', this.diaSemanaSelect.value);
             if (this.fabricaSelect.value) query = query.eq('fabrica_id', this.fabricaSelect.value);
             if (this.statusSelect.value) query = query.eq('status', this.statusSelect.value);
 
@@ -352,6 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         limparFiltros() {
             if (!this.filialRestrita) this.filialSelect.value = '';
             this.semanaInput.value = '';
+            this.diaSemanaSelect.value = '';
             this.fabricaSelect.value = '';
             this.produtoSelect.value = '';
             this.statusSelect.value = '';
@@ -440,6 +443,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const fabrica = this.fabricaSelect.value
                 ? this.fabricaSelect.options[this.fabricaSelect.selectedIndex]?.text
                 : 'Todas';
+            const diaSemana = this.diaSemanaSelect.value
+                ? this.diaSemanaSelect.options[this.diaSemanaSelect.selectedIndex]?.text
+                : 'Todos';
             const produto = this.produtoSelect.value
                 ? this.produtoSelect.options[this.produtoSelect.selectedIndex]?.text
                 : 'Todos';
@@ -449,6 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return [
                 `Filial ${this.filialSelect.value || 'Todas'}`,
                 `Semana ${this.formatSemanaDisplay(this.semanaInput.value)}`,
+                `Dia ${diaSemana}`,
                 `Fabrica ${fabrica}`,
                 `Produto ${produto}`,
                 `Status ${status}`
