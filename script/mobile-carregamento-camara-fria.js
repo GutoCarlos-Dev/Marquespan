@@ -77,7 +77,11 @@ function bind() {
 
     el.produtosLista.addEventListener('input', event => {
         if (event.target.matches('.input-paletes, .input-caixas')) {
-            atualizarPreviewCard(event.target.closest('.produto-card'));
+            const card = event.target.closest('.produto-card');
+            if (event.target.matches('.input-caixas')) {
+                distribuirCaixasEmPaletes(card, event.target);
+            }
+            atualizarPreviewCard(card);
         }
     });
 
@@ -414,7 +418,7 @@ function renderProdutos() {
                     </div>
                     <div class="form-group">
                         <label>Caixas</label>
-                        <input type="number" min="0" step="1" class="input-caixas" ${finalizado ? 'disabled' : ''}>
+                        <input type="number" min="0" step="1" class="input-caixas" title="Digite o total de caixas para calcular os paletes" ${finalizado ? 'disabled' : ''}>
                     </div>
                 </div>
 
@@ -433,6 +437,22 @@ function atualizarPreviewCard(card) {
     const total = getQuantidadeCard(card);
     const preview = card.querySelector('.preview-lancar');
     if (preview) preview.textContent = total > 0 ? `(${total})` : '';
+}
+
+function distribuirCaixasEmPaletes(card, inputCaixas) {
+    if (!card || !inputCaixas) return;
+
+    const valor = String(inputCaixas.value || '').trim();
+    const caixasPorPalete = Number(card.dataset.caixasPorPalete) || 0;
+    if (!valor || caixasPorPalete <= 0) return;
+
+    const totalCaixas = parseInt(valor, 10);
+    if (!Number.isFinite(totalCaixas) || totalCaixas < 0) return;
+
+    const inputPaletes = card.querySelector('.input-paletes');
+    const quantidades = calcularQuantidadesPelasCaixas(totalCaixas, caixasPorPalete);
+    if (inputPaletes) inputPaletes.value = quantidades.paletes;
+    inputCaixas.value = quantidades.caixasAvulsas;
 }
 
 async function lancarProduto(card) {
@@ -476,6 +496,19 @@ function getQuantidadeCard(card) {
     const caixas = getNumero(card.querySelector('.input-caixas')?.value);
     const caixasPorPalete = Number(card.dataset.caixasPorPalete) || 0;
     return (paletes * caixasPorPalete) + caixas;
+}
+
+function calcularQuantidadesPelasCaixas(caixas, caixasPorPalete) {
+    const totalCaixas = Number(caixas) || 0;
+    if (!totalCaixas) return { paletes: '', caixasAvulsas: '' };
+    if (!caixasPorPalete) return { paletes: '', caixasAvulsas: String(totalCaixas) };
+
+    const paletes = Math.floor(totalCaixas / caixasPorPalete);
+    const caixasAvulsas = totalCaixas % caixasPorPalete;
+    return {
+        paletes: paletes ? String(paletes) : '',
+        caixasAvulsas: caixasAvulsas ? String(caixasAvulsas) : ''
+    };
 }
 
 async function atualizarListaAtual(renderizarProdutos = true) {
