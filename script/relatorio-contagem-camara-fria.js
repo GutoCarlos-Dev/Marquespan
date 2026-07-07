@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
         produtosCache: [],
         resumoRows: [],
         detalheRows: [],
+        resumoSortState: { key: 'caixas', direction: 'desc' },
 
         async init() {
             this.cache();
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnExcel = document.getElementById('btnExportarRelatorioContagemExcel');
             this.btnPDF = document.getElementById('btnExportarRelatorioContagemPDF');
             this.resumoBody = document.getElementById('relatorioResumoBody');
+            this.resumoSortableHeaders = document.querySelectorAll('th.resumo-sortable');
             this.detalheBody = document.getElementById('relatorioDetalheBody');
             this.resumoCount = document.getElementById('relatorioResumoCount');
             this.detalheCount = document.getElementById('relatorioDetalheCount');
@@ -44,6 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnPDF.addEventListener('click', () => this.exportarPDF());
             [this.filialSelect, this.semanaInput, this.fabricaSelect, this.produtoSelect, this.statusSelect].forEach(input => {
                 input.addEventListener('change', () => this.carregarRelatorio());
+            });
+            this.resumoSortableHeaders.forEach(th => {
+                th.addEventListener('click', () => this.ordenarResumoPor(th.dataset.sort));
             });
         },
 
@@ -137,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .filter(Boolean)
                     .sort((a, b) => a.produtoNome.localeCompare(b.produtoNome) || a.semana.localeCompare(b.semana));
                 this.resumoRows = this.montarResumo(this.detalheRows);
+                this.aplicarOrdenacaoResumo();
 
                 this.renderResumo();
                 this.renderDetalhe();
@@ -190,6 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 semana: contagem.semana || '-',
                 semanaDisplay: this.formatSemanaDisplay(contagem.semana),
                 fabrica: contagem.fabricas_camara_fria?.nome || '-',
+                fabricaId: contagem.fabrica_id || '',
+                fabricaNumero: this.getFabricaNumero(contagem),
                 status: contagem.status || '-',
                 funcionario: contagem.funcionario || '-',
                 updatedAt: contagem.updated_at,
@@ -215,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         produtoNome: row.produtoNome,
                         produtoTipo: row.produtoTipo,
                         produtoFilial: row.produtoFilial,
+                        caixasPorFabrica: { 1: 0, 2: 0, 3: 0, 4: 0 },
                         paletes: 0,
                         caixasAvulsas: 0,
                         caixas: 0,
@@ -226,19 +235,62 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.paletes += row.paletes;
                 item.caixasAvulsas += row.caixasAvulsas;
                 item.caixas += row.caixas;
+                if (row.fabricaNumero >= 1 && row.fabricaNumero <= 4) {
+                    item.caixasPorFabrica[row.fabricaNumero] += row.caixas;
+                }
                 item.pesoTotal += row.pesoTotal;
                 item.contagens.add(`${row.filial}|${row.semana}|${row.fabrica}`);
             });
 
             return Array.from(mapa.values())
-                .map(item => ({ ...item, totalContagens: item.contagens.size }))
-                .sort((a, b) => b.caixas - a.caixas || a.produtoNome.localeCompare(b.produtoNome));
+                .map(item => ({ ...item, totalContagens: item.contagens.size }));
+        },
+
+        ordenarResumoPor(key) {
+            const direction = this.resumoSortState.key === key && this.resumoSortState.direction === 'asc' ? 'desc' : 'asc';
+            this.resumoSortState = { key, direction };
+            this.aplicarOrdenacaoResumo();
+            this.renderResumo();
+        },
+
+        aplicarOrdenacaoResumo() {
+            const { key, direction } = this.resumoSortState;
+            if (!key) return;
+
+            this.resumoRows.sort((a, b) => {
+                const valorA = this.getValorOrdenacaoResumo(a, key);
+                const valorB = this.getValorOrdenacaoResumo(b, key);
+                const resultado = typeof valorA === 'number' && typeof valorB === 'number'
+                    ? valorA - valorB
+                    : String(valorA).localeCompare(String(valorB), 'pt-BR', { sensitivity: 'base', numeric: true });
+                return direction === 'asc' ? resultado : -resultado;
+            });
+        },
+
+        getValorOrdenacaoResumo(row, key) {
+            if (key === 'fabrica1') return Number(row.caixasPorFabrica[1]) || 0;
+            if (key === 'fabrica2') return Number(row.caixasPorFabrica[2]) || 0;
+            if (key === 'fabrica3') return Number(row.caixasPorFabrica[3]) || 0;
+            if (key === 'fabrica4') return Number(row.caixasPorFabrica[4]) || 0;
+            if (key === 'caixas' || key === 'pesoTotal') return Number(row[key]) || 0;
+            return String(row[key] || '');
+        },
+
+        atualizarIconesOrdenacaoResumo() {
+            this.resumoSortableHeaders.forEach(th => {
+                const icon = th.querySelector('i');
+                if (!icon) return;
+                icon.className = th.dataset.sort === this.resumoSortState.key
+                    ? (this.resumoSortState.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
+                    : 'fas fa-sort';
+            });
         },
 
         renderResumo() {
+            this.atualizarIconesOrdenacaoResumo();
             this.resumoCount.textContent = `${this.resumoRows.length} produto${this.resumoRows.length === 1 ? '' : 's'}`;
             if (this.resumoRows.length === 0) {
-                this.resumoBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhum produto encontrado para os filtros.</td></tr>';
+                this.resumoBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum produto encontrado para os filtros.</td></tr>';
                 return;
             }
 
@@ -247,10 +299,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${this.escapeHtml(row.produtoCodigo)}</td>
                     <td><strong>${this.escapeHtml(row.produtoNome)}</strong></td>
                     <td>${this.escapeHtml(row.produtoTipo)}</td>
-                    <td>${this.escapeHtml(row.produtoFilial)}</td>
+                    <td class="relatorio-numero">${row.caixasPorFabrica[1]}</td>
+                    <td class="relatorio-numero">${row.caixasPorFabrica[2]}</td>
+                    <td class="relatorio-numero">${row.caixasPorFabrica[3]}</td>
+                    <td class="relatorio-numero">${row.caixasPorFabrica[4]}</td>
                     <td class="relatorio-numero">${row.caixas}</td>
                     <td class="relatorio-numero">${this.formatPeso(row.pesoTotal)} KG</td>
-                    <td class="relatorio-numero">${row.totalContagens}</td>
                 </tr>
             `).join('');
         },
@@ -312,10 +366,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 Codigo: row.produtoCodigo,
                 Produto: row.produtoNome,
                 Tipo: row.produtoTipo,
-                FilialProduto: row.produtoFilial,
+                TotalCaixasFabrica1: row.caixasPorFabrica[1],
+                TotalCaixasFabrica2: row.caixasPorFabrica[2],
+                TotalCaixasFabrica3: row.caixasPorFabrica[3],
+                TotalCaixasFabrica4: row.caixasPorFabrica[4],
                 TotalCaixas: row.caixas,
-                PesoTotalKG: Number(row.pesoTotal.toFixed(3)),
-                Contagens: row.totalContagens
+                PesoTotalKG: Number(row.pesoTotal.toFixed(3))
             }));
             const detalhe = this.detalheRows.map(row => ({
                 Filial: row.filial,
@@ -342,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.resumoRows.length === 0) return alert('Nao ha dados para exportar.');
 
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
             const logo = await this.getLogoBase64PDF();
             if (logo) doc.addImage(logo, 'JPEG', 14, 8, 40, 12);
 
@@ -357,16 +413,17 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.text(`Paletes: ${totalPaletes} | Caixas avulsas: ${totalCaixasAvulsas} | Total caixas: ${this.kpiCaixas.textContent} | Produtos: ${this.kpiProdutos.textContent}`, 14, 41);
 
             doc.autoTable({
-                head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Total Caixas', 'Peso Total', 'Contagens']],
+                head: [['Codigo', 'Produto', 'Tipo', 'Fab. 1', 'Fab. 2', 'Fab. 3', 'Fab. 4', 'Total Caixas', 'Peso Total']],
                 body: this.resumoRows.map(row => [
                     row.produtoCodigo,
                     row.produtoNome,
                     row.produtoTipo,
-                    String(row.paletes),
-                    String(row.caixasAvulsas),
+                    String(row.caixasPorFabrica[1]),
+                    String(row.caixasPorFabrica[2]),
+                    String(row.caixasPorFabrica[3]),
+                    String(row.caixasPorFabrica[4]),
                     String(row.caixas),
-                    `${this.formatPeso(row.pesoTotal)} KG`,
-                    String(row.totalContagens)
+                    `${this.formatPeso(row.pesoTotal)} KG`
                 ]),
                 startY: 48,
                 theme: 'grid',
@@ -377,7 +434,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     4: { halign: 'right' },
                     5: { halign: 'right' },
                     6: { halign: 'right' },
-                    7: { halign: 'right' }
+                    7: { halign: 'right' },
+                    8: { halign: 'right' }
                 }
             });
 
@@ -414,6 +472,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 caixasAvulsas: totalCaixas % capacidadePalete,
                 totalCaixas
             };
+        },
+
+        getFabricaNumero(contagem) {
+            const nome = String(contagem?.fabricas_camara_fria?.nome || '');
+            const numeroNome = nome.match(/(?:^|\D)0?([1-4])(?:\D|$)/);
+            if (numeroNome) return Number(numeroNome[1]);
+
+            const index = this.fabricasCache.findIndex(fabrica => String(fabrica.id) === String(contagem?.fabrica_id));
+            return index >= 0 && index < 4 ? index + 1 : 0;
         },
 
         setLoading(loading) {

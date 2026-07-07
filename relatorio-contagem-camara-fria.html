@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="css/menu.css">
   <link rel="stylesheet" href="css/cadastro-produtos-camara-fria.css">
   <link rel="stylesheet" href="css/estoque-camara-fria.css">
-  <link rel="stylesheet" href="css/relatorio-contagem-camara-fria.css">
+  <link rel="stylesheet" href="css/relatorio-contagem-camara-fria.css?v=20260707-resumo-sort">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -104,17 +104,19 @@
           <table class="glass-table">
             <thead>
               <tr>
-                <th>Codigo</th>
-                <th>Produto</th>
-                <th>Tipo</th>
-                <th>Filial Produto</th>
-                <th>Total Caixas</th>
-                <th>Peso Total</th>
-                <th>Contagens</th>
+                <th data-sort="produtoCodigo" class="resumo-sortable">Codigo <i class="fas fa-sort"></i></th>
+                <th data-sort="produtoNome" class="resumo-sortable">Produto <i class="fas fa-sort"></i></th>
+                <th data-sort="produtoTipo" class="resumo-sortable">Tipo <i class="fas fa-sort"></i></th>
+                <th data-sort="fabrica1" class="resumo-sortable">Total Caixas Fabrica 1 <i class="fas fa-sort"></i></th>
+                <th data-sort="fabrica2" class="resumo-sortable">Total Caixas Fabrica 2 <i class="fas fa-sort"></i></th>
+                <th data-sort="fabrica3" class="resumo-sortable">Total Caixas Fabrica 3 <i class="fas fa-sort"></i></th>
+                <th data-sort="fabrica4" class="resumo-sortable">Total Caixas Fabrica 4 <i class="fas fa-sort"></i></th>
+                <th data-sort="caixas" class="resumo-sortable">Total Caixas <i class="fas fa-sort"></i></th>
+                <th data-sort="pesoTotal" class="resumo-sortable">Peso Total <i class="fas fa-sort"></i></th>
               </tr>
             </thead>
             <tbody id="relatorioResumoBody">
-              <tr><td colspan="7" style="text-align:center;">Use os filtros para carregar o relatorio.</td></tr>
+              <tr><td colspan="9" style="text-align:center;">Use os filtros para carregar o relatorio.</td></tr>
             </tbody>
           </table>
         </div>
@@ -152,6 +154,6 @@
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/relatorio-contagem-camara-fria.js?v=20260706-1" defer></script>
+  <script type="module" src="script/relatorio-contagem-camara-fria.js?v=20260707-resumo-sort" defer></script>
 </body>
 </html>
