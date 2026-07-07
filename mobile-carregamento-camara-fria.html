@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carregamento Camara Fria App - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/mobile-carregamento-camara-fria.css?v=20260707-1">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header class="mobile-header">
+    <div class="header-content">
+      <img src="logo.png" alt="Logo" class="mobile-logo">
+      <h1>Carregamento Camara Fria</h1>
+    </div>
+    <a href="carregamento-camara-fria.html" class="btn-desktop-link" title="Voltar para Desktop">
+      <i class="fas fa-desktop"></i>
+    </a>
+  </header>
+
+  <main class="mobile-container">
+    <section id="screenInicio">
+      <h3 class="section-title">Abrir Lista</h3>
+
+      <div class="mobile-panel">
+        <div class="form-group">
+          <label for="mobileCarregamentoFilial">Filial</label>
+          <select id="mobileCarregamentoFilial" required>
+            <option value="">Selecione</option>
+          </select>
+        </div>
+
+        <div class="form-row-mobile">
+          <div class="form-group">
+            <label for="mobileCarregamentoData">Data</label>
+            <input type="date" id="mobileCarregamentoData" required>
+          </div>
+          <div class="form-group">
+            <label for="mobileCarregamentoUsuario">Usuario</label>
+            <input type="text" id="mobileCarregamentoUsuario" readonly>
+          </div>
+        </div>
+
+        <button type="button" id="btnMobileAbrirLista" class="btn-block btn-primary">
+          <i class="fas fa-folder-open"></i> Abrir/Criar Lista
+        </button>
+      </div>
+
+      <h3 class="section-title">Listas Recentes</h3>
+      <div id="mobileCarregamentosRecentes" class="cards-container">
+        <div class="loading">Carregando listas...</div>
+      </div>
+    </section>
+
+    <section id="screenProdutos" class="hidden">
+      <div class="list-header">
+        <button type="button" id="btnMobileVoltar" class="btn-back"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <div>
+          <h3 id="mobileTituloLista">Lista</h3>
+          <small id="mobileSubtituloLista"></small>
+        </div>
+      </div>
+
+      <div class="status-card">
+        <span id="mobileStatusLista" class="status-pill">Aberta</span>
+        <span id="mobileInfoLista"></span>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span>Total Lancado</span>
+          <strong id="mobileKpiTotalLancado">0</strong>
+        </div>
+        <div class="kpi-card">
+          <span>Produtos</span>
+          <strong id="mobileKpiProdutos">0</strong>
+        </div>
+        <div class="kpi-card">
+          <span>Usuarios</span>
+          <strong id="mobileKpiUsuarios">0</strong>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" id="mobileBuscaProdutoCarregamento" placeholder="Buscar produto ou codigo...">
+        <i class="fas fa-search"></i>
+      </div>
+
+      <div id="mobileProdutosCarregamentoLista" class="cards-container produtos-container">
+        <div class="loading">Carregando produtos...</div>
+      </div>
+
+      <div class="mobile-bottom-actions">
+        <button type="button" id="btnMobileFinalizarLista" class="btn-bottom btn-finish">
+          <i class="fas fa-check"></i> Finalizar
+        </button>
+        <button type="button" id="btnMobileAtualizarLista" class="btn-bottom btn-refresh">
+          <i class="fas fa-rotate"></i> Atualizar
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/presenca-online.js"></script>
+  <script type="module" src="script/mobile-carregamento-camara-fria.js?v=20260707-1"></script>
+</body>
+</html>

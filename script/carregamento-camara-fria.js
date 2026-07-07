@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.btnCarregar.disabled = true;
             this.btnCarregar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo...';
-            this.tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Abrindo lista colaborativa...</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Abrindo lista colaborativa...</td></tr>';
 
             try {
                 const contagem = await this.buscarUltimaContagemFinalizada();
@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!contagem) {
                     this.produtosCache = [];
                     this.estoqueContagemCache = new Map();
-                    this.tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhuma contagem finalizada encontrada para esta Filial.</td></tr>';
+                    this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Nenhuma contagem finalizada encontrada para esta Filial.</td></tr>';
                     this.atualizarContagemInfo();
                     this.atualizarEstado(false);
                     this.atualizarTotais();
@@ -346,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (this.produtosCache.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum produto cadastrado para esta filial.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Nenhum produto cadastrado para esta filial.</td></tr>';
                 this.atualizarTotais();
                 return;
             }
@@ -539,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.totaisPorProduto = new Map();
             this.contagemReferencia = null;
             this.carregamentoAtual = null;
-            this.tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Abra ou crie uma lista para iniciar os lancamentos.</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Abra ou crie uma lista para iniciar os lancamentos.</td></tr>';
             this.recordsCount.textContent = '';
             this.atualizarContagemInfo();
             this.atualizarTotais();

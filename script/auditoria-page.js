@@ -42,6 +42,7 @@ const NOMES_PAGINA = {
     'mobile-coletar.html': 'Coleta Manutenção Mobile',
     'abastecimento.html': 'Abastecimento',
     'mobile-abastecimento.html': 'Abastecimento Mobile',
+    'mobile-carregamento-camara-fria.html': 'Carregamento Camara Fria Mobile',
     'usuarios.html': 'Usuários',
     'auditoria.html': 'Auditoria',
     'veiculos.html': 'Veículos',
