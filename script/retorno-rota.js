@@ -191,6 +191,10 @@ function applyDriverTimeToTeam(rowData) {
 
 const RECEBIMENTO_TIME_FIELDS = ['hora_mot', 'hora_aux', 'hora_terceiro'];
 
+function isCompleteReceivingTime(value) {
+    return /^\d{2}:\d{2}:\d{2}$/.test(String(value || '').trim());
+}
+
 function fillLoggedOperatorOnReceivingTime(rowData, field, value) {
     if (!RECEBIMENTO_TIME_FIELDS.includes(field) || !String(value || '').trim()) return false;
 
@@ -889,6 +893,15 @@ function updateSelectAllState() {
     selectAll.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
 }
 
+function updateGridCounters(rows) {
+    const countRetornaram = rows.filter(row => row.operador_recebimento && row.operador_recebimento.trim() !== '').length;
+    const countAguardando = rows.length - countRetornaram;
+    const elRetornaram = document.getElementById('count-retornaram');
+    const elAguardando = document.getElementById('count-aguardando');
+    if (elRetornaram) elRetornaram.textContent = countRetornaram;
+    if (elAguardando) elAguardando.textContent = countAguardando;
+}
+
 /**
  * Carrega os dados do Supabase para a data selecionada.
  */
@@ -1063,13 +1076,7 @@ function renderGrid() {
           )
         : [...gridData];
 
-    // Calcular e atualizar os contadores (Retornaram vs Aguardando)
-    const countRetornaram = dataToRender.filter(row => row.operador_recebimento && row.operador_recebimento.trim() !== '').length;
-    const countAguardando = dataToRender.length - countRetornaram;
-    const elRetornaram = document.getElementById('count-retornaram');
-    const elAguardando = document.getElementById('count-aguardando');
-    if (elRetornaram) elRetornaram.textContent = countRetornaram;
-    if (elAguardando) elAguardando.textContent = countAguardando;
+    updateGridCounters(dataToRender);
 
     // Aplica a ordenação se houver uma chave definida
     if (sortConfig.key) {
@@ -1210,9 +1217,21 @@ function renderGrid() {
                 }
                 // Se o campo for o operador, atualizamos os contadores imediatamente
                 if (field === 'operador_recebimento' || operadorPreenchido) {
-                    renderGrid(); // Re-renderiza para atualizar os totais no cabeçalho
+                    const isTimeEdit = RECEBIMENTO_TIME_FIELDS.includes(field);
+                    if (isTimeEdit) {
+                        updateGridCounters(gridData);
+                    } else {
+                        renderGrid(); // Re-renderiza para atualizar os totais no cabeçalho
+                    }
                 }
                 await saveRow(index);
+            });
+
+            input.addEventListener('blur', (e) => {
+                const field = e.target.dataset.field;
+                if (RECEBIMENTO_TIME_FIELDS.includes(field) && sortConfig.key && isCompleteReceivingTime(e.target.value)) {
+                    renderGrid();
+                }
             });
         });
 
