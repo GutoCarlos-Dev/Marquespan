@@ -70,9 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnModalSalvar.addEventListener('click', () => this.salvarItens());
             this.btnModalFinalizar.addEventListener('click', () => this.finalizarContagem());
             this.btnModalReabrir.addEventListener('click', () => this.reabrirContagem());
-            this.modalContagem.addEventListener('click', (event) => {
-                if (event.target === this.modalContagem) this.closeModalContagem();
-            });
             [this.filialSelect, this.semanaInput, this.diaSemanaSelect, this.fabricaSelect].forEach(el => {
                 el.addEventListener('change', () => {
                     this.contagemAtual = null;
@@ -84,11 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
             this.tableBody.addEventListener('input', (event) => {
-                if (event.target.matches('.input-paletes-estoque, .input-caixas-estoque')) this.atualizarLinha(event.target.closest('tr'));
+                if (event.target.matches('.input-paletes-estoque, .input-caixas-estoque')) this.processarAlteracaoQuantidade(event.target);
             });
             this.modalTableBody.addEventListener('input', (event) => {
                 if (event.target.matches('.input-paletes-estoque, .input-caixas-estoque')) {
-                    this.atualizarLinha(event.target.closest('tr'));
+                    this.processarAlteracaoQuantidade(event.target);
                     this.sincronizarPreviaComModal();
                 }
             });
@@ -289,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${this.escapeHtml(produto.tipo) || '-'}</td>
                         <td>${produto.peso_caixa != null ? `${this.formatPeso(produto.peso_caixa)} KG` : '-'}</td>
                         <td><input type="number" min="0" step="1" class="input-paletes-estoque" value="${quantidades.paletes}" ${bloqueado}></td>
-                        <td><input type="number" min="0" step="1" class="input-caixas-estoque" value="${quantidades.caixasAvulsas}" ${bloqueado}></td>
+                        <td><input type="number" min="0" step="1" class="input-caixas-estoque" value="${quantidades.caixasAvulsas}" title="Digite o total de caixas para calcular os paletes" ${bloqueado}></td>
                         <td class="estoque-qtd-caixas">${caixas || 0}</td>
                         <td class="estoque-peso-total">0,000 KG</td>
                         <td><input type="text" class="input-observacao-estoque" value="${this.escapeHtml(observacao)}" placeholder="Opcional" ${bloqueado}></td>
@@ -330,6 +327,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? `${visiveis} de ${linhas.length} produto${linhas.length === 1 ? '' : 's'}`
                     : `${linhas.length} produto${linhas.length === 1 ? '' : 's'}`;
             }
+        },
+
+        processarAlteracaoQuantidade(input) {
+            const tr = input.closest('tr');
+            if (!tr) return;
+            if (input.matches('.input-caixas-estoque')) {
+                this.distribuirCaixasEmPaletes(tr, input);
+            }
+            this.atualizarLinha(tr);
+        },
+
+        distribuirCaixasEmPaletes(tr, inputCaixas) {
+            const valor = String(inputCaixas?.value || '').trim();
+            const caixasPorPalete = Number(tr.dataset.caixasPorPalete) || 0;
+            if (!valor || caixasPorPalete <= 0) return;
+
+            const totalCaixas = parseInt(valor, 10);
+            if (!Number.isFinite(totalCaixas) || totalCaixas < 0) return;
+
+            const inputPaletes = tr.querySelector('.input-paletes-estoque');
+            const quantidades = this.calcularQuantidadesPelasCaixas(totalCaixas, caixasPorPalete);
+            if (inputPaletes) inputPaletes.value = quantidades.paletes;
+            inputCaixas.value = quantidades.caixasAvulsas;
         },
 
         atualizarLinha(tr) {
