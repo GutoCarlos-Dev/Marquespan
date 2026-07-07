@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.caixasPaleteInput = document.getElementById('produtoCaixasPalete');
             this.filialSelect = document.getElementById('produtoFilial');
             this.sortableHeaders = document.querySelectorAll('th.sortable');
+            this.buscaGridProdutoInput = document.getElementById('buscaGridProduto');
             this.countBadge = document.getElementById('produtosRecordsCount');
             this.tableBody = document.getElementById('tableBodyProdutos');
             this.btnSalvar = document.getElementById('btnSalvarProduto');
@@ -58,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.renderTable();
                 }
             });
+            this.buscaGridProdutoInput?.addEventListener('input', () => this.renderRows());
             this.btnIncluirProduto.addEventListener('click', () => this.openModalProduto());
 
             this.form.addEventListener('submit', this.handleFormSubmit.bind(this));
@@ -259,7 +261,14 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         renderRows() {
-            const produtos = [...(this.produtosCache || [])];
+            const termoBusca = String(this.buscaGridProdutoInput?.value || '').trim().toLowerCase();
+            const produtos = [...(this.produtosCache || [])].filter(produto => {
+                if (!termoBusca) return true;
+
+                const nome = String(produto.nome || '').toLowerCase();
+                const codigo = String(produto.codigo || '').toLowerCase();
+                return nome.includes(termoBusca) || codigo.includes(termoBusca);
+            });
             const { key, direction } = this.sortState;
 
             if (key) {
@@ -286,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tableBody.innerHTML = '';
 
             if (produtos.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="7">Nenhum produto cadastrado.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="7">Nenhum produto encontrado.</td></tr>';
                 return;
             }
 
