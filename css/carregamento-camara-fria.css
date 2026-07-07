@@ -18,10 +18,44 @@
 
 .carregamento-total,
 .carregamento-estoque,
-.carregamento-diferenca {
+.carregamento-diferenca,
+.carregamento-total-lancado,
+.carregamento-usuarios,
+.carregamento-ultimo {
     font-weight: 800;
-    text-align: right;
+    text-align: center;
     white-space: nowrap;
+}
+
+.carregamento-estoque {
+    color: #245a30;
+}
+
+.carregamento-total-lancado {
+    color: #004085;
+}
+
+.carregamento-ultimo {
+    min-width: 150px;
+    font-size: 0.85rem;
+}
+
+.btn-lancar-produto {
+    min-width: 96px;
+    justify-content: center;
+    padding: 8px 12px;
+    white-space: nowrap;
+}
+
+.input-paletes-lancar,
+.input-caixas-lancar {
+    min-width: 78px;
+    text-align: center;
+}
+
+.contagem-status-badge.em-andamento {
+    background: rgba(0, 123, 255, 0.12);
+    color: #0056b3;
 }
 
 .carregamento-diferenca.falta {

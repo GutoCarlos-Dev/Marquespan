@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="css/menu.css" />
   <link rel="stylesheet" href="css/cadastro-produtos-camara-fria.css" />
   <link rel="stylesheet" href="css/estoque-camara-fria.css" />
-  <link rel="stylesheet" href="css/carregamento-camara-fria.css" />
+  <link rel="stylesheet" href="css/carregamento-camara-fria.css?v=20260707-fabrica-opcional" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
@@ -25,7 +25,7 @@
 
       <div class="produtos-top-grid carregamento-top-grid">
         <section class="glass-panel">
-          <h3><i class="fas fa-clipboard-list"></i> Dados do Carregamento</h3>
+          <h3><i class="fas fa-clipboard-list"></i> Lista de Carregamento</h3>
           <div class="filtros-container carregamento-filtros">
             <div class="form-group-filter">
               <label for="carregamentoFilial">Filial</label>
@@ -35,8 +35,8 @@
             </div>
             <div class="form-group-filter">
               <label for="carregamentoFabrica">Fabrica</label>
-              <select id="carregamentoFabrica" class="glass-input" required>
-                <option value="">Selecione</option>
+              <select id="carregamentoFabrica" class="glass-input">
+                <option value="">Todas / Contagem unica</option>
               </select>
             </div>
             <div class="form-group-filter">
@@ -49,7 +49,7 @@
             </div>
           </div>
           <div class="contagem-status-row">
-            <span id="carregamentoContagemBadge" class="contagem-status-badge">Nenhuma contagem carregada</span>
+            <span id="carregamentoContagemBadge" class="contagem-status-badge">Nenhuma lista aberta</span>
             <span id="carregamentoContagemInfo" class="contagem-info-text"></span>
           </div>
         </section>
@@ -57,8 +57,8 @@
         <section class="glass-panel acoes-panel">
           <h3><i class="fas fa-cogs"></i> Acoes</h3>
           <div class="acoes-grid estoque-acoes-grid">
-            <button type="button" id="btnCarregarProdutosCarregamento" class="btn-glass btn-blue"><i class="fas fa-search"></i> Carregar</button>
-            <button type="button" id="btnSalvarCarregamento" class="btn-glass btn-green" disabled><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" id="btnCarregarProdutosCarregamento" class="btn-glass btn-blue"><i class="fas fa-folder-open"></i> Abrir/Criar</button>
+            <button type="button" id="btnSalvarCarregamento" class="btn-glass btn-green" disabled><i class="fas fa-check"></i> Finalizar</button>
             <button type="button" id="btnLimparCarregamento" class="btn-glass btn-red" disabled><i class="fas fa-eraser"></i> Limpar</button>
           </div>
         </section>
@@ -66,7 +66,7 @@
 
       <div class="kpi-grid-camara">
         <div class="kpi-mini-card">
-          <span>Necessario</span>
+          <span>Total Lancado</span>
           <strong id="kpiCarregamentoNecessario">0</strong>
         </div>
         <div class="kpi-mini-card">
@@ -74,18 +74,18 @@
           <strong id="kpiCarregamentoEstoque">0</strong>
         </div>
         <div class="kpi-mini-card">
-          <span>Faltam</span>
+          <span>Produtos Lancados</span>
           <strong id="kpiCarregamentoFaltam">0</strong>
         </div>
         <div class="kpi-mini-card">
-          <span>Sobrando</span>
+          <span>Usuarios</span>
           <strong id="kpiCarregamentoSobrando">0</strong>
         </div>
       </div>
 
       <section class="glass-panel">
         <div class="panel-header">
-          <h3><i class="fas fa-boxes-stacked"></i> Produtos para Carregar</h3>
+          <h3><i class="fas fa-boxes-stacked"></i> Produtos da Lista</h3>
           <span id="carregamentoRecordsCount" class="produtos-count-badge"></span>
         </div>
         <div class="table-responsive produtos-table-container carregamento-table-container">
@@ -96,16 +96,17 @@
                 <th>Produto</th>
                 <th>Tipo</th>
                 <th>Caixas/Palete</th>
-                <th>Qtd Paletes</th>
-                <th>Qtd Caixas</th>
-                <th>Total Necessario</th>
                 <th>Estoque Contagem</th>
-                <th>Diferenca</th>
-                <th>Observacao</th>
+                <th>Paletes</th>
+                <th>Caixas</th>
+                <th>Lancar</th>
+                <th>Total Lancado</th>
+                <th>Usuarios</th>
+                <th>Ultimo Lancamento</th>
               </tr>
             </thead>
             <tbody id="tableBodyCarregamentoCamara">
-              <tr><td colspan="10" style="text-align:center;">Selecione Filial e Fabrica para carregar.</td></tr>
+              <tr><td colspan="10" style="text-align:center;">Abra ou crie uma lista para iniciar os lancamentos.</td></tr>
             </tbody>
           </table>
         </div>
@@ -141,6 +142,6 @@
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/carregamento-camara-fria.js?v=20260706-1" defer></script>
+  <script type="module" src="script/carregamento-camara-fria.js?v=20260707-fabrica-opcional" defer></script>
 </body>
 </html>
