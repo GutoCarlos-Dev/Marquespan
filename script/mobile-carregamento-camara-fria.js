@@ -53,6 +53,7 @@ function cache() {
     el.kpiTotalLancado = document.getElementById('mobileKpiTotalLancado');
     el.kpiProdutos = document.getElementById('mobileKpiProdutos');
     el.kpiUsuarios = document.getElementById('mobileKpiUsuarios');
+    el.resumoUsuarios = document.getElementById('mobileResumoUsuarios');
 }
 
 function bind() {
@@ -328,14 +329,17 @@ function recalcularTotaisLancamentos() {
             mapa.set(produtoId, {
                 total: 0,
                 usuarios: new Set(),
+                usuarioTotais: new Map(),
                 ultimoUsuario: '',
                 ultimoHorario: ''
             });
         }
         const item = mapa.get(produtoId);
+        const usuario = lancamento.usuario || 'Sistema';
         item.total += Number(lancamento.quantidade_caixas) || 0;
-        if (lancamento.usuario) item.usuarios.add(lancamento.usuario);
-        item.ultimoUsuario = lancamento.usuario || '-';
+        item.usuarios.add(usuario);
+        item.usuarioTotais.set(usuario, (item.usuarioTotais.get(usuario) || 0) + (Number(lancamento.quantidade_caixas) || 0));
+        item.ultimoUsuario = usuario;
         item.ultimoHorario = lancamento.created_at || '';
     });
     state.totaisPorProduto = mapa;
@@ -355,6 +359,7 @@ function renderTelaLista() {
 
     renderProdutos();
     atualizarTotais();
+    renderResumoUsuarios();
 }
 
 function renderProdutos() {
@@ -417,6 +422,7 @@ function renderProdutos() {
                     <i class="fas fa-plus"></i> Lancar <span class="preview-lancar"></span>
                 </button>
                 <div class="ultimo-lancamento">${formatUltimoLancamento(totalInfo)}</div>
+                <div class="usuarios-produto">${formatUsuariosProduto(totalInfo)}</div>
             </article>
         `;
     }).join('');
@@ -488,6 +494,7 @@ function atualizarCardsLancamentos() {
         card.querySelector('.total-lancado').textContent = String(total);
         card.querySelector('.total-usuarios').textContent = String(totalInfo ? totalInfo.usuarios.size : 0);
         card.querySelector('.ultimo-lancamento').innerHTML = formatUltimoLancamento(totalInfo);
+        card.querySelector('.usuarios-produto').innerHTML = formatUsuariosProduto(totalInfo);
     });
 }
 
@@ -499,6 +506,56 @@ function atualizarTotais() {
     el.kpiTotalLancado.textContent = String(totalLancado);
     el.kpiProdutos.textContent = String(produtosLancados);
     el.kpiUsuarios.textContent = String(usuarios);
+    renderResumoUsuarios();
+}
+
+function renderResumoUsuarios() {
+    if (!el.resumoUsuarios) return;
+
+    if (state.lancamentos.length === 0) {
+        el.resumoUsuarios.innerHTML = '<div class="empty-state">Nenhum lancamento ainda.</div>';
+        return;
+    }
+
+    const produtosPorId = new Map(state.produtos.map(produto => [String(produto.id), produto]));
+    const usuarios = new Map();
+
+    state.lancamentos.forEach(lancamento => {
+        const usuario = lancamento.usuario || 'Sistema';
+        const produto = produtosPorId.get(String(lancamento.produto_id));
+        const produtoNome = produto?.nome || 'Produto nao encontrado';
+        const produtoCodigo = produto?.codigo || '-';
+        const quantidade = Number(lancamento.quantidade_caixas) || 0;
+
+        if (!usuarios.has(usuario)) {
+            usuarios.set(usuario, { total: 0, produtos: new Map() });
+        }
+
+        const infoUsuario = usuarios.get(usuario);
+        infoUsuario.total += quantidade;
+        const chaveProduto = String(lancamento.produto_id);
+        const infoProduto = infoUsuario.produtos.get(chaveProduto) || {
+            codigo: produtoCodigo,
+            nome: produtoNome,
+            total: 0
+        };
+        infoProduto.total += quantidade;
+        infoUsuario.produtos.set(chaveProduto, infoProduto);
+    });
+
+    el.resumoUsuarios.innerHTML = Array.from(usuarios.entries()).map(([usuario, info]) => {
+        const produtosHtml = Array.from(info.produtos.values())
+            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+            .map(produto => `<li><strong>${escapeHtml(produto.codigo)}</strong> - ${escapeHtml(produto.nome)}: ${produto.total} cx</li>`)
+            .join('');
+
+        return `
+            <article class="card resumo-usuario-card">
+                <h4><span>${escapeHtml(usuario)}</span><strong>${info.total} cx</strong></h4>
+                <ul class="resumo-produtos">${produtosHtml}</ul>
+            </article>
+        `;
+    }).join('');
 }
 
 async function finalizarLista() {
@@ -662,6 +719,14 @@ function setLoadingButton(button, loading, html) {
 function formatUltimoLancamento(info) {
     if (!info?.ultimoHorario) return 'Nenhum lancamento ainda.';
     return `Ultimo: <strong>${escapeHtml(info.ultimoUsuario || '-')}</strong> em ${formatDateTime(info.ultimoHorario)}`;
+}
+
+function formatUsuariosProduto(info) {
+    if (!info?.usuarioTotais?.size) return 'Usuarios: nenhum lancamento.';
+    const partes = Array.from(info.usuarioTotais.entries())
+        .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))
+        .map(([usuario, total]) => `${escapeHtml(usuario)}: <strong>${total} cx</strong>`);
+    return `Usuarios: ${partes.join(' | ')}`;
 }
 
 function formatSemanaDisplay(value) {

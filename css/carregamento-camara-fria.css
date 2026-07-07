@@ -35,6 +35,19 @@
     color: #004085;
 }
 
+.carregamento-usuarios {
+    min-width: 130px;
+    text-align: left;
+    white-space: normal;
+    line-height: 1.35;
+}
+
+.carregamento-usuarios > strong {
+    display: block;
+    text-align: center;
+    color: #006937;
+}
+
 .carregamento-ultimo {
     min-width: 150px;
     font-size: 0.85rem;

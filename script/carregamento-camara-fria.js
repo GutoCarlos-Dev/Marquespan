@@ -290,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     mapa.set(produtoId, {
                         total: 0,
                         usuarios: new Set(),
+                        usuarioTotais: new Map(),
                         ultimoUsuario: '',
                         ultimoHorario: '',
                         ultimaObservacao: ''
@@ -297,9 +298,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const item = mapa.get(produtoId);
+                const usuario = lancamento.usuario || 'Sistema';
                 item.total += Number(lancamento.quantidade_caixas) || 0;
-                if (lancamento.usuario) item.usuarios.add(lancamento.usuario);
-                item.ultimoUsuario = lancamento.usuario || '-';
+                item.usuarios.add(usuario);
+                item.usuarioTotais.set(usuario, (item.usuarioTotais.get(usuario) || 0) + (Number(lancamento.quantidade_caixas) || 0));
+                item.ultimoUsuario = usuario;
                 item.ultimoHorario = lancamento.created_at || '';
                 item.ultimaObservacao = lancamento.observacao || '';
             });
@@ -373,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </button>
                         </td>
                         <td class="carregamento-total-lancado">${totalInfo?.total || 0}</td>
-                        <td class="carregamento-usuarios">${totalInfo ? totalInfo.usuarios.size : 0}</td>
+                        <td class="carregamento-usuarios">${this.formatUsuariosProduto(totalInfo)}</td>
                         <td class="carregamento-ultimo">${this.formatUltimoLancamento(totalInfo)}</td>
                     </tr>
                 `;
@@ -387,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tableBody.querySelectorAll('tr[data-produto-id]').forEach(tr => {
                 const totalInfo = this.totaisPorProduto.get(String(tr.dataset.produtoId));
                 tr.querySelector('.carregamento-total-lancado').textContent = String(totalInfo?.total || 0);
-                tr.querySelector('.carregamento-usuarios').textContent = String(totalInfo ? totalInfo.usuarios.size : 0);
+                tr.querySelector('.carregamento-usuarios').innerHTML = this.formatUsuariosProduto(totalInfo);
                 tr.querySelector('.carregamento-ultimo').innerHTML = this.formatUltimoLancamento(totalInfo);
             });
         },
@@ -698,6 +701,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         getPreviewLinhaHtml(total) {
             return total > 0 ? String(total) : 'Lancar';
+        },
+
+        formatUsuariosProduto(info) {
+            if (!info?.usuarioTotais?.size) return '<strong>0</strong>';
+            const detalhes = Array.from(info.usuarioTotais.entries())
+                .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))
+                .map(([usuario, total]) => `<div>${this.escapeHtml(usuario)}: <strong>${total} cx</strong></div>`)
+                .join('');
+            return `<strong>${info.usuarios.size}</strong>${detalhes}`;
         },
 
         formatSemanaDisplay(value) {

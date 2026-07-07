@@ -307,6 +307,31 @@ input[readonly] {
     margin: 10px 0;
 }
 
+.mobile-resumo-usuarios {
+    margin-bottom: 12px;
+}
+
+.resumo-usuario-card {
+    border-left-color: #0056b3;
+}
+
+.resumo-usuario-card h4 {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.resumo-produtos {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    color: #4b5563;
+    font-size: 0.86rem;
+}
+
+.resumo-produtos li + li {
+    margin-top: 4px;
+}
+
 .total-box {
     padding: 10px;
     border-radius: 10px;
@@ -331,6 +356,13 @@ input[readonly] {
     margin-top: 8px;
     color: #63707c;
     font-size: 0.8rem;
+}
+
+.usuarios-produto {
+    margin-top: 7px;
+    color: #4b5563;
+    font-size: 0.82rem;
+    line-height: 1.35;
 }
 
 .mobile-bottom-actions {
