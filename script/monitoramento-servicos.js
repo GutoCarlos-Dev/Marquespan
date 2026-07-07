@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
-import { configurarFiltroFilialUsuario, normalizarFilial } from './shared/filtro-filial-usuario.js';
+import { configurarFiltroFilialUsuario } from './shared/filtro-filial-usuario.js';
+import { getValoresFilialRelacionados, normalizarFilial } from './shared/filial-utils.js';
 
 const REFRESH_INTERVAL = 60000;
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
@@ -19,13 +20,29 @@ let chartGastoAnualLavagem = null;
 let chartGastoMensalEngraxe = null;
 let chartGastoAnualEngraxe = null;
 let wakeLock = null;
+let filiaisCache = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     const perfil = await configurarFiltroFilialUsuario(document.getElementById('filtroFilial'));
     if (!perfil) return;
 
+    await carregarFiliaisCache();
     initServicosRealTime();
 });
+
+async function carregarFiliaisCache() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('nome, sigla');
+
+        if (error) throw error;
+        filiaisCache = data || [];
+    } catch (error) {
+        console.warn('Nao foi possivel carregar filiais para filtro do monitoramento:', error);
+        filiaisCache = [];
+    }
+}
 
 function initServicosRealTime() {
     definirPeriodoInicial();
@@ -107,6 +124,7 @@ async function carregarDados() {
 function montarQueryListas(tabela, itensSelect) {
     const dataInicial = document.getElementById('dataInicial')?.value;
     const dataFinal = document.getElementById('dataFinal')?.value;
+    const filiais = getFiliaisFiltroSelecionadas();
     let query = supabaseClient
         .from(tabela)
         .select(`*, ${itensSelect}`)
@@ -117,6 +135,7 @@ function montarQueryListas(tabela, itensSelect) {
     const dataFinalFilter = buildDateRangeFilter(dataFinal, true);
     if (dataInicialFilter) query = query.gte('data_lista', dataInicialFilter);
     if (dataFinalFilter) query = query.lte('data_lista', dataFinalFilter);
+    if (filiais.length) query = query.in('filial', filiais);
 
     return query;
 }
@@ -195,12 +214,14 @@ function renderDashboard() {
 }
 
 function filtrarListas(listas) {
-    const filial = normalizarFilial(document.getElementById('filtroFilial')?.value);
+    const filiais = getFiliaisFiltroNormalizadas();
+    const temFiltroFilial = filiais.size > 0;
     const termo = (document.getElementById('searchInput')?.value || '').trim().toUpperCase();
 
     return listas
+        .filter(lista => !temFiltroFilial || filiais.has(normalizarFilial(lista.filial)))
         .map(lista => {
-            const itensDaFilial = filial ? filtrarItens(lista.itens, filial, '') : lista.itens;
+            const itensDaFilial = temFiltroFilial ? filtrarItens(lista.itens, filiais, '') : lista.itens;
             return {
                 ...lista,
                 itensDaFilial,
@@ -208,7 +229,7 @@ function filtrarListas(listas) {
             };
         })
         .filter(lista => {
-            if (filial && lista.itensDaFilial.length === 0) return false;
+            if (temFiltroFilial && lista.itensDaFilial.length === 0) return false;
             if (!termo) return true;
             const textoLista = montarTextoLista(lista).toUpperCase();
             return textoLista.includes(termo) || lista.itensFiltrados.length > 0;
@@ -216,11 +237,13 @@ function filtrarListas(listas) {
 }
 
 function filtrarItens(itens, filial, termo) {
+    const filiaisPermitidas = filial instanceof Set ? filial : (filial ? new Set([normalizarFilial(filial)]) : null);
+
     return itens.filter(item => {
         const placa = normalizarPlaca(item.placa);
         const veiculo = veiculosPorPlaca.get(placa);
 
-        if (filial && normalizarFilial(veiculo?.filial) !== filial) return false;
+        if (filiaisPermitidas?.size && !filiaisPermitidas.has(normalizarFilial(veiculo?.filial))) return false;
         if (!termo) return true;
 
         const texto = [
@@ -238,6 +261,18 @@ function filtrarItens(itens, filial, termo) {
 
         return texto.includes(termo);
     });
+}
+
+function getFiliaisFiltroSelecionadas() {
+    const filial = document.getElementById('filtroFilial')?.value;
+    if (!filial) return [];
+
+    const relacionadas = getValoresFilialRelacionados(filial, filiaisCache);
+    return relacionadas.length ? relacionadas : [filial];
+}
+
+function getFiliaisFiltroNormalizadas() {
+    return new Set(getFiliaisFiltroSelecionadas().map(normalizarFilial).filter(Boolean));
 }
 
 function montarTextoLista(lista) {
@@ -432,22 +467,51 @@ function carregarGraficosFinanceiros() {
 }
 
 async function filtrarItensPorFilial(itens) {
-    const filial = normalizarFilial(document.getElementById('filtroFilial')?.value);
-    if (!filial) return itens || [];
+    const filiais = getFiliaisFiltroNormalizadas();
+    const itensBase = itens || [];
+    if (!filiais.size) return itensBase;
 
-    const placas = [...new Set((itens || []).map(item => normalizarPlaca(item.placa)).filter(Boolean))];
-    if (!placas.length) return [];
+    const itensPermitidosPorLista = [];
+    const itensSemFilialLista = [];
+
+    itensBase.forEach(item => {
+        const filialLista = getFilialListaItem(item);
+        if (!filialLista) {
+            itensSemFilialLista.push(item);
+            return;
+        }
+
+        if (filiais.has(filialLista)) {
+            itensPermitidosPorLista.push(item);
+        }
+    });
+
+    const placas = [...new Set(itensSemFilialLista.map(item => normalizarPlaca(item.placa)).filter(Boolean))];
+    if (!placas.length) return itensPermitidosPorLista;
 
     const { data, error } = await supabaseClient
         .from('veiculos')
-        .select('placa')
-        .in('placa', placas)
-        .eq('filial', filial);
+        .select('placa, filial')
+        .in('placa', placas);
 
     if (error) throw error;
 
-    const placasPermitidas = new Set((data || []).map(item => normalizarPlaca(item.placa)));
-    return (itens || []).filter(item => placasPermitidas.has(normalizarPlaca(item.placa)));
+    const placasPermitidas = new Set((data || [])
+        .filter(item => filiais.has(normalizarFilial(item.filial)))
+        .map(item => normalizarPlaca(item.placa)));
+
+    return [
+        ...itensPermitidosPorLista,
+        ...itensSemFilialLista.filter(item => placasPermitidas.has(normalizarPlaca(item.placa)))
+    ];
+}
+
+function getFilialListaItem(item) {
+    return normalizarFilial(
+        item?.lavagem_listas?.filial
+        || item?.engraxe_listas?.filial
+        || item?.filial_lista
+    );
 }
 
 async function carregarGraficoGastoMensalLavagem() {
@@ -457,7 +521,7 @@ async function carregarGraficoGastoMensalLavagem() {
     try {
         const { data, error } = await supabaseClient
             .from('lavagem_itens')
-            .select('placa, valor, fornecedor, status, lavagem_listas!inner(status)')
+            .select('placa, valor, fornecedor, status, lavagem_listas!inner(status, filial)')
             .in('status', ['REALIZADO', 'OK'])
             .eq('lavagem_listas.status', 'FINALIZADA');
 
@@ -516,7 +580,7 @@ async function carregarGraficoGastoAnualLavagem() {
         const anoAtual = new Date().getFullYear();
         const { data, error } = await supabaseClient
             .from('lavagem_listas')
-            .select('data_lista, status, lavagem_itens(placa, valor, status)')
+            .select('data_lista, status, filial, lavagem_itens(placa, valor, status)')
             .eq('status', 'FINALIZADA')
             .gte('data_lista', `${anoAtual}-01-01`)
             .lte('data_lista', `${anoAtual}-12-31`);
@@ -525,7 +589,7 @@ async function carregarGraficoGastoAnualLavagem() {
 
         const valoresMensais = new Array(12).fill(0);
         const itensComData = (data || []).flatMap(lista =>
-            (lista.lavagem_itens || []).map(item => ({ ...item, data_lista: lista.data_lista }))
+            (lista.lavagem_itens || []).map(item => ({ ...item, data_lista: lista.data_lista, filial_lista: lista.filial }))
         );
         const itensFiltrados = await filtrarItensPorFilial(itensComData);
         itensFiltrados.forEach(item => {
@@ -570,7 +634,7 @@ async function carregarGraficoGastoMensalEngraxe() {
     try {
         const { data, error } = await supabaseClient
             .from('engraxe_itens')
-            .select('placa, status, engraxe_listas!inner(status)')
+            .select('placa, status, engraxe_listas!inner(status, filial)')
             .in('status', ['OK', 'REALIZADO'])
             .eq('engraxe_listas.status', 'FINALIZADA');
 
@@ -623,7 +687,7 @@ async function carregarGraficoGastoAnualEngraxe() {
         const anoAtual = new Date().getFullYear();
         const { data, error } = await supabaseClient
             .from('engraxe_itens')
-            .select('placa, status, engraxe_listas!inner(status, data_lista)')
+            .select('placa, status, engraxe_listas!inner(status, data_lista, filial)')
             .in('status', ['OK', 'REALIZADO'])
             .eq('engraxe_listas.status', 'FINALIZADA')
             .gte('engraxe_listas.data_lista', `${anoAtual}-01-01`)
