@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tableBody = document.getElementById('tableBodyContagemCamara');
             this.modalContagem = document.getElementById('modalContagemProdutos');
             this.modalSubtitulo = document.getElementById('modalContagemSubtitulo');
+            this.modalBuscaProduto = document.getElementById('modalBuscaProdutoContagem');
+            this.modalBuscaProdutoCount = document.getElementById('modalBuscaProdutoCount');
             this.modalTableBody = document.getElementById('tableBodyModalContagemCamara');
             this.modalKpiCaixas = document.getElementById('modalKpiContagemCaixas');
             this.modalKpiPeso = document.getElementById('modalKpiContagemPeso');
@@ -90,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.sincronizarPreviaComModal();
                 }
             });
+            this.modalBuscaProduto?.addEventListener('input', () => this.filtrarProdutosModal());
             this.recentesBody.addEventListener('click', this.handleRecentesClick.bind(this));
         },
 
@@ -275,8 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const caixasPorPalete = Number(produto.caixas_por_palete) || 0;
                 const quantidades = this.calcularQuantidadesPelasCaixas(caixas, caixasPorPalete);
                 const observacao = item?.observacao || '';
+                const nomeBusca = this.normalizarTexto(produto.nome);
                 return `
-                    <tr data-produto-id="${produto.id}" data-item-id="${item?.id || ''}" data-peso-caixa="${produto.peso_caixa || 0}" data-caixas-por-palete="${caixasPorPalete}">
+                    <tr data-produto-id="${produto.id}" data-item-id="${item?.id || ''}" data-peso-caixa="${produto.peso_caixa || 0}" data-caixas-por-palete="${caixasPorPalete}" data-produto-nome="${this.escapeHtml(nomeBusca)}">
                         <td>${this.escapeHtml(produto.codigo) || '-'}</td>
                         <td>
                             <strong>${this.escapeHtml(produto.nome)}</strong>
@@ -295,6 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.modalTableBody.innerHTML = linhasHtml;
             this.modalTableBody.querySelectorAll('tr[data-produto-id]').forEach(tr => this.atualizarLinha(tr));
+            this.filtrarProdutosModal();
             this.sincronizarPreviaComModal();
             this.atualizarModalInfo();
         },
@@ -303,7 +308,28 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Selecione os campos e clique em Iniciar.</td></tr>';
             this.modalTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Inicie uma contagem para carregar os produtos.</td></tr>';
             if (this.recordsCount) this.recordsCount.textContent = '';
+            if (this.modalBuscaProduto) this.modalBuscaProduto.value = '';
+            if (this.modalBuscaProdutoCount) this.modalBuscaProdutoCount.textContent = '';
             this.atualizarTotais();
+        },
+
+        filtrarProdutosModal() {
+            if (!this.modalTableBody) return;
+            const termo = this.normalizarTexto(this.modalBuscaProduto?.value || '');
+            const linhas = Array.from(this.modalTableBody.querySelectorAll('tr[data-produto-id]'));
+            let visiveis = 0;
+
+            linhas.forEach(tr => {
+                const exibir = !termo || String(tr.dataset.produtoNome || '').includes(termo);
+                tr.hidden = !exibir;
+                if (exibir) visiveis += 1;
+            });
+
+            if (this.modalBuscaProdutoCount) {
+                this.modalBuscaProdutoCount.textContent = termo
+                    ? `${visiveis} de ${linhas.length} produto${linhas.length === 1 ? '' : 's'}`
+                    : `${linhas.length} produto${linhas.length === 1 ? '' : 's'}`;
+            }
         },
 
         atualizarLinha(tr) {
@@ -376,6 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
         openModalContagem() {
             if (!this.modalContagem) return;
             this.atualizarModalInfo();
+            this.filtrarProdutosModal();
             this.modalContagem.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
         },
@@ -940,6 +967,14 @@ document.addEventListener('DOMContentLoaded', () => {
         formatSemanaDisplay(value) {
             const match = String(value || '').match(/^(\d{4})-W(\d{2})$/);
             return match ? `${match[2]}-${match[1]}` : (value || '-');
+        },
+
+        normalizarTexto(value) {
+            return String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
         },
 
         formatDiaSemana(value) {

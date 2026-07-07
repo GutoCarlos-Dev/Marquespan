@@ -159,6 +159,35 @@
     margin-bottom: 16px;
 }
 
+.contagem-modal-grid-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.contagem-modal-search {
+    width: min(420px, 100%);
+}
+
+.input-icon-wrapper {
+    position: relative;
+}
+
+.input-icon-wrapper i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    pointer-events: none;
+}
+
+.input-icon-wrapper .glass-input {
+    padding-left: 38px;
+}
+
 .contagem-modal-table-container {
     max-height: min(58vh, 560px);
     overflow: auto;
@@ -196,5 +225,11 @@
     .estoque-filtros,
     .contagem-filtros {
         grid-template-columns: 1fr;
+    }
+
+    .contagem-modal-grid-header {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 8px;
     }
 }
