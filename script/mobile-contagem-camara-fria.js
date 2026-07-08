@@ -11,8 +11,6 @@ const state = {
     busca: ''
 };
 
-const DIA_SEMANA_PADRAO_MOBILE = 'SEGUNDA';
-
 const el = {};
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -27,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     aplicarRestricaoFilial();
     preencherFuncionario();
     definirSemanaAtual();
+    definirDiaSemanaAtual();
 
     await Promise.all([loadFiliais(), loadFabricas()]);
     await renderContagensRecentes();
@@ -37,6 +36,7 @@ function cache() {
     el.screenProdutos = document.getElementById('screenProdutos');
     el.filial = document.getElementById('mobileContagemFilial');
     el.semana = document.getElementById('mobileContagemSemana');
+    el.diaSemana = document.getElementById('mobileContagemDiaSemana');
     el.fabrica = document.getElementById('mobileContagemFabrica');
     el.funcionario = document.getElementById('mobileContagemFuncionario');
     el.btnIniciar = document.getElementById('btnMobileIniciarContagem');
@@ -69,7 +69,7 @@ function bind() {
         renderProdutos();
     });
 
-    [el.filial, el.semana, el.fabrica].forEach(input => {
+    [el.filial, el.semana, el.diaSemana, el.fabrica].forEach(input => {
         input.addEventListener('change', () => renderContagensRecentes());
     });
 
@@ -102,6 +102,11 @@ function definirSemanaAtual() {
     const inicioAno = new Date(Date.UTC(ano, 0, 1));
     const semana = Math.ceil((((data - inicioAno) / 86400000) + 1) / 7);
     el.semana.value = `${ano}-W${String(semana).padStart(2, '0')}`;
+}
+
+function definirDiaSemanaAtual() {
+    const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+    el.diaSemana.value = dias[new Date().getDay()] || 'SEGUNDA';
 }
 
 async function loadFiliais() {
@@ -151,8 +156,8 @@ async function loadFabricas() {
 }
 
 function validarBase() {
-    if (!el.filial.value || !el.semana.value || !el.fabrica.value) {
-        alert('Preencha Filial, Semana e Fabrica.');
+    if (!el.filial.value || !el.semana.value || !el.diaSemana.value || !el.fabrica.value) {
+        alert('Preencha Filial, Semana, Dia da Semana e Fabrica.');
         return false;
     }
     if (!el.funcionario.value.trim()) {
@@ -174,7 +179,7 @@ async function iniciarContagem() {
             const payload = {
                 filial: el.filial.value,
                 semana: el.semana.value,
-                dia_semana: DIA_SEMANA_PADRAO_MOBILE,
+                dia_semana: el.diaSemana.value,
                 fabrica_id: el.fabrica.value,
                 funcionario: el.funcionario.value.trim(),
                 status: 'EM_ANDAMENTO',
@@ -187,7 +192,7 @@ async function iniciarContagem() {
                 .single();
             if (error) throw error;
             state.contagemAtual = data;
-            registrarAuditoria('INCLUIR', 'Câmara Fria', `Início de contagem via mobile - Filial: ${payload.filial}, Semana: ${payload.semana}`);
+            registrarAuditoria('INCLUIR', 'Câmara Fria', `Início de contagem via mobile - Filial: ${payload.filial}, Semana: ${payload.semana}, Dia: ${formatDiaSemana(payload.dia_semana)}`);
         }
 
         await carregarProdutosEItens();
@@ -207,7 +212,7 @@ async function buscarContagemAtual() {
         .select('id, filial, semana, dia_semana, fabrica_id, funcionario, status, iniciada_em, finalizada_em, updated_at')
         .eq('filial', el.filial.value)
         .eq('semana', el.semana.value)
-        .eq('dia_semana', DIA_SEMANA_PADRAO_MOBILE)
+        .eq('dia_semana', el.diaSemana.value)
         .eq('fabrica_id', el.fabrica.value)
         .maybeSingle();
     if (error) throw error;
@@ -263,7 +268,7 @@ function atualizarCabecalhoContagem() {
     if (!contagem) return;
 
     const fabrica = getNomeFabrica(contagem.fabrica_id);
-    el.titulo.textContent = `${contagem.filial} | ${formatSemanaDisplay(contagem.semana)}`;
+    el.titulo.textContent = `${contagem.filial} | ${formatSemanaDisplay(contagem.semana)} | ${formatDiaSemana(contagem.dia_semana)}`;
     el.subtitulo.textContent = `${fabrica} | ${contagem.funcionario || '-'}`;
     el.status.textContent = contagem.status === 'FINALIZADA' ? 'Finalizada' : 'Em andamento';
     el.status.className = `status-pill ${contagem.status === 'FINALIZADA' ? 'finalizada' : ''}`;
@@ -546,6 +551,7 @@ async function renderContagensRecentes() {
 
         if (el.filial?.value) query = query.eq('filial', el.filial.value);
         if (el.semana?.value) query = query.eq('semana', el.semana.value);
+        if (el.diaSemana?.value) query = query.eq('dia_semana', el.diaSemana.value);
         if (el.fabrica?.value) query = query.eq('fabrica_id', el.fabrica.value);
 
         const { data, error } = await query;
@@ -593,6 +599,7 @@ async function abrirContagemPorId(id) {
         state.contagemAtual = data;
         el.filial.value = data.filial;
         el.semana.value = data.semana;
+        el.diaSemana.value = data.dia_semana || '';
         el.fabrica.value = data.fabrica_id;
         el.funcionario.value = data.funcionario || el.funcionario.value;
         await carregarProdutosEItens();
@@ -649,7 +656,7 @@ async function gerarResumoPDF() {
         doc.text('RESUMO DA CONTAGEM - CAMARA FRIA', 14, 28);
         doc.setFontSize(10);
         doc.setTextColor(40);
-        doc.text(`Filial: ${resumo.contagem.filial} | Semana: ${formatSemanaDisplay(resumo.contagem.semana)} | Fabrica: ${fabrica}`, 14, 35);
+        doc.text(`Filial: ${resumo.contagem.filial} | Semana: ${formatSemanaDisplay(resumo.contagem.semana)} | Dia: ${formatDiaSemana(resumo.contagem.dia_semana)} | Fabrica: ${fabrica}`, 14, 35);
         doc.text(`Funcionario: ${resumo.contagem.funcionario || '-'} | Status: ${resumo.contagem.status === 'FINALIZADA' ? 'Finalizada' : 'Em andamento'}`, 14, 41);
         doc.text(`Paletes: ${totais.paletes} | Caixas avulsas: ${totais.caixasAvulsas} | Total caixas: ${totais.caixas} | Peso: ${formatPeso(totais.peso)} KG`, 14, 47);
 
@@ -662,7 +669,7 @@ async function gerarResumoPDF() {
             styles: { fontSize: 8, cellPadding: 2 }
         });
 
-        const nomeArquivo = `Resumo_Contagem_Camara_Fria_${resumo.contagem.filial}_${resumo.contagem.semana}.pdf`.replace(/[^a-z0-9_.-]+/gi, '_');
+        const nomeArquivo = `Resumo_Contagem_Camara_Fria_${resumo.contagem.filial}_${resumo.contagem.semana}_${resumo.contagem.dia_semana || 'DIA'}.pdf`.replace(/[^a-z0-9_.-]+/gi, '_');
         doc.save(nomeArquivo);
     } catch (error) {
         console.error('Erro ao gerar PDF:', error);

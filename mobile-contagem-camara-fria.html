@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Contagem Camara Fria Mobile - Marquespan</title>
   <link rel="icon" href="img/logonavegador.png" type="image/png">
-  <link rel="stylesheet" href="css/mobile-contagem-camara-fria.css?v=20260706-1">
+  <link rel="stylesheet" href="css/mobile-contagem-camara-fria.css?v=20260708-dia-semana">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
@@ -39,11 +39,25 @@
             <input type="week" id="mobileContagemSemana" required>
           </div>
           <div class="form-group">
-            <label for="mobileContagemFabrica">Fabrica</label>
-            <select id="mobileContagemFabrica" required>
+            <label for="mobileContagemDiaSemana">Dia da Semana</label>
+            <select id="mobileContagemDiaSemana" required>
               <option value="">Selecione</option>
+              <option value="SEGUNDA">SEGUNDA</option>
+              <option value="TERCA">TERÇA</option>
+              <option value="QUARTA">QUARTA</option>
+              <option value="QUINTA">QUINTA</option>
+              <option value="SEXTA">SEXTA</option>
+              <option value="SABADO">SÁBADO</option>
+              <option value="DOMINGO">DOMINGO</option>
             </select>
           </div>
+        </div>
+
+        <div class="form-group">
+          <label for="mobileContagemFabrica">Fabrica</label>
+          <select id="mobileContagemFabrica" required>
+            <option value="">Selecione</option>
+          </select>
         </div>
 
         <div class="form-group">
@@ -119,6 +133,6 @@
 
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/presenca-online.js"></script>
-  <script type="module" src="script/mobile-contagem-camara-fria.js?v=20260707-dia-semana"></script>
+  <script type="module" src="script/mobile-contagem-camara-fria.js?v=20260708-dia-semana"></script>
 </body>
 </html>
