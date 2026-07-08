@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         acessoGlobal: true,
         produtosCache: [],
         estoqueCache: new Map(),
+        contagensResumo: null,
         fabricasCache: [],
 
         init() {
@@ -14,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.bind();
             this.aplicarRestricaoFilial();
             this.definirSemanaAtual();
+            this.definirDiaSemanaAtual();
             this.loadFiliais();
             this.loadFabricas();
             this.renderHistorico();
@@ -22,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cache() {
             this.filialSelect = document.getElementById('estoqueFilial');
             this.semanaInput = document.getElementById('estoqueSemana');
+            this.diaSemanaSelect = document.getElementById('estoqueDiaSemana');
             this.fabricaSelect = document.getElementById('estoqueFabrica');
             this.btnCarregar = document.getElementById('btnCarregarEstoque');
             this.btnSalvar = document.getElementById('btnSalvarEstoque');
@@ -32,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.recordsCount = document.getElementById('estoqueRecordsCount');
             this.historicoCount = document.getElementById('historicoRecordsCount');
             this.kpiTotalCaixas = document.getElementById('kpiTotalCaixas');
+            this.kpiTotalPaletes = document.getElementById('kpiTotalPaletes');
             this.kpiPesoTotal = document.getElementById('kpiPesoTotal');
             this.kpiProdutosRegistrados = document.getElementById('kpiProdutosRegistrados');
 
@@ -48,23 +52,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         bind() {
             this.btnCarregar.addEventListener('click', () => this.carregarLancamento());
-            this.btnSalvar.addEventListener('click', () => this.salvarEstoque());
-            this.btnLimpar.addEventListener('click', () => this.limparLancamento());
+            this.btnSalvar.addEventListener('click', () => this.alertaEstoqueCalculado());
+            this.btnLimpar.addEventListener('click', () => this.alertaEstoqueCalculado());
             this.filialSelect.addEventListener('change', async () => {
-                this.fabricaSelect.value = '';
+                this.fabricaSelect.value = '__TODAS__';
                 if (this.fabricaFilial) this.fabricaFilial.value = this.filialSelect.value;
                 await this.loadFabricas();
                 this.renderHistorico();
                 if (this.formularioBaseValido(false)) this.carregarLancamento();
             });
-            [this.semanaInput, this.fabricaSelect].forEach(el => {
+            [this.semanaInput, this.diaSemanaSelect, this.fabricaSelect].forEach(el => {
                 el.addEventListener('change', () => {
                     this.renderHistorico();
                     if (this.formularioBaseValido(false)) this.carregarLancamento();
                 });
-            });
-            this.tableBody.addEventListener('input', (e) => {
-                if (e.target.matches('.input-caixas-estoque')) this.atualizarLinha(e.target.closest('tr'));
             });
             this.historicoBody.addEventListener('click', this.handleHistoricoClick.bind(this));
 
@@ -94,6 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const inicioAno = new Date(Date.UTC(ano, 0, 1));
             const semana = Math.ceil((((data - inicioAno) / 86400000) + 1) / 7);
             this.semanaInput.value = `${ano}-W${String(semana).padStart(2, '0')}`;
+        },
+
+        definirDiaSemanaAtual() {
+            const dias = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
+            this.diaSemanaSelect.value = dias[new Date().getDay()] || 'SEGUNDA';
         },
 
         async loadFiliais() {
@@ -144,10 +150,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 this.fabricasCache = data || [];
                 const valorAtual = this.fabricaSelect.value;
-                this.fabricaSelect.innerHTML = '<option value="">Selecione</option>'
+                this.fabricaSelect.innerHTML = '<option value="__TODAS__">Todas</option>'
                     + this.fabricasCache.map(f => `<option value="${f.id}">${this.escapeHtml(f.nome)}</option>`).join('');
                 if (valorAtual && this.fabricasCache.some(f => String(f.id) === String(valorAtual))) {
                     this.fabricaSelect.value = valorAtual;
+                } else {
+                    this.fabricaSelect.value = '__TODAS__';
                 }
 
                 this.renderFabricasGrid();
@@ -158,8 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         formularioBaseValido(mostrarAlerta = true) {
-            if (!this.filialSelect.value || !this.semanaInput.value || !this.fabricaSelect.value) {
-                if (mostrarAlerta) alert('Preencha Filial, Semana e Fabrica.');
+            if (!this.filialSelect.value || !this.semanaInput.value || !this.diaSemanaSelect.value || !this.fabricaSelect.value) {
+                if (mostrarAlerta) alert('Preencha Filial, Semana, Dia da Semana e Fabrica.');
                 return false;
             }
             return true;
@@ -171,16 +179,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const filial = this.filialSelect.value;
-                const [produtosResult, estoqueResult] = await Promise.all([
+                const [produtosResult, contagemResumo] = await Promise.all([
                     this.buscarProdutos(filial),
-                    this.buscarEstoqueSemana()
+                    this.buscarTotaisContagem()
                 ]);
 
                 if (produtosResult.error) throw produtosResult.error;
-                if (estoqueResult.error) throw estoqueResult.error;
 
                 this.produtosCache = produtosResult.data || [];
-                this.estoqueCache = new Map((estoqueResult.data || []).map(item => [String(item.produto_id), item]));
+                this.estoqueCache = contagemResumo.totaisPorProduto;
+                this.contagensResumo = contagemResumo;
                 this.renderProdutos();
                 this.renderHistorico();
             } catch (error) {
@@ -200,13 +208,46 @@ document.addEventListener('DOMContentLoaded', () => {
             return query;
         },
 
-        buscarEstoqueSemana() {
-            return supabaseClient
-                .from('estoque_camara_fria')
-                .select('id, produto_id, quantidade_caixas, observacao')
+        async buscarTotaisContagem() {
+            let contagensQuery = supabaseClient
+                .from('contagens_camara_fria')
+                .select('id, fabrica_id, status')
                 .eq('filial', this.filialSelect.value)
                 .eq('semana', this.semanaInput.value)
-                .eq('fabrica_id', this.fabricaSelect.value);
+                .eq('dia_semana', this.diaSemanaSelect.value);
+
+            if (this.fabricaSelect.value !== '__TODAS__') {
+                contagensQuery = contagensQuery.eq('fabrica_id', this.fabricaSelect.value);
+            }
+
+            const { data: contagens, error: contagensError } = await contagensQuery;
+            if (contagensError) throw contagensError;
+
+            const contagemIds = (contagens || []).map(contagem => contagem.id);
+            const totaisPorProduto = new Map();
+            if (contagemIds.length === 0) {
+                return { totaisPorProduto, totalContagens: 0 };
+            }
+
+            const { data: itens, error: itensError } = await supabaseClient
+                .from('contagem_camara_fria_itens')
+                .select('contagem_id, produto_id, quantidade_caixas')
+                .in('contagem_id', contagemIds);
+            if (itensError) throw itensError;
+
+            (itens || []).forEach(item => {
+                const produtoId = String(item.produto_id);
+                const atual = totaisPorProduto.get(produtoId) || {
+                    produto_id: produtoId,
+                    quantidade_caixas: 0,
+                    contagemIds: new Set()
+                };
+                atual.quantidade_caixas += Number(item.quantidade_caixas) || 0;
+                atual.contagemIds.add(String(item.contagem_id));
+                totaisPorProduto.set(produtoId, atual);
+            });
+
+            return { totaisPorProduto, totalContagens: contagemIds.length };
         },
 
         renderProdutos() {
@@ -222,26 +263,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.tableBody.innerHTML = this.produtosCache.map(produto => {
                 const estoque = this.estoqueCache.get(String(produto.id));
-                const caixas = estoque?.quantidade_caixas ?? '';
-                const observacao = estoque?.observacao || '';
+                const caixas = Number(estoque?.quantidade_caixas) || 0;
+                const caixasPorPalete = Number(produto.caixas_por_palete) || 0;
+                const quantidades = this.calcularQuantidadesPelasCaixas(caixas, caixasPorPalete);
+                const contagensProduto = estoque?.contagemIds?.size || 0;
+                const pesoTotal = caixas * (Number(produto.peso_caixa) || 0);
                 return `
-                    <tr data-produto-id="${produto.id}" data-estoque-id="${estoque?.id || ''}" data-peso-caixa="${produto.peso_caixa || 0}">
+                    <tr data-produto-id="${produto.id}" data-peso-caixa="${produto.peso_caixa || 0}" data-total-caixas="${caixas}" data-total-paletes="${quantidades.paletes}">
                         <td>${this.escapeHtml(produto.codigo) || '-'}</td>
                         <td>
                             <strong>${this.escapeHtml(produto.nome)}</strong>
                             <div class="produto-meta">${this.escapeHtml(produto.filial || 'TODAS')}</div>
                         </td>
                         <td>${this.escapeHtml(produto.tipo) || '-'}</td>
-                        <td>${produto.peso_caixa != null ? `${this.formatPeso(produto.peso_caixa)} KG` : '-'}</td>
-                        <td>${produto.caixas_por_palete || '-'}</td>
-                        <td><input type="number" min="0" step="1" class="input-caixas-estoque" value="${caixas}"></td>
-                        <td class="estoque-peso-total">0,000 KG</td>
-                        <td><input type="text" class="input-observacao-estoque" value="${this.escapeHtml(observacao)}" placeholder="Opcional"></td>
+                        <td class="estoque-total-paletes">${quantidades.paletes}</td>
+                        <td class="estoque-caixas-avulsas">${quantidades.caixasAvulsas}</td>
+                        <td class="estoque-qtd-caixas">${caixas}</td>
+                        <td class="estoque-peso-total">${this.formatPeso(pesoTotal)} KG</td>
+                        <td>${contagensProduto || '-'}</td>
                     </tr>
                 `;
             }).join('');
 
-            this.tableBody.querySelectorAll('tr[data-produto-id]').forEach(tr => this.atualizarLinha(tr));
+            this.atualizarTotais();
         },
 
         atualizarLinha(tr) {
@@ -256,34 +300,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
         atualizarTotais() {
             const linhas = Array.from(this.tableBody.querySelectorAll('tr[data-produto-id]'));
+            let totalPaletes = 0;
             let totalCaixas = 0;
             let totalPeso = 0;
             let produtosRegistrados = 0;
 
             linhas.forEach(tr => {
-                const caixasInput = tr.querySelector('.input-caixas-estoque');
-                const preenchido = String(caixasInput?.value || '').trim() !== '';
                 const caixas = this.getCaixasLinha(tr);
+                const paletes = parseInt(tr.dataset.totalPaletes || '0', 10);
                 const pesoCaixa = Number(tr.dataset.pesoCaixa) || 0;
 
-                if (preenchido) produtosRegistrados++;
+                if (caixas > 0) produtosRegistrados++;
+                totalPaletes += Number.isFinite(paletes) ? paletes : 0;
                 totalCaixas += caixas;
                 totalPeso += caixas * pesoCaixa;
             });
 
+            if (this.kpiTotalPaletes) this.kpiTotalPaletes.textContent = String(totalPaletes);
             this.kpiTotalCaixas.textContent = String(totalCaixas);
             this.kpiPesoTotal.textContent = `${this.formatPeso(totalPeso)} KG`;
             this.kpiProdutosRegistrados.textContent = String(produtosRegistrados);
         },
 
         getCaixasLinha(tr) {
-            const value = tr.querySelector('.input-caixas-estoque')?.value;
+            const value = tr.dataset.totalCaixas;
             const numero = parseInt(value, 10);
             return Number.isFinite(numero) && numero >= 0 ? numero : 0;
         },
 
+        calcularQuantidadesPelasCaixas(caixas, caixasPorPalete) {
+            const totalCaixas = Number(caixas) || 0;
+            const capacidadePalete = Number(caixasPorPalete) || 0;
+            if (!totalCaixas) {
+                return { paletes: 0, caixasAvulsas: 0 };
+            }
+            if (!capacidadePalete) {
+                return { paletes: 0, caixasAvulsas: totalCaixas };
+            }
+            return {
+                paletes: Math.floor(totalCaixas / capacidadePalete),
+                caixasAvulsas: totalCaixas % capacidadePalete
+            };
+        },
+
+        alertaEstoqueCalculado() {
+            alert('O estoque da Camara Fria agora e calculado automaticamente pelas contagens filtradas por Semana, Dia e Fabrica.');
+        },
+
         async salvarEstoque() {
-            if (!this.formularioBaseValido()) return;
+            this.alertaEstoqueCalculado();
+            return;
 
             const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
             const linhas = Array.from(this.tableBody.querySelectorAll('tr[data-produto-id]'));
@@ -357,11 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         limparLancamento() {
-            this.tableBody.querySelectorAll('tr[data-produto-id]').forEach(tr => {
-                tr.querySelector('.input-caixas-estoque').value = '';
-                tr.querySelector('.input-observacao-estoque').value = '';
-                this.atualizarLinha(tr);
-            });
+            this.alertaEstoqueCalculado();
         },
 
         async renderHistorico() {
@@ -375,7 +437,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (this.filialSelect?.value) query = query.eq('filial', this.filialSelect.value);
                 if (this.semanaInput?.value) query = query.eq('semana', this.semanaInput.value);
-                if (this.fabricaSelect?.value) query = query.eq('fabrica_id', this.fabricaSelect.value);
+                if (this.fabricaSelect?.value && this.fabricaSelect.value !== '__TODAS__') {
+                    query = query.eq('fabrica_id', this.fabricaSelect.value);
+                }
 
                 const { data, error } = await query;
                 if (error) throw error;

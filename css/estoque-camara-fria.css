@@ -3,7 +3,7 @@
 }
 
 .estoque-filtros {
-    grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(220px, 1.4fr);
+    grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr) minmax(160px, 1fr) minmax(220px, 1.2fr);
 }
 
 .contagem-filtros {
@@ -80,6 +80,14 @@
 }
 
 .estoque-qtd-caixas {
+    font-weight: 700;
+    text-align: right;
+    color: #2f3d4a;
+    white-space: nowrap;
+}
+
+.estoque-total-paletes,
+.estoque-caixas-avulsas {
     font-weight: 700;
     text-align: right;
     color: #2f3d4a;

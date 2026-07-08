@@ -37,10 +37,23 @@
               <input type="week" id="estoqueSemana" class="glass-input" required>
             </div>
             <div class="form-group-filter">
+              <label for="estoqueDiaSemana">Dia da Semana</label>
+              <select id="estoqueDiaSemana" class="glass-input" required>
+                <option value="">Selecione</option>
+                <option value="SEGUNDA">SEGUNDA</option>
+                <option value="TERCA">TERÇA</option>
+                <option value="QUARTA">QUARTA</option>
+                <option value="QUINTA">QUINTA</option>
+                <option value="SEXTA">SEXTA</option>
+                <option value="SABADO">SÁBADO</option>
+                <option value="DOMINGO">DOMINGO</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
               <label for="estoqueFabrica">Fabrica</label>
               <div class="tipo-input-row">
                 <select id="estoqueFabrica" class="glass-input" required>
-                  <option value="">Selecione</option>
+                  <option value="__TODAS__">Todas</option>
                 </select>
                 <button type="button" id="btnAbrirCadastroFabrica" class="btn-add-inline" title="Cadastrar fabrica" aria-label="Cadastrar fabrica"><i class="fas fa-plus"></i></button>
               </div>
@@ -52,13 +65,17 @@
           <h3><i class="fas fa-cogs"></i> Acoes</h3>
           <div class="acoes-grid estoque-acoes-grid">
             <button type="button" id="btnCarregarEstoque" class="btn-glass btn-blue"><i class="fas fa-search"></i> Carregar</button>
-            <button type="button" id="btnSalvarEstoque" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
-            <button type="button" id="btnLimparLancamento" class="btn-glass btn-red"><i class="fas fa-eraser"></i> Limpar</button>
+            <button type="button" id="btnSalvarEstoque" class="btn-glass btn-green" disabled title="O estoque e calculado automaticamente pelas contagens"><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" id="btnLimparLancamento" class="btn-glass btn-red" disabled title="O estoque e calculado automaticamente pelas contagens"><i class="fas fa-eraser"></i> Limpar</button>
           </div>
         </section>
       </div>
 
       <div class="kpi-grid-camara">
+        <div class="kpi-mini-card">
+          <span>Total Paletes</span>
+          <strong id="kpiTotalPaletes">0</strong>
+        </div>
         <div class="kpi-mini-card">
           <span>Total Caixas</span>
           <strong id="kpiTotalCaixas">0</strong>
@@ -75,7 +92,7 @@
 
       <div class="glass-panel">
         <div class="panel-header">
-          <h3><i class="fas fa-boxes-stacked"></i> Produtos da Semana</h3>
+          <h3><i class="fas fa-boxes-stacked"></i> Total da Contagem</h3>
           <span id="estoqueRecordsCount" class="produtos-count-badge"></span>
         </div>
         <div class="table-responsive produtos-table-container estoque-table-container">
@@ -85,15 +102,15 @@
                 <th>Codigo</th>
                 <th>Produto</th>
                 <th>Tipo</th>
-                <th>Peso Caixa</th>
-                <th>Caixas/Palete</th>
+                <th>Paletes</th>
                 <th>Caixas</th>
+                <th>Total Caixas</th>
                 <th>Peso Total</th>
-                <th>Observacao</th>
+                <th>Contagens</th>
               </tr>
             </thead>
             <tbody id="tableBodyEstoqueCamara">
-              <tr><td colspan="8" style="text-align:center;">Selecione Filial, Semana e Fabrica para carregar.</td></tr>
+              <tr><td colspan="8" style="text-align:center;">Selecione Filial, Semana, Dia e Fabrica para carregar.</td></tr>
             </tbody>
           </table>
         </div>
@@ -175,6 +192,6 @@
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/estoque-camara-fria.js?v=20260706-1" defer></script>
+  <script type="module" src="script/estoque-camara-fria.js?v=20260708-contagem" defer></script>
 </body>
 </html>
