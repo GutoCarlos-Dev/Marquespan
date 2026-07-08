@@ -215,22 +215,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 filial: this.filialSelect.value || null
             };
 
-            if (this.editingIdInput.value) {
-                payload.id = this.editingIdInput.value;
+            const editingId = this.editingIdInput.value;
+            const isEditing = Boolean(editingId);
+
+            if (isEditing) {
+                payload.id = editingId;
             }
 
             try {
-                const { error } = await supabaseClient.from('produtos_camara_fria').upsert(payload);
+                const { data: produtoSalvo, error } = await supabaseClient
+                    .from('produtos_camara_fria')
+                    .upsert(payload)
+                    .select('*')
+                    .single();
                 if (error) throw error;
 
                 registrarAuditoria(
-                    this.editingIdInput.value ? 'ALTERAR' : 'INCLUIR',
+                    isEditing ? 'ALTERAR' : 'INCLUIR',
                     'Câmara Fria',
-                    `${this.editingIdInput.value ? 'Atualização' : 'Cadastro'} de produto: ${payload.nome}`
+                    `${isEditing ? 'Atualização' : 'Cadastro'} de produto: ${payload.nome}`
                 );
-                alert(`Produto ${this.editingIdInput.value ? 'atualizado' : 'salvo'} com sucesso!`);
-                this.closeModalProduto();
-                this.renderTable();
+                alert(`Produto ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`);
+                this.closeModalProduto({ focus: false });
+                if (isEditing && produtoSalvo) {
+                    this.atualizarProdutoNaGrade(produtoSalvo);
+                } else {
+                    this.renderTable();
+                }
             } catch (error) {
                 console.error('Erro ao salvar produto:', error);
                 alert('Erro ao salvar produto: ' + error.message);
@@ -300,21 +311,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             produtos.forEach(produto => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${this.escapeHtml(produto.codigo) || '-'}</td>
-                    <td>${this.escapeHtml(produto.nome)}</td>
-                    <td>${this.escapeHtml(produto.tipo) || '-'}</td>
-                    <td>${produto.peso_caixa != null ? `${this.formatPeso(produto.peso_caixa)} KG` : '-'}</td>
-                    <td>${produto.caixas_por_palete ?? '-'}</td>
-                    <td>${this.escapeHtml(produto.filial) || 'TODAS'}</td>
-                    <td class="actions-cell">
-                        <button class="btn-icon edit" data-id="${produto.id}" title="Editar"><i class="fas fa-pen"></i></button>
-                        <button class="btn-icon delete" data-id="${produto.id}" title="Excluir"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-                this.tableBody.appendChild(tr);
+                this.tableBody.appendChild(this.criarLinhaProduto(produto));
             });
+        },
+
+        criarLinhaProduto(produto) {
+            const tr = document.createElement('tr');
+            tr.dataset.produtoId = produto.id;
+            tr.innerHTML = `
+                <td>${this.escapeHtml(produto.codigo) || '-'}</td>
+                <td>${this.escapeHtml(produto.nome)}</td>
+                <td>${this.escapeHtml(produto.tipo) || '-'}</td>
+                <td>${produto.peso_caixa != null ? `${this.formatPeso(produto.peso_caixa)} KG` : '-'}</td>
+                <td>${produto.caixas_por_palete ?? '-'}</td>
+                <td>${this.escapeHtml(produto.filial) || 'TODAS'}</td>
+                <td class="actions-cell">
+                    <button class="btn-icon edit" data-id="${produto.id}" title="Editar"><i class="fas fa-pen"></i></button>
+                    <button class="btn-icon delete" data-id="${produto.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            return tr;
+        },
+
+        atualizarProdutoNaGrade(produtoAtualizado) {
+            const index = (this.produtosCache || []).findIndex(item => String(item.id) === String(produtoAtualizado.id));
+            if (index >= 0) {
+                this.produtosCache[index] = produtoAtualizado;
+            } else {
+                this.produtosCache = [...(this.produtosCache || []), produtoAtualizado];
+            }
+
+            const linhaAtual = this.tableBody.querySelector(`tr[data-produto-id="${produtoAtualizado.id}"]`);
+            if (linhaAtual) {
+                linhaAtual.replaceWith(this.criarLinhaProduto(produtoAtualizado));
+            } else {
+                this.renderRows();
+            }
         },
 
         handleTableClick(e) {
@@ -337,9 +369,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.modalProduto.classList.remove('hidden');
         },
 
-        closeModalProduto() {
+        closeModalProduto(options = {}) {
             this.modalProduto.classList.add('hidden');
-            this.clearForm();
+            this.clearForm(options);
         },
 
         loadForEditing(id) {
@@ -370,12 +402,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        clearForm() {
+        clearForm(options = {}) {
+            const { focus = true } = options;
             this.form.reset();
             this.editingIdInput.value = '';
             if (this.filialRestrita) this.filialSelect.value = this.filialRestrita;
             this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar Produto';
-            this.codigoInput.focus();
+            if (focus) this.codigoInput.focus();
         },
 
         // --- Cadastro de Tipo (catalogo auxiliar) ---
