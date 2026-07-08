@@ -28,8 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.diaSemanaSelect = document.getElementById('estoqueDiaSemana');
             this.fabricaSelect = document.getElementById('estoqueFabrica');
             this.btnCarregar = document.getElementById('btnCarregarEstoque');
-            this.btnSalvar = document.getElementById('btnSalvarEstoque');
-            this.btnLimpar = document.getElementById('btnLimparLancamento');
+            this.btnPDF = document.getElementById('btnEstoquePDF');
+            this.btnXLSX = document.getElementById('btnEstoqueXLSX');
             this.btnAbrirCadastroFabrica = document.getElementById('btnAbrirCadastroFabrica');
             this.tableBody = document.getElementById('tableBodyEstoqueCamara');
             this.buscaTotalInput = document.getElementById('buscaTotalContagem');
@@ -53,8 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         bind() {
             this.btnCarregar.addEventListener('click', () => this.carregarLancamento());
-            this.btnSalvar.addEventListener('click', () => this.alertaEstoqueCalculado());
-            this.btnLimpar.addEventListener('click', () => this.alertaEstoqueCalculado());
+            this.btnPDF.addEventListener('click', () => this.exportarPDF());
+            this.btnXLSX.addEventListener('click', () => this.exportarXLSX());
             this.filialSelect.addEventListener('change', async () => {
                 this.fabricaSelect.value = '__TODAS__';
                 if (this.fabricaFilial) this.fabricaFilial.value = this.filialSelect.value;
@@ -280,7 +280,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pesoTotal = caixas * (Number(produto.peso_caixa) || 0);
                 const textoBusca = this.normalizarTexto(`${produto.codigo || ''} ${produto.nome || ''} ${produto.tipo || ''}`);
                 return `
-                    <tr data-produto-id="${produto.id}" data-peso-caixa="${produto.peso_caixa || 0}" data-total-caixas="${caixas}" data-total-paletes="${quantidades.paletes}" data-search="${this.escapeHtml(textoBusca)}">
+                    <tr data-produto-id="${produto.id}"
+                        data-codigo="${this.escapeHtml(produto.codigo || '-')}"
+                        data-produto="${this.escapeHtml(produto.nome || '-')}"
+                        data-tipo="${this.escapeHtml(produto.tipo || '-')}"
+                        data-paletes="${quantidades.paletes}"
+                        data-caixas-avulsas="${quantidades.caixasAvulsas}"
+                        data-total-caixas="${caixas}"
+                        data-peso-total="${pesoTotal}"
+                        data-contagens="${contagensProduto || 0}"
+                        data-peso-caixa="${produto.peso_caixa || 0}"
+                        data-total-paletes="${quantidades.paletes}"
+                        data-search="${this.escapeHtml(textoBusca)}">
                         <td>${this.escapeHtml(produto.codigo) || '-'}</td>
                         <td>
                             <strong>${this.escapeHtml(produto.nome)}</strong>
@@ -433,6 +444,195 @@ document.addEventListener('DOMContentLoaded', () => {
                 paletes: Math.floor(totalCaixas / capacidadePalete),
                 caixasAvulsas: totalCaixas % capacidadePalete
             };
+        },
+
+        getLinhasExportacao() {
+            return Array.from(this.tableBody.querySelectorAll('tr[data-produto-id]'))
+                .filter(tr => !tr.hidden)
+                .map(tr => ({
+                    codigo: tr.dataset.codigo || '-',
+                    produto: tr.dataset.produto || '-',
+                    tipo: tr.dataset.tipo || '-',
+                    paletes: Number(tr.dataset.paletes) || 0,
+                    caixas: Number(tr.dataset.caixasAvulsas) || 0,
+                    totalCaixas: Number(tr.dataset.totalCaixas) || 0,
+                    pesoTotal: Number(tr.dataset.pesoTotal) || 0,
+                    contagens: Number(tr.dataset.contagens) || 0
+                }));
+        },
+
+        getContextoExportacao() {
+            const fabricaLabel = this.fabricaSelect.value === '__TODAS__'
+                ? 'Todas'
+                : (this.fabricaSelect.options[this.fabricaSelect.selectedIndex]?.text || '-');
+            return {
+                filial: this.filialSelect.value || '-',
+                semana: this.formatSemanaDisplay(this.semanaInput.value),
+                dia: this.formatDiaSemana(this.diaSemanaSelect.value),
+                fabrica: fabricaLabel
+            };
+        },
+
+        getTotaisExportacao(linhas) {
+            return linhas.reduce((acc, item) => {
+                acc.paletes += item.paletes;
+                acc.caixas += item.caixas;
+                acc.totalCaixas += item.totalCaixas;
+                acc.peso += item.pesoTotal;
+                if (item.totalCaixas > 0) acc.produtos += 1;
+                return acc;
+            }, { paletes: 0, caixas: 0, totalCaixas: 0, peso: 0, produtos: 0 });
+        },
+
+        exportarPDF() {
+            const linhas = this.getLinhasExportacao();
+            if (linhas.length === 0) return alert('Carregue o grid antes de gerar o PDF.');
+            if (!window.jspdf?.jsPDF) return alert('Biblioteca jsPDF nao carregada.');
+            this.abrirModalOrientacaoPDF();
+        },
+
+        abrirModalOrientacaoPDF() {
+            let modal = document.getElementById('modalOrientacaoEstoquePDF');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modalOrientacaoEstoquePDF';
+                modal.className = 'estoque-pdf-orientacao-modal hidden';
+                modal.innerHTML = `
+                    <div class="estoque-pdf-orientacao-card">
+                        <h3><i class="fas fa-file-pdf"></i> Gerar PDF</h3>
+                        <p>Escolha a orientação do relatório.</p>
+                        <div class="estoque-pdf-orientacao-actions">
+                            <button type="button" class="btn-glass btn-blue" data-orientacao="portrait"><i class="fas fa-file-alt"></i> Vertical</button>
+                            <button type="button" class="btn-glass btn-green" data-orientacao="landscape"><i class="fas fa-image"></i> Horizontal</button>
+                        </div>
+                        <button type="button" class="estoque-pdf-orientacao-cancelar">Cancelar</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                modal.addEventListener('click', (e) => {
+                    const orientacaoBtn = e.target.closest('[data-orientacao]');
+                    if (orientacaoBtn) {
+                        modal.classList.add('hidden');
+                        this.gerarPDFComOrientacao(orientacaoBtn.dataset.orientacao);
+                        return;
+                    }
+                    if (e.target === modal || e.target.closest('.estoque-pdf-orientacao-cancelar')) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+            modal.classList.remove('hidden');
+        },
+
+        async gerarPDFComOrientacao(orientacao = 'landscape') {
+            const linhas = this.getLinhasExportacao();
+            if (linhas.length === 0) return alert('Carregue o grid antes de gerar o PDF.');
+            if (!window.jspdf?.jsPDF) return alert('Biblioteca jsPDF nao carregada.');
+
+            const contexto = this.getContextoExportacao();
+            const totais = this.getTotaisExportacao(linhas);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: orientacao, unit: 'mm', format: 'a4' });
+            const logo = await this.getLogoBase64PDF();
+            const tituloX = orientacao === 'portrait' ? 14 : 60;
+            const logoWidth = orientacao === 'portrait' ? 36 : 42;
+            const logoHeight = orientacao === 'portrait' ? 12 : 14;
+            const titleY = orientacao === 'portrait' ? 28 : 15;
+            const infoY = orientacao === 'portrait' ? 35 : 22;
+            const totalY = orientacao === 'portrait' ? 41 : 28;
+            const tableY = orientacao === 'portrait' ? 48 : 34;
+
+            if (logo) doc.addImage(logo, 'JPEG', 12, 8, logoWidth, logoHeight);
+            doc.setFontSize(15);
+            doc.setTextColor(0, 105, 55);
+            doc.text('TOTAL DA CONTAGEM - CAMARA FRIA', tituloX, titleY);
+            doc.setFontSize(9);
+            doc.setTextColor(40);
+            doc.text(`Filial: ${contexto.filial} | Semana: ${contexto.semana} | Dia: ${contexto.dia} | Fabrica: ${contexto.fabrica}`, tituloX, infoY);
+            doc.text(`Paletes: ${totais.paletes} | Caixas: ${totais.caixas} | Total Caixas: ${totais.totalCaixas} | Peso: ${this.formatPeso(totais.peso)} KG | Produtos: ${totais.produtos}`, tituloX, totalY);
+
+            doc.autoTable({
+                head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Total Caixas', 'Peso Total', 'Contagens']],
+                body: linhas.map(item => [
+                    item.codigo,
+                    item.produto,
+                    item.tipo,
+                    String(item.paletes),
+                    String(item.caixas),
+                    String(item.totalCaixas),
+                    `${this.formatPeso(item.pesoTotal)} KG`,
+                    String(item.contagens)
+                ]),
+                startY: tableY,
+                theme: 'grid',
+                headStyles: { fillColor: [0, 105, 55], textColor: [255, 255, 255], halign: 'center', fontSize: 8 },
+                bodyStyles: { fillColor: [255, 255, 255] },
+                alternateRowStyles: { fillColor: [238, 248, 241] },
+                styles: { fontSize: orientacao === 'portrait' ? 7 : 8, cellPadding: 2, halign: 'center' },
+                columnStyles: { 1: { halign: 'left', cellWidth: orientacao === 'portrait' ? 46 : 80 } }
+            });
+
+            doc.save(this.getNomeArquivoExportacao('pdf'));
+        },
+
+        exportarXLSX() {
+            const linhas = this.getLinhasExportacao();
+            if (linhas.length === 0) return alert('Carregue o grid antes de gerar o XLSX.');
+            if (!window.XLSX) return alert('Biblioteca XLSX nao carregada.');
+
+            const contexto = this.getContextoExportacao();
+            const totais = this.getTotaisExportacao(linhas);
+            const dados = [
+                ['TOTAL DA CONTAGEM - CAMARA FRIA'],
+                [`Filial: ${contexto.filial}`, `Semana: ${contexto.semana}`, `Dia: ${contexto.dia}`, `Fabrica: ${contexto.fabrica}`],
+                [`Paletes: ${totais.paletes}`, `Caixas: ${totais.caixas}`, `Total Caixas: ${totais.totalCaixas}`, `Peso: ${this.formatPeso(totais.peso)} KG`, `Produtos: ${totais.produtos}`],
+                [],
+                ['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Total Caixas', 'Peso Total', 'Contagens'],
+                ...linhas.map(item => [
+                    item.codigo,
+                    item.produto,
+                    item.tipo,
+                    item.paletes,
+                    item.caixas,
+                    item.totalCaixas,
+                    item.pesoTotal,
+                    item.contagens
+                ])
+            ];
+
+            const ws = window.XLSX.utils.aoa_to_sheet(dados);
+            ws['!cols'] = [
+                { wch: 14 }, { wch: 38 }, { wch: 18 }, { wch: 10 },
+                { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 10 }
+            ];
+            const wb = window.XLSX.utils.book_new();
+            window.XLSX.utils.book_append_sheet(wb, ws, 'Total Contagem');
+            window.XLSX.writeFile(wb, this.getNomeArquivoExportacao('xlsx'));
+        },
+
+        getNomeArquivoExportacao(extensao) {
+            const contexto = this.getContextoExportacao();
+            return `Total_Contagem_Camara_Fria_${contexto.filial}_${this.semanaInput.value}_${this.diaSemanaSelect.value}_${contexto.fabrica}.${extensao}`
+                .replace(/[^a-z0-9_.-]+/gi, '_');
+        },
+
+        getLogoBase64PDF() {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.src = 'logo.png';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => resolve(null);
+            });
         },
 
         alertaEstoqueCalculado() {
@@ -716,6 +916,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 .replace(/[\u0300-\u036f]/g, '')
                 .toLowerCase()
                 .trim();
+        },
+
+        formatSemanaDisplay(value) {
+            const match = String(value || '').match(/^(\d{4})-W(\d{2})$/);
+            return match ? `${match[2]}-${match[1]}` : (value || '-');
+        },
+
+        formatDiaSemana(value) {
+            const labels = {
+                SEGUNDA: 'SEGUNDA',
+                TERCA: 'TERÇA',
+                QUARTA: 'QUARTA',
+                QUINTA: 'QUINTA',
+                SEXTA: 'SEXTA',
+                SABADO: 'SÁBADO',
+                DOMINGO: 'DOMINGO'
+            };
+            return labels[String(value || '').trim().toUpperCase()] || '-';
         },
 
         formatPeso(value) {

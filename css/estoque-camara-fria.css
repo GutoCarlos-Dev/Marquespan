@@ -71,6 +71,18 @@
     vertical-align: middle;
 }
 
+.estoque-total-table tbody tr:nth-child(odd) {
+    background: #ffffff;
+}
+
+.estoque-total-table tbody tr:nth-child(even) {
+    background: #eef8f1;
+}
+
+.estoque-total-table tbody tr:hover {
+    background: #dff2e5;
+}
+
 .estoque-total-table td:nth-child(2) {
     text-align: center;
 }
@@ -190,6 +202,55 @@
     opacity: 0.55;
     cursor: not-allowed;
     transform: none;
+}
+
+.estoque-pdf-orientacao-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.estoque-pdf-orientacao-modal.hidden {
+    display: none;
+}
+
+.estoque-pdf-orientacao-card {
+    width: min(380px, 94vw);
+    padding: 22px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+    text-align: center;
+}
+
+.estoque-pdf-orientacao-card h3 {
+    margin: 0 0 8px;
+    color: var(--primary-color);
+}
+
+.estoque-pdf-orientacao-card p {
+    margin: 0 0 18px;
+    color: #666;
+}
+
+.estoque-pdf-orientacao-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.estoque-pdf-orientacao-cancelar {
+    border: 0;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    text-decoration: underline;
 }
 
 .contagem-produtos-modal {
