@@ -153,6 +153,7 @@ const RotasUI = {
         this.filtroGridFilial = document.getElementById('filtroGridFilial');
         this.filtroGridSemana = document.getElementById('filtroGridSemana');
         this.filtroGridSupervisor = document.getElementById('filtroGridSupervisor');
+        this.filtroGridStatus = document.getElementById('filtroGridStatus');
         this.rotasBulkActions = document.getElementById('rotasBulkActions');
         this.rotasSelecionadasCount = document.getElementById('rotasSelecionadasCount');
         this.bulkStatusRotas = document.getElementById('bulkStatusRotas');
@@ -195,6 +196,9 @@ const RotasUI = {
         if (this.filtroGridSupervisor) {
             this.filtroGridSupervisor.addEventListener('change', () => this.renderGrid());
         }
+        if (this.filtroGridStatus) {
+            this.filtroGridStatus.addEventListener('change', () => this.renderGrid());
+        }
 
         // Eventos de importação
         if (this.btnImportarLista) {
@@ -219,6 +223,7 @@ const RotasUI = {
             this.filtroGridFilial = document.getElementById('filtroGridFilial');
             this.filtroGridSemana = document.getElementById('filtroGridSemana');
             this.filtroGridSupervisor = document.getElementById('filtroGridSupervisor');
+            this.filtroGridStatus = document.getElementById('filtroGridStatus');
             return;
         }
 
@@ -282,11 +287,31 @@ const RotasUI = {
         supervisorGroup.appendChild(supervisorLabel);
         supervisorGroup.appendChild(supervisorSelect);
 
-        filtrosContainer.append(filtroGroup, semanaGroup, supervisorGroup);
+        const statusGroup = document.createElement('div');
+        statusGroup.className = 'form-group';
+
+        const statusLabel = document.createElement('label');
+        statusLabel.htmlFor = 'filtroGridStatus';
+        statusLabel.textContent = 'Status';
+
+        const statusSelect = document.createElement('select');
+        statusSelect.id = 'filtroGridStatus';
+        statusSelect.className = 'glass-input';
+        statusSelect.innerHTML = `
+            <option value="">Todos</option>
+            <option value="ATIVA">ATIVA</option>
+            <option value="INATIVA">INATIVA</option>
+        `;
+
+        statusGroup.appendChild(statusLabel);
+        statusGroup.appendChild(statusSelect);
+
+        filtrosContainer.append(filtroGroup, semanaGroup, supervisorGroup, statusGroup);
         searchGroup.parentNode.insertBefore(filtrosContainer, searchGroup);
         this.filtroGridFilial = select;
         this.filtroGridSemana = semanaSelect;
         this.filtroGridSupervisor = supervisorSelect;
+        this.filtroGridStatus = statusSelect;
     },
 
     setupInitialState() {
@@ -687,6 +712,7 @@ const RotasUI = {
             const filialFiltro = restringirFilial ? filialUsuario : (this.filtroGridFilial?.value || '');
             const semanaFiltro = this.filtroGridSemana?.value || '';
             const supervisorFiltro = this.filtroGridSupervisor?.value || '';
+            const statusFiltro = this.filtroGridStatus?.value || '';
             let queryOptions = { orderBy: this._sort.field, ascending: this._sort.ascending };
 
             const eqList = [];
@@ -698,6 +724,9 @@ const RotasUI = {
             }
             if (supervisorFiltro) {
                 eqList.push({ field: 'supervisor', value: supervisorFiltro });
+            }
+            if (statusFiltro) {
+                eqList.push({ field: 'status', value: statusFiltro });
             }
             if (eqList.length) {
                 queryOptions.eqList = eqList;
