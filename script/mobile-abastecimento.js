@@ -1,5 +1,6 @@
 import { supabaseClient } from './supabase.js';
 import { calcularEstoqueAtual } from './abastecimento/estoque-service.js';
+import { salvarColetaKmAbastecimento } from './abastecimento/coleta-km-service.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 import { getValoresFilialRelacionados } from './shared/filial-utils.js';
 
@@ -496,14 +497,15 @@ async function salvarAbastecimento(e) {
         // REGISTRA NA TABELA DE COLETA DE KM (Odometer History) - Seguindo padrão Desktop
         const kmValue = parseFloat(km);
         if (!isNaN(kmValue) && kmValue > 0) {
-            await supabaseClient.from('coleta_km').upsert([{
-                data_coleta: dataHora,
-                placa: placa,
-                km_atual: kmValue,
-                usuario: usuario,
+            await salvarColetaKmAbastecimento({
+                supabaseClient,
+                dataColeta: dataHora,
+                placa,
+                kmAtual: kmValue,
+                usuario,
                 modelo: veiculoObj ? veiculoObj.modelo : '',
                 observacao: `Abastecimento App (${payloads.length} bicos)`
-            }], { onConflict: 'data_coleta,placa' });
+            });
         }
 
         // Salva um ou dois registros de uma vez
