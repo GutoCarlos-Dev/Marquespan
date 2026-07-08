@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         acessoGlobal: true,
         produtosCache: [],
         estoqueCache: new Map(),
+        saidasCache: new Map(),
         contagensResumo: null,
         fabricasCache: [],
         buscaTotalContagem: '',
@@ -187,24 +188,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async carregarLancamento() {
             if (!this.formularioBaseValido()) return;
-            this.tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Carregando...</td></tr>';
 
             try {
                 const filial = this.filialSelect.value;
-                const [produtosResult, contagemResumo] = await Promise.all([
+                const [produtosResult, contagemResumo, saidasResumo] = await Promise.all([
                     this.buscarProdutos(filial),
-                    this.buscarTotaisContagem()
+                    this.buscarTotaisContagem(),
+                    this.buscarSaidasCarregamento()
                 ]);
 
                 if (produtosResult.error) throw produtosResult.error;
 
                 this.produtosCache = produtosResult.data || [];
                 this.estoqueCache = contagemResumo.totaisPorProduto;
+                this.saidasCache = saidasResumo.totaisPorProduto;
                 this.contagensResumo = contagemResumo;
                 this.renderProdutos();
             } catch (error) {
                 console.error('Erro ao carregar estoque semanal:', error);
-                this.tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc3545;">Erro ao carregar estoque.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#dc3545;">Erro ao carregar estoque.</td></tr>';
             }
         },
 
@@ -264,13 +267,112 @@ document.addEventListener('DOMContentLoaded', () => {
             return { totaisPorProduto, totalContagens: contagemIds.length };
         },
 
+        async buscarSaidasCarregamento() {
+            const periodo = this.getPeriodoCarregamentoSelecionado();
+            const totaisPorProduto = new Map();
+            if (!periodo) return { totaisPorProduto, totalCarregamentos: 0 };
+
+            let query = supabaseClient
+                .from('carregamentos_camara_fria')
+                .select('id')
+                .eq('filial', this.filialSelect.value);
+
+            if (periodo.data) {
+                query = query.eq('data_carregamento', periodo.data);
+            } else {
+                query = query
+                    .gte('data_carregamento', periodo.inicio)
+                    .lte('data_carregamento', periodo.fim);
+            }
+
+            if (this.fabricaSelect.value !== '__TODAS__') {
+                query = query.eq('fabrica_id', this.fabricaSelect.value);
+            }
+
+            const { data: carregamentos, error: carregamentosError } = await query;
+            if (carregamentosError) throw carregamentosError;
+
+            const carregamentoIds = (carregamentos || []).map(item => item.id);
+            if (carregamentoIds.length === 0) {
+                return { totaisPorProduto, totalCarregamentos: 0 };
+            }
+
+            const { data: lancamentos, error: lancamentosError } = await supabaseClient
+                .from('carregamento_camara_fria_lancamentos')
+                .select('produto_id, quantidade_caixas')
+                .in('carregamento_id', carregamentoIds);
+            if (lancamentosError) throw lancamentosError;
+
+            (lancamentos || []).forEach(item => {
+                const produtoId = String(item.produto_id);
+                const atual = totaisPorProduto.get(produtoId) || {
+                    produto_id: produtoId,
+                    quantidade_caixas: 0
+                };
+                atual.quantidade_caixas += Number(item.quantidade_caixas) || 0;
+                totaisPorProduto.set(produtoId, atual);
+            });
+
+            return { totaisPorProduto, totalCarregamentos: carregamentoIds.length };
+        },
+
+        getPeriodoCarregamentoSelecionado() {
+            const inicio = this.getInicioSemanaISO(this.semanaInput.value);
+            if (!inicio) return null;
+
+            const fim = new Date(inicio);
+            fim.setUTCDate(inicio.getUTCDate() + 6);
+
+            if (this.diaSemanaSelect.value === DIA_SEMANA_TODOS) {
+                return {
+                    inicio: this.formatDateISO(inicio),
+                    fim: this.formatDateISO(fim)
+                };
+            }
+
+            const offsets = {
+                SEGUNDA: 0,
+                TERCA: 1,
+                QUARTA: 2,
+                QUINTA: 3,
+                SEXTA: 4,
+                SABADO: 5,
+                DOMINGO: 6
+            };
+            const offset = offsets[this.diaSemanaSelect.value];
+            if (offset == null) return null;
+
+            const data = new Date(inicio);
+            data.setUTCDate(inicio.getUTCDate() + offset);
+            return { data: this.formatDateISO(data) };
+        },
+
+        getInicioSemanaISO(value) {
+            const match = String(value || '').match(/^(\d{4})-W(\d{2})$/);
+            if (!match) return null;
+
+            const year = Number(match[1]);
+            const week = Number(match[2]);
+            const jan4 = new Date(Date.UTC(year, 0, 4));
+            const jan4Day = jan4.getUTCDay() || 7;
+            const mondayWeek1 = new Date(jan4);
+            mondayWeek1.setUTCDate(jan4.getUTCDate() - jan4Day + 1);
+            const target = new Date(mondayWeek1);
+            target.setUTCDate(mondayWeek1.getUTCDate() + ((week - 1) * 7));
+            return target;
+        },
+
+        formatDateISO(date) {
+            return date.toISOString().slice(0, 10);
+        },
+
         renderProdutos() {
             if (this.recordsCount) {
                 this.recordsCount.textContent = `${this.produtosCache.length} produto${this.produtosCache.length === 1 ? '' : 's'}`;
             }
 
             if (this.produtosCache.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum produto cadastrado para esta filial.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Nenhum produto cadastrado para esta filial.</td></tr>';
                 this.atualizarTotais();
                 return;
             }
@@ -278,7 +380,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const produtosOrdenados = this.getProdutosOrdenados();
             this.tableBody.innerHTML = produtosOrdenados.map(produto => {
                 const estoque = this.estoqueCache.get(String(produto.id));
+                const saida = this.saidasCache.get(String(produto.id));
                 const caixas = Number(estoque?.quantidade_caixas) || 0;
+                const saidaCaixas = Number(saida?.quantidade_caixas) || 0;
+                const saldoCaixas = caixas - saidaCaixas;
                 const caixasPorPalete = Number(produto.caixas_por_palete) || 0;
                 const quantidades = this.calcularQuantidadesPelasCaixas(caixas, caixasPorPalete);
                 const contagensProduto = estoque?.contagemIds?.size || 0;
@@ -292,6 +397,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         data-paletes="${quantidades.paletes}"
                         data-caixas-avulsas="${quantidades.caixasAvulsas}"
                         data-total-caixas="${caixas}"
+                        data-saida-caixas="${saidaCaixas}"
+                        data-saldo-caixas="${saldoCaixas}"
                         data-peso-total="${pesoTotal}"
                         data-contagens="${contagensProduto || 0}"
                         data-peso-caixa="${produto.peso_caixa || 0}"
@@ -306,6 +413,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td class="estoque-total-paletes">${quantidades.paletes}</td>
                         <td class="estoque-caixas-avulsas">${quantidades.caixasAvulsas}</td>
                         <td class="estoque-qtd-caixas">${caixas}</td>
+                        <td class="estoque-saida-caixas">${saidaCaixas}</td>
+                        <td class="estoque-saldo-caixas">${saldoCaixas}</td>
                         <td class="estoque-peso-total">${this.formatPeso(pesoTotal)} KG</td>
                         <td>${contagensProduto || '-'}</td>
                     </tr>
@@ -336,6 +445,8 @@ document.addEventListener('DOMContentLoaded', () => {
         getValorOrdenacaoProduto(produto, campo) {
             const estoque = this.estoqueCache.get(String(produto.id));
             const caixas = Number(estoque?.quantidade_caixas) || 0;
+            const saida = this.saidasCache.get(String(produto.id));
+            const saidaCaixas = Number(saida?.quantidade_caixas) || 0;
             const caixasPorPalete = Number(produto.caixas_por_palete) || 0;
             const quantidades = this.calcularQuantidadesPelasCaixas(caixas, caixasPorPalete);
             const contagensProduto = estoque?.contagemIds?.size || 0;
@@ -348,6 +459,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 paletes: quantidades.paletes,
                 caixas_avulsas: quantidades.caixasAvulsas,
                 total_caixas: caixas,
+                saida_caixas: saidaCaixas,
+                saldo_caixas: caixas - saidaCaixas,
                 peso_total: pesoTotal,
                 contagens: contagensProduto
             };
@@ -461,6 +574,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     paletes: Number(tr.dataset.paletes) || 0,
                     caixas: Number(tr.dataset.caixasAvulsas) || 0,
                     totalCaixas: Number(tr.dataset.totalCaixas) || 0,
+                    saidaCaixas: Number(tr.dataset.saidaCaixas) || 0,
+                    saldoCaixas: Number(tr.dataset.saldoCaixas) || 0,
                     pesoTotal: Number(tr.dataset.pesoTotal) || 0,
                     contagens: Number(tr.dataset.contagens) || 0
                 }));
@@ -483,10 +598,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 acc.paletes += item.paletes;
                 acc.caixas += item.caixas;
                 acc.totalCaixas += item.totalCaixas;
+                acc.saidaCaixas += item.saidaCaixas;
+                acc.saldoCaixas += item.saldoCaixas;
                 acc.peso += item.pesoTotal;
                 if (item.totalCaixas > 0) acc.produtos += 1;
                 return acc;
-            }, { paletes: 0, caixas: 0, totalCaixas: 0, peso: 0, produtos: 0 });
+            }, { paletes: 0, caixas: 0, totalCaixas: 0, saidaCaixas: 0, saldoCaixas: 0, peso: 0, produtos: 0 });
         },
 
         exportarPDF() {
@@ -554,10 +671,10 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.setFontSize(9);
             doc.setTextColor(40);
             doc.text(`Filial: ${contexto.filial} | Semana: ${contexto.semana} | Dia: ${contexto.dia} | Fabrica: ${contexto.fabrica}`, tituloX, infoY);
-            doc.text(`Paletes: ${totais.paletes} | Caixas: ${totais.caixas} | Total Caixas: ${totais.totalCaixas} | Peso: ${this.formatPeso(totais.peso)} KG | Produtos: ${totais.produtos}`, tituloX, totalY);
+            doc.text(`Paletes: ${totais.paletes} | Caixas: ${totais.caixas} | Total: ${totais.totalCaixas} | Saida: ${totais.saidaCaixas} | Saldo: ${totais.saldoCaixas} | Peso: ${this.formatPeso(totais.peso)} KG`, tituloX, totalY);
 
             doc.autoTable({
-                head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Total Caixas', 'Peso Total', 'Contagens']],
+                head: [['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Total Caixas', 'Saida', 'Saldo', 'Peso Total', 'Contagens']],
                 body: linhas.map(item => [
                     item.codigo,
                     item.produto,
@@ -565,6 +682,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     String(item.paletes),
                     String(item.caixas),
                     String(item.totalCaixas),
+                    String(item.saidaCaixas),
+                    String(item.saldoCaixas),
                     `${this.formatPeso(item.pesoTotal)} KG`,
                     String(item.contagens)
                 ]),
@@ -574,7 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 bodyStyles: { fillColor: [255, 255, 255] },
                 alternateRowStyles: { fillColor: [238, 248, 241] },
                 styles: { fontSize: orientacao === 'portrait' ? 7 : 8, cellPadding: 2, halign: 'center' },
-                columnStyles: { 1: { halign: 'left', cellWidth: orientacao === 'portrait' ? 46 : 80 } }
+                columnStyles: { 1: { halign: 'left', cellWidth: orientacao === 'portrait' ? 38 : 68 } }
             });
 
             doc.save(this.getNomeArquivoExportacao('pdf'));
@@ -590,9 +709,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const dados = [
                 ['TOTAL DA CONTAGEM - CAMARA FRIA'],
                 [`Filial: ${contexto.filial}`, `Semana: ${contexto.semana}`, `Dia: ${contexto.dia}`, `Fabrica: ${contexto.fabrica}`],
-                [`Paletes: ${totais.paletes}`, `Caixas: ${totais.caixas}`, `Total Caixas: ${totais.totalCaixas}`, `Peso: ${this.formatPeso(totais.peso)} KG`, `Produtos: ${totais.produtos}`],
+                [`Paletes: ${totais.paletes}`, `Caixas: ${totais.caixas}`, `Total Caixas: ${totais.totalCaixas}`, `Saida: ${totais.saidaCaixas}`, `Saldo: ${totais.saldoCaixas}`, `Peso: ${this.formatPeso(totais.peso)} KG`, `Produtos: ${totais.produtos}`],
                 [],
-                ['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Total Caixas', 'Peso Total', 'Contagens'],
+                ['Codigo', 'Produto', 'Tipo', 'Paletes', 'Caixas', 'Total Caixas', 'Saida', 'Saldo', 'Peso Total', 'Contagens'],
                 ...linhas.map(item => [
                     item.codigo,
                     item.produto,
@@ -600,6 +719,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.paletes,
                     item.caixas,
                     item.totalCaixas,
+                    item.saidaCaixas,
+                    item.saldoCaixas,
                     item.pesoTotal,
                     item.contagens
                 ])
@@ -608,7 +729,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const ws = window.XLSX.utils.aoa_to_sheet(dados);
             ws['!cols'] = [
                 { wch: 14 }, { wch: 38 }, { wch: 18 }, { wch: 10 },
-                { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 10 }
+                { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 },
+                { wch: 14 }, { wch: 10 }
             ];
             const wb = window.XLSX.utils.book_new();
             window.XLSX.utils.book_append_sheet(wb, ws, 'Total Contagem');

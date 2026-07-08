@@ -96,7 +96,7 @@
 
       <div class="glass-panel">
         <div class="panel-header">
-          <h3><i class="fas fa-boxes-stacked"></i> Total da Contagem</h3>
+          <h3><i class="fas fa-boxes-stacked"></i> Fluxo da Contagem e Saida</h3>
           <div class="estoque-grid-tools">
             <div class="input-icon-wrapper estoque-search">
               <i class="fas fa-search"></i>
@@ -115,12 +115,14 @@
                 <th><button type="button" class="estoque-sort-btn" data-sort="paletes">Paletes <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="estoque-sort-btn" data-sort="caixas_avulsas">Caixas <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="estoque-sort-btn" data-sort="total_caixas">Total Caixas <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="estoque-sort-btn" data-sort="saida_caixas">Saida <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="estoque-sort-btn" data-sort="saldo_caixas">Saldo <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="estoque-sort-btn" data-sort="peso_total">Peso Total <i class="fas fa-sort"></i></button></th>
                 <th><button type="button" class="estoque-sort-btn" data-sort="contagens">Contagens <i class="fas fa-sort"></i></button></th>
               </tr>
             </thead>
             <tbody id="tableBodyEstoqueCamara">
-              <tr><td colspan="8" style="text-align:center;">Selecione Filial, Semana, Dia e Fabrica para carregar.</td></tr>
+              <tr><td colspan="10" style="text-align:center;">Selecione Filial, Semana, Dia e Fabrica para carregar.</td></tr>
             </tbody>
           </table>
         </div>
@@ -176,6 +178,6 @@
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/estoque-camara-fria.js?v=20260708-exportacao" defer></script>
+  <script type="module" src="script/estoque-camara-fria.js?v=20260708-fluxo" defer></script>
 </body>
 </html>
