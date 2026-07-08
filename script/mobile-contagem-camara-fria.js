@@ -75,7 +75,7 @@ function bind() {
 
     el.produtosLista.addEventListener('input', event => {
         if (event.target.matches('.input-paletes, .input-caixas')) {
-            atualizarCard(event.target.closest('.produto-card'));
+            processarAlteracaoQuantidade(event.target);
             atualizarTotais();
         }
     });
@@ -357,6 +357,29 @@ function atualizarCard(card) {
     const pesoCaixa = Number(card.dataset.pesoCaixa) || 0;
     card.querySelector('.total-caixas').textContent = String(caixas);
     card.querySelector('.total-peso').textContent = `${formatPeso(caixas * pesoCaixa)} KG`;
+}
+
+function processarAlteracaoQuantidade(input) {
+    const card = input.closest('.produto-card');
+    if (!card) return;
+    if (input.matches('.input-caixas')) {
+        distribuirCaixasEmPaletes(card, input);
+    }
+    atualizarCard(card);
+}
+
+function distribuirCaixasEmPaletes(card, inputCaixas) {
+    const valor = String(inputCaixas?.value || '').trim();
+    const caixasPorPalete = Number(card.dataset.caixasPorPalete) || 0;
+    if (!valor || caixasPorPalete <= 0) return;
+
+    const totalCaixas = parseInt(valor, 10);
+    if (!Number.isFinite(totalCaixas) || totalCaixas < 0) return;
+
+    const inputPaletes = card.querySelector('.input-paletes');
+    const quantidades = calcularQuantidadesPelasCaixas(totalCaixas, caixasPorPalete);
+    if (inputPaletes) inputPaletes.value = quantidades.paletes;
+    inputCaixas.value = quantidades.caixasAvulsas;
 }
 
 function atualizarTotais() {
