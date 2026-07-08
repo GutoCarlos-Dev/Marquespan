@@ -27,7 +27,10 @@ ALTER TABLE public.veiculos
     ADD COLUMN IF NOT EXISTS foto_dianteira_url text,
     ADD COLUMN IF NOT EXISTS foto_traseira_url text,
     ADD COLUMN IF NOT EXISTS foto_lateral_1_url text,
-    ADD COLUMN IF NOT EXISTS foto_lateral_2_url text;
+    ADD COLUMN IF NOT EXISTS foto_lateral_2_url text,
+    ADD COLUMN IF NOT EXISTS arquivo_anexo_url text,
+    ADD COLUMN IF NOT EXISTS arquivo_anexo_nome text,
+    ADD COLUMN IF NOT EXISTS arquivo_anexo_tipo text;
 
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('veiculos_fotos', 'veiculos_fotos', false)

@@ -274,13 +274,15 @@
 
                 <section class="veiculo-form-section">
                     <h4><i class="fas fa-camera"></i> Anexar Fotos do Veículo</h4>
+                    <div id="veiculoAnexosExistentes" class="veiculo-anexos-lista hidden"></div>
                     <div class="veiculo-form-grid fotos-grid">
                         <div class="form-group"><label for="veiculoFotoDianteira">Foto Dianteira</label><input type="file" id="veiculoFotoDianteira" class="glass-input veiculo-foto-input" accept="image/*"></div>
                         <div class="form-group"><label for="veiculoFotoTraseira">Foto Traseira</label><input type="file" id="veiculoFotoTraseira" class="glass-input veiculo-foto-input" accept="image/*"></div>
                         <div class="form-group"><label for="veiculoFotoLateral1">Foto Lateral 1</label><input type="file" id="veiculoFotoLateral1" class="glass-input veiculo-foto-input" accept="image/*"></div>
                         <div class="form-group"><label for="veiculoFotoLateral2">Foto Lateral 2</label><input type="file" id="veiculoFotoLateral2" class="glass-input veiculo-foto-input" accept="image/*"></div>
+                        <div class="form-group full-width"><label for="veiculoArquivoAnexo">Arquivo do Veículo (PDF, XLSX, DOC etc.)</label><input type="file" id="veiculoArquivoAnexo" class="glass-input" accept=".pdf,.xlsx,.xls,.doc,.docx,.txt,.csv,.zip,image/*"></div>
                     </div>
-                    <p class="veiculo-upload-hint">Fotos opcionais. Ao editar um veículo, envie uma nova foto apenas se quiser substituir a atual.</p>
+                    <p class="veiculo-upload-hint">Fotos e arquivo opcionais. Ao editar um veículo, envie um novo arquivo apenas se quiser substituir o atual.</p>
                 </section>
                 <div class="form-actions">
                     <button type="button" class="btn-glass btn-red" onclick="document.getElementById('modalVeiculo').classList.add('hidden')">Cancelar</button>
@@ -323,7 +325,7 @@
   <!-- ðŸš€ Scripts -->
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="./script/veiculos.js?v=20260701-filial-readonly" defer></script>
+  <script type="module" src="./script/veiculos.js?v=20260708-anexos" defer></script>
   <script type="module" src="./script/veiculos-qr.js?v=20260701-filial-readonly" defer></script>
 </body>
 </html>

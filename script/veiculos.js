@@ -2,6 +2,13 @@ import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
 const VEICULOS_PAGE_ID = 'veiculos.html';
+const VEICULOS_STORAGE_BUCKET = 'veiculos_fotos';
+const VEICULOS_FOTOS_CAMPOS = [
+    { coluna: 'foto_dianteira_url', label: 'Foto Dianteira', nome: 'dianteira' },
+    { coluna: 'foto_traseira_url', label: 'Foto Traseira', nome: 'traseira' },
+    { coluna: 'foto_lateral_1_url', label: 'Foto Lateral 1', nome: 'lateral_1' },
+    { coluna: 'foto_lateral_2_url', label: 'Foto Lateral 2', nome: 'lateral_2' }
+];
 
 let veiculosData = [];
 let currentSort = { column: null, direction: 'asc' };
@@ -158,6 +165,11 @@ function setupEventListeners() {
     const formVeiculo = document.getElementById('formVeiculo');
     if (formVeiculo) {
         formVeiculo.addEventListener('submit', salvarVeiculo);
+    }
+
+    const anexosExistentes = document.getElementById('veiculoAnexosExistentes');
+    if (anexosExistentes) {
+        anexosExistentes.addEventListener('click', handleDownloadAnexoVeiculo);
     }
 
     // Delegação de eventos na tabela (Editar/Excluir)
@@ -562,6 +574,7 @@ function abrirModalVeiculo(veiculo = null) {
     if (!modal || !form) return;
 
     form.reset();
+    renderizarAnexosVeiculo(veiculo);
 
     if (veiculo) {
         title.textContent = 'Editar Veículo';
@@ -761,10 +774,10 @@ async function salvarVeiculo(e) {
         if (error) throw error;
         if (!savedId) throw new Error('ID do veículo não retornado após salvar.');
 
-        const fotosPayload = await uploadFotosVeiculo(savedId, payload.placa);
-        if (Object.keys(fotosPayload).length > 0) {
-            const { error: fotoError } = await supabaseClient.from('veiculos').update(fotosPayload).eq('id', savedId);
-            if (fotoError) throw fotoError;
+        const anexosPayload = await uploadAnexosVeiculo(savedId, payload.placa);
+        if (Object.keys(anexosPayload).length > 0) {
+            const { error: anexosError } = await supabaseClient.from('veiculos').update(anexosPayload).eq('id', savedId);
+            if (anexosError) throw anexosError;
         }
 
         registrarAuditoria(id ? 'ALTERAR' : 'INCLUIR', 'Veículos', `${id ? 'Alteração' : 'Inclusão'} do veículo placa ${payload.placa}`);
@@ -800,7 +813,7 @@ async function uploadFotosVeiculo(veiculoId, placa) {
         const ext = file.name.split('.').pop() || 'jpg';
         const filePath = `${pasta}/${foto.nome}.${ext}`;
         const { error } = await supabaseClient.storage
-            .from('veiculos_fotos')
+            .from(VEICULOS_STORAGE_BUCKET)
             .upload(filePath, file, { upsert: true, contentType: file.type });
 
         if (error) throw new Error(`Falha ao enviar ${foto.nome}: ${error.message}`);
@@ -808,6 +821,130 @@ async function uploadFotosVeiculo(veiculoId, placa) {
     }
 
     return uploaded;
+}
+
+async function uploadAnexosVeiculo(veiculoId, placa) {
+    const uploaded = await uploadFotosVeiculo(veiculoId, placa);
+    const inputArquivo = document.getElementById('veiculoArquivoAnexo');
+    const arquivo = inputArquivo?.files?.[0];
+
+    if (!arquivo) return uploaded;
+
+    const pasta = String(placa || veiculoId).replace(/[^a-z0-9]/gi, '_').toUpperCase();
+    const nomeSeguro = normalizarNomeArquivo(arquivo.name || `arquivo_${Date.now()}`);
+    const filePath = `${pasta}/arquivo/${Date.now()}_${nomeSeguro}`;
+    const { error } = await supabaseClient.storage
+        .from(VEICULOS_STORAGE_BUCKET)
+        .upload(filePath, arquivo, { upsert: true, contentType: arquivo.type || 'application/octet-stream' });
+
+    if (error) throw new Error(`Falha ao enviar arquivo do veiculo: ${error.message}`);
+
+    uploaded.arquivo_anexo_url = filePath;
+    uploaded.arquivo_anexo_nome = arquivo.name;
+    uploaded.arquivo_anexo_tipo = arquivo.type || null;
+    return uploaded;
+}
+
+function renderizarAnexosVeiculo(veiculo) {
+    const container = document.getElementById('veiculoAnexosExistentes');
+    if (!container) return;
+
+    container.replaceChildren();
+
+    const anexos = [];
+    if (veiculo) {
+        VEICULOS_FOTOS_CAMPOS.forEach((foto) => {
+            const path = veiculo[foto.coluna];
+            if (path) anexos.push({ label: foto.label, path, nome: obterNomeArquivo(path) });
+        });
+
+        if (veiculo.arquivo_anexo_url) {
+            anexos.push({
+                label: 'Arquivo do Veiculo',
+                path: veiculo.arquivo_anexo_url,
+                nome: veiculo.arquivo_anexo_nome || obterNomeArquivo(veiculo.arquivo_anexo_url)
+            });
+        }
+    }
+
+    container.classList.toggle('hidden', anexos.length === 0);
+    anexos.forEach((anexo) => container.appendChild(criarItemAnexoVeiculo(anexo)));
+}
+
+function criarItemAnexoVeiculo(anexo) {
+    const item = document.createElement('div');
+    item.className = 'veiculo-anexo-item';
+
+    const info = document.createElement('div');
+    info.className = 'veiculo-anexo-info';
+
+    const titulo = document.createElement('span');
+    titulo.className = 'veiculo-anexo-titulo';
+    titulo.textContent = anexo.label;
+
+    const nome = document.createElement('span');
+    nome.className = 'veiculo-anexo-nome';
+    nome.textContent = anexo.nome || 'Arquivo salvo';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-download-anexo';
+    btn.dataset.path = anexo.path;
+    btn.dataset.nome = anexo.nome || '';
+    btn.innerHTML = '<i class="fas fa-download"></i> Baixar';
+
+    info.append(titulo, nome);
+    item.append(info, btn);
+    return item;
+}
+
+async function handleDownloadAnexoVeiculo(event) {
+    const button = event.target.closest('.btn-download-anexo');
+    if (!button) return;
+
+    const path = button.dataset.path;
+    if (!path) return;
+
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    try {
+        const { data, error } = await supabaseClient.storage
+            .from(VEICULOS_STORAGE_BUCKET)
+            .createSignedUrl(path, 60);
+
+        if (error) throw error;
+        const response = await fetch(data.signedUrl);
+        if (!response.ok) throw new Error('Falha ao obter arquivo do storage.');
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = button.dataset.nome || obterNomeArquivo(path);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+        console.error('Erro ao baixar anexo do veiculo:', err);
+        alert('Nao foi possivel baixar o arquivo.');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalText;
+    }
+}
+
+function obterNomeArquivo(path) {
+    return decodeURIComponent(String(path || '').split('/').pop() || 'arquivo');
+}
+
+function normalizarNomeArquivo(nome) {
+    return String(nome || 'arquivo')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
 async function excluirVeiculo(id) {
