@@ -600,6 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td><span class="carregamento-status-pill ${item.status === 'FINALIZADO' ? 'finalizado' : 'aberto'}">${item.status === 'FINALIZADO' ? 'Finalizado' : 'Aberto'}</span></td>
                         <td class="actions-cell">
                             <button class="btn-icon edit" data-action="abrir" data-id="${item.id}" data-filial="${this.escapeHtml(item.filial)}" data-fabrica="${item.fabrica_id || ''}" data-data="${item.data_carregamento}" title="Abrir"><i class="fas fa-folder-open"></i></button>
+                            ${item.status === 'FINALIZADO' ? `<button class="btn-icon edit" data-action="reabrir" data-id="${item.id}" title="Reabrir"><i class="fas fa-lock-open"></i></button>` : ''}
                             <button class="btn-icon delete" data-action="excluir" data-id="${item.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
@@ -621,6 +622,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            if (button.dataset.action === 'reabrir') {
+                await this.reabrirCarregamento(button.dataset.id);
+                return;
+            }
+
             if (button.dataset.action === 'excluir') {
                 if (!confirm('Excluir esta lista de carregamento?')) return;
                 try {
@@ -636,6 +642,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('Erro ao excluir carregamento:', error);
                     alert('Erro ao excluir carregamento: ' + error.message);
                 }
+            }
+        },
+
+        async reabrirCarregamento(id) {
+            if (!id) return;
+            if (!confirm('Reabrir esta lista para continuar lancando?')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('carregamentos_camara_fria')
+                    .update({ status: 'ABERTO', updated_at: new Date().toISOString() })
+                    .eq('id', id);
+                if (error) throw error;
+
+                registrarAuditoria('ALTERAR', 'Camara Fria', `Lista de carregamento reaberta - ID: ${id}`);
+
+                if (String(this.carregamentoAtual?.id || '') === String(id)) {
+                    this.carregamentoAtual.status = 'ABERTO';
+                    this.renderProdutos();
+                    this.atualizarContagemInfo();
+                    this.atualizarEstado(true);
+                    this.configurarRealtime();
+                }
+
+                await this.renderCarregamentosRecentes();
+                alert('Lista reaberta com sucesso.');
+            } catch (error) {
+                console.error('Erro ao reabrir carregamento:', error);
+                alert('Erro ao reabrir carregamento: ' + error.message);
             }
         },
 

@@ -59,7 +59,13 @@ function cache() {
 function bind() {
     el.btnAbrir.addEventListener('click', abrirOuCriarLista);
     el.btnVoltar.addEventListener('click', voltarInicio);
-    el.btnFinalizar.addEventListener('click', finalizarLista);
+    el.btnFinalizar.addEventListener('click', () => {
+        if (state.listaAtual?.status === 'FINALIZADO') {
+            reabrirLista();
+        } else {
+            finalizarLista();
+        }
+    });
     el.btnAtualizar.addEventListener('click', atualizarListaAtual);
 
     el.busca.addEventListener('input', () => {
@@ -359,7 +365,12 @@ function renderTelaLista() {
     el.status.textContent = statusFinalizado ? 'Finalizada' : 'Aberta';
     el.status.className = `status-pill ${statusFinalizado ? 'finalizado' : ''}`;
     el.info.textContent = `${state.contagemReferencia?.fabricas_camara_fria?.nome || 'Contagem unica'} | Atualizacao ao vivo`;
-    el.btnFinalizar.disabled = statusFinalizado;
+    el.btnFinalizar.disabled = false;
+    el.btnFinalizar.classList.toggle('btn-refresh', statusFinalizado);
+    el.btnFinalizar.classList.toggle('btn-finish', !statusFinalizado);
+    el.btnFinalizar.innerHTML = statusFinalizado
+        ? '<i class="fas fa-lock-open"></i> Reabrir'
+        : '<i class="fas fa-check"></i> Finalizar';
 
     renderProdutos();
     atualizarTotais();
@@ -642,8 +653,38 @@ async function finalizarLista() {
         console.error('Erro ao finalizar lista:', error);
         alert('Erro ao finalizar lista: ' + error.message);
     } finally {
-        setLoadingButton(el.btnFinalizar, false, '<i class="fas fa-check"></i> Finalizar');
-        el.btnFinalizar.disabled = state.listaAtual?.status === 'FINALIZADO';
+        setLoadingButton(el.btnFinalizar, false, state.listaAtual?.status === 'FINALIZADO'
+            ? '<i class="fas fa-lock-open"></i> Reabrir'
+            : '<i class="fas fa-check"></i> Finalizar');
+    }
+}
+
+async function reabrirLista() {
+    if (!state.listaAtual?.id) return alert('Abra uma lista antes de reabrir.');
+    if (state.listaAtual.status !== 'FINALIZADO') return;
+    if (!confirm('Reabrir esta lista para continuar lancando?')) return;
+
+    setLoadingButton(el.btnFinalizar, true, '<i class="fas fa-spinner fa-spin"></i> Reabrindo...');
+    try {
+        const { error } = await supabaseClient
+            .from('carregamentos_camara_fria')
+            .update({ status: 'ABERTO', updated_at: new Date().toISOString() })
+            .eq('id', state.listaAtual.id);
+        if (error) throw error;
+
+        registrarAuditoria('ALTERAR', 'Camara Fria', `Lista de carregamento reaberta via app - ID: ${state.listaAtual.id}`);
+        state.listaAtual.status = 'ABERTO';
+        renderTelaLista();
+        configurarRealtime();
+        await renderListasRecentes();
+        alert('Lista reaberta com sucesso. Voce ja pode continuar lancando.');
+    } catch (error) {
+        console.error('Erro ao reabrir lista:', error);
+        alert('Erro ao reabrir lista: ' + error.message);
+    } finally {
+        setLoadingButton(el.btnFinalizar, false, state.listaAtual?.status === 'FINALIZADO'
+            ? '<i class="fas fa-lock-open"></i> Reabrir'
+            : '<i class="fas fa-check"></i> Finalizar');
     }
 }
 
