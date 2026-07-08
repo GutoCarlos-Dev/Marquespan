@@ -29,6 +29,10 @@ const DIARIA_NIVEIS_PERMITIDOS = new Set([
     'gerencia',
     'lider_balanca'
 ]);
+const ESCALA_NIVEIS_RESTRITOS_FALTAS_RESERVAS = new Set([
+    'adm_colisao',
+    'adm_pedido'
+]);
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Página de Controle de Escala carregada.');
@@ -48,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const podeGerenciarEscala = ESCALA_NIVEIS_GERENCIAMENTO.has(nivelUsuarioEscala);
     const podeAcessarDiaria = DIARIA_NIVEIS_PERMITIDOS.has(nivelUsuarioEscala);
     const isAdmPedidoEscala = nivelUsuarioEscala === 'adm_pedido';
+    const restringeFaltasReservasPlanejamento = ESCALA_NIVEIS_RESTRITOS_FALTAS_RESERVAS.has(nivelUsuarioEscala);
 
     const acessoPermitido = await verificarPermissaoPaginaEscala();
     if (!acessoPermitido) {
@@ -161,6 +166,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnDiaria.disabled = !podeAcessarDiaria;
         }
 
+        if (restringeFaltasReservasPlanejamento) {
+            [
+                'btnCalculoPeso',
+                'btnAdicionarFaltaPlanejamento'
+            ].forEach(id => {
+                const element = document.getElementById(id);
+                if (!element) return;
+                element.disabled = true;
+                element.classList.add('hidden');
+                element.title = 'Disponivel apenas para niveis autorizados.';
+            });
+        }
+
         if (btnImportarSemana) {
             btnImportarSemana.disabled = true;
             btnImportarSemana.classList.add('hidden', 'escala-importar-semana-oculto');
@@ -203,7 +221,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isAdmPedidoEscala) {
             idsSomenteGerencia.push(
                 'btnPDFExpedicaoModelo',
-                'btnCalculoPeso',
                 'btnGerarBoleta',
                 'btnModeloDia',
                 'btnImportarDia',
@@ -2029,7 +2046,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
 
                 // Opção específica para preencher Peso de Rota ao clicar na coluna ROTA
-                if (key === 'rota' && input.value.trim() !== '') {
+                if (key === 'rota' && input.value.trim() !== '' && !restringeFaltasReservasPlanejamento) {
                     const rota = input.value.trim();
                     const placa = tr.querySelector('input[data-key="placa"]')?.value || '';
                     const modelo = tr.querySelector('input[data-key="modelo"]')?.value || '';
@@ -10320,11 +10337,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${DIAS_FALTAS_PLANEJAMENTO.map(dia => {
                             const registro = item.dias[dia];
                             if (!registro) return '<td style="text-align: center;"></td>';
-                            return `<td style="text-align: center; white-space: nowrap;">
-                                <span>${escapeAttribute(registro.motivo)}</span>
+                            const botaoRemover = restringeFaltasReservasPlanejamento ? '' : `
                                 <button type="button" class="btn-icon delete btn-remover-falta-plan" data-id="${registro.id}" data-campo="${registro.campo}" title="Remover lançamento" style="padding: 2px 4px; margin-left: 4px; font-size: 0.85em;">
                                     <i class="fas fa-times"></i>
-                                </button>
+                                </button>`;
+                            return `<td style="text-align: center; white-space: nowrap;">
+                                <span>${escapeAttribute(registro.motivo)}</span>
+                                ${botaoRemover}
                             </td>`;
                         }).join('')}
                     </tr>
@@ -10451,11 +10470,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${DIAS_FALTAS_PLANEJAMENTO.map(dia => {
                             const registro = item.dias[dia];
                             if (registro) {
-                                return `<td style="text-align: center; white-space: nowrap;">
-                                    <span>${escapeAttribute(registro.placa || 'RESERVA')}</span>
+                                const botaoTrocar = restringeFaltasReservasPlanejamento ? '' : `
                                     <button type="button" class="btn-icon edit btn-trocar-reserva-plan" data-dia="${dia}" title="Trocar funcionário em ${dia}" style="padding: 2px 4px; margin-left: 4px; font-size: 0.85em;">
                                         <i class="fas fa-right-left"></i>
-                                    </button>
+                                    </button>`;
+                                return `<td style="text-align: center; white-space: nowrap;">
+                                    <span>${escapeAttribute(registro.placa || 'RESERVA')}</span>
+                                    ${botaoTrocar}
                                 </td>`;
                             }
 
@@ -10466,12 +10487,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             const resumosUnicos = Array.from(new Set(resumos.map(r => JSON.stringify(r)))).map(s => JSON.parse(s));
                             const tooltip = resumosUnicos.map(montarResumoEscalado).join('\n');
+                            const botaoTrocar = restringeFaltasReservasPlanejamento ? '' : `
+                                <button type="button" class="btn-icon edit btn-trocar-reserva-plan" data-dia="${dia}" title="Trocar funcionário em ${dia}" style="padding: 2px 4px; margin-left: 4px; font-size: 0.85em;">
+                                    <i class="fas fa-right-left"></i>
+                                </button>`;
 
                             return `<td style="text-align: center; white-space: nowrap; background-color: #fff3cd;" title="${escapeAttribute(tooltip)}">
                                 <span>ESCALADO</span>
-                                <button type="button" class="btn-icon edit btn-trocar-reserva-plan" data-dia="${dia}" title="Trocar funcionário em ${dia}" style="padding: 2px 4px; margin-left: 4px; font-size: 0.85em;">
-                                    <i class="fas fa-right-left"></i>
-                                </button>
+                                ${botaoTrocar}
                             </td>`;
                         }).join('')}
                     </tr>
@@ -10543,11 +10566,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('click', (e) => {
         const btnTrocarReservaPlan = e.target.closest('.btn-trocar-reserva-plan');
         if (btnTrocarReservaPlan) {
+            if (restringeFaltasReservasPlanejamento) return;
             abrirTrocaFuncionarioNoDiaPlanejamento(btnTrocarReservaPlan.dataset.dia);
         }
     });
 
     async function removerFaltaPlanejamento(id, campo) {
+        if (restringeFaltasReservasPlanejamento) {
+            alert('Seu nivel de acesso nao permite adicionar ou remover faltas/ferias/afastamentos/descontos da semana.');
+            return;
+        }
         if (!id || !campo) return;
         if (!confirm('Remover este lançamento de falta/férias/afastamento/desconto?')) return;
 
@@ -10666,6 +10694,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function abrirModalFaltasPlanejamentoSemana() {
+        if (restringeFaltasReservasPlanejamento) {
+            alert('Seu nivel de acesso nao permite adicionar ou remover faltas/ferias/afastamentos/descontos da semana.');
+            return;
+        }
         const semana = selectSemana.value;
         if (!semana) return alert('Selecione uma semana.');
 
@@ -10681,6 +10713,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function aplicarFaltaPlanejamentoSemana() {
+        if (restringeFaltasReservasPlanejamento) {
+            alert('Seu nivel de acesso nao permite adicionar ou remover faltas/ferias/afastamentos/descontos da semana.');
+            return;
+        }
         const semana = selectSemana.value;
         if (!semana) return;
 
@@ -10971,6 +11007,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnCalculoPeso) {
         btnCalculoPeso.addEventListener('click', () => {
+            if (restringeFaltasReservasPlanejamento) return;
             modalCalculoPeso.classList.remove('hidden');
             modalCalculoPeso.style.display = 'flex';
             if (calculoPesoAnularTransferencia) {
@@ -10986,6 +11023,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function abrirModalPesoRotaComDados(rota, placa, modelo, motorista, auxiliar) {
         if (!modalCalculoPeso) return;
+        if (restringeFaltasReservasPlanejamento) return;
 
         modalCalculoPeso.classList.remove('hidden');
         modalCalculoPeso.style.display = 'flex';
