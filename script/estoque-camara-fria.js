@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
         estoqueCache: new Map(),
         contagensResumo: null,
         fabricasCache: [],
+        buscaTotalContagem: '',
+        sortTotalContagem: { campo: 'produto', direcao: 'asc' },
 
         init() {
             this.cache();
@@ -18,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
             this.definirDiaSemanaAtual();
             this.loadFiliais();
             this.loadFabricas();
-            this.renderHistorico();
         },
 
         cache() {
@@ -31,9 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnLimpar = document.getElementById('btnLimparLancamento');
             this.btnAbrirCadastroFabrica = document.getElementById('btnAbrirCadastroFabrica');
             this.tableBody = document.getElementById('tableBodyEstoqueCamara');
-            this.historicoBody = document.getElementById('tableBodyHistoricoEstoqueCamara');
+            this.buscaTotalInput = document.getElementById('buscaTotalContagem');
+            this.totalTable = document.querySelector('.estoque-total-table');
             this.recordsCount = document.getElementById('estoqueRecordsCount');
-            this.historicoCount = document.getElementById('historicoRecordsCount');
             this.kpiTotalCaixas = document.getElementById('kpiTotalCaixas');
             this.kpiTotalPaletes = document.getElementById('kpiTotalPaletes');
             this.kpiPesoTotal = document.getElementById('kpiPesoTotal');
@@ -58,16 +59,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.fabricaSelect.value = '__TODAS__';
                 if (this.fabricaFilial) this.fabricaFilial.value = this.filialSelect.value;
                 await this.loadFabricas();
-                this.renderHistorico();
                 if (this.formularioBaseValido(false)) this.carregarLancamento();
             });
             [this.semanaInput, this.diaSemanaSelect, this.fabricaSelect].forEach(el => {
                 el.addEventListener('change', () => {
-                    this.renderHistorico();
                     if (this.formularioBaseValido(false)) this.carregarLancamento();
                 });
             });
-            this.historicoBody.addEventListener('click', this.handleHistoricoClick.bind(this));
+            if (this.buscaTotalInput) {
+                this.buscaTotalInput.addEventListener('input', () => {
+                    this.buscaTotalContagem = this.normalizarTexto(this.buscaTotalInput.value);
+                    this.filtrarTotalContagem();
+                });
+            }
+            if (this.totalTable) {
+                this.totalTable.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.estoque-sort-btn');
+                    if (btn) this.ordenarTotalContagem(btn.dataset.sort);
+                });
+            }
 
             this.btnAbrirCadastroFabrica.addEventListener('click', () => this.openCadastroFabrica());
             this.btnCloseCadastroFabrica.addEventListener('click', () => this.closeCadastroFabrica());
@@ -190,7 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.estoqueCache = contagemResumo.totaisPorProduto;
                 this.contagensResumo = contagemResumo;
                 this.renderProdutos();
-                this.renderHistorico();
             } catch (error) {
                 console.error('Erro ao carregar estoque semanal:', error);
                 this.tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc3545;">Erro ao carregar estoque.</td></tr>';
@@ -261,15 +270,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            this.tableBody.innerHTML = this.produtosCache.map(produto => {
+            const produtosOrdenados = this.getProdutosOrdenados();
+            this.tableBody.innerHTML = produtosOrdenados.map(produto => {
                 const estoque = this.estoqueCache.get(String(produto.id));
                 const caixas = Number(estoque?.quantidade_caixas) || 0;
                 const caixasPorPalete = Number(produto.caixas_por_palete) || 0;
                 const quantidades = this.calcularQuantidadesPelasCaixas(caixas, caixasPorPalete);
                 const contagensProduto = estoque?.contagemIds?.size || 0;
                 const pesoTotal = caixas * (Number(produto.peso_caixa) || 0);
+                const textoBusca = this.normalizarTexto(`${produto.codigo || ''} ${produto.nome || ''} ${produto.tipo || ''}`);
                 return `
-                    <tr data-produto-id="${produto.id}" data-peso-caixa="${produto.peso_caixa || 0}" data-total-caixas="${caixas}" data-total-paletes="${quantidades.paletes}">
+                    <tr data-produto-id="${produto.id}" data-peso-caixa="${produto.peso_caixa || 0}" data-total-caixas="${caixas}" data-total-paletes="${quantidades.paletes}" data-search="${this.escapeHtml(textoBusca)}">
                         <td>${this.escapeHtml(produto.codigo) || '-'}</td>
                         <td>
                             <strong>${this.escapeHtml(produto.nome)}</strong>
@@ -285,7 +296,88 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }).join('');
 
+            this.filtrarTotalContagem();
             this.atualizarTotais();
+            this.atualizarIconesOrdenacao();
+        },
+
+        getProdutosOrdenados() {
+            const campo = this.sortTotalContagem.campo;
+            const direcao = this.sortTotalContagem.direcao === 'desc' ? -1 : 1;
+            return [...this.produtosCache].sort((a, b) => {
+                const valorA = this.getValorOrdenacaoProduto(a, campo);
+                const valorB = this.getValorOrdenacaoProduto(b, campo);
+                if (typeof valorA === 'number' && typeof valorB === 'number') {
+                    return (valorA - valorB) * direcao;
+                }
+                return String(valorA).localeCompare(String(valorB), 'pt-BR', {
+                    numeric: true,
+                    sensitivity: 'base'
+                }) * direcao;
+            });
+        },
+
+        getValorOrdenacaoProduto(produto, campo) {
+            const estoque = this.estoqueCache.get(String(produto.id));
+            const caixas = Number(estoque?.quantidade_caixas) || 0;
+            const caixasPorPalete = Number(produto.caixas_por_palete) || 0;
+            const quantidades = this.calcularQuantidadesPelasCaixas(caixas, caixasPorPalete);
+            const contagensProduto = estoque?.contagemIds?.size || 0;
+            const pesoTotal = caixas * (Number(produto.peso_caixa) || 0);
+
+            const valores = {
+                codigo: produto.codigo || '',
+                produto: produto.nome || '',
+                tipo: produto.tipo || '',
+                paletes: quantidades.paletes,
+                caixas_avulsas: quantidades.caixasAvulsas,
+                total_caixas: caixas,
+                peso_total: pesoTotal,
+                contagens: contagensProduto
+            };
+            return valores[campo] ?? '';
+        },
+
+        ordenarTotalContagem(campo) {
+            if (!campo) return;
+            if (this.sortTotalContagem.campo === campo) {
+                this.sortTotalContagem.direcao = this.sortTotalContagem.direcao === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortTotalContagem = { campo, direcao: 'asc' };
+            }
+            this.renderProdutos();
+        },
+
+        atualizarIconesOrdenacao() {
+            if (!this.totalTable) return;
+            this.totalTable.querySelectorAll('.estoque-sort-btn').forEach(btn => {
+                const icon = btn.querySelector('i');
+                const ativo = btn.dataset.sort === this.sortTotalContagem.campo;
+                btn.classList.toggle('active', ativo);
+                if (!icon) return;
+                icon.className = ativo
+                    ? `fas fa-sort-${this.sortTotalContagem.direcao === 'asc' ? 'up' : 'down'}`
+                    : 'fas fa-sort';
+            });
+        },
+
+        filtrarTotalContagem() {
+            const termo = this.buscaTotalContagem || '';
+            const linhas = Array.from(this.tableBody.querySelectorAll('tr[data-produto-id]'));
+            let visiveis = 0;
+
+            linhas.forEach(tr => {
+                const exibir = !termo || String(tr.dataset.search || '').includes(termo);
+                tr.hidden = !exibir;
+                if (exibir) visiveis++;
+            });
+
+            if (this.recordsCount) {
+                const total = linhas.length;
+                this.recordsCount.textContent = termo
+                    ? `${visiveis} de ${total} produto${total === 1 ? '' : 's'}`
+                    : `${total} produto${total === 1 ? '' : 's'}`;
+            }
         },
 
         atualizarLinha(tr) {
@@ -616,6 +708,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 .replace(/"/g, '&quot;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
+        },
+
+        normalizarTexto(value) {
+            return String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
         },
 
         formatPeso(value) {

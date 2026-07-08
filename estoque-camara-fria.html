@@ -93,20 +93,26 @@
       <div class="glass-panel">
         <div class="panel-header">
           <h3><i class="fas fa-boxes-stacked"></i> Total da Contagem</h3>
-          <span id="estoqueRecordsCount" class="produtos-count-badge"></span>
+          <div class="estoque-grid-tools">
+            <div class="input-icon-wrapper estoque-search">
+              <i class="fas fa-search"></i>
+              <input type="search" id="buscaTotalContagem" class="glass-input" placeholder="Buscar codigo, produto ou tipo">
+            </div>
+            <span id="estoqueRecordsCount" class="produtos-count-badge"></span>
+          </div>
         </div>
         <div class="table-responsive produtos-table-container estoque-table-container">
-          <table class="glass-table">
+          <table class="glass-table estoque-total-table">
             <thead class="produtos-table-head">
               <tr>
-                <th>Codigo</th>
-                <th>Produto</th>
-                <th>Tipo</th>
-                <th>Paletes</th>
-                <th>Caixas</th>
-                <th>Total Caixas</th>
-                <th>Peso Total</th>
-                <th>Contagens</th>
+                <th><button type="button" class="estoque-sort-btn" data-sort="codigo">Codigo <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="estoque-sort-btn" data-sort="produto">Produto <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="estoque-sort-btn" data-sort="tipo">Tipo <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="estoque-sort-btn" data-sort="paletes">Paletes <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="estoque-sort-btn" data-sort="caixas_avulsas">Caixas <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="estoque-sort-btn" data-sort="total_caixas">Total Caixas <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="estoque-sort-btn" data-sort="peso_total">Peso Total <i class="fas fa-sort"></i></button></th>
+                <th><button type="button" class="estoque-sort-btn" data-sort="contagens">Contagens <i class="fas fa-sort"></i></button></th>
               </tr>
             </thead>
             <tbody id="tableBodyEstoqueCamara">
@@ -116,32 +122,6 @@
         </div>
       </div>
 
-      <div class="glass-panel">
-        <div class="panel-header">
-          <h3><i class="fas fa-clock-rotate-left"></i> Historico Registrado</h3>
-          <span id="historicoRecordsCount" class="produtos-count-badge"></span>
-        </div>
-        <div class="table-responsive estoque-historico-container">
-          <table class="glass-table table-compact">
-            <thead>
-              <tr>
-                <th>Filial</th>
-                <th>Semana</th>
-                <th>Fabrica</th>
-                <th>Codigo</th>
-                <th>Produto</th>
-                <th>Caixas</th>
-                <th>Peso Total</th>
-                <th>Usuario</th>
-                <th style="width: 70px; text-align: center;">Acoes</th>
-              </tr>
-            </thead>
-            <tbody id="tableBodyHistoricoEstoqueCamara">
-              <tr><td colspan="9" style="text-align:center;">Nenhum registro carregado.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   </div>
 

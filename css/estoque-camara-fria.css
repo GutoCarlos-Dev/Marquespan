@@ -48,6 +48,58 @@
     max-height: 520px;
 }
 
+.estoque-grid-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.estoque-search {
+    width: min(360px, 100%);
+}
+
+.estoque-search .glass-input {
+    min-height: 36px;
+    padding-left: 38px;
+}
+
+.estoque-total-table th,
+.estoque-total-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.estoque-total-table td:nth-child(2) {
+    text-align: center;
+}
+
+.estoque-sort-btn {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.estoque-sort-btn i {
+    color: #7b8794;
+    font-size: 0.78rem;
+}
+
+.estoque-sort-btn.active i,
+.estoque-sort-btn:hover i {
+    color: var(--primary-color);
+}
+
 .estoque-historico-container {
     max-height: 360px;
     overflow-y: auto;
@@ -81,7 +133,7 @@
 
 .estoque-qtd-caixas {
     font-weight: 700;
-    text-align: right;
+    text-align: center;
     color: #2f3d4a;
     white-space: nowrap;
 }
@@ -89,7 +141,7 @@
 .estoque-total-paletes,
 .estoque-caixas-avulsas {
     font-weight: 700;
-    text-align: right;
+    text-align: center;
     color: #2f3d4a;
     white-space: nowrap;
 }
@@ -239,5 +291,14 @@
         align-items: stretch;
         flex-direction: column;
         gap: 8px;
+    }
+
+    .estoque-grid-tools {
+        align-items: stretch;
+        justify-content: stretch;
+    }
+
+    .estoque-search {
+        width: 100%;
     }
 }
