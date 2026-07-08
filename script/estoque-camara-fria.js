@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${this.escapeHtml(produto.codigo) || '-'}</td>
                         <td>
                             <strong>${this.escapeHtml(produto.nome)}</strong>
-                            <div class="produto-meta">${this.escapeHtml(produto.filial || 'TODAS')}</div>
+                            <div class="produto-meta">CAIXAS/PALETE: ${this.escapeHtml(produto.caixas_por_palete || 0)}</div>
                         </td>
                         <td>${this.escapeHtml(produto.tipo) || '-'}</td>
                         <td class="estoque-total-paletes">${quantidades.paletes}</td>
