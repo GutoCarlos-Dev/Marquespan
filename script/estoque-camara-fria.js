@@ -1,6 +1,8 @@
 import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
+const DIA_SEMANA_TODOS = '__TODOS__';
+
 document.addEventListener('DOMContentLoaded', () => {
     const EstoqueCamaraFriaUI = {
         filialRestrita: '',
@@ -222,8 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('contagens_camara_fria')
                 .select('id, fabrica_id, status')
                 .eq('filial', this.filialSelect.value)
-                .eq('semana', this.semanaInput.value)
-                .eq('dia_semana', this.diaSemanaSelect.value);
+                .eq('semana', this.semanaInput.value);
+
+            if (this.diaSemanaSelect.value !== DIA_SEMANA_TODOS) {
+                contagensQuery = contagensQuery.eq('dia_semana', this.diaSemanaSelect.value);
+            }
 
             if (this.fabricaSelect.value !== '__TODAS__') {
                 contagensQuery = contagensQuery.eq('fabrica_id', this.fabricaSelect.value);
@@ -612,7 +617,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         getNomeArquivoExportacao(extensao) {
             const contexto = this.getContextoExportacao();
-            return `Total_Contagem_Camara_Fria_${contexto.filial}_${this.semanaInput.value}_${this.diaSemanaSelect.value}_${contexto.fabrica}.${extensao}`
+            const diaArquivo = this.diaSemanaSelect.value === DIA_SEMANA_TODOS ? 'TODAS' : this.diaSemanaSelect.value;
+            return `Total_Contagem_Camara_Fria_${contexto.filial}_${this.semanaInput.value}_${diaArquivo}_${contexto.fabrica}.${extensao}`
                 .replace(/[^a-z0-9_.-]+/gi, '_');
         },
 
@@ -924,6 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         formatDiaSemana(value) {
+            if (String(value || '').trim().toUpperCase() === DIA_SEMANA_TODOS) return 'Todas';
             const labels = {
                 SEGUNDA: 'SEGUNDA',
                 TERCA: 'TERÇA',
