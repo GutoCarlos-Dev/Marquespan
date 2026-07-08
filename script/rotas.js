@@ -8,6 +8,13 @@ class SupabaseService {
   static async list(table, cols='*', opts={}){
     let q = supabaseClient.from(table).select(cols).order(opts.orderBy||'id',{ascending:!!opts.ascending});
     if(opts.eq) q = q.eq(opts.eq.field, opts.eq.value);
+    if(Array.isArray(opts.eqList)) {
+      opts.eqList.forEach(filter => {
+        if (filter?.field && filter.value !== undefined && filter.value !== null && filter.value !== '') {
+          q = q.eq(filter.field, filter.value);
+        }
+      });
+    }
     if(opts.ilike) q = q.ilike(opts.ilike.field, opts.ilike.value);
     if(opts.or) q = q.or(opts.or);
     const { data, error } = await q;
@@ -83,6 +90,12 @@ const RotasUI = {
 
         const formTitle = document.querySelector('#sectionCadastrarRotas > h3');
         if (formTitle) formTitle.style.display = 'none';
+
+        const bulkActions = document.getElementById('rotasBulkActions');
+        if (bulkActions) bulkActions.style.display = 'none';
+
+        const selectAll = document.getElementById('selectAllRotas');
+        if (selectAll) selectAll.disabled = true;
     },
 
     async verificarPermissaoPagina() {
@@ -138,6 +151,13 @@ const RotasUI = {
         this.supervisorSelect = document.getElementById('rotaSupervisor');
         this.filialSelect = document.getElementById('rotaFilial'); // Novo campo Filial
         this.filtroGridFilial = document.getElementById('filtroGridFilial');
+        this.filtroGridSemana = document.getElementById('filtroGridSemana');
+        this.filtroGridSupervisor = document.getElementById('filtroGridSupervisor');
+        this.rotasBulkActions = document.getElementById('rotasBulkActions');
+        this.rotasSelecionadasCount = document.getElementById('rotasSelecionadasCount');
+        this.bulkStatusRotas = document.getElementById('bulkStatusRotas');
+        this.btnAplicarStatusRotas = document.getElementById('btnAplicarStatusRotas');
+        this.selectAllRotas = document.getElementById('selectAllRotas');
 
         // Botão e input de importação
         this.btnImportarLista = document.getElementById('btnImportarLista');
@@ -154,12 +174,26 @@ const RotasUI = {
         }
         if (this.tableBody) {
             this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
+            this.tableBody.addEventListener('click', (e) => this.handleRotaCheckboxClick(e));
+            this.tableBody.addEventListener('change', () => this.updateRotasBulkState());
+        }
+        if (this.selectAllRotas) {
+            this.selectAllRotas.addEventListener('change', () => this.toggleTodasRotasVisiveis());
+        }
+        if (this.btnAplicarStatusRotas) {
+            this.btnAplicarStatusRotas.addEventListener('click', () => this.aplicarStatusRotasSelecionadas());
         }
         if (this.searchInput) {
             this.searchInput.addEventListener('input', () => this.renderGrid());
         }
         if (this.filtroGridFilial) {
             this.filtroGridFilial.addEventListener('change', () => this.renderGrid());
+        }
+        if (this.filtroGridSemana) {
+            this.filtroGridSemana.addEventListener('change', () => this.renderGrid());
+        }
+        if (this.filtroGridSupervisor) {
+            this.filtroGridSupervisor.addEventListener('change', () => this.renderGrid());
         }
 
         // Eventos de importação
@@ -183,16 +217,19 @@ const RotasUI = {
     setupFiltroGridFilial() {
         if (!this.searchInput || document.getElementById('filtroGridFilial')) {
             this.filtroGridFilial = document.getElementById('filtroGridFilial');
+            this.filtroGridSemana = document.getElementById('filtroGridSemana');
+            this.filtroGridSupervisor = document.getElementById('filtroGridSupervisor');
             return;
         }
 
         const searchGroup = this.searchInput.closest('.form-group') || this.searchInput.parentElement;
         if (!searchGroup?.parentNode) return;
 
+        const filtrosContainer = document.createElement('div');
+        filtrosContainer.className = 'rotas-grid-filtros';
+
         const filtroGroup = document.createElement('div');
         filtroGroup.className = 'form-group';
-        filtroGroup.style.marginBottom = '15px';
-        filtroGroup.style.maxWidth = '280px';
 
         const label = document.createElement('label');
         label.htmlFor = 'filtroGridFilial';
@@ -205,8 +242,51 @@ const RotasUI = {
 
         filtroGroup.appendChild(label);
         filtroGroup.appendChild(select);
-        searchGroup.parentNode.insertBefore(filtroGroup, searchGroup);
+
+        const semanaGroup = document.createElement('div');
+        semanaGroup.className = 'form-group';
+
+        const semanaLabel = document.createElement('label');
+        semanaLabel.htmlFor = 'filtroGridSemana';
+        semanaLabel.textContent = 'Semana';
+
+        const semanaSelect = document.createElement('select');
+        semanaSelect.id = 'filtroGridSemana';
+        semanaSelect.className = 'glass-input';
+        semanaSelect.innerHTML = `
+            <option value="">Todas</option>
+            <option value="SEGUNDA">SEGUNDA</option>
+            <option value="TERÇA">TERÇA</option>
+            <option value="QUARTA">QUARTA</option>
+            <option value="QUINTA">QUINTA</option>
+            <option value="SEXTA">SEXTA</option>
+            <option value="EXTRA">EXTRA</option>
+            <option value="AVULSA">AVULSA</option>
+        `;
+
+        semanaGroup.appendChild(semanaLabel);
+        semanaGroup.appendChild(semanaSelect);
+
+        const supervisorGroup = document.createElement('div');
+        supervisorGroup.className = 'form-group';
+
+        const supervisorLabel = document.createElement('label');
+        supervisorLabel.htmlFor = 'filtroGridSupervisor';
+        supervisorLabel.textContent = 'Supervisor';
+
+        const supervisorSelect = document.createElement('select');
+        supervisorSelect.id = 'filtroGridSupervisor';
+        supervisorSelect.className = 'glass-input';
+        supervisorSelect.innerHTML = '<option value="">Todos</option>';
+
+        supervisorGroup.appendChild(supervisorLabel);
+        supervisorGroup.appendChild(supervisorSelect);
+
+        filtrosContainer.append(filtroGroup, semanaGroup, supervisorGroup);
+        searchGroup.parentNode.insertBefore(filtrosContainer, searchGroup);
         this.filtroGridFilial = select;
+        this.filtroGridSemana = semanaSelect;
+        this.filtroGridSupervisor = supervisorSelect;
     },
 
     setupInitialState() {
@@ -230,6 +310,17 @@ const RotasUI = {
                 supervisores.forEach(sup => {
                     this.supervisorSelect.add(new Option(sup, sup));
                 });
+            }
+            if (this.filtroGridSupervisor && data) {
+                const valorAtual = this.filtroGridSupervisor.value;
+                this.filtroGridSupervisor.innerHTML = '<option value="">Todos</option>';
+                const supervisores = [...new Set(data.map(s => s.nome).filter(Boolean))].sort();
+                supervisores.forEach(sup => {
+                    this.filtroGridSupervisor.add(new Option(sup, sup));
+                });
+                if (valorAtual && Array.from(this.filtroGridSupervisor.options).some(opt => opt.value === valorAtual)) {
+                    this.filtroGridSupervisor.value = valorAtual;
+                }
             }
         } catch (err) {
             console.error('Erro ao carregar lista de supervisores:', err);
@@ -314,7 +405,7 @@ const RotasUI = {
             registrarAuditoria(editingId ? 'ALTERAR' : 'INCLUIR', 'Rotas', `${editingId ? 'Alteracao' : 'Inclusao'} da rota no ${payload.numero}`);
             alert('Rota salva com sucesso!');
             this.clearForm();
-            this.renderGrid();
+            await this.renderGrid();
         } catch (err) {
             console.error('Erro ao salvar rota:', err);
             alert(`Erro ao salvar rota: ${err.message}`);
@@ -375,6 +466,116 @@ const RotasUI = {
                 return;
             }
             this.loadForEditing(id);
+        }
+    },
+
+    getRotasSelecionadas() {
+        return Array.from(this.tableBody?.querySelectorAll('.rota-select-checkbox:checked') || [])
+            .map(input => input.value)
+            .filter(Boolean);
+    },
+
+    handleRotaCheckboxClick(e) {
+        const checkbox = e.target.closest('.rota-select-checkbox');
+        if (!checkbox) return;
+
+        const checkboxes = Array.from(this.tableBody?.querySelectorAll('.rota-select-checkbox') || []);
+        const currentIndex = checkboxes.indexOf(checkbox);
+        if (currentIndex < 0) return;
+
+        if (e.shiftKey && this.lastRotaCheckboxIndex !== undefined && this.lastRotaCheckboxIndex !== null) {
+            const start = Math.min(this.lastRotaCheckboxIndex, currentIndex);
+            const end = Math.max(this.lastRotaCheckboxIndex, currentIndex);
+            const checked = checkbox.checked;
+
+            checkboxes.slice(start, end + 1).forEach(input => {
+                input.checked = checked;
+            });
+        }
+
+        this.lastRotaCheckboxIndex = currentIndex;
+        this.updateRotasBulkState();
+    },
+
+    updateRotasBulkState() {
+        const checkboxes = Array.from(this.tableBody?.querySelectorAll('.rota-select-checkbox') || []);
+        const selecionadas = checkboxes.filter(input => input.checked);
+
+        if (this.rotasSelecionadasCount) {
+            const total = selecionadas.length;
+            this.rotasSelecionadasCount.textContent = `${total} ${total === 1 ? 'rota selecionada' : 'rotas selecionadas'}`;
+        }
+
+        if (this.selectAllRotas) {
+            this.selectAllRotas.checked = checkboxes.length > 0 && selecionadas.length === checkboxes.length;
+            this.selectAllRotas.indeterminate = selecionadas.length > 0 && selecionadas.length < checkboxes.length;
+        }
+
+        if (this.btnAplicarStatusRotas) {
+            this.btnAplicarStatusRotas.disabled = selecionadas.length === 0;
+        }
+    },
+
+    toggleTodasRotasVisiveis() {
+        const checked = Boolean(this.selectAllRotas?.checked);
+        this.tableBody?.querySelectorAll('.rota-select-checkbox').forEach(input => {
+            input.checked = checked;
+        });
+        this.updateRotasBulkState();
+    },
+
+    async aplicarStatusRotasSelecionadas() {
+        if (this.usuarioSomenteVisualiza()) {
+            alert('Seu nivel de acesso permite somente visualizar as rotas.');
+            return;
+        }
+
+        const ids = this.getRotasSelecionadas();
+        const status = this.bulkStatusRotas?.value;
+
+        if (!ids.length) {
+            alert('Selecione pelo menos uma rota.');
+            return;
+        }
+
+        if (!status) {
+            alert('Escolha se deseja ativar ou inativar as rotas selecionadas.');
+            return;
+        }
+
+        const acao = status === 'ATIVA' ? 'ativar' : 'inativar';
+        if (!confirm(`Deseja ${acao} ${ids.length} rota(s) selecionada(s)?`)) return;
+
+        const originalText = this.btnAplicarStatusRotas?.innerHTML;
+        if (this.btnAplicarStatusRotas) {
+            this.btnAplicarStatusRotas.disabled = true;
+            this.btnAplicarStatusRotas.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aplicando...';
+        }
+
+        try {
+            const { error } = await supabaseClient
+                .from('rotas')
+                .update({ status })
+                .in('id', ids);
+
+            if (error) throw error;
+
+            registrarAuditoria('ALTERAR', 'Rotas', `${status === 'ATIVA' ? 'Ativacao' : 'Inativacao'} em lote de ${ids.length} rota(s)`);
+            alert(`${ids.length} rota(s) ${status === 'ATIVA' ? 'ativada(s)' : 'inativada(s)'} com sucesso!`);
+            if (this.bulkStatusRotas) this.bulkStatusRotas.value = '';
+            if (this.selectAllRotas) {
+                this.selectAllRotas.checked = false;
+                this.selectAllRotas.indeterminate = false;
+            }
+            await this.renderGrid();
+        } catch (err) {
+            console.error('Erro ao atualizar rotas em lote:', err);
+            alert('Erro ao atualizar rotas selecionadas: ' + err.message);
+        } finally {
+            if (this.btnAplicarStatusRotas) {
+                this.btnAplicarStatusRotas.innerHTML = originalText;
+                this.updateRotasBulkState();
+            }
         }
     },
 
@@ -484,10 +685,22 @@ const RotasUI = {
             const filialUsuario = this.getFilialUsuario();
             const restringirFilial = this.usuarioSomenteVisualiza() && filialUsuario;
             const filialFiltro = restringirFilial ? filialUsuario : (this.filtroGridFilial?.value || '');
+            const semanaFiltro = this.filtroGridSemana?.value || '';
+            const supervisorFiltro = this.filtroGridSupervisor?.value || '';
             let queryOptions = { orderBy: this._sort.field, ascending: this._sort.ascending };
 
+            const eqList = [];
             if (filialFiltro) {
-                queryOptions.eq = { field: 'filial', value: filialFiltro };
+                eqList.push({ field: 'filial', value: filialFiltro });
+            }
+            if (semanaFiltro) {
+                eqList.push({ field: 'semana', value: semanaFiltro });
+            }
+            if (supervisorFiltro) {
+                eqList.push({ field: 'supervisor', value: supervisorFiltro });
+            }
+            if (eqList.length) {
+                queryOptions.eqList = eqList;
             }
 
             if (searchTerm) {
@@ -517,6 +730,9 @@ const RotasUI = {
                 const rowClass = dayClassMap[r.semana] || '';
                 return `
                 <tr class="${rowClass}">
+                    <td class="rotas-select-col">
+                        ${this.usuarioSomenteVisualiza() ? '' : `<input type="checkbox" class="rota-select-checkbox" value="${r.id}" aria-label="Selecionar rota ${r.numero || ''}">`}
+                    </td>
                     <td>${r.filial || ''}</td> <!-- Nova primeira coluna -->
                     <td>${r.numero || ''}</td>
                     <td>${r.semana || ''}</td>
@@ -532,9 +748,11 @@ const RotasUI = {
                     </td>
                 </tr>`;
             }).join('');
+            this.lastRotaCheckboxIndex = null;
+            this.updateRotasBulkState();
         } catch (e) {
-            console.error('Erro ao carregar rotas', e); // Colspan ajustado para 8
-            this.tableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar rotas.</td></tr>`;
+            console.error('Erro ao carregar rotas', e);
+            this.tableBody.innerHTML = `<tr><td colspan="9">Erro ao carregar rotas.</td></tr>`;
         }
 
         // Renderiza o resumo após carregar o grid
@@ -631,4 +849,3 @@ const RotasUI = {
 document.addEventListener('DOMContentLoaded', () => {
     RotasUI.init();
 });
-

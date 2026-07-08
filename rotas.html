@@ -87,6 +87,17 @@
         <hr style="margin: 20px 0; border-color: rgba(0,0,0,0.1);">
 
         <h3><i class="fas fa-list"></i> Rotas Cadastradas</h3>
+        <div id="rotasBulkActions" class="rotas-bulk-actions">
+            <span id="rotasSelecionadasCount">0 rotas selecionadas</span>
+            <select id="bulkStatusRotas" class="glass-input">
+                <option value="">Ação em lote</option>
+                <option value="ATIVA">Ativar selecionadas</option>
+                <option value="INATIVA">Inativar selecionadas</option>
+            </select>
+            <button type="button" id="btnAplicarStatusRotas" class="btn-glass btn-blue" disabled>
+                <i class="fas fa-check"></i> Aplicar
+            </button>
+        </div>
         <div class="form-group" style="margin-bottom: 15px;">
             <input type="text" id="searchRotaInput" placeholder="🔍 Buscar por supervisor, número ou cidades..." class="glass-input">
         </div>
@@ -95,7 +106,8 @@
             <table class="glass-table data-grid">
                 <thead>
                 <tr>
-              <th data-field="filial">FILIAL <i class="fas fa-sort"></i></th>
+                    <th class="rotas-select-col"><input type="checkbox" id="selectAllRotas" aria-label="Selecionar todas as rotas visíveis"></th>
+                    <th data-field="filial">FILIAL <i class="fas fa-sort"></i></th>
                     <th data-field="numero">NÚMERO <i class="fas fa-sort"></i></th>
                     <th data-field="semana">SEMANA <i class="fas fa-sort"></i></th>
                     <th data-field="supervisor">SUPERVISOR <i class="fas fa-sort"></i></th>
@@ -125,7 +137,7 @@
   <!-- Scripts -->
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" ></script>
-  <script type="module" src="./script/rotas.js?v=20260616-1" ></script>
+  <script type="module" src="./script/rotas.js?v=20260708-shift-select" ></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js" defer></script>
   
 </body>
