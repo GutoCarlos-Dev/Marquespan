@@ -6,6 +6,7 @@ const TIMEZONE_BRASILIA = 'America/Sao_Paulo';
 const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
 const PEDAGIO_IMPORTACOES_BUCKET = 'pedagios_importacoes';
 const PEDAGIO_PAGE_ID = 'pedagio.html';
+const PEDAGIO_IMPORT_INSERT_BATCH_SIZE = 50;
 
 const PedagioUI = {
     async init() {
@@ -1198,6 +1199,29 @@ const PedagioUI = {
         return chaves;
     },
 
+    async inserirLancamentosPedagioEmLotes(lancamentos, onProgress) {
+        let inseridos = 0;
+
+        for (let inicio = 0; inicio < lancamentos.length; inicio += PEDAGIO_IMPORT_INSERT_BATCH_SIZE) {
+            const lote = lancamentos.slice(inicio, inicio + PEDAGIO_IMPORT_INSERT_BATCH_SIZE);
+            const numeroLote = Math.floor(inicio / PEDAGIO_IMPORT_INSERT_BATCH_SIZE) + 1;
+
+            const { error } = await supabaseClient
+                .from('pedagios_lancamentos')
+                .insert(lote);
+
+            if (error) {
+                const detalhes = error.details || error.hint || error.code || '';
+                throw new Error(`Falha ao gravar lote ${numeroLote}: ${error.message || 'erro desconhecido'}${detalhes ? ` (${detalhes})` : ''}`);
+            }
+
+            inseridos += lote.length;
+            if (typeof onProgress === 'function') onProgress(inseridos, lancamentos.length);
+        }
+
+        return inseridos;
+    },
+
     async criarImportacaoPedagio(arquivo, empresaId, filial, usuarioInfo) {
         const id = crypto.randomUUID();
         const nomeSeguro = arquivo.name.replace(/[^a-zA-Z0-9._-]+/g, '_');
@@ -1475,8 +1499,11 @@ const PedagioUI = {
                     });
 
                     if (lancamentosSemDuplicidade.length > 0) {
-                        const { error } = await supabaseClient.from('pedagios_lancamentos').insert(lancamentosSemDuplicidade);
-                        if (error) throw error;
+                        await this.inserirLancamentosPedagioEmLotes(lancamentosSemDuplicidade, (inseridos, total) => {
+                            const percent = 90 + Math.round((inseridos / total) * 10);
+                            this.updateProgress(Math.min(99, percent));
+                            this.importStatus.innerHTML = `<p><i class="fas fa-spinner fa-spin"></i> Gravando lanÃ§amentos ${inseridos}/${total}...</p>`;
+                        });
 
                         const importadosFinais = lancamentosSemDuplicidade.map(item => ({
                             placa: item.placa,
