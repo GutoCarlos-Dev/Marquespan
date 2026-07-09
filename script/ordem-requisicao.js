@@ -2,6 +2,8 @@ let clienteIndex = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dataOrdem').value = new Date().toISOString().slice(0, 10);
+  atualizarSemanaPorData();
+  document.getElementById('dataOrdem').addEventListener('change', atualizarSemanaPorData);
   document.getElementById('btnAdicionarCliente').addEventListener('click', () => adicionarCliente({}, true));
   document.getElementById('btnGerarPDF').addEventListener('click', baixarPDF);
   document.getElementById('btnCompartilharWhatsapp').addEventListener('click', compartilharWhatsapp);
@@ -85,6 +87,7 @@ function atualizarTitulosClientes() {
 }
 
 function obterDadosFormulario() {
+  const semana = normalizarTexto(document.getElementById('semanaOrdem').value);
   const supervisor = normalizarTexto(document.getElementById('supervisorNome').value);
   const dataOrdem = document.getElementById('dataOrdem').value;
   const clientes = Array.from(document.querySelectorAll('.cliente-card'))
@@ -97,11 +100,16 @@ function obterDadosFormulario() {
     .filter(cliente => cliente.nome || cliente.cidade || cliente.obs)
     .sort((a, b) => a.ordem - b.ordem);
 
-  return { supervisor, dataOrdem, clientes };
+  return { semana, supervisor, dataOrdem, clientes };
 }
 
 function validarFormulario() {
   const dados = obterDadosFormulario();
+  if (!dados.semana) {
+    alert('Informe a semana.');
+    document.getElementById('semanaOrdem').focus();
+    return null;
+  }
   if (!dados.supervisor) {
     alert('Informe o nome do supervisor.');
     document.getElementById('supervisorNome').focus();
@@ -140,12 +148,13 @@ async function criarPDFBlob() {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80);
   doc.setFontSize(10);
-  doc.text(`Supervisor: ${dados.supervisor}`, 14, 34);
+  doc.text(`Semana: ${dados.semana}`, 14, 34);
+  doc.text(`Supervisor: ${dados.supervisor}`, 14, 40);
   doc.text(`Data: ${formatarData(dados.dataOrdem)}`, pageWidth - 14, 34, { align: 'right' });
-  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 40);
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 40, { align: 'right' });
 
   doc.autoTable({
-    startY: 48,
+    startY: 50,
     head: [['Ordem', 'Cliente', 'Cidade', 'OBS.']],
     body: dados.clientes.map(cliente => [
       String(cliente.ordem),
@@ -220,6 +229,7 @@ function limparFormulario() {
   if (!confirm('Deseja limpar todo o formulario?')) return;
   document.getElementById('supervisorNome').value = '';
   document.getElementById('dataOrdem').value = new Date().toISOString().slice(0, 10);
+  atualizarSemanaPorData();
   document.getElementById('clientesContainer').innerHTML = '';
   clienteIndex = 0;
   adicionarCliente({}, false);
@@ -261,6 +271,25 @@ function formatarData(value) {
   if (!value) return '-';
   const [ano, mes, dia] = value.split('-');
   return `${dia}/${mes}/${ano}`;
+}
+
+function atualizarSemanaPorData() {
+  document.getElementById('semanaOrdem').value = calcularSemanaAno(document.getElementById('dataOrdem').value);
+}
+
+function calcularSemanaAno(dataISO) {
+  if (!dataISO) return '';
+  const [ano, mes, dia] = dataISO.split('-').map(Number);
+  if (!ano || !mes || !dia) return '';
+
+  const data = new Date(Date.UTC(ano, mes - 1, dia));
+  const diaSemana = data.getUTCDay() || 7;
+  data.setUTCDate(data.getUTCDate() + 4 - diaSemana);
+
+  const anoSemana = data.getUTCFullYear();
+  const inicioAno = new Date(Date.UTC(anoSemana, 0, 1));
+  const semana = Math.ceil((((data - inicioAno) / 86400000) + 1) / 7);
+  return `${String(semana).padStart(2, '0')}-${anoSemana}`;
 }
 
 function normalizarTexto(value) {

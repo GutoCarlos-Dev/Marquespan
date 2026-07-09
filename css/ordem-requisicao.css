@@ -58,7 +58,7 @@ body {
 
 .ordem-form-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr) minmax(180px, 240px);
   gap: 14px;
 }
 
