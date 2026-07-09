@@ -10485,6 +10485,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             const porFuncionarios = new Map();
             const escaladoPorDia = new Map();
 
+            const adicionarReserva = (nome, funcao, dia, row) => {
+                const nomeNormalizado = normalizeString(nome);
+                if (!nomeNormalizado) return;
+
+                const chave = `${funcao}|${nomeNormalizado}`;
+                if (!porFuncionarios.has(chave)) {
+                    porFuncionarios.set(chave, {
+                        funcao,
+                        motorista: funcao === 'MOTORISTA' ? nome : '',
+                        auxiliar: funcao === 'AUXILIAR' ? nome : '',
+                        dias: {}
+                    });
+                }
+                porFuncionarios.get(chave).dias[dia] = { placa: row.placa || '' };
+            };
+
             (data || []).forEach(row => {
                 const dia = diaPorData.get(String(row.data_escala || '').slice(0, 10));
                 if (!dia) return;
@@ -10493,13 +10509,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const auxiliar = getNomeFuncionarioExibicao(row.auxiliar);
 
                 if (normalizeString(row.tipo_escala) === 'RESERVA') {
-                    if (!motorista && !auxiliar) return;
-
-                    const chave = `${normalizeString(motorista)}|${normalizeString(auxiliar)}`;
-                    if (!porFuncionarios.has(chave)) {
-                        porFuncionarios.set(chave, { motorista, auxiliar, dias: {} });
-                    }
-                    porFuncionarios.get(chave).dias[dia] = { placa: row.placa || '' };
+                    adicionarReserva(motorista, 'MOTORISTA', dia, row);
+                    adicionarReserva(auxiliar, 'AUXILIAR', dia, row);
                     return;
                 }
 
@@ -10519,16 +10530,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             const linhas = Array.from(porFuncionarios.values()).sort((a, b) => {
-                const motorista = a.motorista.localeCompare(b.motorista, 'pt-BR');
-                if (motorista !== 0) return motorista;
-                return a.auxiliar.localeCompare(b.auxiliar, 'pt-BR');
+                const nomeA = a.motorista || a.auxiliar || '';
+                const nomeB = b.motorista || b.auxiliar || '';
+                const nome = nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
+                if (nome !== 0) return nome;
+                return (a.funcao || '').localeCompare(b.funcao || '', 'pt-BR');
             });
 
             const montarResumoEscalado = (resumo) => `PLACA: ${resumo.placa || '-'} | ROTA: ${resumo.rota || '-'} | MOTORISTA: ${resumo.motorista || '-'} | AUXILIAR: ${resumo.auxiliar || '-'} | TERCEIRO: ${resumo.terceiro || '-'}`;
 
             tbody.innerHTML = linhas.length
                 ? linhas.map(item => `
-                    <tr data-motorista="${escapeAttribute(item.motorista)}" data-auxiliar="${escapeAttribute(item.auxiliar)}">
+                    <tr data-motorista="${escapeAttribute(item.motorista)}" data-auxiliar="${escapeAttribute(item.auxiliar)}" data-funcao="${escapeAttribute(item.funcao || '')}">
                         <td data-column-key="motorista">${escapeAttribute(item.motorista)}</td>
                         <td data-column-key="auxiliar">${escapeAttribute(item.auxiliar)}</td>
                         ${DIAS_FALTAS_PLANEJAMENTO.map(dia => {
