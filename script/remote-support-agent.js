@@ -36,9 +36,9 @@ async function receberSolicitacao(usuario, canalSinais, payload) {
     return;
   }
 
-  const modo = payload.mode === 'control' ? 'visualizar e controlar esta pagina' : 'visualizar sua tela';
-  const aprovado = window.confirm(
-    `${admin.nome || payload.admin_nome || 'Administrador'} esta solicitando permissao para ${modo}.\n\n` +
+  const modoControle = payload.mode === 'control';
+  const aprovado = !modoControle || window.confirm(
+    `${admin.nome || payload.admin_nome || 'Administrador'} esta solicitando permissao para visualizar e controlar esta pagina.\n\n` +
     'Aceite somente se voce solicitou suporte agora. Voce podera encerrar a sessao a qualquer momento.'
   );
 
