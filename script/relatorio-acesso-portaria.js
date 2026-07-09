@@ -1,11 +1,14 @@
 import { supabaseClient } from './supabase.js';
+import { configurarFiltroFilialUsuario } from './shared/filtro-filial-usuario.js';
+import { normalizarFilial } from './shared/filial-utils.js';
 
 const TIMEZONE = 'America/Sao_Paulo';
 let registros = [];
 let registrosExibidos = [];
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   definirPeriodoPadrao();
+  await configurarFiltroFilialUsuario(document.getElementById('filtroFilial'));
   document.getElementById('formFiltrosRelatorio').addEventListener('submit', event => {
     event.preventDefault();
     buscarRelatorio();
@@ -14,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnExcel').addEventListener('click', exportarExcel);
   document.getElementById('btnPDF').addEventListener('click', exportarPDF);
   document.getElementById('filtroLocal').addEventListener('input', aplicarFiltrosLocais);
+  document.getElementById('filtroFilial').addEventListener('change', buscarRelatorio);
   document.querySelectorAll('#formFiltrosRelatorio input[type="text"]').forEach(input => {
     input.addEventListener('input', () => {
       const inicio = input.selectionStart;
@@ -59,6 +63,7 @@ async function buscarRelatorio() {
     const dataInicial = document.getElementById('dataInicial').value;
     const dataFinal = document.getElementById('dataFinal').value;
     const status = document.getElementById('filtroStatus').value;
+    const filial = normalizarFilial(document.getElementById('filtroFilial').value);
     const montarQuery = () => {
       let query = supabaseClient
         .from('portaria_acessos')
@@ -67,6 +72,7 @@ async function buscarRelatorio() {
       if (dataInicial) query = query.gte(campoPeriodo, dataLocalParaIso(dataInicial, '00:00:00'));
       if (dataFinal) query = query.lte(campoPeriodo, dataLocalParaIso(dataFinal, '23:59:59.999'));
       if (status) query = query.eq('status', status);
+      if (filial) query = query.eq('filial', filial);
       return query;
     };
 
@@ -91,6 +97,7 @@ function aplicarFiltrosLocais() {
     setor: normalizar(document.getElementById('filtroSetor').value),
     produto: normalizar(document.getElementById('filtroProduto').value),
     usuario: normalizar(document.getElementById('filtroUsuario').value),
+    filial: normalizarFilial(document.getElementById('filtroFilial').value),
     divergencia: document.getElementById('filtroDivergencia').value,
     local: normalizar(document.getElementById('filtroLocal').value)
   };
@@ -105,6 +112,7 @@ function aplicarFiltrosLocais() {
     if (filtros.setor && !normalizar(item.setor_nome).includes(filtros.setor)) return false;
     if (filtros.produto && !normalizar(`${item.produto_servico || ''} ${item.observacoes || ''}`).includes(filtros.produto)) return false;
     if (filtros.usuario && !normalizar(item.usuario_nome).includes(filtros.usuario)) return false;
+    if (filtros.filial && normalizarFilial(item.filial) !== filtros.filial) return false;
     if (!atendeFiltroDivergencia(auditoria, filtros.divergencia)) return false;
     if (filtros.local && !normalizar(Object.values(item).filter(valor => typeof valor === 'string').join(' ')).includes(filtros.local)) return false;
     return true;
@@ -148,7 +156,7 @@ function atendeFiltroDivergencia(auditoria, filtro) {
 function renderizarTabela() {
   const tbody = document.getElementById('tbodyRelatorio');
   if (!registrosExibidos.length) {
-    tbody.innerHTML = '<tr><td colspan="17" class="auditoria-empty">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="18" class="auditoria-empty">Nenhum registro encontrado.</td></tr>';
     return;
   }
 
@@ -161,6 +169,7 @@ function renderizarTabela() {
         <td>${formatarDataHora(item.entrada_em)}</td>
         <td>${formatarDataHora(item.saida_em)}</td>
         <td>${calcularPermanencia(item.entrada_em, item.saida_em)}</td>
+        <td>${escapeHtml(item.filial || '-')}</td>
         <td>${escapeHtml(item.pessoa_nome || '-')}</td>
         <td>${escapeHtml(item.pessoa_documento || '-')}</td>
         <td>${escapeHtml(item.empresa_nome || '-')}</td>
@@ -217,6 +226,7 @@ function montarLinhasExportacao() {
       Entrada: formatarDataHora(item.entrada_em),
       Saida: formatarDataHora(item.saida_em),
       'Tempo interno': calcularPermanencia(item.entrada_em, item.saida_em),
+      Filial: item.filial || '',
       Pessoa: item.pessoa_nome || '',
       Documento: item.pessoa_documento || '',
       Empresa: item.empresa_nome || '',
@@ -265,12 +275,12 @@ async function exportarPDF() {
   doc.autoTable({
     startY: 29,
     head: [[
-      'Entrada', 'Saida', 'Tempo', 'Pessoa', 'Documento', 'Empresa',
+      'Entrada', 'Saida', 'Tempo', 'Filial', 'Pessoa', 'Documento', 'Empresa',
       'Cavalo Ent.', 'Cavalo Sai.', 'Carreta Ent.', 'Carreta Sai.',
       'Conferencia', 'Setor', 'Produto/Servico', 'Status', 'Usuario'
     ]],
     body: linhas.map(item => [
-      item.Entrada, item.Saida, item['Tempo interno'], item.Pessoa, item.Documento,
+      item.Entrada, item.Saida, item['Tempo interno'], item.Filial, item.Pessoa, item.Documento,
       item.Empresa, item['Cavalo entrada'], item['Cavalo saida'],
       item['Carreta/Cacamba entrada'], item['Carreta/Cacamba saida'],
       item.Conferencia, item.Setor, item['Produto/Servico'], item.Status, item.Usuario

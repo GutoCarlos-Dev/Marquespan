@@ -38,6 +38,12 @@
             <input type="text" id="filtroBusca" class="glass-input" placeholder="Empresa, CPF/CNPJ, pessoa, setor...">
           </div>
           <div class="form-group-filter">
+            <label for="filtroFilial">Filial</label>
+            <select id="filtroFilial" class="glass-input">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="form-group-filter">
             <label for="filtroStatus">Status</label>
             <select id="filtroStatus" class="glass-input">
               <option value="aguardando">Aguardando</option>
@@ -76,6 +82,7 @@
           <thead>
             <tr>
               <th>Data/Hora</th>
+              <th>Filial</th>
               <th>Empresa</th>
               <th>Documento</th>
               <th>Pessoa</th>
@@ -90,7 +97,7 @@
             </tr>
           </thead>
           <tbody id="tbodyAcessos">
-            <tr><td colspan="12" style="text-align:center; padding:20px;">Utilize os filtros para pesquisar.</td></tr>
+            <tr><td colspan="13" style="text-align:center; padding:20px;">Utilize os filtros para pesquisar.</td></tr>
           </tbody>
         </table>
       </div>
@@ -106,6 +113,12 @@
       <form id="formAcesso">
         <div class="modal-body">
           <div class="form-grid-2-cols">
+            <div class="form-group form-group-full">
+              <label for="acessoFilial">Filial</label>
+              <select id="acessoFilial" class="glass-input" required>
+                <option value="">Selecione a filial</option>
+              </select>
+            </div>
             <div class="form-group form-group-full">
               <label for="acessoDocumentoPessoa">CPF/RG/CNH do Motorista</label>
               <input type="text" id="acessoDocumentoPessoa" class="glass-input" required placeholder="Digite o documento para localizar o motorista" autocomplete="off">
@@ -204,15 +217,22 @@
               <thead>
                 <tr>
                   <th>Empresa</th>
+                  <th>Filial</th>
                   <th>Documento</th>
                   <th>Telefone</th>
                   <th>Acoes</th>
                 </tr>
               </thead>
               <tbody id="gridEmpresasCadastro">
-                <tr><td colspan="4">Clique em Buscar para listar os cadastros.</td></tr>
+                <tr><td colspan="5">Clique em Buscar para listar os cadastros.</td></tr>
               </tbody>
             </table>
+          </div>
+          <div class="form-group">
+            <label for="empresaFilial">Filial</label>
+            <select id="empresaFilial" class="glass-input" required>
+              <option value="">Selecione a filial</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="empresaNome">Nome da Empresa</label>
@@ -260,15 +280,22 @@
               <thead>
                 <tr>
                   <th>Pessoa</th>
+                  <th>Filial</th>
                   <th>Documento</th>
                   <th>Empresa</th>
                   <th>Acoes</th>
                 </tr>
               </thead>
               <tbody id="gridPessoasCadastro">
-                <tr><td colspan="4">Clique em Buscar para listar os cadastros.</td></tr>
+                <tr><td colspan="5">Clique em Buscar para listar os cadastros.</td></tr>
               </tbody>
             </table>
+          </div>
+          <div class="form-group">
+            <label for="pessoaFilial">Filial</label>
+            <select id="pessoaFilial" class="glass-input" required>
+              <option value="">Selecione a filial</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="pessoaNome">Nome</label>
@@ -316,15 +343,22 @@
               <thead>
                 <tr>
                   <th>Setor</th>
+                  <th>Filial</th>
                   <th>Responsavel</th>
                   <th>Ramal</th>
                   <th>Acoes</th>
                 </tr>
               </thead>
               <tbody id="gridSetoresCadastro">
-                <tr><td colspan="4">Clique em Buscar para listar os cadastros.</td></tr>
+                <tr><td colspan="5">Clique em Buscar para listar os cadastros.</td></tr>
               </tbody>
             </table>
+          </div>
+          <div class="form-group">
+            <label for="setorFilial">Filial</label>
+            <select id="setorFilial" class="glass-input" required>
+              <option value="">Selecione a filial</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="setorNome">Nome do Setor</label>

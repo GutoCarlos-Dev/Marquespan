@@ -1,5 +1,7 @@
 import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
+import { configurarFiltroFilialUsuario } from './shared/filtro-filial-usuario.js';
+import { normalizarFilial } from './shared/filial-utils.js';
 import XLSX from 'https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs';
 
 let empresas = [];
@@ -17,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('filtroDataAte').valueAsDate = hoje;
 
   bindEvents();
+  await configurarFiliaisPortaria();
   await carregarCadastros();
   await buscarAcessos();
 });
@@ -27,6 +30,11 @@ function bindEvents() {
   document.getElementById('btnBuscarAcessos').addEventListener('click', buscarAcessos);
   document.getElementById('filtroBusca').addEventListener('input', renderizarTabela);
   document.getElementById('filtroStatus').addEventListener('change', buscarAcessos);
+  document.getElementById('filtroFilial').addEventListener('change', async () => {
+    sincronizarFilialPadrao();
+    await carregarCadastros();
+    await buscarAcessos();
+  });
   document.getElementById('formAcesso').addEventListener('submit', salvarAcesso);
   document.getElementById('formSaidaAcesso').addEventListener('submit', confirmarSaidaAcesso);
   document.getElementById('formEmpresa').addEventListener('submit', salvarEmpresa);
@@ -77,6 +85,45 @@ function bindEvents() {
   });
 }
 
+async function configurarFiliaisPortaria() {
+  const filtroFilial = document.getElementById('filtroFilial');
+  await configurarFiltroFilialUsuario(filtroFilial);
+  sincronizarFilialPadrao();
+}
+
+function sincronizarFilialPadrao() {
+  const filtro = document.getElementById('filtroFilial');
+  const selects = ['acessoFilial', 'empresaFilial', 'pessoaFilial', 'setorFilial']
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+
+  selects.forEach(select => {
+    const valorAtual = select.value;
+    select.innerHTML = '<option value="">Selecione a filial</option>';
+    Array.from(filtro?.options || [])
+      .filter(option => option.value)
+      .forEach(option => select.add(new Option(option.textContent, option.value)));
+    select.value = valorAtual && Array.from(select.options).some(option => option.value === valorAtual)
+      ? valorAtual
+      : (filtro?.value || '');
+    select.disabled = Boolean(filtro?.disabled && filtro.value);
+  });
+}
+
+function getFilialFiltro() {
+  return normalizarFilial(document.getElementById('filtroFilial')?.value);
+}
+
+function getFilialDoCadastro(tipo) {
+  const ids = {
+    empresa: 'empresaFilial',
+    pessoa: 'pessoaFilial',
+    setor: 'setorFilial',
+    acesso: 'acessoFilial'
+  };
+  return normalizarFilial(document.getElementById(ids[tipo])?.value || getFilialFiltro());
+}
+
 function configurarCamposMaiusculos() {
   document.querySelectorAll('#acessoProdutoServico, #acessoObservacoes, #formEmpresa input[type="text"], #formEmpresa textarea, #formPessoa input[type="text"], #formPessoa textarea, #formSetor input[type="text"], #formSetor textarea')
     .forEach(campo => {
@@ -114,13 +161,19 @@ async function carregarCadastros() {
   if (pessoasRes.error) console.error('Erro ao carregar pessoas:', pessoasRes.error);
   if (setoresRes.error) console.error('Erro ao carregar setores:', setoresRes.error);
 
-  empresas = empresasRes.data || [];
-  pessoas = pessoasRes.data || [];
-  setores = setoresRes.data || [];
+  const filial = getFilialFiltro();
+  empresas = filtrarPorFilial(empresasRes.data || [], filial);
+  pessoas = filtrarPorFilial(pessoasRes.data || [], filial);
+  setores = filtrarPorFilial(setoresRes.data || [], filial);
 
   preencherDatalist('listaEmpresasPortaria', empresas.map(formatarEmpresaOpcao));
   preencherDatalist('listaPessoasPortaria', pessoas.map(formatarPessoaOpcao));
   preencherDatalist('listaSetoresPortaria', setores.map(setor => setor.nome));
+}
+
+function filtrarPorFilial(lista, filial) {
+  if (!filial) return lista;
+  return lista.filter(item => !normalizarFilial(item.filial) || normalizarFilial(item.filial) === filial);
 }
 
 function preencherDatalist(id, valores) {
@@ -147,20 +200,22 @@ function normalizarBusca(valor) {
 
 function encontrarEmpresa(valor) {
   const busca = normalizarBusca(valor);
-  return empresas.find(empresa =>
+  const filial = getFilialContextoSelecao();
+  return empresas.find(empresa => itemCompativelComFilial(empresa, filial) && (
     normalizarBusca(formatarEmpresaOpcao(empresa)) === busca ||
     normalizarBusca(empresa.nome) === busca ||
     normalizarBusca(empresa.documento) === busca
-  );
+  ));
 }
 
 function encontrarPessoa(valor) {
   const busca = normalizarBusca(valor);
-  return pessoas.find(pessoa =>
+  const filial = getFilialContextoSelecao();
+  return pessoas.find(pessoa => itemCompativelComFilial(pessoa, filial) && (
     normalizarBusca(formatarPessoaOpcao(pessoa)) === busca ||
     normalizarBusca(pessoa.nome) === busca ||
     normalizarBusca(pessoa.documento) === busca
-  );
+  ));
 }
 
 function normalizarDocumento(valor) {
@@ -170,12 +225,23 @@ function normalizarDocumento(valor) {
 function encontrarPessoaPorDocumento(valor) {
   const documento = normalizarDocumento(valor);
   if (!documento) return null;
-  return pessoas.find(pessoa => normalizarDocumento(pessoa.documento) === documento) || null;
+  const filial = getFilialContextoSelecao();
+  return pessoas.find(pessoa => itemCompativelComFilial(pessoa, filial) && normalizarDocumento(pessoa.documento) === documento) || null;
 }
 
 function encontrarSetor(valor) {
   const busca = normalizarBusca(valor);
-  return setores.find(setor => normalizarBusca(setor.nome) === busca);
+  const filial = getFilialContextoSelecao();
+  return setores.find(setor => itemCompativelComFilial(setor, filial) && normalizarBusca(setor.nome) === busca);
+}
+
+function getFilialContextoSelecao() {
+  return normalizarFilial(document.getElementById('acessoFilial')?.value || getFilialFiltro());
+}
+
+function itemCompativelComFilial(item, filial) {
+  const filialItem = normalizarFilial(item?.filial);
+  return !filial || !filialItem || filialItem === filial;
 }
 
 function abrirModalAcesso(item = null) {
@@ -184,6 +250,7 @@ function abrirModalAcesso(item = null) {
   document.getElementById('formAcesso').reset();
   acessoEditandoId = item?.id || null;
   document.querySelector('#modalAcesso .modal-header h3').textContent = acessoEditandoId ? 'Editar Acesso' : 'Controle de Acesso';
+  document.getElementById('acessoFilial').value = normalizarFilial(item?.filial) || getFilialFiltro();
   document.getElementById('acessoEmpresa').value = item ? [item.empresa_nome, item.empresa_documento].filter(Boolean).join(' - ') : '';
   document.getElementById('acessoPessoa').value = item ? [item.pessoa_nome, item.pessoa_documento].filter(Boolean).join(' - ') : '';
   document.getElementById('acessoDocumentoPessoa').value = item?.pessoa_documento || '';
@@ -208,6 +275,9 @@ function abrirModalCadastro(id, modalRetorno = null) {
   const modal = document.getElementById(id);
   modal.querySelector('form')?.reset();
   limparResultadosCadastro(id);
+  if (id === 'modalEmpresa') document.getElementById('empresaFilial').value = getFilialFiltro();
+  if (id === 'modalPessoa') document.getElementById('pessoaFilial').value = getFilialFiltro();
+  if (id === 'modalSetor') document.getElementById('setorFilial').value = getFilialFiltro();
   if (id === 'modalEmpresa') document.getElementById('empresaNome').value = document.getElementById('acessoEmpresa').value.split(' - ')[0] || '';
   if (id === 'modalPessoa') document.getElementById('pessoaNome').value = document.getElementById('acessoPessoa').value.split(' - ')[0] || '';
   if (id === 'modalSetor') document.getElementById('setorNome').value = document.getElementById('acessoSetor').value || '';
@@ -312,7 +382,7 @@ function limparResultadosCadastro(modalId) {
   const ids = mapa[modalId] || [];
   if (ids[0]) document.getElementById(ids[0]).value = '';
   if (ids[1]) document.getElementById(ids[1]).innerHTML = '';
-  if (ids[2]) document.getElementById(ids[2]).innerHTML = '<tr><td colspan="4">Clique em Buscar para listar os cadastros.</td></tr>';
+  if (ids[2]) document.getElementById(ids[2]).innerHTML = '<tr><td colspan="5">Clique em Buscar para listar os cadastros.</td></tr>';
 }
 
 function filtrarPorTermo(lista, termo, campos) {
@@ -403,7 +473,7 @@ function renderGridCadastro(tipo) {
   const tbody = document.getElementById(config.gridId);
 
   if (!dados.length) {
-    tbody.innerHTML = '<tr><td colspan="4">Nenhum cadastro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Nenhum cadastro encontrado.</td></tr>';
     return;
   }
 
@@ -445,8 +515,8 @@ function getCadastroConfig(tipo) {
       tabela: 'portaria_empresas',
       buscaId: 'buscaEmpresaCadastro',
       gridId: 'gridEmpresasCadastro',
-      campos: ['nome', 'documento', 'telefone'],
-      colunas: ['nome', 'documento', 'telefone'],
+      campos: ['nome', 'filial', 'documento', 'telefone'],
+      colunas: ['nome', 'filial', 'documento', 'telefone'],
       label: 'empresa'
     },
     pessoa: {
@@ -454,8 +524,8 @@ function getCadastroConfig(tipo) {
       tabela: 'portaria_pessoas',
       buscaId: 'buscaPessoaCadastro',
       gridId: 'gridPessoasCadastro',
-      campos: ['nome', 'documento', 'telefone', 'empresa_nome'],
-      colunas: ['nome', 'documento', 'empresa_nome'],
+      campos: ['nome', 'filial', 'documento', 'telefone', 'empresa_nome'],
+      colunas: ['nome', 'filial', 'documento', 'empresa_nome'],
       label: 'pessoa'
     },
     setor: {
@@ -463,8 +533,8 @@ function getCadastroConfig(tipo) {
       tabela: 'portaria_setores',
       buscaId: 'buscaSetorCadastro',
       gridId: 'gridSetoresCadastro',
-      campos: ['nome', 'responsavel', 'ramal'],
-      colunas: ['nome', 'responsavel', 'ramal'],
+      campos: ['nome', 'filial', 'responsavel', 'ramal'],
+      colunas: ['nome', 'filial', 'responsavel', 'ramal'],
       label: 'setor'
     }
   };
@@ -493,6 +563,7 @@ async function excluirCadastro(tipo, id) {
 
 function preencherFormularioEmpresa(empresa) {
   document.getElementById('empresaNome').value = empresa.nome || '';
+  document.getElementById('empresaFilial').value = normalizarFilial(empresa.filial) || getFilialFiltro();
   document.getElementById('empresaDocumento').value = empresa.documento || '';
   document.getElementById('empresaTelefone').value = empresa.telefone || '';
   document.getElementById('empresaObservacoes').value = empresa.observacoes || '';
@@ -500,6 +571,7 @@ function preencherFormularioEmpresa(empresa) {
 
 function preencherFormularioPessoa(pessoa) {
   document.getElementById('pessoaNome').value = pessoa.nome || '';
+  document.getElementById('pessoaFilial').value = normalizarFilial(pessoa.filial) || getFilialFiltro();
   document.getElementById('pessoaDocumento').value = pessoa.documento || '';
   document.getElementById('pessoaTelefone').value = pessoa.telefone || '';
   document.getElementById('pessoaEmpresa').value = pessoa.empresa_nome || '';
@@ -507,6 +579,7 @@ function preencherFormularioPessoa(pessoa) {
 
 function preencherFormularioSetor(setor) {
   document.getElementById('setorNome').value = setor.nome || '';
+  document.getElementById('setorFilial').value = normalizarFilial(setor.filial) || getFilialFiltro();
   document.getElementById('setorResponsavel').value = setor.responsavel || '';
   document.getElementById('setorRamal').value = setor.ramal || '';
 }
@@ -526,7 +599,10 @@ async function salvarAcesso(event) {
 
     const empresaValor = document.getElementById('acessoEmpresa').value.trim();
     const pessoaValor = document.getElementById('acessoPessoa').value.trim();
+    const filial = getFilialDoCadastro('acesso');
+    if (!filial) throw new Error('Selecione a filial do acesso.');
     const payload = {
+      filial,
       empresa_id: empresa?.id || null,
       pessoa_id: pessoa?.id || null,
       setor_id: setor?.id || null,
@@ -577,14 +653,18 @@ function extrairDocumento(valor) {
 async function salvarEmpresa(event) {
   event.preventDefault();
   const payload = {
+    filial: getFilialDoCadastro('empresa'),
     nome: textoMaiusculo(document.getElementById('empresaNome').value),
     documento: textoMaiusculo(document.getElementById('empresaDocumento').value) || null,
     telefone: textoMaiusculo(document.getElementById('empresaTelefone').value) || null,
     observacoes: textoMaiusculo(document.getElementById('empresaObservacoes').value) || null
   };
+  if (!payload.filial) return alert('Selecione a filial da empresa.');
   const existente = empresas.find(item =>
-    (payload.documento && normalizarBusca(item.documento) === normalizarBusca(payload.documento)) ||
-    normalizarBusca(item.nome) === normalizarBusca(payload.nome)
+    normalizarFilial(item.filial) === payload.filial && (
+      (payload.documento && normalizarBusca(item.documento) === normalizarBusca(payload.documento)) ||
+      normalizarBusca(item.nome) === normalizarBusca(payload.nome)
+    )
   );
   if (existente) {
     alert('Empresa ja cadastrada. O cadastro existente foi selecionado.');
@@ -604,15 +684,19 @@ async function salvarPessoa(event) {
   event.preventDefault();
   const empresa = encontrarEmpresa(document.getElementById('pessoaEmpresa').value);
   const payload = {
+    filial: getFilialDoCadastro('pessoa'),
     nome: textoMaiusculo(document.getElementById('pessoaNome').value),
     documento: textoMaiusculo(document.getElementById('pessoaDocumento').value) || null,
     telefone: textoMaiusculo(document.getElementById('pessoaTelefone').value) || null,
     empresa_id: empresa?.id || null,
     empresa_nome: empresa?.nome || textoMaiusculo(document.getElementById('pessoaEmpresa').value) || null
   };
+  if (!payload.filial) return alert('Selecione a filial da pessoa.');
   const existente = pessoas.find(item =>
-    (payload.documento && normalizarBusca(item.documento) === normalizarBusca(payload.documento)) ||
-    normalizarBusca(item.nome) === normalizarBusca(payload.nome)
+    normalizarFilial(item.filial) === payload.filial && (
+      (payload.documento && normalizarBusca(item.documento) === normalizarBusca(payload.documento)) ||
+      normalizarBusca(item.nome) === normalizarBusca(payload.nome)
+    )
   );
   if (existente) {
     alert('Pessoa ja cadastrada. O cadastro existente foi selecionado.');
@@ -633,11 +717,13 @@ async function salvarPessoa(event) {
 async function salvarSetor(event) {
   event.preventDefault();
   const payload = {
+    filial: getFilialDoCadastro('setor'),
     nome: textoMaiusculo(document.getElementById('setorNome').value),
     responsavel: textoMaiusculo(document.getElementById('setorResponsavel').value) || null,
     ramal: textoMaiusculo(document.getElementById('setorRamal').value) || null
   };
-  const existente = setores.find(item => normalizarBusca(item.nome) === normalizarBusca(payload.nome));
+  if (!payload.filial) return alert('Selecione a filial do setor.');
+  const existente = setores.find(item => normalizarFilial(item.filial) === payload.filial && normalizarBusca(item.nome) === normalizarBusca(payload.nome));
   if (existente) {
     alert('Setor ja cadastrado. O cadastro existente foi selecionado.');
     document.getElementById('acessoSetor').value = existente.nome || '';
@@ -656,11 +742,13 @@ async function buscarAcessos() {
   const dataDe = document.getElementById('filtroDataDe').value;
   const dataAte = document.getElementById('filtroDataAte').value;
   const status = document.getElementById('filtroStatus').value;
+  const filial = getFilialFiltro();
 
   let query = supabaseClient.from('portaria_acessos').select('*');
   if (dataDe) query = query.gte('created_at', `${dataDe}T00:00:00`);
   if (dataAte) query = query.lte('created_at', `${dataAte}T23:59:59`);
   if (status) query = query.eq('status', status);
+  if (filial) query = query.eq('filial', filial);
 
   const { data, error } = await query.order('created_at', { ascending: false });
   if (error) return alert(`Erro ao buscar acessos: ${error.message}`);
@@ -674,13 +762,14 @@ function renderizarTabela() {
 
   document.getElementById('totalRegistros').textContent = dados.length;
   if (!dados.length) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:20px;">Nenhum registro encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:20px;">Nenhum registro encontrado.</td></tr>';
     return;
   }
 
   tbody.innerHTML = dados.map(item => `
     <tr>
       <td>${formatarDataHora(item.created_at)}</td>
+      <td>${escapeHtml(item.filial || '-')}</td>
       <td>${escapeHtml(item.empresa_nome || '-')}</td>
       <td>${escapeHtml(item.empresa_documento || '-')}</td>
       <td>${escapeHtml(item.pessoa_nome || '-')}</td>
@@ -706,6 +795,7 @@ function obterAcessosFiltrados() {
   return acessos.filter(item => !termo || [
     item.empresa_nome,
     item.empresa_documento,
+    item.filial,
     item.pessoa_nome,
     item.pessoa_documento,
     item.placa_veiculo,
@@ -720,6 +810,7 @@ function obterAcessosFiltrados() {
 function montarLinhasExportacao() {
   return obterAcessosFiltrados().map(item => ({
     'Data/Hora': formatarDataHoraCompleta(item.created_at),
+    Filial: item.filial || '',
     Empresa: item.empresa_nome || '',
     Documento: item.empresa_documento || '',
     Pessoa: item.pessoa_nome || '',
@@ -742,7 +833,7 @@ function exportarXLSX() {
 
   const ws = XLSX.utils.json_to_sheet(linhas);
   ws['!cols'] = [
-    { wch: 20 }, { wch: 28 }, { wch: 18 }, { wch: 24 }, { wch: 18 },
+    { wch: 20 }, { wch: 12 }, { wch: 28 }, { wch: 18 }, { wch: 24 }, { wch: 18 },
     { wch: 12 }, { wch: 16 }, { wch: 20 }, { wch: 24 }, { wch: 20 },
     { wch: 20 }, { wch: 16 }, { wch: 35 }, { wch: 20 }
   ];
@@ -786,6 +877,7 @@ async function exportarPDF() {
     startY: 38,
     head: [[
       'Data/Hora',
+      'Filial',
       'Empresa',
       'Documento',
       'Pessoa',
@@ -799,6 +891,7 @@ async function exportarPDF() {
     ]],
     body: linhas.map(item => [
       item['Data/Hora'],
+      item.Filial,
       item.Empresa,
       item.Documento,
       item.Pessoa,

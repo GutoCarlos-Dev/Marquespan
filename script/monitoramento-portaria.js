@@ -1,4 +1,6 @@
 import { supabaseClient } from './supabase.js';
+import { configurarFiltroFilialUsuario } from './shared/filtro-filial-usuario.js';
+import { normalizarFilial } from './shared/filial-utils.js';
 
 const REFRESH_INTERVAL = 30000;
 const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
@@ -8,7 +10,8 @@ let portariaChannel = null;
 let refreshTimer = null;
 let wakeLockSentinel = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await configurarFiltroFilialUsuario(document.getElementById('filtroFilial'));
   initMonitoramentoPortaria();
 });
 
@@ -21,6 +24,7 @@ function initMonitoramentoPortaria() {
   document.getElementById('btn-fullscreen')?.addEventListener('click', toggleFullScreen);
   document.getElementById('btn-toggle-sidebar')?.addEventListener('click', () => window.toggleSidebar && window.toggleSidebar());
   document.getElementById('dataPortaria')?.addEventListener('change', carregarDados);
+  document.getElementById('filtroFilial')?.addEventListener('change', carregarDados);
   document.getElementById('searchInput')?.addEventListener('input', renderDashboard);
 
   document.addEventListener('fullscreenchange', atualizarEstadoTelaCheia);
@@ -66,19 +70,20 @@ async function carregarDados() {
 
   try {
     const intervalo = getIntervaloDiaSaoPaulo(dataPortaria);
+    const filial = normalizarFilial(document.getElementById('filtroFilial')?.value);
     const [registrosDoDia, registrosAguardando] = await Promise.all([
-      supabaseClient
+      aplicarFiltroFilialQuery(supabaseClient
         .from('portaria_acessos')
         .select('*')
         .gte('created_at', intervalo.inicio)
         .lte('created_at', intervalo.fim)
-        .order('created_at', { ascending: false }),
-      supabaseClient
+        .order('created_at', { ascending: false }), filial),
+      aplicarFiltroFilialQuery(supabaseClient
         .from('portaria_acessos')
         .select('*')
         .eq('status', 'aguardando')
         .lte('created_at', intervalo.fim)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: true }), filial)
     ]);
 
     if (registrosDoDia.error) throw registrosDoDia.error;
@@ -96,6 +101,10 @@ async function carregarDados() {
   } finally {
     btnRefresh?.querySelector('i')?.classList.remove('fa-spin');
   }
+}
+
+function aplicarFiltroFilialQuery(query, filial) {
+  return filial ? query.eq('filial', filial) : query;
 }
 
 function configurarRealtime() {
@@ -142,6 +151,7 @@ function filtrarRegistros(registros) {
   return registros.filter(item => [
     item.empresa_nome,
     item.empresa_documento,
+    item.filial,
     item.pessoa_nome,
     item.pessoa_documento,
     item.placa_veiculo,
@@ -175,6 +185,7 @@ function renderLista(containerId, itens, tipo) {
         </div>
         <div class="portaria-access-details">
           <span><i class="fas fa-building"></i> ${escapeHtml(item.empresa_nome || '-')}</span>
+          <span><i class="fas fa-code-branch"></i> Filial ${escapeHtml(item.filial || '-')}</span>
           <span><i class="fas fa-id-card"></i> ${escapeHtml(item.empresa_documento || item.pessoa_documento || '-')}</span>
           <span class="portaria-sector-label" style="--setor-cor: ${corSetor.cor}; --setor-fundo: ${corSetor.fundo};"><i class="fas fa-location-dot"></i> ${escapeHtml(item.setor_nome || 'SEM SETOR')}</span>
           <span><i class="fas fa-box-open"></i> ${escapeHtml(item.produto_servico || '-')}</span>
