@@ -1,15 +1,20 @@
+const STORAGE_KEY_REQUISICOES = 'marquespan_ordem_requisicao_salvas_v1';
+
 let clienteIndex = 0;
+let requisicaoAtualId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dataOrdem').value = new Date().toISOString().slice(0, 10);
   atualizarSemanaPorData();
   document.getElementById('dataOrdem').addEventListener('change', atualizarSemanaPorData);
   document.getElementById('btnAdicionarCliente').addEventListener('click', () => adicionarCliente({}, true));
+  document.getElementById('btnSalvarLocal').addEventListener('click', salvarRequisicaoLocal);
   document.getElementById('btnGerarPDF').addEventListener('click', baixarPDF);
   document.getElementById('btnCompartilharWhatsapp').addEventListener('click', compartilharWhatsapp);
   document.getElementById('btnLimparFormulario').addEventListener('click', limparFormulario);
   document.getElementById('supervisorNome').addEventListener('input', aplicarMaiusculo);
   adicionarCliente({}, false);
+  renderizarRequisicoesSalvas();
 });
 
 function aplicarMaiusculo(event) {
@@ -189,6 +194,31 @@ async function criarPDFBlob() {
   };
 }
 
+function salvarRequisicaoLocal() {
+  const dados = validarFormulario();
+  if (!dados) return;
+
+  const salvas = obterRequisicoesSalvas();
+  const agora = new Date().toISOString();
+  const id = requisicaoAtualId || criarIdLocal();
+  const registroExistente = salvas.find(item => item.id === id);
+  const registro = {
+    id,
+    ...dados,
+    criadoEm: registroExistente?.criadoEm || agora,
+    atualizadoEm: agora
+  };
+
+  const atualizadas = registroExistente
+    ? salvas.map(item => (item.id === id ? registro : item))
+    : [registro, ...salvas];
+
+  if (!gravarRequisicoesSalvas(atualizadas)) return;
+  requisicaoAtualId = id;
+  renderizarRequisicoesSalvas();
+  alert('Requisicao salva localmente neste aparelho/navegador.');
+}
+
 async function baixarPDF() {
   const arquivo = await criarPDFBlob();
   if (!arquivo) return;
@@ -227,12 +257,112 @@ async function compartilharWhatsapp() {
 
 function limparFormulario() {
   if (!confirm('Deseja limpar todo o formulario?')) return;
+  resetarFormulario();
+}
+
+function resetarFormulario() {
+  requisicaoAtualId = null;
   document.getElementById('supervisorNome').value = '';
   document.getElementById('dataOrdem').value = new Date().toISOString().slice(0, 10);
   atualizarSemanaPorData();
   document.getElementById('clientesContainer').innerHTML = '';
   clienteIndex = 0;
   adicionarCliente({}, false);
+}
+
+function carregarRequisicaoSalva(id) {
+  const registro = obterRequisicoesSalvas().find(item => item.id === id);
+  if (!registro) {
+    alert('Requisicao salva nao encontrada.');
+    renderizarRequisicoesSalvas();
+    return;
+  }
+
+  requisicaoAtualId = registro.id;
+  document.getElementById('semanaOrdem').value = registro.semana || '';
+  document.getElementById('supervisorNome').value = registro.supervisor || '';
+  document.getElementById('dataOrdem').value = registro.dataOrdem || new Date().toISOString().slice(0, 10);
+  document.getElementById('clientesContainer').innerHTML = '';
+  clienteIndex = 0;
+
+  const clientes = Array.isArray(registro.clientes) && registro.clientes.length ? registro.clientes : [{}];
+  clientes.forEach(cliente => adicionarCliente(cliente, false));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function excluirRequisicaoSalva(id) {
+  if (!confirm('Deseja excluir esta requisicao salva localmente?')) return;
+  const atualizadas = obterRequisicoesSalvas().filter(item => item.id !== id);
+  if (!gravarRequisicoesSalvas(atualizadas)) return;
+  if (requisicaoAtualId === id) requisicaoAtualId = null;
+  renderizarRequisicoesSalvas();
+}
+
+function renderizarRequisicoesSalvas() {
+  const tbody = document.getElementById('requisicoesSalvasBody');
+  if (!tbody) return;
+
+  const salvas = obterRequisicoesSalvas();
+  if (!salvas.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="ordem-salvas-vazio">Nenhuma requisicao salva localmente.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = salvas.map(registro => `
+    <tr>
+      <td data-label="Semana">${escapeHtml(registro.semana || '-')}</td>
+      <td data-label="Data">${escapeHtml(formatarData(registro.dataOrdem))}</td>
+      <td data-label="Supervisor">${escapeHtml(registro.supervisor || '-')}</td>
+      <td data-label="Clientes">${Number(registro.clientes?.length || 0)}</td>
+      <td data-label="Acoes">
+        <div class="acoes-salvas">
+          <button type="button" class="btn-grid btn-editar" data-editar-requisicao="${escapeHtml(registro.id)}">
+            <i class="fas fa-pen"></i> Editar
+          </button>
+          <button type="button" class="btn-grid btn-excluir" data-excluir-requisicao="${escapeHtml(registro.id)}">
+            <i class="fas fa-trash"></i> Excluir
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-editar-requisicao]').forEach(botao => {
+    botao.addEventListener('click', () => carregarRequisicaoSalva(botao.dataset.editarRequisicao));
+  });
+  tbody.querySelectorAll('[data-excluir-requisicao]').forEach(botao => {
+    botao.addEventListener('click', () => excluirRequisicaoSalva(botao.dataset.excluirRequisicao));
+  });
+}
+
+function obterRequisicoesSalvas() {
+  try {
+    const salvas = JSON.parse(localStorage.getItem(STORAGE_KEY_REQUISICOES) || '[]');
+    return Array.isArray(salvas) ? salvas : [];
+  } catch (error) {
+    console.warn('Nao foi possivel ler requisicoes salvas localmente.', error);
+    return [];
+  }
+}
+
+function gravarRequisicoesSalvas(requisicoes) {
+  try {
+    localStorage.setItem(STORAGE_KEY_REQUISICOES, JSON.stringify(requisicoes));
+    return true;
+  } catch (error) {
+    console.error('Nao foi possivel salvar localmente.', error);
+    alert('Nao foi possivel salvar localmente. Verifique o espaco do navegador ou permissoes.');
+    return false;
+  }
+}
+
+function criarIdLocal() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function adicionarRodape(doc) {

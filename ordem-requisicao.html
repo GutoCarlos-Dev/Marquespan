@@ -22,6 +22,10 @@
     </header>
 
     <section class="ordem-card">
+      <div class="ordem-local-alert">
+        <i class="fas fa-circle-info"></i>
+        <span>Esta requisi&ccedil;&atilde;o ficar&aacute; salva apenas localmente neste aparelho/navegador. Se voc&ecirc; limpar o hist&oacute;rico ou os dados do navegador, n&atilde;o conseguir&aacute; mais visualizar depois.</span>
+      </div>
       <div class="ordem-form-grid">
         <div class="form-group">
           <label for="semanaOrdem">Semana</label>
@@ -53,6 +57,9 @@
     </section>
 
     <section class="ordem-actions">
+      <button type="button" id="btnSalvarLocal" class="btn-glass btn-green">
+        <i class="fas fa-floppy-disk"></i> Salvar Local
+      </button>
       <button type="button" id="btnLimparFormulario" class="btn-glass btn-red">
         <i class="fas fa-eraser"></i> Limpar
       </button>
@@ -62,6 +69,29 @@
       <button type="button" id="btnCompartilharWhatsapp" class="btn-glass btn-green">
         <i class="fab fa-whatsapp"></i> Compartilhar WhatsApp
       </button>
+    </section>
+
+    <section class="ordem-card ordem-salvas-card">
+      <div class="ordem-section-header">
+        <div>
+          <h2><i class="fas fa-folder-open"></i> Requisi&ccedil;&otilde;es Salvas</h2>
+          <p>Registros salvos localmente para editar, gerar ou compartilhar novamente.</p>
+        </div>
+      </div>
+      <div class="ordem-salvas-scroll">
+        <table class="ordem-salvas-table">
+          <thead>
+            <tr>
+              <th>Semana</th>
+              <th>Data</th>
+              <th>Supervisor</th>
+              <th>Clientes</th>
+              <th>A&ccedil;&otilde;es</th>
+            </tr>
+          </thead>
+          <tbody id="requisicoesSalvasBody"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
