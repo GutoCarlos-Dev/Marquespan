@@ -3,6 +3,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 
 const FUNCIONARIO_PAGE_ID = 'funcionario.html';
 const FUNCIONARIO_PAGE_SIZE = 1000;
+const FUNCIONARIO_DOCUMENTOS_BUCKET = 'funcionario_documentos';
 const FUNCOES_FALLBACK = [
     'Jovem Aprendiz',
     'Auxiliar de Expedição',
@@ -236,6 +237,9 @@ const FuncionarioUI = {
         this.escalaAtivaSelect = document.getElementById('funcEscalaAtiva');
         this.tipoEscalaSelect = document.getElementById('funcTipoEscala');
         this.equipeEscalaSelect = document.getElementById('funcEquipeEscala');
+        this.funcDocumentosInput = document.getElementById('funcDocumentos');
+        this.funcDocumentosList = document.getElementById('funcDocumentosList');
+        this.funcDocumentosHint = document.getElementById('funcDocumentosHint');
         this.funcSummaryBody = document.getElementById('funcSummaryBody'); // Novo cache para o corpo da tabela de resumo
         this.gridCount = document.getElementById('countFuncGrid');
         this.filterCount = document.getElementById('funcFilterCount');
@@ -262,6 +266,8 @@ const FuncionarioUI = {
         ].forEach(el => {
             if (el) el.style.display = 'none';
         });
+
+        if (this.funcDocumentosInput) this.funcDocumentosInput.disabled = true;
     },
 
     // Adiciona o campo Data de Nascimento ao cache
@@ -353,6 +359,18 @@ const FuncionarioUI = {
         }
         if (this.histFuncTableBody) {
             this.histFuncTableBody.addEventListener('dblclick', (e) => this.handleHistoricoDblClick(e));
+        }
+        if (this.funcDocumentosInput) {
+            this.funcDocumentosInput.addEventListener('change', () => this.renderDocumentosSelecionados());
+        }
+        if (this.funcDocumentosList) {
+            this.funcDocumentosList.addEventListener('click', (event) => {
+                const downloadButton = event.target.closest('.btn-download-documento');
+                const deleteButton = event.target.closest('.btn-delete-documento');
+
+                if (downloadButton?.dataset.id) this.baixarDocumentoFuncionario(downloadButton.dataset.id);
+                if (deleteButton?.dataset.id) this.excluirDocumentoFuncionario(deleteButton.dataset.id);
+            });
         }
         
         if (this.btnExportXLSX) {
@@ -893,6 +911,203 @@ const FuncionarioUI = {
         }
     },
 
+    getDocumentosSelecionados() {
+        return Array.from(this.funcDocumentosInput?.files || []);
+    },
+
+    formatarTamanhoArquivo(bytes) {
+        const tamanho = Number(bytes || 0);
+        if (tamanho < 1024) return `${tamanho} B`;
+        if (tamanho < 1024 * 1024) return `${(tamanho / 1024).toFixed(1)} KB`;
+        return `${(tamanho / (1024 * 1024)).toFixed(1)} MB`;
+    },
+
+    getNomeArquivoSeguro(nome) {
+        return String(nome || 'documento')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9._-]+/g, '_')
+            .replace(/^_+|_+$/g, '') || 'documento';
+    },
+
+    renderDocumentosSelecionados() {
+        const arquivos = this.getDocumentosSelecionados();
+        if (!this.funcDocumentosHint) return;
+
+        if (!arquivos.length) {
+            this.funcDocumentosHint.textContent = 'Selecione um ou mais arquivos para anexar ao salvar.';
+            return;
+        }
+
+        this.funcDocumentosHint.textContent = `${arquivos.length} arquivo(s) selecionado(s): ${arquivos.map(file => file.name).join(', ')}`;
+        this.renderDocumentosFuncionario(this.funcionarioDocumentosAtuais || []);
+    },
+
+    renderDocumentosFuncionario(documentos = []) {
+        if (!this.funcDocumentosList) return;
+
+        const pendentes = this.getDocumentosSelecionados();
+        const pendentesHtml = pendentes.length
+            ? `
+                <div class="func-documentos-section-title">Pendentes para salvar</div>
+                ${pendentes.map(file => `
+                    <div class="func-documento-item pending">
+                        <span class="func-documento-name"><i class="fas fa-hourglass-half"></i> ${escapeHtml(file.name)}</span>
+                        <span class="func-documento-size">${this.formatarTamanhoArquivo(file.size)}</span>
+                    </div>
+                `).join('')}
+            `
+            : '';
+
+        const anexadosHtml = documentos.length
+            ? `
+                <div class="func-documentos-section-title">Anexados</div>
+                ${documentos.map(doc => `
+                    <div class="func-documento-item" data-id="${escapeHtml(doc.id)}">
+                        <span class="func-documento-name" title="${escapeHtml(doc.nome_arquivo)}"><i class="fas fa-file-alt"></i> ${escapeHtml(doc.nome_arquivo)}</span>
+                        <span class="func-documento-size">${this.formatarTamanhoArquivo(doc.tamanho)}</span>
+                        <button type="button" class="btn-icon edit btn-download-documento" data-id="${escapeHtml(doc.id)}" title="Baixar documento"><i class="fas fa-download"></i></button>
+                        ${this.acessoTotal ? `<button type="button" class="btn-icon delete btn-delete-documento" data-id="${escapeHtml(doc.id)}" title="Excluir documento"><i class="fas fa-trash"></i></button>` : ''}
+                    </div>
+                `).join('')}
+            `
+            : '';
+
+        this.funcDocumentosList.innerHTML = anexadosHtml || pendentesHtml
+            ? `${anexadosHtml}${pendentesHtml}`
+            : '<div class="func-documentos-empty">Nenhum documento anexado.</div>';
+    },
+
+    async carregarDocumentosFuncionario(funcionarioId) {
+        if (!this.funcDocumentosList) return;
+        if (!funcionarioId) {
+            this.renderDocumentosFuncionario([]);
+            return;
+        }
+
+        this.funcDocumentosList.innerHTML = '<div class="func-documentos-empty">Carregando documentos...</div>';
+        try {
+            const { data, error } = await supabaseClient
+                .from('funcionario_documentos')
+                .select('*')
+                .eq('funcionario_id', funcionarioId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            this.funcionarioDocumentosAtuais = data || [];
+            this.renderDocumentosFuncionario(this.funcionarioDocumentosAtuais);
+        } catch (error) {
+            console.error('Erro ao carregar documentos do funcionario:', error);
+            this.funcDocumentosList.innerHTML = '<div class="func-documentos-empty error">Nao foi possivel carregar documentos. Verifique o SQL de documentos.</div>';
+        }
+    },
+
+    async anexarDocumentosFuncionario(funcionarioId) {
+        const arquivos = this.getDocumentosSelecionados();
+        if (!funcionarioId || arquivos.length === 0) return 0;
+
+        const usuario = this.usuarioAtual || {};
+        let anexados = 0;
+
+        for (const arquivo of arquivos) {
+            const caminho = `${funcionarioId}/${Date.now()}-${crypto.randomUUID()}-${this.getNomeArquivoSeguro(arquivo.name)}`;
+
+            const { error: uploadError } = await supabaseClient.storage
+                .from(FUNCIONARIO_DOCUMENTOS_BUCKET)
+                .upload(caminho, arquivo, {
+                    contentType: arquivo.type || 'application/octet-stream',
+                    upsert: false
+                });
+            if (uploadError) throw uploadError;
+
+            const payload = {
+                funcionario_id: funcionarioId,
+                nome_arquivo: arquivo.name,
+                caminho_arquivo: caminho,
+                tipo_arquivo: arquivo.type || null,
+                tamanho: arquivo.size || null,
+                usuario_id: usuario.auth_user_id || null,
+                usuario_nome: usuario.nome || usuario.nomecompleto || 'Sistema'
+            };
+
+            const { error: insertError } = await supabaseClient
+                .from('funcionario_documentos')
+                .insert(payload);
+
+            if (insertError) {
+                await supabaseClient.storage.from(FUNCIONARIO_DOCUMENTOS_BUCKET).remove([caminho]);
+                throw insertError;
+            }
+
+            anexados++;
+        }
+
+        this.funcDocumentosInput.value = '';
+        this.renderDocumentosSelecionados();
+        await this.carregarDocumentosFuncionario(funcionarioId);
+        return anexados;
+    },
+
+    async baixarDocumentoFuncionario(documentoId) {
+        try {
+            const { data: documento, error } = await supabaseClient
+                .from('funcionario_documentos')
+                .select('nome_arquivo, caminho_arquivo')
+                .eq('id', documentoId)
+                .single();
+
+            if (error) throw error;
+
+            const { data: signed, error: signedError } = await supabaseClient.storage
+                .from(FUNCIONARIO_DOCUMENTOS_BUCKET)
+                .createSignedUrl(documento.caminho_arquivo, 60);
+
+            if (signedError) throw signedError;
+
+            const link = document.createElement('a');
+            link.href = signed.signedUrl;
+            link.download = documento.nome_arquivo || 'documento';
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error('Erro ao baixar documento:', error);
+            alert('Nao foi possivel baixar o documento: ' + (error.message || error));
+        }
+    },
+
+    async excluirDocumentoFuncionario(documentoId) {
+        if (!this.acessoTotal) return;
+        if (!confirm('Deseja remover este documento do colaborador?')) return;
+
+        try {
+            const { data: documento, error } = await supabaseClient
+                .from('funcionario_documentos')
+                .select('funcionario_id, caminho_arquivo')
+                .eq('id', documentoId)
+                .single();
+
+            if (error) throw error;
+
+            const { error: deleteError } = await supabaseClient
+                .from('funcionario_documentos')
+                .delete()
+                .eq('id', documentoId);
+
+            if (deleteError) throw deleteError;
+
+            await supabaseClient.storage
+                .from(FUNCIONARIO_DOCUMENTOS_BUCKET)
+                .remove([documento.caminho_arquivo]);
+
+            await this.carregarDocumentosFuncionario(documento.funcionario_id);
+        } catch (error) {
+            console.error('Erro ao excluir documento:', error);
+            alert('Nao foi possivel excluir o documento: ' + (error.message || error));
+        }
+    },
+
     async handleFormSubmit(e) {
         e.preventDefault();
         if (!this.acessoTotal) return;
@@ -991,14 +1206,16 @@ const FuncionarioUI = {
                 return supabaseClient.from('funcionario').insert(insertPayload).select('id').single();
             };
 
-            let { error } = await salvarPayload(payload);
+            let resultadoSalvamento = await salvarPayload(payload);
+            let { data: funcionarioSalvo, error } = resultadoSalvamento;
             const erroCNHSchema = error && /cnh_|schema cache|column/i.test(String(error.message || error));
             if (erroCNHSchema && !temDadosCNH) {
                 const payloadSemCNH = { ...payload };
                 delete payloadSemCNH.cnh_numero;
                 delete payloadSemCNH.cnh_categoria;
                 delete payloadSemCNH.cnh_vencimento;
-                ({ error } = await salvarPayload(payloadSemCNH));
+                resultadoSalvamento = await salvarPayload(payloadSemCNH);
+                ({ data: funcionarioSalvo, error } = resultadoSalvamento);
             }
             const erroEscalaAtivaSchema = error && /escala_ativa|schema cache|column/i.test(String(error.message || error));
             if (erroEscalaAtivaSchema) {
@@ -1009,18 +1226,32 @@ const FuncionarioUI = {
                     delete payloadSemEscalaAtiva.cnh_categoria;
                     delete payloadSemEscalaAtiva.cnh_vencimento;
                 }
-                ({ error } = await salvarPayload(payloadSemEscalaAtiva));
+                resultadoSalvamento = await salvarPayload(payloadSemEscalaAtiva);
+                ({ data: funcionarioSalvo, error } = resultadoSalvamento);
             }
             if (error) throw error;
+
+            const funcionarioId = funcionarioSalvo?.id || this.editingIdInput.value;
+            let anexados = 0;
+            let erroDocumentos = '';
+            try {
+                anexados = await this.anexarDocumentosFuncionario(funcionarioId);
+            } catch (documentoError) {
+                console.error('Erro ao anexar documentos do funcionario:', documentoError);
+                erroDocumentos = documentoError?.message || String(documentoError || '');
+            }
 
             if (this.editingIdInput.value) await this.carregarHistoricoFuncao(rh);
             await this.renderSummary();
             registrarAuditoria(
                 this.editingIdInput.value ? 'ALTERAR' : 'INCLUIR',
                 'Funcionário',
-                `${this.editingIdInput.value ? 'Alteração' : 'Inclusão'} do colaborador ${payload.nome} (RH: ${payload.rh_registro})`
+                `${this.editingIdInput.value ? 'Alteração' : 'Inclusão'} do colaborador ${payload.nome} (RH: ${payload.rh_registro})${anexados ? ` com ${anexados} documento(s) anexado(s)` : ''}`
             );
-            alert('✅ Colaborador salvo com sucesso!');
+            alert(erroDocumentos
+                ? `✅ Colaborador salvo com sucesso, mas os documentos nao foram anexados: ${erroDocumentos}`
+                : '✅ Colaborador salvo com sucesso!'
+            );
             this.clearForm();
             this.closeFuncionarioModal();
             this.renderGrid();
@@ -1052,6 +1283,10 @@ const FuncionarioUI = {
         }
         if (this.histFuncContainer) this.histFuncContainer.classList.add('hidden');
         if (this.histFuncTableBody) this.histFuncTableBody.innerHTML = '';
+        if (this.funcDocumentosInput) this.funcDocumentosInput.value = '';
+        if (this.funcDocumentosHint) this.funcDocumentosHint.textContent = 'Selecione um ou mais arquivos para anexar ao salvar.';
+        this.funcionarioDocumentosAtuais = [];
+        this.renderDocumentosFuncionario([]);
         if (this.escalaAtivaSelect) this.escalaAtivaSelect.value = 'true';
         if (this.tipoEscalaSelect) this.tipoEscalaSelect.value = 'Normal';
         if (this.equipeEscalaSelect) this.equipeEscalaSelect.value = '';
@@ -1425,6 +1660,8 @@ const FuncionarioUI = {
             alert('Voce nao tem permissao para alterar funcionarios de outra filial.');
             return;
         }
+        if (this.funcDocumentosInput) this.funcDocumentosInput.value = '';
+        if (this.funcDocumentosHint) this.funcDocumentosHint.textContent = 'Selecione um ou mais arquivos para anexar ao salvar.';
         this.currentFuncaoBeforeEdit = f.funcao;
         this.editingIdInput.value = f.id;
         document.getElementById('funcRH').value = f.rh_registro;
@@ -1450,6 +1687,7 @@ const FuncionarioUI = {
         document.getElementById('funcDataPromocao').value = f.data_alteracao_funcao || '';
         this.toggleDesligamentoField();
         await this.carregarHistoricoFuncao(f.rh_registro);
+        await this.carregarDocumentosFuncionario(f.id);
         this.btnSubmit.textContent = 'Atualizar Registro';
         this.openFuncionarioModal();
     },

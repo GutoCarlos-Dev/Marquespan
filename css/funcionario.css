@@ -316,6 +316,71 @@ body.funcionario-modal-open {
     box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.1);
 }
 
+.funcionario-documentos-card {
+    grid-column: 1 / -1;
+}
+
+.func-documentos-hint {
+    color: #6c757d;
+    font-size: 0.72rem;
+    margin-top: 5px;
+}
+
+.func-documentos-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.func-documentos-section-title {
+    color: var(--primary-color);
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-top: 4px;
+    text-transform: uppercase;
+}
+
+.func-documento-item {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(0, 105, 55, 0.12);
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    min-height: 34px;
+    padding: 6px 8px;
+}
+
+.func-documento-item.pending {
+    grid-template-columns: minmax(0, 1fr) auto;
+    opacity: 0.82;
+}
+
+.func-documento-name {
+    color: #2f3b45;
+    font-size: 0.78rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.func-documento-size {
+    color: #6c757d;
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+.func-documentos-empty {
+    color: #6c757d;
+    font-size: 0.78rem;
+    padding: 6px 0;
+}
+
+.func-documentos-empty.error {
+    color: #dc3545;
+}
+
 /* Botões Glass */
 .form-actions-vertical {
     display: flex;
