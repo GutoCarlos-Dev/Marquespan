@@ -29,6 +29,7 @@ function bindEvents() {
   document.getElementById('btnNovoAcesso').addEventListener('click', () => abrirModalAcesso());
   document.getElementById('btnBuscarAcessos').addEventListener('click', buscarAcessos);
   document.getElementById('filtroBusca').addEventListener('input', renderizarTabela);
+  document.getElementById('filtroGridEmpresaPlaca').addEventListener('input', renderizarTabela);
   document.getElementById('filtroStatus').addEventListener('change', buscarAcessos);
   document.getElementById('filtroFilial').addEventListener('change', async () => {
     sincronizarFilialPadrao();
@@ -51,6 +52,8 @@ function bindEvents() {
   document.getElementById('btnCadastroSetor').addEventListener('click', () => abrirModalCadastro('modalSetor'));
   document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
   document.getElementById('btnExportarXLSX').addEventListener('click', exportarXLSX);
+  document.getElementById('btnExportarGridPDF').addEventListener('click', exportarPDF);
+  document.getElementById('btnExportarGridXLSX').addEventListener('click', exportarXLSX);
   document.getElementById('btnToggleMenuLateralPortaria')?.addEventListener('click', toggleMenuLateral);
   document.getElementById('btnAbrirEmpresaNoAcesso').addEventListener('click', () => abrirModalCadastro('modalEmpresa', 'modalAcesso'));
   document.getElementById('btnAbrirPessoaNoAcesso').addEventListener('click', () => abrirModalCadastro('modalPessoa', 'modalAcesso'));
@@ -792,19 +795,39 @@ function renderizarTabela() {
 
 function obterAcessosFiltrados() {
   const termo = normalizarBusca(document.getElementById('filtroBusca').value);
-  return acessos.filter(item => !termo || [
-    item.empresa_nome,
-    item.empresa_documento,
-    item.filial,
-    item.pessoa_nome,
-    item.pessoa_documento,
-    item.placa_veiculo,
-    item.carreta_cacamba,
-    item.setor_nome,
-    item.produto_servico,
-    item.observacoes,
-    item.status
-  ].some(valor => normalizarBusca(valor).includes(termo)));
+  const termoGrid = normalizarBusca(document.getElementById('filtroGridEmpresaPlaca').value);
+  return acessos.filter(item => {
+    const atendeBuscaGeral = !termo || [
+      item.empresa_nome,
+      item.empresa_documento,
+      item.filial,
+      item.pessoa_nome,
+      item.pessoa_documento,
+      item.placa_veiculo,
+      item.placa_entrada,
+      item.placa_saida,
+      item.carreta_cacamba,
+      item.carreta_cacamba_entrada,
+      item.carreta_cacamba_saida,
+      item.setor_nome,
+      item.produto_servico,
+      item.observacoes,
+      item.status
+    ].some(valor => normalizarBusca(valor).includes(termo));
+
+    const atendeBuscaGrid = !termoGrid || [
+      item.empresa_nome,
+      item.empresa_documento,
+      item.placa_veiculo,
+      item.placa_entrada,
+      item.placa_saida,
+      item.carreta_cacamba,
+      item.carreta_cacamba_entrada,
+      item.carreta_cacamba_saida
+    ].some(valor => normalizarBusca(valor).includes(termoGrid));
+
+    return atendeBuscaGeral && atendeBuscaGrid;
+  });
 }
 
 function montarLinhasExportacao() {
@@ -854,27 +877,26 @@ async function exportarPDF() {
   if (typeof doc.autoTable !== 'function') {
     return alert('Biblioteca jsPDF AutoTable nao carregada. Verifique sua conexao.');
   }
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const logo = await carregarLogoBase64();
+  const logo = await carregarLogoComFundoBranco();
+  const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
 
-  doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, pageWidth, 34, 'F');
-  if (logo) doc.addImage(logo, 'PNG', 12, 7, 26, 18);
+  if (logo) {
+    doc.addImage(logo, 'JPEG', 14, 10, 40, 10);
+  }
 
-  doc.setTextColor(0, 106, 45);
+  doc.setTextColor(0, 105, 55);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
-  doc.text('MARQUESPAN', pageWidth / 2, 12, { align: 'center' });
-  doc.setFontSize(12);
-  doc.text('Relatorio - Portaria Controle de Acesso', pageWidth / 2, 20, { align: 'center' });
-  doc.setTextColor(80, 80, 80);
+  doc.setFontSize(18);
+  doc.text('Relatorio de Portaria - Controle de Acesso', 14, 28);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 12, 12, { align: 'right' });
-  doc.text(`Periodo: ${formatarPeriodoFiltro()} | Registros: ${linhas.length}`, pageWidth / 2, 27, { align: 'center' });
+  doc.setFontSize(10);
+  doc.setTextColor(80);
+  doc.text(`Exportado por: ${usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema'}`, 14, 34);
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 39);
+  doc.text(`Filtros: ${formatarPeriodoFiltro()} | Registros: ${linhas.length}`, 120, 39);
 
   doc.autoTable({
-    startY: 38,
+    startY: 45,
     head: [[
       'Data/Hora',
       'Filial',
@@ -902,47 +924,75 @@ async function exportarPDF() {
       item.Entrada,
       item.Saida,
       item.Status
-    ]),
+    ]).concat([[
+      {
+        content: `Total de Registros: ${linhas.length}`,
+        colSpan: 12,
+        styles: {
+          fillColor: [220, 220, 220],
+          textColor: [0, 0, 0],
+          fontStyle: 'bold',
+          halign: 'right'
+        }
+      }
+    ]]),
     styles: {
       fontSize: 7,
-      cellPadding: 1.8,
-      overflow: 'linebreak',
-      valign: 'middle'
+      cellPadding: 1.4,
+      overflow: 'linebreak'
     },
     headStyles: {
-      fillColor: [0, 106, 45],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold'
+      fillColor: [0, 105, 55],
+      textColor: [255, 255, 255]
     },
     alternateRowStyles: {
       fillColor: [245, 248, 246]
     },
-    margin: { left: 8, right: 8 },
-    didDrawPage: () => {
-      const pageHeight = doc.internal.pageSize.getHeight();
-      doc.setFontSize(8);
-      doc.setTextColor(110, 110, 110);
-      doc.text(`Pagina ${doc.internal.getNumberOfPages()}`, pageWidth - 12, pageHeight - 8, { align: 'right' });
-    }
+    margin: { left: 8, right: 8 }
   });
 
+  adicionarRodapePDF(doc);
   doc.save(`Portaria_Controle_Acesso_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
-async function carregarLogoBase64() {
-  try {
-    const response = await fetch('logo.png');
-    const blob = await response.blob();
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.warn('Nao foi possivel carregar o logo para o PDF:', error);
-    return null;
+function adicionarRodapePDF(doc) {
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let pagina = 1; pagina <= pageCount; pagina += 1) {
+    doc.setPage(pagina);
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const dateText = `Gerado em: ${new Date().toLocaleString('pt-BR')}`;
+    const pageText = `Pagina ${pagina} de ${pageCount}`;
+    const textWidth = doc.getTextWidth(pageText);
+
+    doc.text(dateText, 14, pageHeight - 10);
+    doc.text(pageText, pageWidth - 14 - textWidth, pageHeight - 10);
   }
+}
+
+function carregarLogoComFundoBranco() {
+  return new Promise(resolve => {
+    const imagem = new Image();
+    imagem.crossOrigin = 'anonymous';
+    imagem.src = 'logo.png';
+    imagem.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = imagem.naturalWidth || imagem.width;
+      canvas.height = imagem.naturalHeight || imagem.height;
+      const contexto = canvas.getContext('2d');
+      contexto.fillStyle = '#FFFFFF';
+      contexto.fillRect(0, 0, canvas.width, canvas.height);
+      contexto.drawImage(imagem, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    };
+    imagem.onerror = () => {
+      console.warn('Nao foi possivel carregar o logo para o PDF.');
+      resolve(null);
+    };
+  });
 }
 
 function formatarPeriodoFiltro() {

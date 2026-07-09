@@ -65,6 +65,30 @@ body.portaria-menu-oculto .portaria-menu-toggle i {
   gap: 10px;
 }
 
+.resumo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.portaria-grid-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.portaria-grid-toolbar #filtroGridEmpresaPlaca {
+  min-width: 280px;
+}
+
+.portaria-grid-toolbar .resumo-valores {
+  white-space: nowrap;
+}
+
 .portaria-table-wrap {
   max-height: calc(100vh - 340px);
   overflow: auto;
@@ -364,6 +388,12 @@ body.portaria-menu-oculto .portaria-menu-toggle i {
 
   .acoes-grid {
     grid-template-columns: 1fr;
+  }
+
+  .resumo-header,
+  .portaria-grid-toolbar,
+  .portaria-grid-toolbar #filtroGridEmpresaPlaca {
+    width: 100%;
   }
 
   .portaria-menu-toggle {
