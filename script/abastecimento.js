@@ -59,6 +59,14 @@ import { filtrarOrdenarSaidas, montarHtmlSaidas } from './abastecimento/tabela-s
 const ABASTECIMENTO_PAGE_ID = 'abastecimento.html';
 const NIVEIS_ABASTECIMENTO_EXTERNO_E_POSTOS = ['pr_encarregado', 'pr_lider'];
 
+async function exigirSessaoSupabaseAtiva() {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error || !session) {
+        throw new Error('Sessao expirada. Faca login novamente antes de salvar o abastecimento.');
+    }
+    return session;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const AbastecimentoUI = {
         async init() {
@@ -1648,6 +1656,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let usuario;
 
             try {
+                await exigirSessaoSupabaseAtiva();
+
                 ({ payloads, commonData, kmValue, placaInput, veiculoObj, usuario } = montarPayloadsSaida({
                     veiculosDisponiveis: this.veiculosDisponiveis,
                     dataHora: this.saidaDataHora.value,

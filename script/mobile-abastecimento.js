@@ -59,6 +59,14 @@ let veiculosDisponiveisCache = []; // Cache para validação de placa
 let saidaVeiculoLookupTimer = null;
 let filiaisCache = null;
 
+async function exigirSessaoSupabaseAtiva() {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error || !session) {
+        throw new Error('Sessao expirada. Faca login novamente antes de salvar o abastecimento.');
+    }
+    return session;
+}
+
 function getUserFilial() {
     try {
         const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
@@ -387,6 +395,8 @@ async function salvarAbastecimento(e) {
     }
     
     try {
+        await exigirSessaoSupabaseAtiva();
+
         // Dados comuns
         const dataHoraInput = document.getElementById('saidaDataHora').value;
         const dataHora = getDataHoraLocalParaBanco(dataHoraInput);
