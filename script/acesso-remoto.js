@@ -13,6 +13,7 @@ let canalPresenca = null;
 let canalSinais = null;
 let usuariosOnline = [];
 let sessaoAtual = null;
+let usuarioMensagemSelecionado = null;
 
 document.addEventListener('DOMContentLoaded', iniciarPagina);
 
@@ -20,6 +21,12 @@ function iniciarPagina() {
   document.getElementById('remoteSearchUser')?.addEventListener('input', renderUsuariosOnline);
   document.getElementById('btnRemoteStop')?.addEventListener('click', () => encerrarSessao(true));
   document.getElementById('remoteVideo')?.addEventListener('click', enviarCliqueRemoto);
+  document.getElementById('btnCloseRemoteMessage')?.addEventListener('click', fecharModalMensagem);
+  document.getElementById('btnCancelRemoteMessage')?.addEventListener('click', fecharModalMensagem);
+  document.getElementById('btnSendRemoteMessage')?.addEventListener('click', enviarMensagemUsuario);
+  document.getElementById('modalRemoteMessage')?.addEventListener('click', event => {
+    if (event.target.id === 'modalRemoteMessage') fecharModalMensagem();
+  });
 
   iniciarPresenca();
   iniciarSinais();
@@ -39,6 +46,7 @@ function iniciarSinais() {
   canalSinais = supabaseClient.channel('sinais_admin');
   canalSinais
     .on('broadcast', { event: 'remote_response' }, ({ payload }) => receberRespostaSolicitacao(payload))
+    .on('broadcast', { event: 'remote_message_received' }, ({ payload }) => confirmarMensagemRecebida(payload))
     .on('broadcast', { event: 'remote_offer' }, ({ payload }) => receberOffer(payload))
     .on('broadcast', { event: 'remote_ice' }, ({ payload }) => receberIce(payload))
     .on('broadcast', { event: 'remote_stop' }, ({ payload }) => {
@@ -92,6 +100,9 @@ function renderUsuariosOnline() {
         <button type="button" class="btn-glass btn-blue" data-remote-mode="view" data-user-id="${escapeHtml(u.user_id)}">
           <i class="fas fa-eye"></i> Visualizar
         </button>
+        <button type="button" class="btn-glass btn-blue" data-remote-message data-user-id="${escapeHtml(u.user_id)}">
+          <i class="fas fa-comment-dots"></i> Mensagem
+        </button>
         <button type="button" class="btn-glass btn-green" data-remote-mode="control" data-user-id="${escapeHtml(u.user_id)}">
           <i class="fas fa-mouse-pointer"></i> Controle total
         </button>
@@ -102,6 +113,70 @@ function renderUsuariosOnline() {
   container.querySelectorAll('[data-remote-mode]').forEach(button => {
     button.addEventListener('click', () => solicitarAcesso(button.dataset.userId, button.dataset.remoteMode));
   });
+  container.querySelectorAll('[data-remote-message]').forEach(button => {
+    button.addEventListener('click', () => abrirModalMensagem(button.dataset.userId));
+  });
+}
+
+function abrirModalMensagem(userId) {
+  const alvo = usuariosOnline.find(u => String(u.user_id) === String(userId));
+  if (!alvo) return;
+  usuarioMensagemSelecionado = alvo;
+  document.getElementById('remoteMessageTarget').textContent = `Para: ${alvo.nome || 'Usuario'} (${alvo.filial || 'Global'})`;
+  document.getElementById('remoteMessageText').value = '';
+  document.getElementById('modalRemoteMessage').classList.remove('hidden');
+  document.getElementById('remoteMessageText').focus();
+}
+
+function fecharModalMensagem() {
+  usuarioMensagemSelecionado = null;
+  document.getElementById('modalRemoteMessage')?.classList.add('hidden');
+}
+
+async function enviarMensagemUsuario() {
+  const alvo = usuarioMensagemSelecionado;
+  const mensagem = document.getElementById('remoteMessageText').value.trim();
+  if (!alvo || !canalSinais) return;
+  if (!mensagem) {
+    alert('Digite a mensagem antes de enviar.');
+    return;
+  }
+
+  const btn = document.getElementById('btnSendRemoteMessage');
+  const textoOriginal = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando';
+
+  const sentAt = new Date().toISOString();
+  const resultado = await canalSinais.send({
+    type: 'broadcast',
+    event: 'remote_message',
+    payload: {
+      admin_id: usuarioLogado.id,
+      admin_nome: usuarioLogado.nome || usuarioLogado.nomecompleto || 'Administrador',
+      target_user_id: String(alvo.user_id),
+      target_nome: alvo.nome || 'Usuario',
+      message: mensagem,
+      sent_at: sentAt
+    }
+  });
+
+  btn.disabled = false;
+  btn.innerHTML = textoOriginal;
+
+  if (resultado !== 'ok') {
+    alert(`Erro ao enviar mensagem: ${resultado}`);
+    return;
+  }
+
+  registrarAuditoria('INCLUIR', 'Acesso Remoto', `Mensagem enviada para ${alvo.nome || alvo.user_id}: ${mensagem.slice(0, 120)}`);
+  fecharModalMensagem();
+  setStatus('Mensagem enviada', 'online');
+}
+
+function confirmarMensagemRecebida(payload) {
+  if (String(payload?.admin_id) !== String(usuarioLogado.id)) return;
+  setStatus(`Mensagem recebida por ${payload.target_nome || 'usuario'}`, 'online');
 }
 
 async function solicitarAcesso(userId, mode) {

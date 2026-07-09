@@ -14,7 +14,8 @@ export function iniciarAgenteAcessoRemoto({ usuario, canalSinais }) {
     .on('broadcast', { event: 'remote_answer' }, ({ payload }) => receberRespostaAdmin(payload))
     .on('broadcast', { event: 'remote_ice' }, ({ payload }) => receberIce(payload))
     .on('broadcast', { event: 'remote_stop' }, ({ payload }) => encerrarSeSessao(payload?.session_id, true))
-    .on('broadcast', { event: 'remote_control' }, ({ payload }) => executarControle(payload));
+    .on('broadcast', { event: 'remote_control' }, ({ payload }) => executarControle(payload))
+    .on('broadcast', { event: 'remote_message' }, ({ payload }) => receberMensagem(usuario, canalSinais, payload));
 }
 
 async function receberSolicitacao(usuario, canalSinais, payload) {
@@ -171,6 +172,126 @@ function executarControle(payload) {
   const clicavel = el.closest('button, a, input, select, textarea, label, [role="button"], [onclick]') || el;
   if (typeof clicavel.focus === 'function') clicavel.focus();
   if (typeof clicavel.click === 'function') clicavel.click();
+}
+
+async function receberMensagem(usuario, canalSinais, payload) {
+  if (String(payload?.target_user_id) !== String(usuario.id)) return;
+  const mensagem = String(payload?.message || '').trim();
+  if (!mensagem) return;
+
+  mostrarPopupMensagem(payload.admin_nome || 'Administrador', mensagem);
+  await enviarSinal(canalSinais, 'remote_message_received', {
+    target_user_id: usuario.id,
+    target_nome: usuario.nome || 'Usuario',
+    admin_id: payload.admin_id,
+    sent_at: payload.sent_at,
+    received_at: new Date().toISOString()
+  });
+}
+
+function mostrarPopupMensagem(adminNome, mensagem) {
+  const overlay = document.createElement('div');
+  overlay.className = 'remoteSupportMessageOverlay';
+  overlay.innerHTML = `
+    <div class="remoteSupportMessageBox">
+      <div class="remoteSupportMessageHeader">
+        <strong>Mensagem do suporte</strong>
+        <button type="button" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="remoteSupportMessageSender">${escapeHtml(adminNome)}</div>
+      <div class="remoteSupportMessageText">${escapeHtml(mensagem)}</div>
+      <div class="remoteSupportMessageFooter">
+        <button type="button">OK</button>
+      </div>
+    </div>
+  `;
+
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    inset: '0',
+    zIndex: '2147483647',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(15,23,42,0.42)',
+    padding: '18px'
+  });
+
+  const box = overlay.querySelector('.remoteSupportMessageBox');
+  Object.assign(box.style, {
+    width: 'min(440px, 100%)',
+    borderRadius: '10px',
+    background: '#fff',
+    boxShadow: '0 18px 46px rgba(0,0,0,0.28)',
+    fontFamily: 'Arial, sans-serif',
+    overflow: 'hidden'
+  });
+
+  const header = overlay.querySelector('.remoteSupportMessageHeader');
+  Object.assign(header.style, {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    padding: '14px 16px',
+    background: '#006937',
+    color: '#fff'
+  });
+
+  const close = header.querySelector('button');
+  Object.assign(close.style, {
+    border: '0',
+    background: 'transparent',
+    color: '#fff',
+    cursor: 'pointer',
+    fontSize: '24px',
+    lineHeight: '1'
+  });
+
+  const sender = overlay.querySelector('.remoteSupportMessageSender');
+  Object.assign(sender.style, {
+    padding: '12px 16px 0',
+    color: '#64748b',
+    fontSize: '13px',
+    fontWeight: '700'
+  });
+
+  const text = overlay.querySelector('.remoteSupportMessageText');
+  Object.assign(text.style, {
+    padding: '10px 16px 16px',
+    color: '#1f2937',
+    whiteSpace: 'pre-wrap',
+    lineHeight: '1.45',
+    fontSize: '15px'
+  });
+
+  const footer = overlay.querySelector('.remoteSupportMessageFooter');
+  Object.assign(footer.style, {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    padding: '12px 16px',
+    background: '#f8fafc',
+    borderTop: '1px solid #e5e7eb'
+  });
+
+  const ok = footer.querySelector('button');
+  Object.assign(ok.style, {
+    border: '0',
+    borderRadius: '7px',
+    padding: '9px 18px',
+    background: '#006937',
+    color: '#fff',
+    cursor: 'pointer',
+    fontWeight: '700'
+  });
+
+  const fechar = () => overlay.remove();
+  close.addEventListener('click', fechar);
+  ok.addEventListener('click', fechar);
+  overlay.addEventListener('click', event => {
+    if (event.target === overlay) fechar();
+  });
+  document.body.appendChild(overlay);
 }
 
 function mostrarBarraSessao(adminNome, mode) {
