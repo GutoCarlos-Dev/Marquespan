@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { iniciarAgenteAcessoRemoto } from './remote-support-agent.js';
 
 let canalPresenca = null;
 let canalSinais = null;
@@ -39,8 +40,10 @@ function iniciarPresencaOnline() {
       localStorage.removeItem('usuarioLogado');
       localStorage.removeItem('marquespan_auth_version');
       window.location.href = 'index.html';
-    })
-    .subscribe();
+    });
+
+  iniciarAgenteAcessoRemoto({ usuario, canalSinais });
+  canalSinais.subscribe();
 }
 
 window.addEventListener('beforeunload', () => {

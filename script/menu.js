@@ -1,4 +1,5 @@
 import { supabaseClient } from './supabase.js';
+import { iniciarAgenteAcessoRemoto } from './remote-support-agent.js';
 
 const DIARIA_NIVEIS_PERMITIDOS = new Set([
   'administrador',
@@ -96,8 +97,10 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.removeItem('usuarioLogado');
             localStorage.removeItem('marquespan_auth_version');
             window.location.href = 'index.html';
-          })
-          .subscribe();
+          });
+
+        iniciarAgenteAcessoRemoto({ usuario, canalSinais });
+        canalSinais.subscribe();
       }
 
       // Adiciona funcionalidade de toggle para os submenus

@@ -1,0 +1,202 @@
+:root {
+  --remote-green: #006937;
+  --remote-red: #dc3545;
+  --remote-blue: #0d6efd;
+  --remote-muted: #64748b;
+}
+
+.remote-alert {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--remote-green);
+  border-radius: 8px;
+  background: #f0f8f3;
+  color: #1f2937;
+  font-size: 0.9rem;
+}
+
+.remote-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.remote-panel-header,
+.remote-session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.remote-panel-header h3,
+.remote-session-header h3 {
+  margin: 0;
+}
+
+#remoteOnlineCount {
+  color: var(--remote-green);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.remote-users-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  max-height: calc(100vh - 270px);
+  overflow: auto;
+}
+
+.remote-user-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #28a745;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.remote-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #e8f5ee;
+  color: var(--remote-green);
+  font-size: 1.45rem;
+}
+
+.remote-user-info strong,
+.remote-user-info span {
+  display: block;
+}
+
+.remote-user-info strong {
+  color: #1f2937;
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+.remote-user-info span {
+  margin-top: 3px;
+  color: var(--remote-muted);
+  font-size: 0.76rem;
+}
+
+.remote-user-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.remote-empty {
+  margin: 0;
+  padding: 18px 4px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.remote-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.remote-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 110px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.remote-status.idle {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.remote-status.waiting {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.remote-status.online {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.remote-status.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.remote-screen-wrap {
+  position: relative;
+  min-height: 520px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111827;
+}
+
+#remoteVideo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  object-fit: contain;
+  background: #111827;
+}
+
+.remote-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #cbd5e1;
+  text-align: center;
+  padding: 24px;
+}
+
+.remote-placeholder i {
+  font-size: 3rem;
+  opacity: 0.65;
+}
+
+.remote-screen-wrap.has-video .remote-placeholder {
+  display: none;
+}
+
+.remote-help {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 980px) {
+  .remote-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .remote-screen-wrap,
+  #remoteVideo {
+    min-height: 320px;
+  }
+}

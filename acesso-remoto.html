@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acesso Remoto - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/acesso-remoto.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div id="menu-container"></div>
+
+  <main class="main-content">
+    <header class="header glass-header">
+      <h1><i class="fas fa-desktop"></i> Acesso Remoto</h1>
+    </header>
+
+    <section class="remote-alert">
+      <strong>Consentimento obrigatorio.</strong>
+      O usuario precisa aceitar a solicitacao antes de qualquer visualizacao. O acesso fica visivel na tela do usuario durante toda a sessao.
+    </section>
+
+    <section class="remote-layout">
+      <div class="glass-panel remote-users-panel">
+        <div class="remote-panel-header">
+          <h3><i class="fas fa-users"></i> Usuarios Online</h3>
+          <span id="remoteOnlineCount">0 online</span>
+        </div>
+        <input type="text" id="remoteSearchUser" class="glass-input" placeholder="Buscar usuario, filial ou pagina...">
+        <div id="remoteUsersGrid" class="remote-users-grid">
+          <p class="remote-empty">Conectando ao canal de presenca...</p>
+        </div>
+      </div>
+
+      <div class="glass-panel remote-view-panel">
+        <div class="remote-session-header">
+          <div>
+            <h3 id="remoteSessionTitle"><i class="fas fa-display"></i> Nenhuma sessao ativa</h3>
+            <p id="remoteSessionMeta">Selecione um usuario online para solicitar visualizacao ou controle.</p>
+          </div>
+          <div class="remote-session-actions">
+            <span id="remoteSessionStatus" class="remote-status idle">Aguardando</span>
+            <button type="button" id="btnRemoteStop" class="btn-glass btn-red" disabled><i class="fas fa-stop"></i> Encerrar</button>
+          </div>
+        </div>
+
+        <div class="remote-screen-wrap">
+          <video id="remoteVideo" autoplay playsinline></video>
+          <div id="remotePlaceholder" class="remote-placeholder">
+            <i class="fas fa-desktop"></i>
+            <span>A tela compartilhada aparecera aqui apos aprovacao do usuario.</span>
+          </div>
+        </div>
+
+        <div class="remote-help">
+          <strong>Controle total:</strong> no navegador, o controle fica limitado aos elementos da pagina aberta pelo usuario. Acoes fora do navegador dependem de recursos nativos do sistema operacional e nao sao expostas ao JavaScript.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="./script/acesso-remoto.js" defer></script>
+</body>
+</html>
