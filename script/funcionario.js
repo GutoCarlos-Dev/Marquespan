@@ -1064,13 +1064,20 @@ const FuncionarioUI = {
 
             if (signedError) throw signedError;
 
+            const response = await fetch(signed.signedUrl);
+            if (!response.ok) {
+                throw new Error('Nao foi possivel carregar o arquivo para download.');
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.href = signed.signedUrl;
+            link.href = url;
             link.download = documento.nome_arquivo || 'documento';
-            link.target = '_blank';
             document.body.appendChild(link);
             link.click();
             link.remove();
+            URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Erro ao baixar documento:', error);
             alert('Nao foi possivel baixar o documento: ' + (error.message || error));
