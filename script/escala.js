@@ -4249,8 +4249,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             return alert('Erro ao carregar dados para o PDF.');
         }
 
+        const dadosGridPDF = coletarDadosPDFDoGridAtual();
+        const usarDadosGridPDF = dadosGridPDF.disponivel;
+        const dadosEscalaPDF = usarDadosGridPDF ? dadosGridPDF.escala : (dadosEscala || []);
+        const dadosFaltasPDF = usarDadosGridPDF ? dadosGridPDF.faltas : (dadosFaltas || []);
+
         const incluirVeiculosDisponiveis = selectedSections ? selectedSections.includes('VEICULOS') : false;
-        if (!incluirVeiculosDisponiveis && (!dadosEscala || dadosEscala.length === 0) && (!dadosFaltas || dadosFaltas.length === 0)) {
+        if (!incluirVeiculosDisponiveis && dadosEscalaPDF.length === 0 && dadosFaltasPDF.length === 0) {
             return alert('Nenhum dado encontrado para este dia.');
         }
 
@@ -4305,11 +4310,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 columns = ['PLACA', 'MODELO', 'TIPO', 'DIA ESCALADO'];
                 body = itens.map(i => [normalizeVehiclePlate(i.placa) || i.placa || '', i.modelo || '', i.tipo || '', i.diasEscalados || '']);
             } else if (sec.id === 'FALTAS') {
-                itens = dadosFaltas || [];
+                itens = dadosFaltasPDF;
                 columns = ['MOTORISTA', 'MOTIVO MOTORISTA', 'AUXILIAR', 'MOTIVO AUXILIAR', 'ASSINATURA'];
                 body = itens.map(i => [i.motorista_ausente || '', i.motivo_motorista || '', i.auxiliar_ausente || '', i.motivo_auxiliar || '', '']);
             } else {
-                itens = (dadosEscala || []).filter(d => d.tipo_escala === sec.id);
+                itens = dadosEscalaPDF.filter(d => d.tipo_escala === sec.id);
                 columns = ['PLACA', 'MODELO', 'ROTA', 'STATUS', 'MOTORISTA', 'AUXILIAR', 'TERCEIRO', 'ASSINATURA'];
                 body = itens.map(i => [i.placa || '', i.modelo || '', i.rota || '', i.status || '', i.motorista || '', i.auxiliar || '', i.terceiro || '', '']);
             }
@@ -4365,6 +4370,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         doc.save(`Escala_${semana}_${dia}.pdf`);
+    }
+
+    function coletarDadosPDFDoGridAtual() {
+        const sectionMap = {
+            PADRAO: { tbodyId: 'tbodyPadrao', tipo: 'PADRAO' },
+            TRANSFERENCIA: { tbodyId: 'tbodyTransferencia', tipo: 'TRANSFERENCIA' },
+            EQUIPAMENTO: { tbodyId: 'tbodyEquipamento', tipo: 'EQUIPAMENTO' },
+            RESERVA: { tbodyId: 'tbodyReservas', tipo: 'RESERVA' }
+        };
+        const dados = { disponivel: false, escala: [], faltas: [] };
+
+        Object.values(sectionMap).forEach(config => {
+            const tbody = document.getElementById(config.tbodyId);
+            if (!tbody) return;
+            dados.disponivel = true;
+
+            coletarLinhasVisiveisDoTbody(tbody).forEach(tr => {
+                dados.escala.push({
+                    id: tr.dataset.id || null,
+                    tipo_escala: config.tipo,
+                    placa: getValorLinhaGrid(tr, 'placa'),
+                    modelo: getValorLinhaGrid(tr, 'modelo'),
+                    rota: getValorLinhaGrid(tr, 'rota'),
+                    status: getValorLinhaGrid(tr, 'status'),
+                    motorista: getValorLinhaGrid(tr, 'motorista'),
+                    auxiliar: getValorLinhaGrid(tr, 'auxiliar'),
+                    terceiro: getValorLinhaGrid(tr, 'terceiro')
+                });
+            });
+        });
+
+        const tbodyFaltas = document.getElementById('tbodyFaltas');
+        if (tbodyFaltas) {
+            dados.disponivel = true;
+            coletarLinhasVisiveisDoTbody(tbodyFaltas).forEach(tr => {
+                dados.faltas.push({
+                    id: tr.dataset.id || null,
+                    motorista_ausente: getValorLinhaGrid(tr, 'motorista_ausente'),
+                    motivo_motorista: getValorLinhaGrid(tr, 'motivo_motorista'),
+                    auxiliar_ausente: getValorLinhaGrid(tr, 'auxiliar_ausente'),
+                    motivo_auxiliar: getValorLinhaGrid(tr, 'motivo_auxiliar')
+                });
+            });
+        }
+
+        return dados;
+    }
+
+    function coletarLinhasVisiveisDoTbody(tbody) {
+        return Array.from(tbody.querySelectorAll('tr'))
+            .filter(tr => tr.style.display !== 'none')
+            .filter(tr => tr.querySelector('[data-key]'));
+    }
+
+    function getValorLinhaGrid(tr, key) {
+        const field = tr.querySelector(`[data-key="${key}"]`);
+        if (!field) return '';
+        if ('value' in field) return String(field.value || '').trim();
+        return String(field.innerText || field.textContent || '').trim();
     }
 
     function getColumnStylesPDF(columns, orientation) {
