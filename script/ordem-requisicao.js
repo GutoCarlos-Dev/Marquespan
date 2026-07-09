@@ -153,7 +153,7 @@ async function criarPDFBlob() {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80);
   doc.setFontSize(10);
-  doc.text(`Semana: ${dados.semana}`, 14, 34);
+  doc.text(`Referente a Semana: ${dados.semana}`, 14, 34);
   doc.text(`Supervisor: ${dados.supervisor}`, 14, 40);
   doc.text(`Data: ${formatarData(dados.dataOrdem)}`, pageWidth - 14, 34, { align: 'right' });
   doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 40, { align: 'right' });
