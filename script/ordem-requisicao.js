@@ -314,7 +314,7 @@ function renderizarRequisicoesSalvas() {
 
   tbody.innerHTML = salvas.map(registro => `
     <tr>
-      <td data-label="Semana">${escapeHtml(registro.semana || '-')}</td>
+      <td data-label="Referente a Semana">${escapeHtml(registro.semana || '-')}</td>
       <td data-label="Data">${escapeHtml(formatarData(registro.dataOrdem))}</td>
       <td data-label="Supervisor">${escapeHtml(registro.supervisor || '-')}</td>
       <td data-label="Clientes">${Number(registro.clientes?.length || 0)}</td>
