@@ -8,6 +8,7 @@
 body {
   min-height: 100vh;
   background: var(--ordem-bg);
+  padding-bottom: 24px;
 }
 
 .ordem-page {
@@ -96,7 +97,7 @@ body {
 
 .cliente-card {
   display: grid;
-  grid-template-columns: 90px minmax(220px, 1.3fr) minmax(180px, 0.8fr) minmax(220px, 1fr);
+  grid-template-columns: 90px minmax(220px, 1.3fr) minmax(180px, 0.8fr) minmax(220px, 1fr) 42px;
   gap: 10px;
   align-items: end;
   padding: 12px;
@@ -106,10 +107,19 @@ body {
 }
 
 .cliente-card-header {
+  display: contents;
+}
+
+.cliente-card-header strong {
   display: none;
 }
 
+.cliente-card .form-group {
+  order: 1;
+}
+
 .cliente-card .btn-remove {
+  order: 2;
   width: 42px;
   height: 42px;
   border: 0;
@@ -128,8 +138,9 @@ body {
 }
 
 .cliente-obs {
+  height: 42px;
   min-height: 42px;
-  resize: vertical;
+  resize: none;
 }
 
 .ordem-actions {
@@ -149,7 +160,7 @@ body {
 
 @media (max-width: 900px) {
   body {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+    padding-bottom: calc(180px + env(safe-area-inset-bottom));
   }
 
   .ordem-page {
@@ -211,6 +222,7 @@ body {
 
   .cliente-card-header {
     display: flex;
+    order: 0;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
@@ -221,6 +233,12 @@ body {
 
   .cliente-card .btn-remove {
     width: 42px;
+  }
+
+  .cliente-obs {
+    height: auto;
+    min-height: 88px;
+    resize: vertical;
   }
 
   .ordem-actions {
@@ -252,6 +270,10 @@ body {
 }
 
 @media (max-width: 380px) {
+  body {
+    padding-bottom: calc(230px + env(safe-area-inset-bottom));
+  }
+
   .ordem-actions {
     grid-template-columns: 1fr;
   }
