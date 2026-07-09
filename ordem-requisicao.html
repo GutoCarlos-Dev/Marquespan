@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ordem de Requisi&ccedil;&atilde;o - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/ordem-requisicao.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <main class="ordem-page">
+    <header class="ordem-header">
+      <img src="logo.png" alt="Logo Marquespan">
+      <div>
+        <h1>Ordem de Requisi&ccedil;&atilde;o</h1>
+        <p>Preencha os dados, gere o PDF e compartilhe pelo WhatsApp.</p>
+      </div>
+    </header>
+
+    <section class="ordem-card">
+      <div class="ordem-form-grid">
+        <div class="form-group">
+          <label for="supervisorNome">Nome do Supervisor</label>
+          <input type="text" id="supervisorNome" class="glass-input" placeholder="Digite o nome do supervisor" autocomplete="name" autocapitalize="characters" required>
+        </div>
+        <div class="form-group">
+          <label for="dataOrdem">Data</label>
+          <input type="date" id="dataOrdem" class="glass-input">
+        </div>
+      </div>
+    </section>
+
+    <section class="ordem-card">
+      <div class="ordem-section-header">
+        <div>
+          <h2><i class="fas fa-users"></i> Clientes</h2>
+          <p>Adicione os clientes e ajuste a ordem num&eacute;rica conforme a rota/requisi&ccedil;&atilde;o.</p>
+        </div>
+        <button type="button" id="btnAdicionarCliente" class="btn-glass btn-green">
+          <i class="fas fa-plus"></i> Adicionar Cliente
+        </button>
+      </div>
+
+      <div id="clientesContainer" class="clientes-container"></div>
+    </section>
+
+    <section class="ordem-actions">
+      <button type="button" id="btnLimparFormulario" class="btn-glass btn-red">
+        <i class="fas fa-eraser"></i> Limpar
+      </button>
+      <button type="button" id="btnGerarPDF" class="btn-glass btn-blue">
+        <i class="fas fa-file-pdf"></i> Gerar PDF
+      </button>
+      <button type="button" id="btnCompartilharWhatsapp" class="btn-glass btn-green">
+        <i class="fab fa-whatsapp"></i> Compartilhar WhatsApp
+      </button>
+    </section>
+  </main>
+
+  <footer class="ordem-footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+
+  <script type="module" src="script/ordem-requisicao.js"></script>
+</body>
+</html>
