@@ -58,7 +58,11 @@ async function receberSolicitacao(usuario, canalSinais, payload) {
 
   try {
     const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
+      video: {
+        frameRate: { ideal: 24, max: 30 },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
       audio: false
     });
 
@@ -73,7 +77,14 @@ async function receberSolicitacao(usuario, canalSinais, payload) {
       peer: criarPeer(canalSinais, payload.session_id, payload.admin_id, usuario.id)
     };
 
+    sessaoAtual.controlChannel = sessaoAtual.peer.createDataChannel('remote-control', {
+      ordered: false,
+      maxRetransmits: 0
+    });
+    configurarCanalControle(sessaoAtual.controlChannel);
+
     stream.getTracks().forEach(track => {
+      if ('contentHint' in track) track.contentHint = 'detail';
       track.addEventListener('ended', () => encerrarSessao(false));
       sessaoAtual.peer.addTrack(track, stream);
     });
@@ -161,11 +172,12 @@ async function receberIce(payload) {
 
 function executarControle(payload) {
   if (!sessaoAtual || payload?.session_id !== sessaoAtual.sessionId || sessaoAtual.mode !== 'control') return;
-  if (payload.type !== 'click') return;
+  if (!['move', 'click'].includes(payload.type)) return;
 
   const x = Math.round(Number(payload.xRatio || 0) * window.innerWidth);
   const y = Math.round(Number(payload.yRatio || 0) * window.innerHeight);
   mostrarPonteiroRemoto(x, y);
+  if (payload.type === 'move') return;
 
   const el = document.elementFromPoint(x, y);
   if (!el) return;
@@ -173,6 +185,16 @@ function executarControle(payload) {
   const clicavel = el.closest('button, a, input, select, textarea, label, [role="button"], [onclick]') || el;
   if (typeof clicavel.focus === 'function') clicavel.focus();
   if (typeof clicavel.click === 'function') clicavel.click();
+}
+
+function configurarCanalControle(channel) {
+  channel.onmessage = event => {
+    try {
+      executarControle(JSON.parse(event.data));
+    } catch (error) {
+      console.warn('Comando remoto invalido:', error);
+    }
+  };
 }
 
 async function receberMensagem(usuario, canalSinais, payload) {

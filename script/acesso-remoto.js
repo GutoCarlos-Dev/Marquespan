@@ -15,13 +15,25 @@ let usuariosOnline = [];
 let sessaoAtual = null;
 let usuarioMensagemSelecionado = null;
 const conversasMensagem = new Map();
+let ultimoMovimentoControle = 0;
 
 document.addEventListener('DOMContentLoaded', iniciarPagina);
 
 function iniciarPagina() {
   document.getElementById('remoteSearchUser')?.addEventListener('input', renderUsuariosOnline);
   document.getElementById('btnRemoteStop')?.addEventListener('click', () => encerrarSessao(true));
+  document.getElementById('btnRemoteFullscreen')?.addEventListener('click', alternarTelaCheiaMonitoramento);
   document.getElementById('remoteVideo')?.addEventListener('click', enviarCliqueRemoto);
+  document.getElementById('remoteVideo')?.addEventListener('mousemove', enviarMovimentoRemoto);
+  document.getElementById('remoteVideo')?.addEventListener('dblclick', alternarTelaCheiaMonitoramento);
+  document.addEventListener('fullscreenchange', atualizarBotaoTelaCheia);
+  document.getElementById('btnRemoteSessionSend')?.addEventListener('click', enviarMensagemSessao);
+  document.getElementById('remoteSessionChatText')?.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      enviarMensagemSessao();
+    }
+  });
   document.getElementById('btnCloseRemoteMessage')?.addEventListener('click', fecharModalMensagem);
   document.getElementById('btnCancelRemoteMessage')?.addEventListener('click', fecharModalMensagem);
   document.getElementById('btnSendRemoteMessage')?.addEventListener('click', enviarMensagemUsuario);
@@ -145,25 +157,60 @@ function fecharModalMensagem() {
 async function enviarMensagemUsuario() {
   const alvo = usuarioMensagemSelecionado;
   const mensagem = document.getElementById('remoteMessageText').value.trim();
+  const btn = document.getElementById('btnSendRemoteMessage');
+  const textoOriginal = btn.innerHTML;
+  await enviarMensagemParaAlvo(alvo, mensagem, {
+    button: btn,
+    buttonHtml: textoOriginal,
+    afterSend: () => {
+      document.getElementById('remoteMessageText').value = '';
+      document.getElementById('remoteMessageText').focus();
+    }
+  });
+}
+
+async function enviarMensagemSessao() {
+  if (!sessaoAtual?.targetUserId) return;
+  const alvo = usuariosOnline.find(u => String(u.user_id) === String(sessaoAtual.targetUserId)) || {
+    user_id: sessaoAtual.targetUserId,
+    nome: sessaoAtual.targetNome
+  };
+  const campo = document.getElementById('remoteSessionChatText');
+  const mensagem = campo.value.trim();
+  const btn = document.getElementById('btnRemoteSessionSend');
+  const textoOriginal = btn.innerHTML;
+  await enviarMensagemParaAlvo(alvo, mensagem, {
+    button: btn,
+    buttonHtml: textoOriginal,
+    afterSend: () => {
+      campo.value = '';
+      campo.focus();
+    }
+  });
+}
+
+async function enviarMensagemParaAlvo(alvo, mensagem, options = {}) {
   if (!alvo || !canalSinais) return;
   if (!mensagem) {
     alert('Digite a mensagem antes de enviar.');
     return;
   }
 
-  const btn = document.getElementById('btnSendRemoteMessage');
-  const textoOriginal = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando';
+  const btn = options.button;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando';
+  }
 
+  const userId = String(alvo.user_id);
   const sentAt = new Date().toISOString();
-  adicionarMensagemHistorico(String(alvo.user_id), {
+  adicionarMensagemHistorico(userId, {
     from: 'admin',
     nome: usuarioLogado.nome || usuarioLogado.nomecompleto || 'Administrador',
     message: mensagem,
     timestamp: sentAt
   });
-  renderHistoricoMensagem(String(alvo.user_id));
+  atualizarHistoricosMensagem(userId);
 
   const resultado = await canalSinais.send({
     type: 'broadcast',
@@ -171,24 +218,25 @@ async function enviarMensagemUsuario() {
     payload: {
       admin_id: usuarioLogado.id,
       admin_nome: usuarioLogado.nome || usuarioLogado.nomecompleto || 'Administrador',
-      target_user_id: String(alvo.user_id),
+      target_user_id: userId,
       target_nome: alvo.nome || 'Usuario',
       message: mensagem,
       sent_at: sentAt
     }
   });
 
-  btn.disabled = false;
-  btn.innerHTML = textoOriginal;
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = options.buttonHtml || '<i class="fas fa-paper-plane"></i> Enviar';
+  }
 
   if (resultado !== 'ok') {
     alert(`Erro ao enviar mensagem: ${resultado}`);
     return;
   }
 
-  registrarAuditoria('INCLUIR', 'Acesso Remoto', `Mensagem enviada para ${alvo.nome || alvo.user_id}: ${mensagem.slice(0, 120)}`);
-  document.getElementById('remoteMessageText').value = '';
-  document.getElementById('remoteMessageText').focus();
+  registrarAuditoria('INCLUIR', 'Acesso Remoto', `Mensagem enviada para ${alvo.nome || userId}: ${mensagem.slice(0, 120)}`);
+  options.afterSend?.();
   setStatus('Mensagem enviada', 'online');
 }
 
@@ -213,6 +261,7 @@ function receberRespostaMensagem(payload) {
   if (usuarioMensagemSelecionado && String(usuarioMensagemSelecionado.user_id) === userId) {
     renderHistoricoMensagem(userId);
   }
+  if (sessaoAtual && String(sessaoAtual.targetUserId) === userId) renderHistoricoSessao(userId);
   setStatus(`Resposta recebida de ${payload.target_nome || 'usuario'}`, 'online');
 }
 
@@ -238,6 +287,48 @@ function renderHistoricoMensagem(userId) {
   container.scrollTop = container.scrollHeight;
 }
 
+function atualizarHistoricosMensagem(userId) {
+  if (usuarioMensagemSelecionado && String(usuarioMensagemSelecionado.user_id) === userId) {
+    renderHistoricoMensagem(userId);
+  }
+  if (sessaoAtual && String(sessaoAtual.targetUserId) === userId) {
+    renderHistoricoSessao(userId);
+  }
+}
+
+function renderHistoricoSessao(userId) {
+  const container = document.getElementById('remoteSessionChatHistory');
+  const mensagens = conversasMensagem.get(userId) || [];
+  if (!mensagens.length) {
+    container.innerHTML = '<div class="remote-chat-empty">Nenhuma mensagem enviada nesta sessao.</div>';
+    return;
+  }
+  container.innerHTML = mensagens.map(item => `
+    <div class="remote-chat-message ${item.from === 'admin' ? 'admin' : 'user'}">
+      <small>${escapeHtml(item.nome || (item.from === 'admin' ? 'Administrador' : 'Usuario'))} - ${escapeHtml(formatarHora(item.timestamp))}</small>
+      ${escapeHtml(item.message)}
+    </div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+function habilitarChatSessao(alvo) {
+  document.getElementById('remoteSessionChat')?.classList.remove('disabled');
+  document.getElementById('remoteSessionChatTarget').textContent = alvo?.nome || sessaoAtual?.targetNome || 'Usuario conectado';
+  document.getElementById('remoteSessionChatText').disabled = false;
+  document.getElementById('btnRemoteSessionSend').disabled = false;
+  renderHistoricoSessao(String(sessaoAtual.targetUserId));
+}
+
+function desabilitarChatSessao() {
+  document.getElementById('remoteSessionChat')?.classList.add('disabled');
+  document.getElementById('remoteSessionChatTarget').textContent = 'Sem usuario conectado';
+  document.getElementById('remoteSessionChatText').value = '';
+  document.getElementById('remoteSessionChatText').disabled = true;
+  document.getElementById('btnRemoteSessionSend').disabled = true;
+  document.getElementById('remoteSessionChatHistory').innerHTML = '<div class="remote-chat-empty">O chat sera habilitado quando a visualizacao iniciar.</div>';
+}
+
 async function solicitarAcesso(userId, mode) {
   const alvo = usuariosOnline.find(u => String(u.user_id) === String(userId));
   if (!alvo || !canalSinais) return;
@@ -253,6 +344,7 @@ async function solicitarAcesso(userId, mode) {
     targetNome: alvo.nome || 'Usuario',
     mode,
     peer: null,
+    controlChannel: null,
     remoteStream: null
   };
 
@@ -302,6 +394,17 @@ async function receberOffer(payload) {
   const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
   sessaoAtual.peer = peer;
 
+  peer.ondatachannel = event => {
+    if (event.channel?.label !== 'remote-control') return;
+    sessaoAtual.controlChannel = event.channel;
+    sessaoAtual.controlChannel.onopen = () => {
+      if (sessaoAtual?.mode === 'control') setStatus('Controle conectado', 'online');
+    };
+    sessaoAtual.controlChannel.onclose = () => {
+      if (sessaoAtual) sessaoAtual.controlChannel = null;
+    };
+  };
+
   peer.ontrack = event => {
     const stream = event.streams?.[0];
     if (!stream) return;
@@ -309,6 +412,10 @@ async function receberOffer(payload) {
     const video = document.getElementById('remoteVideo');
     video.srcObject = stream;
     document.querySelector('.remote-screen-wrap')?.classList.add('has-video');
+    document.getElementById('btnRemoteFullscreen').disabled = false;
+    habilitarChatSessao({
+      nome: sessaoAtual.targetNome
+    });
     setStatus('Conectado', 'online');
     registrarAuditoria('ALTERAR', 'Acesso Remoto', `Sessao remota iniciada com ${sessaoAtual.targetNome}`);
   };
@@ -360,23 +467,41 @@ async function receberIce(payload) {
 }
 
 async function enviarCliqueRemoto(event) {
-  if (!sessaoAtual || sessaoAtual.mode !== 'control' || !canalSinais) return;
+  await enviarControleRemoto(event, 'click');
+}
+
+function enviarMovimentoRemoto(event) {
+  if (!sessaoAtual || sessaoAtual.mode !== 'control') return;
+  const agora = performance.now();
+  if (agora - ultimoMovimentoControle < 50) return;
+  ultimoMovimentoControle = agora;
+  enviarControleRemoto(event, 'move');
+}
+
+async function enviarControleRemoto(event, type) {
+  if (!sessaoAtual || sessaoAtual.mode !== 'control') return;
   const video = event.currentTarget;
   const rect = video.getBoundingClientRect();
-  const xRatio = (event.clientX - rect.left) / rect.width;
-  const yRatio = (event.clientY - rect.top) / rect.height;
+  const payload = {
+    session_id: sessaoAtual.sessionId,
+    admin_id: usuarioLogado.id,
+    target_user_id: sessaoAtual.targetUserId,
+    type,
+    xRatio: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
+    yRatio: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height))
+  };
 
+  const channel = sessaoAtual.controlChannel;
+  if (channel?.readyState === 'open') {
+    channel.send(JSON.stringify(payload));
+    return;
+  }
+
+  if (type !== 'click' || !canalSinais) return;
   await canalSinais.send({
     type: 'broadcast',
     event: 'remote_control',
-    payload: {
-      session_id: sessaoAtual.sessionId,
-      admin_id: usuarioLogado.id,
-      target_user_id: sessaoAtual.targetUserId,
-      type: 'click',
-      xRatio: Math.min(1, Math.max(0, xRatio)),
-      yRatio: Math.min(1, Math.max(0, yRatio))
-    }
+    payload
   });
 }
 
@@ -409,8 +534,39 @@ function limparSessao() {
   if (video) video.srcObject = null;
   document.querySelector('.remote-screen-wrap')?.classList.remove('has-video');
   document.getElementById('btnRemoteStop').disabled = true;
+  document.getElementById('btnRemoteFullscreen').disabled = true;
+  if (document.fullscreenElement?.classList?.contains('remote-screen-wrap')) {
+    document.exitFullscreen().catch(() => {});
+  }
   document.getElementById('remoteSessionTitle').innerHTML = '<i class="fas fa-display"></i> Nenhuma sessao ativa';
   document.getElementById('remoteSessionMeta').textContent = 'Selecione um usuario online para solicitar visualizacao ou controle.';
+  desabilitarChatSessao();
+}
+
+async function alternarTelaCheiaMonitoramento() {
+  const wrap = document.querySelector('.remote-screen-wrap');
+  const video = document.getElementById('remoteVideo');
+  if (!wrap || !video?.srcObject) return;
+
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await wrap.requestFullscreen();
+    }
+  } catch (error) {
+    console.warn('Nao foi possivel alternar tela cheia:', error);
+    alert('Nao foi possivel abrir em tela cheia neste navegador.');
+  }
+}
+
+function atualizarBotaoTelaCheia() {
+  const btn = document.getElementById('btnRemoteFullscreen');
+  if (!btn) return;
+  const ativo = document.fullscreenElement?.classList?.contains('remote-screen-wrap');
+  btn.innerHTML = ativo
+    ? '<i class="fas fa-compress"></i> Sair da tela cheia'
+    : '<i class="fas fa-expand"></i> Tela cheia';
 }
 
 function atualizarTituloSessao(alvo, mode) {

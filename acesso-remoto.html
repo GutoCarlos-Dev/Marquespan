@@ -42,6 +42,7 @@
           </div>
           <div class="remote-session-actions">
             <span id="remoteSessionStatus" class="remote-status idle">Aguardando</span>
+            <button type="button" id="btnRemoteFullscreen" class="btn-glass btn-blue" disabled><i class="fas fa-expand"></i> Tela cheia</button>
             <button type="button" id="btnRemoteStop" class="btn-glass btn-red" disabled><i class="fas fa-stop"></i> Encerrar</button>
           </div>
         </div>
@@ -56,6 +57,20 @@
 
         <div class="remote-help">
           <strong>Controle total:</strong> no navegador, o controle fica limitado aos elementos da pagina aberta pelo usuario. Acoes fora do navegador dependem de recursos nativos do sistema operacional e nao sao expostas ao JavaScript.
+        </div>
+
+        <div id="remoteSessionChat" class="remote-session-chat disabled">
+          <div class="remote-session-chat-header">
+            <strong><i class="fas fa-comments"></i> Chat da sessao</strong>
+            <span id="remoteSessionChatTarget">Sem usuario conectado</span>
+          </div>
+          <div id="remoteSessionChatHistory" class="remote-session-chat-history">
+            <div class="remote-chat-empty">O chat sera habilitado quando a visualizacao iniciar.</div>
+          </div>
+          <div class="remote-session-chat-input">
+            <textarea id="remoteSessionChatText" class="glass-input" rows="2" maxlength="800" placeholder="Digite uma mensagem durante o acesso..." disabled></textarea>
+            <button type="button" id="btnRemoteSessionSend" class="btn-glass btn-green" disabled><i class="fas fa-paper-plane"></i> Enviar</button>
+          </div>
         </div>
       </div>
     </section>
