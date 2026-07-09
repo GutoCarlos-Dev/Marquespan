@@ -206,7 +206,7 @@
 }
 
 .remote-modal-box {
-  width: min(520px, 100%);
+  width: min(560px, 100%);
   border-radius: 8px;
   overflow: hidden;
   background: #fff;
@@ -250,9 +250,56 @@
   font-weight: 700;
 }
 
+.remote-chat-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 260px;
+  overflow: auto;
+  padding: 10px;
+  margin-bottom: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.remote-chat-empty {
+  margin: auto;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.remote-chat-message {
+  max-width: 82%;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.remote-chat-message.admin {
+  align-self: flex-end;
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.remote-chat-message.user {
+  align-self: flex-start;
+  background: #e0f2fe;
+  color: #0c4a6e;
+}
+
+.remote-chat-message small {
+  display: block;
+  margin-bottom: 3px;
+  opacity: 0.75;
+  font-weight: 700;
+}
+
 .remote-modal-body textarea {
   resize: vertical;
-  min-height: 120px;
+  min-height: 90px;
 }
 
 .remote-modal-footer {

@@ -4,6 +4,7 @@ const SIGNAL_CHANNEL = 'sinais_admin';
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 
 let sessaoAtual = null;
+const conversasMensagem = new Map();
 
 export function iniciarAgenteAcessoRemoto({ usuario, canalSinais }) {
   if (!usuario?.id || !canalSinais || window.__remoteSupportAgentStarted) return;
@@ -179,7 +180,14 @@ async function receberMensagem(usuario, canalSinais, payload) {
   const mensagem = String(payload?.message || '').trim();
   if (!mensagem) return;
 
-  mostrarPopupMensagem(payload.admin_nome || 'Administrador', mensagem);
+  const adminId = String(payload.admin_id || '');
+  adicionarMensagemConversa(adminId, {
+    from: 'admin',
+    nome: payload.admin_nome || 'Administrador',
+    message: mensagem,
+    timestamp: payload.sent_at || new Date().toISOString()
+  });
+  mostrarPopupMensagem(usuario, canalSinais, payload.admin_id, payload.admin_nome || 'Administrador');
   await enviarSinal(canalSinais, 'remote_message_received', {
     target_user_id: usuario.id,
     target_nome: usuario.nome || 'Usuario',
@@ -189,19 +197,30 @@ async function receberMensagem(usuario, canalSinais, payload) {
   });
 }
 
-function mostrarPopupMensagem(adminNome, mensagem) {
-  const overlay = document.createElement('div');
+function mostrarPopupMensagem(usuario, canalSinais, adminId, adminNome) {
+  const conversaId = String(adminId || '');
+  let overlay = document.querySelector(`.remoteSupportMessageOverlay[data-admin-id="${cssEscape(conversaId)}"]`);
+  if (overlay) {
+    renderPopupHistorico(overlay, conversaId);
+    overlay.querySelector('.remoteSupportReplyText')?.focus();
+    return;
+  }
+
+  overlay = document.createElement('div');
   overlay.className = 'remoteSupportMessageOverlay';
+  overlay.dataset.adminId = conversaId;
   overlay.innerHTML = `
     <div class="remoteSupportMessageBox">
       <div class="remoteSupportMessageHeader">
-        <strong>Mensagem do suporte</strong>
+        <strong>Chat com suporte</strong>
         <button type="button" aria-label="Fechar">&times;</button>
       </div>
       <div class="remoteSupportMessageSender">${escapeHtml(adminNome)}</div>
-      <div class="remoteSupportMessageText">${escapeHtml(mensagem)}</div>
+      <div class="remoteSupportMessageHistory"></div>
+      <textarea class="remoteSupportReplyText" maxlength="800" rows="3" placeholder="Digite sua resposta..."></textarea>
       <div class="remoteSupportMessageFooter">
-        <button type="button">OK</button>
+        <button type="button" class="remoteSupportCloseBtn">Fechar</button>
+        <button type="button" class="remoteSupportSendBtn">Responder</button>
       </div>
     </div>
   `;
@@ -219,7 +238,7 @@ function mostrarPopupMensagem(adminNome, mensagem) {
 
   const box = overlay.querySelector('.remoteSupportMessageBox');
   Object.assign(box.style, {
-    width: 'min(440px, 100%)',
+    width: 'min(460px, 100%)',
     borderRadius: '10px',
     background: '#fff',
     boxShadow: '0 18px 46px rgba(0,0,0,0.28)',
@@ -256,42 +275,124 @@ function mostrarPopupMensagem(adminNome, mensagem) {
     fontWeight: '700'
   });
 
-  const text = overlay.querySelector('.remoteSupportMessageText');
-  Object.assign(text.style, {
-    padding: '10px 16px 16px',
-    color: '#1f2937',
-    whiteSpace: 'pre-wrap',
-    lineHeight: '1.45',
-    fontSize: '15px'
+  const history = overlay.querySelector('.remoteSupportMessageHistory');
+  Object.assign(history.style, {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    height: '230px',
+    overflow: 'auto',
+    margin: '12px 16px',
+    padding: '10px',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+    background: '#f8fafc'
+  });
+
+  const textarea = overlay.querySelector('.remoteSupportReplyText');
+  Object.assign(textarea.style, {
+    boxSizing: 'border-box',
+    width: 'calc(100% - 32px)',
+    margin: '0 16px 12px',
+    minHeight: '76px',
+    padding: '10px',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    resize: 'vertical',
+    fontFamily: 'Arial, sans-serif',
+    fontSize: '14px'
   });
 
   const footer = overlay.querySelector('.remoteSupportMessageFooter');
   Object.assign(footer.style, {
     display: 'flex',
+    gap: '8px',
     justifyContent: 'flex-end',
     padding: '12px 16px',
     background: '#f8fafc',
     borderTop: '1px solid #e5e7eb'
   });
 
-  const ok = footer.querySelector('button');
-  Object.assign(ok.style, {
+  const botoes = footer.querySelectorAll('button');
+  botoes.forEach(botao => Object.assign(botao.style, {
     border: '0',
     borderRadius: '7px',
     padding: '9px 18px',
-    background: '#006937',
     color: '#fff',
     cursor: 'pointer',
     fontWeight: '700'
-  });
+  }));
+  footer.querySelector('.remoteSupportCloseBtn').style.background = '#64748b';
+  footer.querySelector('.remoteSupportSendBtn').style.background = '#006937';
 
   const fechar = () => overlay.remove();
   close.addEventListener('click', fechar);
-  ok.addEventListener('click', fechar);
-  overlay.addEventListener('click', event => {
-    if (event.target === overlay) fechar();
+  footer.querySelector('.remoteSupportCloseBtn').addEventListener('click', fechar);
+  footer.querySelector('.remoteSupportSendBtn').addEventListener('click', () => enviarRespostaChat(usuario, canalSinais, adminId, adminNome, overlay));
+  textarea.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      enviarRespostaChat(usuario, canalSinais, adminId, adminNome, overlay);
+    }
   });
   document.body.appendChild(overlay);
+  renderPopupHistorico(overlay, conversaId);
+  textarea.focus();
+}
+
+async function enviarRespostaChat(usuario, canalSinais, adminId, adminNome, overlay) {
+  const textarea = overlay.querySelector('.remoteSupportReplyText');
+  const mensagem = String(textarea.value || '').trim();
+  if (!mensagem) return;
+
+  const sentAt = new Date().toISOString();
+  adicionarMensagemConversa(String(adminId || ''), {
+    from: 'user',
+    nome: usuario.nome || 'Usuario',
+    message: mensagem,
+    timestamp: sentAt
+  });
+  renderPopupHistorico(overlay, String(adminId || ''));
+  textarea.value = '';
+  textarea.focus();
+
+  await enviarSinal(canalSinais, 'remote_message_reply', {
+    admin_id: adminId,
+    admin_nome: adminNome,
+    target_user_id: usuario.id,
+    target_nome: usuario.nome || 'Usuario',
+    message: mensagem,
+    sent_at: sentAt
+  });
+}
+
+function adicionarMensagemConversa(adminId, mensagem) {
+  if (!conversasMensagem.has(adminId)) conversasMensagem.set(adminId, []);
+  conversasMensagem.get(adminId).push(mensagem);
+}
+
+function renderPopupHistorico(overlay, adminId) {
+  const history = overlay.querySelector('.remoteSupportMessageHistory');
+  const mensagens = conversasMensagem.get(adminId) || [];
+  history.innerHTML = mensagens.map(item => {
+    const isAdmin = item.from === 'admin';
+    return `
+      <div style="
+        align-self:${isAdmin ? 'flex-start' : 'flex-end'};
+        max-width:82%;
+        padding:9px 11px;
+        border-radius:8px;
+        background:${isAdmin ? '#e0f2fe' : '#dcfce7'};
+        color:${isAdmin ? '#0c4a6e' : '#14532d'};
+        font-size:14px;
+        line-height:1.35;
+        white-space:pre-wrap;">
+        <small style="display:block;margin-bottom:3px;opacity:.75;font-weight:700;">${escapeHtml(item.nome)} - ${escapeHtml(formatarHora(item.timestamp))}</small>
+        ${escapeHtml(item.message)}
+      </div>
+    `;
+  }).join('');
+  history.scrollTop = history.scrollHeight;
 }
 
 function mostrarBarraSessao(adminNome, mode) {
@@ -407,6 +508,17 @@ function escapeHtml(value) {
     '"': '&quot;',
     "'": '&#039;'
   }[char]));
+}
+
+function formatarHora(value) {
+  const data = new Date(value);
+  if (Number.isNaN(data.getTime())) return '--:--';
+  return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function cssEscape(value) {
+  if (window.CSS?.escape) return window.CSS.escape(value);
+  return String(value).replace(/["\\]/g, '\\$&');
 }
 
 window.addEventListener('beforeunload', () => {

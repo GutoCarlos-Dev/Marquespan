@@ -14,6 +14,7 @@ let canalSinais = null;
 let usuariosOnline = [];
 let sessaoAtual = null;
 let usuarioMensagemSelecionado = null;
+const conversasMensagem = new Map();
 
 document.addEventListener('DOMContentLoaded', iniciarPagina);
 
@@ -24,6 +25,12 @@ function iniciarPagina() {
   document.getElementById('btnCloseRemoteMessage')?.addEventListener('click', fecharModalMensagem);
   document.getElementById('btnCancelRemoteMessage')?.addEventListener('click', fecharModalMensagem);
   document.getElementById('btnSendRemoteMessage')?.addEventListener('click', enviarMensagemUsuario);
+  document.getElementById('remoteMessageText')?.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      enviarMensagemUsuario();
+    }
+  });
   document.getElementById('modalRemoteMessage')?.addEventListener('click', event => {
     if (event.target.id === 'modalRemoteMessage') fecharModalMensagem();
   });
@@ -47,6 +54,7 @@ function iniciarSinais() {
   canalSinais
     .on('broadcast', { event: 'remote_response' }, ({ payload }) => receberRespostaSolicitacao(payload))
     .on('broadcast', { event: 'remote_message_received' }, ({ payload }) => confirmarMensagemRecebida(payload))
+    .on('broadcast', { event: 'remote_message_reply' }, ({ payload }) => receberRespostaMensagem(payload))
     .on('broadcast', { event: 'remote_offer' }, ({ payload }) => receberOffer(payload))
     .on('broadcast', { event: 'remote_ice' }, ({ payload }) => receberIce(payload))
     .on('broadcast', { event: 'remote_stop' }, ({ payload }) => {
@@ -124,6 +132,7 @@ function abrirModalMensagem(userId) {
   usuarioMensagemSelecionado = alvo;
   document.getElementById('remoteMessageTarget').textContent = `Para: ${alvo.nome || 'Usuario'} (${alvo.filial || 'Global'})`;
   document.getElementById('remoteMessageText').value = '';
+  renderHistoricoMensagem(String(alvo.user_id));
   document.getElementById('modalRemoteMessage').classList.remove('hidden');
   document.getElementById('remoteMessageText').focus();
 }
@@ -148,6 +157,14 @@ async function enviarMensagemUsuario() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando';
 
   const sentAt = new Date().toISOString();
+  adicionarMensagemHistorico(String(alvo.user_id), {
+    from: 'admin',
+    nome: usuarioLogado.nome || usuarioLogado.nomecompleto || 'Administrador',
+    message: mensagem,
+    timestamp: sentAt
+  });
+  renderHistoricoMensagem(String(alvo.user_id));
+
   const resultado = await canalSinais.send({
     type: 'broadcast',
     event: 'remote_message',
@@ -170,13 +187,55 @@ async function enviarMensagemUsuario() {
   }
 
   registrarAuditoria('INCLUIR', 'Acesso Remoto', `Mensagem enviada para ${alvo.nome || alvo.user_id}: ${mensagem.slice(0, 120)}`);
-  fecharModalMensagem();
+  document.getElementById('remoteMessageText').value = '';
+  document.getElementById('remoteMessageText').focus();
   setStatus('Mensagem enviada', 'online');
 }
 
 function confirmarMensagemRecebida(payload) {
   if (String(payload?.admin_id) !== String(usuarioLogado.id)) return;
   setStatus(`Mensagem recebida por ${payload.target_nome || 'usuario'}`, 'online');
+}
+
+function receberRespostaMensagem(payload) {
+  if (String(payload?.admin_id) !== String(usuarioLogado.id)) return;
+  const userId = String(payload?.target_user_id || '');
+  const mensagem = String(payload?.message || '').trim();
+  if (!userId || !mensagem) return;
+
+  adicionarMensagemHistorico(userId, {
+    from: 'user',
+    nome: payload.target_nome || 'Usuario',
+    message: mensagem,
+    timestamp: payload.sent_at || new Date().toISOString()
+  });
+
+  if (usuarioMensagemSelecionado && String(usuarioMensagemSelecionado.user_id) === userId) {
+    renderHistoricoMensagem(userId);
+  }
+  setStatus(`Resposta recebida de ${payload.target_nome || 'usuario'}`, 'online');
+}
+
+function adicionarMensagemHistorico(userId, mensagem) {
+  if (!conversasMensagem.has(userId)) conversasMensagem.set(userId, []);
+  conversasMensagem.get(userId).push(mensagem);
+}
+
+function renderHistoricoMensagem(userId) {
+  const container = document.getElementById('remoteMessageHistory');
+  const mensagens = conversasMensagem.get(userId) || [];
+  if (!mensagens.length) {
+    container.innerHTML = '<div class="remote-chat-empty">Nenhuma mensagem enviada ainda.</div>';
+    return;
+  }
+
+  container.innerHTML = mensagens.map(item => `
+    <div class="remote-chat-message ${item.from === 'admin' ? 'admin' : 'user'}">
+      <small>${escapeHtml(item.nome || (item.from === 'admin' ? 'Administrador' : 'Usuario'))} - ${escapeHtml(formatarHora(item.timestamp))}</small>
+      ${escapeHtml(item.message)}
+    </div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
 }
 
 async function solicitarAcesso(userId, mode) {
@@ -391,6 +450,12 @@ function normalizar(value) {
     .toUpperCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+}
+
+function formatarHora(value) {
+  const data = new Date(value);
+  if (Number.isNaN(data.getTime())) return '--:--';
+  return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function escapeHtml(value) {
