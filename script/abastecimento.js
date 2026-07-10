@@ -770,6 +770,61 @@ document.addEventListener('DOMContentLoaded', () => {
             return ['administrador', 'gerencia', 'adm_logistica'].includes(this.getUserLevel());
         },
 
+        canConfirmarKmExcedido() {
+            return ['administrador', 'gerencia', 'adm_logistica'].includes(this.getUserLevel());
+        },
+
+        confirmarLancamentoKmExcedido(mensagem) {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;';
+
+                const modal = document.createElement('div');
+                modal.style.cssText = 'width:min(460px,100%);background:#fff;color:#1f2937;border-radius:10px;box-shadow:0 18px 45px rgba(0,0,0,.28);padding:22px;font-family:Arial,sans-serif;';
+
+                const titulo = document.createElement('h3');
+                titulo.textContent = 'KM acima do limite';
+                titulo.style.cssText = 'margin:0 0 12px;font-size:18px;color:#111827;';
+
+                const texto = document.createElement('p');
+                texto.textContent = mensagem;
+                texto.style.cssText = 'margin:0 0 18px;line-height:1.45;white-space:pre-line;';
+
+                const acoes = document.createElement('div');
+                acoes.style.cssText = 'display:flex;justify-content:flex-end;gap:10px;';
+
+                const btnNao = document.createElement('button');
+                btnNao.type = 'button';
+                btnNao.textContent = 'Não';
+                btnNao.style.cssText = 'border:0;border-radius:8px;padding:10px 16px;background:#e5e7eb;color:#111827;font-weight:700;cursor:pointer;';
+
+                const btnSim = document.createElement('button');
+                btnSim.type = 'button';
+                btnSim.textContent = 'Sim';
+                btnSim.style.cssText = 'border:0;border-radius:8px;padding:10px 16px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;';
+
+                const finalizar = (confirmado) => {
+                    document.removeEventListener('keydown', onKeydown);
+                    overlay.remove();
+                    resolve(confirmado);
+                };
+
+                const onKeydown = (event) => {
+                    if (event.key === 'Escape') finalizar(false);
+                };
+
+                btnNao.addEventListener('click', () => finalizar(false));
+                btnSim.addEventListener('click', () => finalizar(true));
+                document.addEventListener('keydown', onKeydown);
+
+                acoes.append(btnNao, btnSim);
+                modal.append(titulo, texto, acoes);
+                overlay.appendChild(modal);
+                document.body.appendChild(overlay);
+                btnNao.focus();
+            });
+        },
+
         setupAuditoriaEstoque() {
             if (!this.auditoriaEstoqueContainer) return;
 
@@ -1689,16 +1744,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!isNaN(ultimoKm) && ultimoKm > 0 && !isNaN(kmValue) && kmValue > 0) {
                     const difKm = kmValue - ultimoKm;
                     if (difKm > 5000) {
-                        alert(
-                            `⚠️ KM Inválido!\n\n` +
+                        const mensagemConfirmacaoKm =
                             `O KM atual informado (${kmValue.toLocaleString('pt-BR')}) excede em ` +
                             `${difKm.toLocaleString('pt-BR')} km o Último KM registrado (${ultimoKm.toLocaleString('pt-BR')}).\n\n` +
-                            `A diferença máxima permitida é de 5.000 km.\n` +
-                            `Verifique o odômetro e tente novamente.`
-                        );
-                        this.btnSalvarSaida.disabled = false;
-                        this.btnSalvarSaida.innerHTML = originalText;
-                        return;
+                            `A diferença máxima permitida é de 5.000 km.\n\n` +
+                            `Deseja realmente realizar esse lançamento?`;
+
+                        if (this.canConfirmarKmExcedido()) {
+                            const confirmarLancamento = await this.confirmarLancamentoKmExcedido(mensagemConfirmacaoKm);
+
+                            if (!confirmarLancamento) {
+                                this.btnSalvarSaida.disabled = false;
+                                this.btnSalvarSaida.innerHTML = originalText;
+                                return;
+                            }
+                        } else {
+                            alert(
+                                `⚠️ KM Inválido!\n\n` +
+                                `O KM atual informado (${kmValue.toLocaleString('pt-BR')}) excede em ` +
+                                `${difKm.toLocaleString('pt-BR')} km o Último KM registrado (${ultimoKm.toLocaleString('pt-BR')}).\n\n` +
+                                `A diferença máxima permitida é de 5.000 km.\n` +
+                                `Verifique o odômetro e tente novamente.`
+                            );
+                            this.btnSalvarSaida.disabled = false;
+                            this.btnSalvarSaida.innerHTML = originalText;
+                            return;
+                        }
                     }
                 }
 
