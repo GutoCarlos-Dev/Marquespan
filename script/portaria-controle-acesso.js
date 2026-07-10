@@ -10,6 +10,8 @@ let setores = [];
 let acessos = [];
 let acessoEditandoId = null;
 let acessoSaidaId = null;
+let empresaEditandoId = null;
+let pessoaEditandoId = null;
 let setorEditandoId = null;
 let modalRetornoCadastro = null;
 const niveisComExclusao = ['administrador', 'gerencia'];
@@ -279,6 +281,8 @@ function abrirModalCadastro(id, modalRetorno = null) {
   const modal = document.getElementById(id);
   modal.querySelector('form')?.reset();
   limparResultadosCadastro(id);
+  if (id === 'modalEmpresa') empresaEditandoId = null;
+  if (id === 'modalPessoa') pessoaEditandoId = null;
   if (id === 'modalSetor') setorEditandoId = null;
   if (id === 'modalEmpresa') document.getElementById('empresaFilial').value = getFilialFiltro();
   if (id === 'modalPessoa') document.getElementById('pessoaFilial').value = getFilialFiltro();
@@ -291,6 +295,8 @@ function abrirModalCadastro(id, modalRetorno = null) {
 
 function fecharModalCadastro(id) {
   document.getElementById(id).classList.add('hidden');
+  if (id === 'modalEmpresa') empresaEditandoId = null;
+  if (id === 'modalPessoa') pessoaEditandoId = null;
   if (id === 'modalSetor') setorEditandoId = null;
   if (modalRetornoCadastro) {
     document.getElementById(modalRetornoCadastro)?.classList.remove('hidden');
@@ -568,6 +574,7 @@ async function excluirCadastro(tipo, id) {
 }
 
 function preencherFormularioEmpresa(empresa) {
+  empresaEditandoId = empresa?.id || null;
   document.getElementById('empresaNome').value = empresa.nome || '';
   document.getElementById('empresaFilial').value = normalizarFilial(empresa.filial) || getFilialFiltro();
   document.getElementById('empresaDocumento').value = empresa.documento || '';
@@ -576,6 +583,7 @@ function preencherFormularioEmpresa(empresa) {
 }
 
 function preencherFormularioPessoa(pessoa) {
+  pessoaEditandoId = pessoa?.id || null;
   document.getElementById('pessoaNome').value = pessoa.nome || '';
   document.getElementById('pessoaFilial').value = normalizarFilial(pessoa.filial) || getFilialFiltro();
   document.getElementById('pessoaDocumento').value = pessoa.documento || '';
@@ -659,6 +667,7 @@ function extrairDocumento(valor) {
 
 async function salvarEmpresa(event) {
   event.preventDefault();
+  const estavaEditando = Boolean(empresaEditandoId);
   const payload = {
     filial: getFilialDoCadastro('empresa'),
     nome: textoMaiusculo(document.getElementById('empresaNome').value),
@@ -668,20 +677,43 @@ async function salvarEmpresa(event) {
   };
   if (!payload.filial) return alert('Selecione a filial da empresa.');
   const existente = empresas.find(item =>
+    String(item.id) !== String(empresaEditandoId || '') &&
     normalizarFilial(item.filial) === payload.filial && (
       (payload.documento && normalizarBusca(item.documento) === normalizarBusca(payload.documento)) ||
       normalizarBusca(item.nome) === normalizarBusca(payload.nome)
     )
   );
   if (existente) {
-    alert('Empresa ja cadastrada. O cadastro existente foi selecionado.');
+    alert('Ja existe outra empresa cadastrada com este nome/documento nesta filial. O cadastro existente foi selecionado.');
     document.getElementById('acessoEmpresa').value = formatarEmpresaOpcao(existente);
     preencherFormularioEmpresa(existente);
     return;
   }
-  const { error } = await supabaseClient.from('portaria_empresas').insert([payload]);
+  const { error } = estavaEditando
+    ? await supabaseClient.from('portaria_empresas').update(payload).eq('id', empresaEditandoId)
+    : await supabaseClient.from('portaria_empresas').insert([payload]);
   if (error) return alert(`Erro ao salvar empresa: ${error.message}`);
-  registrarAuditoria('INCLUIR', 'Portaria Empresa', `Empresa cadastrada: ${payload.nome}`);
+
+  if (estavaEditando) {
+    const [{ error: pessoasError }, { error: acessosError }] = await Promise.all([
+      supabaseClient
+        .from('portaria_pessoas')
+        .update({ empresa_nome: payload.nome })
+        .eq('empresa_id', empresaEditandoId),
+      supabaseClient
+        .from('portaria_acessos')
+        .update({ empresa_nome: payload.nome, empresa_documento: payload.documento })
+        .eq('empresa_id', empresaEditandoId)
+    ]);
+    if (pessoasError) console.warn('Empresa atualizada, mas pessoas vinculadas nao foram sincronizadas:', pessoasError);
+    if (acessosError) console.warn('Empresa atualizada, mas acessos anteriores nao foram sincronizados:', acessosError);
+  }
+
+  registrarAuditoria(
+    estavaEditando ? 'ALTERAR' : 'INCLUIR',
+    'Portaria Empresa',
+    `${estavaEditando ? 'Empresa atualizada' : 'Empresa cadastrada'}: ${payload.nome}`
+  );
   fecharModalCadastro('modalEmpresa');
   await carregarCadastros();
   document.getElementById('acessoEmpresa').value = formatarEmpresaOpcao(payload);
@@ -689,6 +721,7 @@ async function salvarEmpresa(event) {
 
 async function salvarPessoa(event) {
   event.preventDefault();
+  const estavaEditando = Boolean(pessoaEditandoId);
   const empresa = encontrarEmpresa(document.getElementById('pessoaEmpresa').value);
   const payload = {
     filial: getFilialDoCadastro('pessoa'),
@@ -700,21 +733,37 @@ async function salvarPessoa(event) {
   };
   if (!payload.filial) return alert('Selecione a filial da pessoa.');
   const existente = pessoas.find(item =>
+    String(item.id) !== String(pessoaEditandoId || '') &&
     normalizarFilial(item.filial) === payload.filial && (
       (payload.documento && normalizarBusca(item.documento) === normalizarBusca(payload.documento)) ||
       normalizarBusca(item.nome) === normalizarBusca(payload.nome)
     )
   );
   if (existente) {
-    alert('Pessoa ja cadastrada. O cadastro existente foi selecionado.');
+    alert('Ja existe outra pessoa cadastrada com este nome/documento nesta filial. O cadastro existente foi selecionado.');
     document.getElementById('acessoPessoa').value = formatarPessoaOpcao(existente);
     document.getElementById('acessoDocumentoPessoa').value = existente.documento || '';
     preencherFormularioPessoa(existente);
     return;
   }
-  const { error } = await supabaseClient.from('portaria_pessoas').insert([payload]);
+  const { error } = estavaEditando
+    ? await supabaseClient.from('portaria_pessoas').update(payload).eq('id', pessoaEditandoId)
+    : await supabaseClient.from('portaria_pessoas').insert([payload]);
   if (error) return alert(`Erro ao salvar pessoa: ${error.message}`);
-  registrarAuditoria('INCLUIR', 'Portaria Pessoa', `Pessoa cadastrada: ${payload.nome}`);
+
+  if (estavaEditando) {
+    const { error: acessosError } = await supabaseClient
+      .from('portaria_acessos')
+      .update({ pessoa_nome: payload.nome, pessoa_documento: payload.documento })
+      .eq('pessoa_id', pessoaEditandoId);
+    if (acessosError) console.warn('Pessoa atualizada, mas acessos anteriores nao foram sincronizados:', acessosError);
+  }
+
+  registrarAuditoria(
+    estavaEditando ? 'ALTERAR' : 'INCLUIR',
+    'Portaria Pessoa',
+    `${estavaEditando ? 'Pessoa atualizada' : 'Pessoa cadastrada'}: ${payload.nome}`
+  );
   fecharModalCadastro('modalPessoa');
   await carregarCadastros();
   document.getElementById('acessoPessoa').value = formatarPessoaOpcao(payload);
