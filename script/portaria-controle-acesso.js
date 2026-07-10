@@ -10,6 +10,7 @@ let setores = [];
 let acessos = [];
 let acessoEditandoId = null;
 let acessoSaidaId = null;
+let setorEditandoId = null;
 let modalRetornoCadastro = null;
 const niveisComExclusao = ['administrador', 'gerencia'];
 
@@ -278,6 +279,7 @@ function abrirModalCadastro(id, modalRetorno = null) {
   const modal = document.getElementById(id);
   modal.querySelector('form')?.reset();
   limparResultadosCadastro(id);
+  if (id === 'modalSetor') setorEditandoId = null;
   if (id === 'modalEmpresa') document.getElementById('empresaFilial').value = getFilialFiltro();
   if (id === 'modalPessoa') document.getElementById('pessoaFilial').value = getFilialFiltro();
   if (id === 'modalSetor') document.getElementById('setorFilial').value = getFilialFiltro();
@@ -289,6 +291,7 @@ function abrirModalCadastro(id, modalRetorno = null) {
 
 function fecharModalCadastro(id) {
   document.getElementById(id).classList.add('hidden');
+  if (id === 'modalSetor') setorEditandoId = null;
   if (modalRetornoCadastro) {
     document.getElementById(modalRetornoCadastro)?.classList.remove('hidden');
     modalRetornoCadastro = null;
@@ -581,6 +584,7 @@ function preencherFormularioPessoa(pessoa) {
 }
 
 function preencherFormularioSetor(setor) {
+  setorEditandoId = setor?.id || null;
   document.getElementById('setorNome').value = setor.nome || '';
   document.getElementById('setorFilial').value = normalizarFilial(setor.filial) || getFilialFiltro();
   document.getElementById('setorResponsavel').value = setor.responsavel || '';
@@ -719,6 +723,7 @@ async function salvarPessoa(event) {
 
 async function salvarSetor(event) {
   event.preventDefault();
+  const estavaEditando = Boolean(setorEditandoId);
   const payload = {
     filial: getFilialDoCadastro('setor'),
     nome: textoMaiusculo(document.getElementById('setorNome').value),
@@ -726,16 +731,35 @@ async function salvarSetor(event) {
     ramal: textoMaiusculo(document.getElementById('setorRamal').value) || null
   };
   if (!payload.filial) return alert('Selecione a filial do setor.');
-  const existente = setores.find(item => normalizarFilial(item.filial) === payload.filial && normalizarBusca(item.nome) === normalizarBusca(payload.nome));
+  const existente = setores.find(item =>
+    String(item.id) !== String(setorEditandoId || '') &&
+    normalizarFilial(item.filial) === payload.filial &&
+    normalizarBusca(item.nome) === normalizarBusca(payload.nome)
+  );
   if (existente) {
-    alert('Setor ja cadastrado. O cadastro existente foi selecionado.');
+    alert('Ja existe outro setor cadastrado com este nome nesta filial. O cadastro existente foi selecionado.');
     document.getElementById('acessoSetor').value = existente.nome || '';
     preencherFormularioSetor(existente);
     return;
   }
-  const { error } = await supabaseClient.from('portaria_setores').insert([payload]);
+  const { error } = estavaEditando
+    ? await supabaseClient.from('portaria_setores').update(payload).eq('id', setorEditandoId)
+    : await supabaseClient.from('portaria_setores').insert([payload]);
   if (error) return alert(`Erro ao salvar setor: ${error.message}`);
-  registrarAuditoria('INCLUIR', 'Portaria Setor', `Setor cadastrado: ${payload.nome}`);
+
+  if (estavaEditando) {
+    const { error: acessoError } = await supabaseClient
+      .from('portaria_acessos')
+      .update({ setor_nome: payload.nome })
+      .eq('setor_id', setorEditandoId);
+    if (acessoError) console.warn('Setor atualizado, mas acessos anteriores nao foram sincronizados:', acessoError);
+  }
+
+  registrarAuditoria(
+    estavaEditando ? 'ALTERAR' : 'INCLUIR',
+    'Portaria Setor',
+    `${estavaEditando ? 'Setor atualizado' : 'Setor cadastrado'}: ${payload.nome}`
+  );
   fecharModalCadastro('modalSetor');
   await carregarCadastros();
   document.getElementById('acessoSetor').value = payload.nome;
