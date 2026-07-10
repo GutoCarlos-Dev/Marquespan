@@ -1378,12 +1378,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             scope = painelPlan;
         }
 
-        // Agrupamento de campos para verificação (ex: motorista e motorista_ausente são verificados juntos)
+        // Agrupamento de campos para verificação.
+        // Funcionarios compartilham o mesmo grupo para marcar nomes repetidos
+        // entre MOTORISTA, AUXILIAR, TERCEIRO e faltas/afastamentos.
         const groupsToCheck = [
             ['placa'],
-            ['motorista', 'motorista_ausente'],
-            ['auxiliar', 'auxiliar_ausente'],
-            ['terceiro']
+            ['motorista', 'motorista_ausente', 'auxiliar', 'auxiliar_ausente', 'terceiro']
         ];
         
         groupsToCheck.forEach(keys => {
