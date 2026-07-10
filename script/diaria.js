@@ -3,6 +3,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 
 const IMPORT_DAYS = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO'];
 const CACHE_DATAS = {};
+const DIARIA_COLUMN_WIDTHS_KEY = 'marquespan_diaria_column_widths';
 const diariaSortState = { key: 'nome', direction: 'asc' };
 const NIVEIS_GERENCIAMENTO = new Set([
     'administrador',
@@ -46,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await carregarFiliais();
     await carregarCadastroFinanceiroDiaria();
     configurarEventos();
+    habilitarResizeColunasDiaria();
     atualizarContextoDiaria();
     aplicarCadastroFinanceiroNaDiaria();
     inicializarJantaPernoite();
@@ -160,6 +162,9 @@ function configurarEventos() {
     document.getElementById('tbodyDiaria')?.addEventListener('input', (event) => {
         const input = event.target.closest('[data-diaria-edit]');
         if (!input) return;
+        if (input.dataset.diariaEdit === 'descricaoDescontoVariavel') {
+            aplicarMaiusculasPreservandoCursor(input);
+        }
         atualizarCampoManualDiaria(input.dataset.diariaKey, input.dataset.diariaEdit, input.value);
     });
 
@@ -169,6 +174,77 @@ function configurarEventos() {
         const item = diariaDadosAtual.find(row => row.key === input.dataset.diariaKey);
         input.value = formatNumeroMoedaInput(item?.descontoVariavel || 0);
     }, true);
+}
+
+function habilitarResizeColunasDiaria() {
+    const table = document.querySelector('.diaria-table');
+    if (!table) return;
+
+    const savedWidths = JSON.parse(localStorage.getItem(DIARIA_COLUMN_WIDTHS_KEY) || '{}');
+    table.querySelectorAll('thead th').forEach((th, index) => {
+        const columnKey = th.dataset.columnKey || String(index);
+        const savedWidth = savedWidths[columnKey];
+        if (savedWidth) {
+            th.style.width = savedWidth;
+            th.style.minWidth = savedWidth;
+        } else if (!th.style.width) {
+            th.style.width = getLarguraPadraoColunaDiaria(columnKey);
+            th.style.minWidth = th.style.width;
+        }
+
+        if (th.querySelector('.resizer')) return;
+        const resizer = document.createElement('div');
+        resizer.className = 'resizer';
+        th.appendChild(resizer);
+        configurarResizeColunaDiaria(resizer, th, columnKey);
+    });
+}
+
+function getLarguraPadraoColunaDiaria(columnKey) {
+    const widths = {
+        nome: '150px',
+        nomeCompleto: '220px',
+        cpf: '120px',
+        funcao: '180px',
+        pagar: '76px',
+        status: '120px',
+        diasDesconto: '95px',
+        valorDesconto: '145px',
+        descontoVariavel: '130px',
+        descricaoDescontoVariavel: '220px',
+        valorPagar: '130px'
+    };
+    return widths[columnKey] || '130px';
+}
+
+function configurarResizeColunaDiaria(resizer, th, columnKey) {
+    let startX = 0;
+    let startWidth = 0;
+
+    const mouseMoveHandler = (event) => {
+        const width = `${Math.max(56, startWidth + event.clientX - startX)}px`;
+        th.style.width = width;
+        th.style.minWidth = width;
+    };
+
+    const mouseUpHandler = () => {
+        document.removeEventListener('mousemove', mouseMoveHandler);
+        document.removeEventListener('mouseup', mouseUpHandler);
+        resizer.classList.remove('resizing');
+        const saved = JSON.parse(localStorage.getItem(DIARIA_COLUMN_WIDTHS_KEY) || '{}');
+        saved[columnKey] = th.style.width;
+        localStorage.setItem(DIARIA_COLUMN_WIDTHS_KEY, JSON.stringify(saved));
+    };
+
+    resizer.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        startX = event.clientX;
+        startWidth = parseInt(window.getComputedStyle(th).width, 10);
+        resizer.classList.add('resizing');
+        document.addEventListener('mousemove', mouseMoveHandler);
+        document.addEventListener('mouseup', mouseUpHandler);
+    });
 }
 
 function toggleMenuLateral() {
@@ -1896,18 +1972,38 @@ function atualizarCampoManualDiaria(key, campo, valor) {
     if (campo === 'descontoVariavel') {
         item.descontoVariavel = parseMoedaBR(valor);
     } else if (campo === 'descricaoDescontoVariavel') {
-        item.descricaoDescontoVariavel = cleanImportValue(valor);
+        item.descricaoDescontoVariavel = cleanImportValue(valor).toLocaleUpperCase('pt-BR');
     } else {
         return;
     }
 
     const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
     recalcularItemDiaria(item, valorSemana);
+    const input = document.querySelector(`#tbodyDiaria [data-diaria-key="${CSS.escape(String(key))}"][data-diaria-edit="${CSS.escape(String(campo))}"]`);
+    if (input) {
+        const temAlerta = campo === 'descontoVariavel'
+            ? Number(item.descontoVariavel || 0) > 0
+            : Boolean(cleanImportValue(item.descricaoDescontoVariavel));
+        input.classList.toggle('diaria-desconto-alerta', temAlerta);
+    }
 
     const row = document.querySelector(`#tbodyDiaria tr[data-diaria-key="${CSS.escape(String(key))}"]`);
     const valorPagarCell = row?.querySelector('[data-diaria-valor-pagar]');
     if (valorPagarCell) valorPagarCell.textContent = formatMoedaBR(item.valorPagar);
     atualizarResumoDiaria();
+}
+
+function aplicarMaiusculasPreservandoCursor(input) {
+    const inicio = input.selectionStart;
+    const fim = input.selectionEnd;
+    const valorAtual = input.value;
+    const valorMaiusculo = valorAtual.toLocaleUpperCase('pt-BR');
+    if (valorAtual === valorMaiusculo) return;
+
+    input.value = valorMaiusculo;
+    if (inicio !== null && fim !== null) {
+        input.setSelectionRange(inicio, fim);
+    }
 }
 
 function renderDiariaTabela() {
@@ -1931,6 +2027,8 @@ function renderDiariaTabela() {
 
     tbody.innerHTML = dadosOrdenados.map(item => {
         const temDescontoSemanaAnterior = Number(item.valorDesconto || 0) > 0 || Number(item.diasDesconto || 0) > 0;
+        const temDescontoVariavel = Number(item.descontoVariavel || 0) > 0;
+        const temDescricaoDesconto = Boolean(cleanImportValue(item.descricaoDescontoVariavel));
         const statusClass = temDescontoSemanaAnterior ? 'bloqueado' : (item.recebe ? 'apto' : 'bloqueado');
         return `
         <tr data-diaria-key="${escapeAttribute(item.key)}" data-nome="${escapeAttribute(item.nome)}" data-funcao="${escapeAttribute(item.funcao)}" data-status="${escapeAttribute(item.status)}">
@@ -1942,8 +2040,8 @@ function renderDiariaTabela() {
             <td><span class="diaria-status ${statusClass}" title="${escapeAttribute(item.descricaoStatus || item.status)}">${escapeAttribute(item.status)}</span></td>
             <td>${item.diasDesconto}</td>
             <td class="${temDescontoSemanaAnterior ? 'diaria-desconto-alerta' : ''}">${formatMoedaBR(item.valorDesconto)}</td>
-            <td><input type="text" class="table-input diaria-desconto-variavel-input" data-diaria-key="${escapeAttribute(item.key)}" data-diaria-edit="descontoVariavel" value="${escapeAttribute(formatNumeroMoedaInput(item.descontoVariavel || 0))}" inputmode="decimal" placeholder="0,00"></td>
-            <td><input type="text" class="table-input diaria-descricao-desconto-input" data-diaria-key="${escapeAttribute(item.key)}" data-diaria-edit="descricaoDescontoVariavel" value="${escapeAttribute(item.descricaoDescontoVariavel || '')}" maxlength="180" placeholder="Texto livre"></td>
+            <td><input type="text" class="table-input diaria-desconto-variavel-input ${temDescontoVariavel ? 'diaria-desconto-alerta' : ''}" data-diaria-key="${escapeAttribute(item.key)}" data-diaria-edit="descontoVariavel" value="${escapeAttribute(formatNumeroMoedaInput(item.descontoVariavel || 0))}" inputmode="decimal" placeholder="0,00"></td>
+            <td><input type="text" class="table-input diaria-descricao-desconto-input ${temDescricaoDesconto ? 'diaria-desconto-alerta' : ''}" data-diaria-key="${escapeAttribute(item.key)}" data-diaria-edit="descricaoDescontoVariavel" value="${escapeAttribute(item.descricaoDescontoVariavel || '')}" maxlength="180" placeholder="Texto livre"></td>
             <td data-diaria-valor-pagar>${formatMoedaBR(item.valorPagar)}</td>
         </tr>
     `;

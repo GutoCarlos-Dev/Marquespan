@@ -1804,6 +1804,7 @@ body.escala-menu-oculto .menu-floating-toggle i {
     z-index: 2;
     background: var(--primary-color);
     color: #fff;
+    padding-right: 14px;
 }
 
 .diaria-sort-btn {
@@ -1869,6 +1870,11 @@ body.escala-menu-oculto .menu-floating-toggle i {
 .diaria-desconto-alerta {
     color: #a71d2a;
     font-weight: 800;
+}
+
+.diaria-table input.table-input.diaria-desconto-alerta {
+    color: #a71d2a !important;
+    font-weight: 800 !important;
 }
 
 .diaria-page-selection {
