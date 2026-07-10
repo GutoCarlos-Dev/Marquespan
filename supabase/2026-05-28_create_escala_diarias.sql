@@ -11,6 +11,7 @@ create table if not exists public.escala_diarias (
     total_aptos integer not null default 0,
     total_bloqueados integer not null default 0,
     total_desconto_anterior numeric(12,2) not null default 0,
+    total_desconto_variavel numeric(12,2) not null default 0,
     total_pagar numeric(12,2) not null default 0,
     total_desconto numeric(12,2) not null default 0,
     ultima_alteracao_por text,
@@ -26,6 +27,8 @@ create table if not exists public.escala_diaria_itens (
     status_diaria text,
     dias_desconto integer not null default 0,
     desconto_anterior numeric(12,2) not null default 0,
+    desconto_variavel numeric(12,2) not null default 0,
+    descricao_desconto_variavel text,
     valor_pagar numeric(12,2) not null default 0,
     valor_desconto numeric(12,2) not null default 0,
     recebe_diaria boolean not null default true,
@@ -44,11 +47,14 @@ alter table if exists public.escala_diarias
     add column if not exists total_desconto_anterior numeric(12,2) not null default 0,
     add column if not exists total_pagar numeric(12,2) not null default 0,
     add column if not exists total_desconto numeric(12,2) not null default 0,
+    add column if not exists total_desconto_variavel numeric(12,2) not null default 0,
     add column if not exists total_aptos integer not null default 0,
     add column if not exists total_bloqueados integer not null default 0,
     add column if not exists total_funcionarios integer not null default 0;
 
 alter table if exists public.escala_diaria_itens
     add column if not exists desconto_anterior numeric(12,2) not null default 0,
+    add column if not exists desconto_variavel numeric(12,2) not null default 0,
+    add column if not exists descricao_desconto_variavel text,
     add column if not exists valor_pagar numeric(12,2) not null default 0,
     add column if not exists valor_desconto numeric(12,2) not null default 0;

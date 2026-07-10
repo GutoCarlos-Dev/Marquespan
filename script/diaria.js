@@ -156,6 +156,19 @@ function configurarEventos() {
             atualizarPagamentoManualDiaria(pagarToggle.dataset.diariaKey, pagarToggle.checked);
         }
     });
+
+    document.getElementById('tbodyDiaria')?.addEventListener('input', (event) => {
+        const input = event.target.closest('[data-diaria-edit]');
+        if (!input) return;
+        atualizarCampoManualDiaria(input.dataset.diariaKey, input.dataset.diariaEdit, input.value);
+    });
+
+    document.getElementById('tbodyDiaria')?.addEventListener('blur', (event) => {
+        const input = event.target.closest('[data-diaria-edit="descontoVariavel"]');
+        if (!input) return;
+        const item = diariaDadosAtual.find(row => row.key === input.dataset.diariaKey);
+        input.value = formatNumeroMoedaInput(item?.descontoVariavel || 0);
+    }, true);
 }
 
 function toggleMenuLateral() {
@@ -1455,6 +1468,8 @@ async function abrirHistoricoDiaria(id) {
             descricaoStatus: cleanImportValue(item.status_diaria) || 'Historico salvo.',
             diasDesconto: Number(item.dias_desconto || 0),
             descontoAnterior: Number(item.desconto_anterior || 0),
+            descontoVariavel: Number(item.desconto_variavel || 0),
+            descricaoDescontoVariavel: cleanImportValue(item.descricao_desconto_variavel),
             valorPagar: Number(item.valor_pagar || 0),
             valorDesconto: Number(item.valor_desconto || 0),
             recebe: Boolean(item.recebe_diaria),
@@ -1544,7 +1559,7 @@ async function carregarDiaria() {
     if (!exigirFilial()) return;
 
     atualizarContextoDiaria();
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Carregando...</td></tr>';
 
     try {
         const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
@@ -1660,7 +1675,7 @@ async function carregarDiaria() {
 
         if (funcionarios.length === 0) {
             diariaDadosAtual = [];
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum funcionario encontrado para a filial.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Nenhum funcionario encontrado para a filial.</td></tr>';
             atualizarFiltroFuncaoDiaria();
             atualizarResumoDiaria();
             return;
@@ -1694,6 +1709,8 @@ async function carregarDiaria() {
                 motivosAusencia,
                 diasDesconto,
                 descontoAnterior,
+                descontoVariavel: 0,
+                descricaoDescontoVariavel: '',
                 valorPagar: 0,
                 valorDesconto: 0,
                 recebe: true,
@@ -1709,7 +1726,7 @@ async function carregarDiaria() {
         renderDiariaTabela();
     } catch (error) {
         console.error('Erro ao carregar diaria:', error);
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:#dc3545;">Erro ao carregar diaria.</td></tr>';
     }
 }
 
@@ -1786,6 +1803,7 @@ function recalcularItemDiaria(item, valorSemana) {
     const temStatusCadastroAusencia = statusCadastro && isStatusAusenciaDiaria(statusCadastro);
     const diasDesconto = Number(item.diasDesconto || 0);
     const descontoAnterior = Number(item.descontoAnterior || 0);
+    const descontoVariavel = Math.max(0, Number(item.descontoVariavel || 0));
     // Bloqueio HARD: cadastro com ausencia ou 5+ dias de falta — checkbox desabilitado, nao pode pagar
     // Bloqueio SOFT: fora da escala — checkbox habilitado, usuario pode autorizar manualmente
     const bloqueioHard = temStatusCadastroAusencia || diasDesconto >= 5;
@@ -1794,8 +1812,9 @@ function recalcularItemDiaria(item, valorSemana) {
 
     item.bloqueioStatus = bloqueioHard;
     item.recebe = !bloqueioHard && pagarManual;
+    item.descontoVariavel = descontoVariavel;
     item.valorDesconto = Math.max(0, diasDesconto * valorDia);
-    item.valorPagar = item.recebe ? Math.max(0, valorSemana - item.valorDesconto - descontoAnterior) : 0;
+    item.valorPagar = item.recebe ? Math.max(0, valorSemana - item.valorDesconto - descontoAnterior - descontoVariavel) : 0;
 
     if (bloqueioHard || !pagarManual) {
         if (temStatusCadastroAusencia) {
@@ -1870,6 +1889,27 @@ function atualizarPagamentoManualDiaria(key, pagarManual) {
     renderDiariaTabela();
 }
 
+function atualizarCampoManualDiaria(key, campo, valor) {
+    const item = diariaDadosAtual.find(row => row.key === key);
+    if (!item) return;
+
+    if (campo === 'descontoVariavel') {
+        item.descontoVariavel = parseMoedaBR(valor);
+    } else if (campo === 'descricaoDescontoVariavel') {
+        item.descricaoDescontoVariavel = cleanImportValue(valor);
+    } else {
+        return;
+    }
+
+    const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
+    recalcularItemDiaria(item, valorSemana);
+
+    const row = document.querySelector(`#tbodyDiaria tr[data-diaria-key="${CSS.escape(String(key))}"]`);
+    const valorPagarCell = row?.querySelector('[data-diaria-valor-pagar]');
+    if (valorPagarCell) valorPagarCell.textContent = formatMoedaBR(item.valorPagar);
+    atualizarResumoDiaria();
+}
+
 function renderDiariaTabela() {
     const tbody = document.getElementById('tbodyDiaria');
     if (!tbody) return;
@@ -1884,7 +1924,7 @@ function renderDiariaTabela() {
     });
 
     if (dadosOrdenados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum funcionario encontrado para os filtros selecionados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Nenhum funcionario encontrado para os filtros selecionados.</td></tr>';
         atualizarResumoDiaria();
         return;
     }
@@ -1893,7 +1933,7 @@ function renderDiariaTabela() {
         const temDescontoSemanaAnterior = Number(item.valorDesconto || 0) > 0 || Number(item.diasDesconto || 0) > 0;
         const statusClass = temDescontoSemanaAnterior ? 'bloqueado' : (item.recebe ? 'apto' : 'bloqueado');
         return `
-        <tr data-nome="${escapeAttribute(item.nome)}" data-funcao="${escapeAttribute(item.funcao)}" data-status="${escapeAttribute(item.status)}">
+        <tr data-diaria-key="${escapeAttribute(item.key)}" data-nome="${escapeAttribute(item.nome)}" data-funcao="${escapeAttribute(item.funcao)}" data-status="${escapeAttribute(item.status)}">
             <td>${escapeAttribute(item.nome)}</td>
             <td>${escapeAttribute(item.nomeCompleto)}</td>
             <td>${escapeAttribute(item.cpf)}</td>
@@ -1902,7 +1942,9 @@ function renderDiariaTabela() {
             <td><span class="diaria-status ${statusClass}" title="${escapeAttribute(item.descricaoStatus || item.status)}">${escapeAttribute(item.status)}</span></td>
             <td>${item.diasDesconto}</td>
             <td class="${temDescontoSemanaAnterior ? 'diaria-desconto-alerta' : ''}">${formatMoedaBR(item.valorDesconto)}</td>
-            <td>${formatMoedaBR(item.valorPagar)}</td>
+            <td><input type="text" class="table-input diaria-desconto-variavel-input" data-diaria-key="${escapeAttribute(item.key)}" data-diaria-edit="descontoVariavel" value="${escapeAttribute(formatNumeroMoedaInput(item.descontoVariavel || 0))}" inputmode="decimal" placeholder="0,00"></td>
+            <td><input type="text" class="table-input diaria-descricao-desconto-input" data-diaria-key="${escapeAttribute(item.key)}" data-diaria-edit="descricaoDescontoVariavel" value="${escapeAttribute(item.descricaoDescontoVariavel || '')}" maxlength="180" placeholder="Texto livre"></td>
+            <td data-diaria-valor-pagar>${formatMoedaBR(item.valorPagar)}</td>
         </tr>
     `;
     }).join('');
@@ -1913,7 +1955,7 @@ function renderDiariaTabela() {
 function atualizarResumoDiaria() {
     const valorSemana = parseMoedaBR(document.getElementById('diariaValorSemana')?.value);
     const dados = getDiariaDadosExportacao();
-    const totalDesconto = dados.reduce((sum, item) => sum + Number(item.valorDesconto || 0), 0);
+    const totalDesconto = dados.reduce((sum, item) => sum + getTotalDescontoDiariaItem(item), 0);
     const totalPagar = dados.reduce((sum, item) => sum + Number(item.valorPagar || 0), 0);
 
     setText('diariaValorDia', formatMoedaBR(valorSemana / 5));
@@ -1955,7 +1997,8 @@ function getDiariaDadosExportacao() {
             item.nome,
             item.nomeCompleto,
             item.cpf,
-            item.funcao
+            item.funcao,
+            item.descricaoDescontoVariavel
         ].some(valor => normalizeString(valor).includes(termoBusca));
         return statusOk && funcaoOk && buscaOk;
     });
@@ -1973,6 +2016,12 @@ function ordenarDiariaDados(dados) {
         }
         return String(aValue || '').localeCompare(String(bValue || ''), 'pt-BR', { sensitivity: 'base' }) * direction;
     });
+}
+
+function getTotalDescontoDiariaItem(item) {
+    return Number(item.valorDesconto || 0)
+        + Number(item.descontoAnterior || 0)
+        + Number(item.descontoVariavel || 0);
 }
 
 async function carregarDescontosDiariaAnterior(semana) {
@@ -2036,6 +2085,8 @@ async function salvarDiariaSemana() {
         status_diaria: item.status,
         dias_desconto: item.diasDesconto,
         desconto_anterior: item.descontoAnterior,
+        desconto_variavel: Number(item.descontoVariavel || 0),
+        descricao_desconto_variavel: cleanImportValue(item.descricaoDescontoVariavel),
         valor_pagar: item.valorPagar,
         valor_desconto: item.valorDesconto,
         recebe_diaria: item.recebe
@@ -2052,7 +2103,8 @@ async function salvarDiariaSemana() {
             data_fim: getDatasSemanaISO(semana).at(-1) || null,
             total_funcionarios: itens.length,
             total_pagar: itens.reduce((sum, item) => sum + Number(item.valor_pagar || 0), 0),
-            total_desconto: itens.reduce((sum, item) => sum + Number(item.valor_desconto || 0), 0),
+            total_desconto: itens.reduce((sum, item) => sum + Number(item.valor_desconto || 0) + Number(item.desconto_variavel || 0), 0),
+            total_desconto_variavel: itens.reduce((sum, item) => sum + Number(item.desconto_variavel || 0), 0),
             total_aptos: itens.filter(item => item.recebe_diaria).length,
             total_bloqueados: itens.filter(item => !item.recebe_diaria).length
         });
@@ -2109,7 +2161,7 @@ async function salvarDiariaSemana() {
         const detalhe = String(error?.message || error || '');
         const sqlCorrecao = detalhe.toLowerCase().includes('row-level security')
             ? 'supabase/2026-06-26_fix_lider_balanca_diaria_rls.sql'
-            : 'supabase/2026-06-26_fix_escala_diarias_totais.sql';
+            : 'supabase/2026-07-10_add_desconto_variavel_diaria.sql';
         alert(`Erro ao salvar diaria. Aplique o SQL ${sqlCorrecao} e tente novamente. Detalhe: ${detalhe}`);
     }
 }
@@ -2124,9 +2176,9 @@ function gerarXLSXDiaria() {
     const filial = getFilial();
     const wsData = [
         [`DIARIA - ${semana} - ${filial}`],
-        [`Valor semanal: ${formatMoedaBR(resumo.valorSemana)}`, `Valor por dia: ${formatMoedaBR(resumo.valorDia)}`, `Total a pagar: ${formatMoedaBR(resumo.totalPagar)}`, `Desconto sem. anterior: ${formatMoedaBR(resumo.totalDesconto)}`],
+        [`Valor semanal: ${formatMoedaBR(resumo.valorSemana)}`, `Valor por dia: ${formatMoedaBR(resumo.valorDia)}`, `Total a pagar: ${formatMoedaBR(resumo.totalPagar)}`, `Total descontos: ${formatMoedaBR(resumo.totalDesconto)}`],
         [],
-        ['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. SEM. ANTERIOR', 'VALOR A PAGAR'],
+        ['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. SEM. ANTERIOR', 'DES. VARIAVEL', 'DESCRICAO DESCONTO', 'VALOR A PAGAR'],
         ...dados.map(item => [
             item.nome,
             item.nomeCompleto,
@@ -2137,6 +2189,8 @@ function gerarXLSXDiaria() {
             item.descricaoStatus,
             item.diasDesconto,
             item.valorDesconto,
+            Number(item.descontoVariavel || 0),
+            item.descricaoDescontoVariavel || '',
             item.valorPagar
         ])
     ];
@@ -2145,7 +2199,8 @@ function gerarXLSXDiaria() {
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws['!cols'] = [
         { wch: 24 }, { wch: 34 }, { wch: 16 }, { wch: 30 }, { wch: 10 },
-        { wch: 18 }, { wch: 42 }, { wch: 12 }, { wch: 16 }, { wch: 18 }
+        { wch: 18 }, { wch: 42 }, { wch: 12 }, { wch: 16 }, { wch: 16 },
+        { wch: 36 }, { wch: 18 }
     ];
     aplicarEstiloDescontoSemAnteriorXLSX(ws, wsData.length);
     XLSX.utils.book_append_sheet(wb, ws, 'Diaria');
@@ -2154,15 +2209,17 @@ function gerarXLSXDiaria() {
 
 function aplicarEstiloDescontoSemAnteriorXLSX(ws, totalRows) {
     if (!ws || !window.XLSX?.utils?.encode_cell) return;
-    const descontoCol = 8;
+    const descontoCols = [8, 9];
     for (let row = 3; row < totalRows; row += 1) {
-        const ref = XLSX.utils.encode_cell({ r: row, c: descontoCol });
-        if (!ws[ref]) continue;
-        ws[ref].s = {
-            ...(ws[ref].s || {}),
-            font: { ...(ws[ref].s?.font || {}), color: { rgb: 'DC3545' }, bold: row === 3 },
-            fill: row === 3 ? { fgColor: { rgb: 'F8D7DA' } } : ws[ref].s?.fill
-        };
+        descontoCols.forEach(descontoCol => {
+            const ref = XLSX.utils.encode_cell({ r: row, c: descontoCol });
+            if (!ws[ref]) return;
+            ws[ref].s = {
+                ...(ws[ref].s || {}),
+                font: { ...(ws[ref].s?.font || {}), color: { rgb: 'DC3545' }, bold: row === 3 },
+                fill: row === 3 ? { fgColor: { rgb: 'F8D7DA' } } : ws[ref].s?.fill
+            };
+        });
     }
 }
 
@@ -2178,12 +2235,12 @@ async function gerarPDFDiaria() {
     const filial = getFilial();
     const logoBase64 = await getLogoBase64DiariaPDF();
     const titulo = `Diaria - ${semana} - ${filial}`;
-    const subtitulo = `Valor semanal: ${formatMoedaBR(resumo.valorSemana)} | Valor por dia: ${formatMoedaBR(resumo.valorDia)} | Total a pagar: ${formatMoedaBR(resumo.totalPagar)} | Desconto sem. anterior: ${formatMoedaBR(resumo.totalDesconto)} | Registros: ${dados.length}`;
+    const subtitulo = `Valor semanal: ${formatMoedaBR(resumo.valorSemana)} | Valor por dia: ${formatMoedaBR(resumo.valorDia)} | Total a pagar: ${formatMoedaBR(resumo.totalPagar)} | Total descontos: ${formatMoedaBR(resumo.totalDesconto)} | Registros: ${dados.length}`;
 
     doc.autoTable({
         startY: 38,
         margin: { top: 38, left: 14, right: 14, bottom: 14 },
-        head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. SEM. ANTERIOR', 'VALOR A PAGAR']],
+        head: [['FUNCIONARIO', 'NOME COMPLETO', 'CPF', 'FUNCAO', 'PAGAR', 'STATUS', 'DESCRICAO', 'DIAS DESC.', 'DESC. SEM. ANTERIOR', 'DES. VARIAVEL', 'DESCRICAO DESCONTO', 'VALOR A PAGAR']],
         body: dados.map(item => [
             item.nome,
             item.nomeCompleto,
@@ -2194,6 +2251,8 @@ async function gerarPDFDiaria() {
             item.descricaoStatus,
             item.diasDesconto,
             formatMoedaBR(item.valorDesconto),
+            formatMoedaBR(item.descontoVariavel || 0),
+            item.descricaoDescontoVariavel || '',
             formatMoedaBR(item.valorPagar)
         ]),
         styles: { fontSize: 7, cellPadding: 1.5 },
@@ -2203,10 +2262,11 @@ async function gerarPDFDiaria() {
             1: { cellWidth: 36 },
             3: { cellWidth: 34 },
             5: { cellWidth: 23 },
-            6: { cellWidth: 48 }
+            6: { cellWidth: 38 },
+            10: { cellWidth: 32 }
         },
         didParseCell: (data) => {
-            if (data.section !== 'body' || data.column.index !== 8) return;
+            if (data.section !== 'body' || ![8, 9].includes(data.column.index)) return;
             const valor = parseMoedaBR(data.cell.raw);
             if (valor > 0) data.cell.styles.textColor = [220, 53, 69];
         },
@@ -2228,7 +2288,7 @@ function getDiariaResumoExportacao(dados) {
     return {
         valorSemana,
         valorDia: valorSemana / 5,
-        totalDesconto: dados.reduce((sum, item) => sum + Number(item.valorDesconto || 0), 0),
+        totalDesconto: dados.reduce((sum, item) => sum + getTotalDescontoDiariaItem(item), 0),
         totalPagar: dados.reduce((sum, item) => sum + Number(item.valorPagar || 0), 0)
     };
 }
