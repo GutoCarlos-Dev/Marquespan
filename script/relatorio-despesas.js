@@ -5,6 +5,7 @@ const RelatorioDespesasUI = {
         this.cacheDOM();
         this.bindEvents();
         this.setDefaultDates();
+        this.carregarFiliais();
         // Garante que rotas sejam carregadas antes dos dados para mapear o supervisor
         this.carregarRotas().then(() => {
             this.carregarHoteis();
@@ -33,6 +34,9 @@ const RelatorioDespesasUI = {
         this.filtroCheckoutIni = document.getElementById('filtroCheckoutIni');
         this.filtroCheckoutFim = document.getElementById('filtroCheckoutFim');
 
+        this.filtroFilialDisplay = document.getElementById('filtroFilialDisplay');
+        this.filtroFilialOptions = document.getElementById('filtroFilialOptions');
+        this.filtroFilialText = document.getElementById('filtroFilialText');
         this.filtroRotaDisplay = document.getElementById('filtroRotaDisplay');
         this.filtroRotaOptions = document.getElementById('filtroRotaOptions');
         this.filtroRotaText = document.getElementById('filtroRotaText');
@@ -96,6 +100,25 @@ const RelatorioDespesasUI = {
         this.btnExportarExcel?.addEventListener('click', () => this.exportarExcel());
         this.btnExportarPDF?.addEventListener('click', () => this.exportarPDF());
         this.btnToggleMenuLateral?.addEventListener('click', () => this.toggleMenuLateral());
+        document.getElementById('btnLimparFiltros')?.addEventListener('click', () => this.limparSelecoesFiltros());
+
+        // Eventos do Multiselect de Filiais
+        if (this.filtroFilialDisplay) {
+            this.filtroFilialDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.filtroFilialOptions.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!this.filtroFilialDisplay.contains(e.target) && !this.filtroFilialOptions.contains(e.target)) {
+                    this.filtroFilialOptions.classList.add('hidden');
+                }
+            });
+
+            this.filtroFilialOptions.addEventListener('change', () => {
+                this.atualizarTextoFilial();
+            });
+        }
 
         // Eventos do Multiselect de Rotas
         if (this.filtroRotaDisplay) {
@@ -164,6 +187,90 @@ const RelatorioDespesasUI = {
         // Comentado para que os campos de data iniciem vazios (zerados) conforme solicitado
         // this.dataInicio.value = firstDay.toISOString().split('T')[0];
         // this.dataFim.value = lastDay.toISOString().split('T')[0];
+    },
+
+    async carregarFiliais() {
+        if (!this.filtroFilialOptions) return;
+
+        try {
+            const [filiaisResult, despesasResult] = await Promise.all([
+                supabaseClient.from('filiais').select('sigla, nome').order('nome', { ascending: true }),
+                supabaseClient.from('despesas').select('filial').not('filial', 'is', null).order('filial', { ascending: true })
+            ]);
+
+            if (filiaisResult.error) throw filiaisResult.error;
+            if (despesasResult.error) throw despesasResult.error;
+
+            const filiaisMap = new Map();
+
+            (filiaisResult.data || []).forEach(filial => {
+                const value = String(filial.sigla || filial.nome || '').trim();
+                if (!value) return;
+                const label = filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome;
+                filiaisMap.set(value, { value, label });
+            });
+
+            (despesasResult.data || []).forEach(item => {
+                const value = String(item.filial || '').trim();
+                if (!value || filiaisMap.has(value)) return;
+                filiaisMap.set(value, { value, label: value });
+            });
+
+            const filiais = Array.from(filiaisMap.values())
+                .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+
+            this.filtroFilialOptions.innerHTML = '';
+
+            const stickyContainer = document.createElement('div');
+            stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
+
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = 'Buscar filial...';
+            searchInput.style.cssText = 'width: 100%; padding: 10px; border: none; border-bottom: 1px solid #eee; outline: none; box-sizing: border-box;';
+            searchInput.onclick = (e) => e.stopPropagation();
+            searchInput.addEventListener('input', (e) => {
+                 const term = e.target.value.toLowerCase();
+                 const options = this.filtroFilialOptions.querySelectorAll('label.custom-option');
+                 options.forEach(opt => {
+                     const text = opt.textContent.toLowerCase();
+                     opt.style.display = text.includes(term) ? 'block' : 'none';
+                 });
+            });
+            stickyContainer.appendChild(searchInput);
+
+            const btnLimpar = document.createElement('div');
+            btnLimpar.className = 'custom-option';
+            btnLimpar.style.cssText = 'color: #dc3545; font-weight: bold; text-align: center; cursor: pointer;';
+            btnLimpar.textContent = 'Limpar Selecao';
+            btnLimpar.onclick = (e) => {
+                e.stopPropagation();
+                this.filtroFilialOptions.querySelectorAll('.filial-checkbox').forEach(cb => cb.checked = false);
+                this.atualizarTextoFilial();
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            };
+            stickyContainer.appendChild(btnLimpar);
+            
+            this.filtroFilialOptions.appendChild(stickyContainer);
+
+            filiais.forEach(filial => {
+                const label = document.createElement('label');
+                label.className = 'custom-option';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'filial-checkbox';
+                checkbox.value = filial.value;
+                checkbox.style.marginRight = '8px';
+
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(filial.label));
+                this.filtroFilialOptions.appendChild(label);
+            });
+        } catch (err) {
+            console.error('Erro ao carregar filiais:', err);
+        }
     },
 
     async carregarRotas() {
@@ -339,6 +446,19 @@ const RelatorioDespesasUI = {
         });
     },
 
+    atualizarTextoFilial() {
+        const checkboxes = this.filtroFilialOptions.querySelectorAll('.filial-checkbox:checked');
+        const selecionados = Array.from(checkboxes).map(cb => cb.parentElement.textContent.trim());
+        
+        if (selecionados.length === 0) {
+            this.filtroFilialText.textContent = 'Todas';
+        } else if (selecionados.length <= 3) {
+            this.filtroFilialText.textContent = selecionados.join(', ');
+        } else {
+            this.filtroFilialText.textContent = `${selecionados.length} selecionadas`;
+        }
+    },
+
     atualizarTextoRota() {
         const checkboxes = this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked');
         const selecionados = Array.from(checkboxes).map(cb => cb.value);
@@ -378,6 +498,18 @@ const RelatorioDespesasUI = {
         }
     },
 
+    limparSelecoesFiltros() {
+        this.filtroFilialOptions?.querySelectorAll('.filial-checkbox').forEach(cb => cb.checked = false);
+        this.filtroRotaOptions?.querySelectorAll('.rota-checkbox').forEach(cb => cb.checked = false);
+        this.filtroSupervisorOptions?.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = false);
+        this.filtroHotelOptions?.querySelectorAll('.hotel-checkbox').forEach(cb => cb.checked = false);
+
+        this.atualizarTextoFilial();
+        this.atualizarTextoRota();
+        this.atualizarTextoSupervisor();
+        this.atualizarTextoHotel();
+    },
+
     formatDateTime(value) {
         if (!value) return '-';
         const date = new Date(value);
@@ -390,6 +522,7 @@ const RelatorioDespesasUI = {
             this.tableBodyResultados.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando...</td></tr>';
             
             // Captura filtros selecionados antes do loop
+            const filiaisSelecionadas = Array.from(this.filtroFilialOptions.querySelectorAll('.filial-checkbox:checked')).map(cb => cb.value);
             const rotasSelecionadas = Array.from(this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked')).map(cb => cb.value);
             const supervisoresSelecionados = Array.from(this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox:checked')).map(cb => cb.value);
             const hoteisSelecionados = Array.from(this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked')).map(cb => cb.value);
@@ -416,6 +549,10 @@ const RelatorioDespesasUI = {
             while (keepFetching) {
                 // Cria uma nova instância da query para cada página para evitar conflitos de range
                 let query = baseQuery.range(from, from + step - 1);
+
+                if (filiaisSelecionadas.length > 0) {
+                    query = query.in('filial', filiaisSelecionadas);
+                }
 
                 // Filtro de Múltiplas Rotas
                 if (rotasSelecionadas.length > 0) {

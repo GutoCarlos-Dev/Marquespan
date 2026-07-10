@@ -113,6 +113,16 @@
           <div class="filtro-card">
             <h4><i class="fas fa-tags"></i> Entidades</h4>
             <div class="form-group">
+              <label for="filtroFilial">Filial</label>
+              <div class="custom-select-wrapper">
+                  <div class="glass-input select-display" id="filtroFilialDisplay">
+                      <span id="filtroFilialText">Todas</span>
+                      <i class="fas fa-chevron-down"></i>
+                  </div>
+                  <div class="custom-options hidden" id="filtroFilialOptions"></div>
+              </div>
+            </div>
+            <div class="form-group">
               <label for="filtroRota">Rota</label>
               <div class="custom-select-wrapper">
                   <div class="glass-input select-display" id="filtroRotaDisplay">
@@ -290,6 +300,6 @@
   </script>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="script/relatorio-despesas.js"></script>
+  <script type="module" src="script/relatorio-despesas.js?v=20260710-1"></script>
 </body>
 </html>
