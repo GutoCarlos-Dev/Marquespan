@@ -1677,6 +1677,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return funcionario?.escala_ativa !== false;
     }
 
+    function getCampoFaltaPorFuncao(funcao) {
+        const funcaoNormalizada = normalizeString(funcao);
+        return funcaoNormalizada.includes('MOTORISTA') ? 'motorista' : 'auxiliar';
+    }
+
     async function sincronizarReservasAutomaticas(semana, dataISO, dadosEscala, dadosFaltas) {
         if (!podeGerenciarEscala || !semana || !dataISO || !getFilialEscala()) return dadosEscala;
 
@@ -6750,6 +6755,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <label for="faltasTipoFuncionario">Atividade</label>
                         <select id="faltasTipoFuncionario" class="glass-input">
                             <option value="TODOS">Todos</option>
+                            <option value="FORA_ESCALA">Fora da escala</option>
                             <option value="motorista">Motoristas</option>
                             <option value="auxiliar">Auxiliares</option>
                         </select>
@@ -6857,14 +6863,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             { id: 'tbodyReservas', label: 'RESERVAS' }
         ];
         const funcionarios = [];
+        const escalados = new Set();
+        const adicionados = new Set();
 
         secoes.forEach(secao => {
             document.querySelectorAll(`#${secao.id} tr[data-id][data-tabela]`).forEach(tr => {
+                ['motorista', 'auxiliar', 'terceiro'].forEach(funcao => {
+                    const input = tr.querySelector(`input[data-key="${funcao}"]`);
+                    const nome = getNomeFuncionarioExibicao(input?.value);
+                    const chave = normalizeString(nome);
+                    if (chave) escalados.add(chave);
+                });
+
                 ['motorista', 'auxiliar'].forEach(funcao => {
                     const input = tr.querySelector(`input[data-key="${funcao}"]`);
                     const nome = getNomeFuncionarioExibicao(input?.value);
                     const chave = normalizeString(nome);
-                    if (!chave || lancados.has(chave)) return;
+                    if (!chave || lancados.has(chave) || adicionados.has(chave)) return;
+                    adicionados.add(chave);
 
                     const origem = `${tr.dataset.tabela}:${tr.dataset.id}:${funcao}`;
                     funcionarios.push({
@@ -6880,6 +6896,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                         modelo: tr.querySelector('input[data-key="modelo"]')?.value || ''
                     });
                 });
+            });
+        });
+
+        listaFuncionariosAtivos.forEach(funcionario => {
+            const nome = getNomeFuncionarioExibicao(funcionario.nome || funcionario.nome_completo);
+            const chave = normalizeString(nome);
+            if (!chave || lancados.has(chave) || escalados.has(chave) || adicionados.has(chave)) return;
+
+            const funcao = getCampoFaltaPorFuncao(funcionario.funcao);
+            const funcaoCadastro = cleanImportValue(funcionario.funcao) || (funcao === 'motorista' ? 'MOTORISTA' : 'OUTROS');
+            const origemId = funcionario.id || funcionario.rh_registro || funcionario.matricula || chave;
+            adicionados.add(chave);
+            funcionarios.push({
+                origem: `fora_escala:${origemId}:${funcao}`,
+                tabela: 'fora_escala',
+                id: origemId,
+                funcao,
+                funcaoLabel: funcaoCadastro.toUpperCase(),
+                nome,
+                atividade: 'FORA DA ESCALA',
+                rota: '',
+                placa: '',
+                modelo: ''
             });
         });
 
@@ -6913,9 +6952,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const filtroFuncao = modal.querySelector('#faltasTipoFuncionario')?.value || 'TODOS';
         const termo = ignorarTermo ? '' : normalizeString(modal.querySelector('#faltasFuncionario')?.value);
         return coletarFuncionariosDisponiveisFaltas()
-            .filter(item => filtroFuncao === 'TODOS' || item.funcao === filtroFuncao)
+            .filter(item => {
+                if (filtroFuncao === 'TODOS') return true;
+                if (filtroFuncao === 'FORA_ESCALA') return item.tabela === 'fora_escala';
+                return item.funcao === filtroFuncao;
+            })
             .filter(item => !termo
                 || normalizeString(item.nome).includes(termo)
+                || normalizeString(item.funcaoLabel).includes(termo)
                 || normalizeString(item.atividade).includes(termo)
                 || normalizeString(item.rota).includes(termo)
                 || normalizeVehiclePlate(item.placa).includes(normalizeVehiclePlate(termo)));
@@ -6928,7 +6972,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         modal.querySelector('#faltasFuncionario').value = `${funcionario.nome}${funcionario.rota ? ` - Rota ${funcionario.rota}` : ''}`;
         modal.querySelector('#faltasFuncionarioOrigem').value = funcionario.origem;
-        modal.querySelector('#faltasTipoFuncionario').value = funcionario.funcao;
+        modal.querySelector('#faltasTipoFuncionario').value = funcionario.tabela === 'fora_escala' ? 'FORA_ESCALA' : funcionario.funcao;
         modal.querySelector('#faltasFuncionarioSugestoes').classList.add('hidden');
         carregarFaltasFuncionariosModal(funcionario.origem);
     }
@@ -7005,7 +7049,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const complemento = cleanImportValue(modal.querySelector('#faltasComplemento')?.value);
         const motivo = complemento ? `${motivoBase} - ${complemento}` : motivoBase;
 
-        if (!tabelaOrigem || !idOrigem || !['motorista', 'auxiliar'].includes(keyOrigem)) {
+        if (!tabelaOrigem || !['motorista', 'auxiliar'].includes(keyOrigem) || (tabelaOrigem !== 'fora_escala' && !idOrigem)) {
             return alert('Origem do funcionario invalida.');
         }
 
@@ -7019,7 +7063,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         payload[campoFalta] = nome;
         payload[campoMotivo] = motivo;
 
-        const anotacaoOrigem = getCellNote(tabelaOrigem, idOrigem, keyOrigem);
+        const anotacaoOrigem = tabelaOrigem === 'fora_escala' ? '' : getCellNote(tabelaOrigem, idOrigem, keyOrigem);
 
         const { data: faltaInserida, error: insertError } = await supabaseClient
             .from('faltas_afastamentos')
@@ -7032,28 +7076,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             return alert('Erro ao lancar falta: ' + insertError.message);
         }
 
-        const { error: limparOrigemError } = await supabaseClient
-            .from(tabelaOrigem)
-            .update(comAuditoria({ [keyOrigem]: null }))
-            .eq('id', idOrigem);
+        if (tabelaOrigem !== 'fora_escala') {
+            const { error: limparOrigemError } = await supabaseClient
+                .from(tabelaOrigem)
+                .update(comAuditoria({ [keyOrigem]: null }))
+                .eq('id', idOrigem);
 
-        if (limparOrigemError) {
-            console.error('Erro ao remover funcionario da origem:', limparOrigemError);
-            if (faltaInserida?.id) {
-                await supabaseClient
-                    .from('faltas_afastamentos')
-                    .delete()
-                    .eq('id', faltaInserida.id);
+            if (limparOrigemError) {
+                console.error('Erro ao remover funcionario da origem:', limparOrigemError);
+                if (faltaInserida?.id) {
+                    await supabaseClient
+                        .from('faltas_afastamentos')
+                        .delete()
+                        .eq('id', faltaInserida.id);
+                }
+                return alert('Falta lancada, mas nao foi possivel remover o funcionario da linha anterior: ' + limparOrigemError.message);
             }
-            return alert('Falta lancada, mas nao foi possivel remover o funcionario da linha anterior: ' + limparOrigemError.message);
         }
 
-        if (anotacaoOrigem) {
+        if (anotacaoOrigem && tabelaOrigem !== 'fora_escala') {
             setCellNote(tabelaOrigem, idOrigem, keyOrigem, '');
             if (faltaInserida?.id) setCellNote('faltas_afastamentos', faltaInserida.id, campoFalta, anotacaoOrigem);
         }
 
-        const inputOrigem = document.querySelector(`#painelEscala tr[data-tabela="${tabelaOrigem}"][data-id="${CSS.escape(String(idOrigem))}"] input[data-key="${keyOrigem}"]`);
+        const inputOrigem = tabelaOrigem === 'fora_escala'
+            ? null
+            : document.querySelector(`#painelEscala tr[data-tabela="${tabelaOrigem}"][data-id="${CSS.escape(String(idOrigem))}"] input[data-key="${keyOrigem}"]`);
         if (inputOrigem) {
             inputOrigem.value = '';
             inputOrigem.classList.remove('cell-has-note', 'cell-duplicate');
@@ -8288,6 +8336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- CACHE DE VEÍCULOS E FUNCIONÁRIOS ---
     let listaVeiculos = [];
     let mapaNomesFuncionarios = new Map();
+    let listaFuncionariosAtivos = [];
     let placasVeiculosOcultosEscala = new Set();
     const TIPOS_VEICULO_OCULTOS_ESCALA = new Set(['EMPILHADEIRA', 'GERADOR']);
 
@@ -8360,6 +8409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dlTer = document.getElementById('listaTerceiros');
         if (!filial) {
             mapaNomesFuncionarios = new Map();
+            listaFuncionariosAtivos = [];
             if (dlMot) dlMot.innerHTML = '';
             if (dlAux) dlAux.innerHTML = '';
             if (dlTer) dlTer.innerHTML = '';
@@ -8372,9 +8422,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .eq('filial', filial)
             : { data: [] };
         if (funcs) {
-            const funcionariosAtivos = funcs
-                .filter(f => normalizeString(f.status) === 'ATIVO')
-                .filter(isFuncionarioEscalavel);
+            listaFuncionariosAtivos = funcs.filter(f => normalizeString(f.status) === 'ATIVO');
+            const funcionariosAtivos = listaFuncionariosAtivos.filter(isFuncionarioEscalavel);
             mapaNomesFuncionarios = new Map();
             funcs.forEach(f => {
                 const nomeCurto = cleanImportValue(f.nome);
