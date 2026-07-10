@@ -558,6 +558,7 @@ const DespesasUI = {
 
             const payload = {
                 id: this.editingIdInput.value || undefined,
+                filial: this.filialSelect?.value || null,
                 numero_rota: rotasSelecionadas.join(', '),
                 id_hotel: hotelId,
                 id_funcionario1: func1.id,

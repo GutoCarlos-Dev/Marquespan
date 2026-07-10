@@ -18,6 +18,7 @@ const RelatorioDespesasUI = {
         this.chartEvolucaoMensal = null;
         this.chartTopFuncionarios = null;
         this.rotasCache = []; // Cache para buscar supervisores
+        this.filtroFilialDisponivel = true;
         this.currentSort = { column: 'data_checkin', direction: 'desc' }; // Estado de ordenação
         
         this.iniciarRolagemAutomatica();
@@ -199,7 +200,12 @@ const RelatorioDespesasUI = {
             ]);
 
             if (filiaisResult.error) throw filiaisResult.error;
-            if (despesasResult.error) throw despesasResult.error;
+            if (despesasResult.error) {
+                this.filtroFilialDisponivel = false;
+                console.warn('Nao foi possivel ler despesas.filial. Verifique se a migration da coluna filial foi aplicada.', despesasResult.error);
+            } else {
+                this.filtroFilialDisponivel = true;
+            }
 
             const filiaisMap = new Map();
 
@@ -210,7 +216,7 @@ const RelatorioDespesasUI = {
                 filiaisMap.set(value, { value, label });
             });
 
-            (despesasResult.data || []).forEach(item => {
+            (despesasResult.error ? [] : despesasResult.data || []).forEach(item => {
                 const value = String(item.filial || '').trim();
                 if (!value || filiaisMap.has(value)) return;
                 filiaisMap.set(value, { value, label: value });
@@ -526,6 +532,11 @@ const RelatorioDespesasUI = {
             const rotasSelecionadas = Array.from(this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked')).map(cb => cb.value);
             const supervisoresSelecionados = Array.from(this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox:checked')).map(cb => cb.value);
             const hoteisSelecionados = Array.from(this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked')).map(cb => cb.value);
+
+            if (filiaisSelecionadas.length > 0 && !this.filtroFilialDisponivel) {
+                alert('O filtro por Filial precisa da coluna filial na tabela despesas. Execute a migration supabase/2026-07-10_add_filial_despesas.sql no Supabase.');
+                return;
+            }
 
             // Define o ano de busca baseado na primeira data disponível informada
             const dataBase = this.dataInicio.value || this.filtroCheckinIni.value || this.filtroCheckoutIni.value || new Date().toISOString();
