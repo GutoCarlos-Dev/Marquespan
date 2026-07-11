@@ -86,26 +86,44 @@ function getUsuarioAtual() {
 const ClientesUI = {
     clientes: [],
     clientesRenderizados: [],
+    clientesCarregados: false,
+    filtroOpcoes: {
+        rotas: [],
+        supervisores: [],
+        ufs: []
+    },
     sortConfig: { column: 'codigo', direction: 'asc' },
     usuarioAtual: null,
     modalMode: 'incluir',
     rotaOriginal: '',
+    rotasSelecionadas: new Set(),
+    supervisoresSelecionados: new Set(),
 
     async init() {
         this.cache();
         const acessoPermitido = await this.verificarPermissaoPagina();
         if (!acessoPermitido) return;
         this.bind();
-        await this.carregarClientes();
+        this.prepararEstadoInicial();
+        await this.carregarOpcoesFiltros();
     },
 
     cache() {
         this.tableBody = document.getElementById('clientesTableBody');
         this.searchInput = document.getElementById('searchClientesInput');
         this.rotaFilter = document.getElementById('clienteRotaFilter');
+        this.rotaFilterButton = document.getElementById('clienteRotaFilterButton');
+        this.rotaFilterLabel = document.getElementById('clienteRotaFilterLabel');
+        this.rotaFilterOptions = document.getElementById('clienteRotaFilterOptions');
+        this.supervisorFilter = document.getElementById('clienteSupervisorFilter');
+        this.supervisorFilterButton = document.getElementById('clienteSupervisorFilterButton');
+        this.supervisorFilterLabel = document.getElementById('clienteSupervisorFilterLabel');
+        this.supervisorFilterOptions = document.getElementById('clienteSupervisorFilterOptions');
         this.ufFilter = document.getElementById('clienteUfFilter');
         this.ativoFilter = document.getElementById('clienteAtivoFilter');
         this.inputImportar = document.getElementById('inputImportarClientes');
+        this.btnBuscarClientes = document.getElementById('btnBuscarClientes');
+        this.btnVisualizarClientesMapa = document.getElementById('btnVisualizarClientesMapa');
         this.btnImportar = document.getElementById('btnImportarClientes');
         this.btnExportar = document.getElementById('btnExportarClientes');
         this.btnOpenClienteModal = document.getElementById('btnOpenClienteModal');
@@ -134,14 +152,38 @@ const ClientesUI = {
         });
         this.tableBody?.addEventListener('click', (event) => this.handleGridAction(event));
         this.selectAllClientes?.addEventListener('change', () => this.toggleSelectAllClientes());
-        this.searchInput?.addEventListener('input', () => this.renderGrid());
-        this.rotaFilter?.addEventListener('change', () => this.renderGrid());
-        this.ufFilter?.addEventListener('change', () => this.renderGrid());
-        this.ativoFilter?.addEventListener('change', () => this.renderGrid());
+        this.searchInput?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') this.carregarClientes();
+        });
+        this.btnBuscarClientes?.addEventListener('click', () => this.carregarClientes());
+        this.btnVisualizarClientesMapa?.addEventListener('click', () => this.abrirClientesNoMapa());
+        this.rotaFilterButton?.addEventListener('click', () => this.toggleFilterMenu('rota'));
+        this.supervisorFilterButton?.addEventListener('click', () => this.toggleFilterMenu('supervisor'));
+        this.rotaFilterOptions?.addEventListener('change', (event) => this.handleMultiFilterChange(event, 'rota'));
+        this.supervisorFilterOptions?.addEventListener('change', (event) => this.handleMultiFilterChange(event, 'supervisor'));
+        document.addEventListener('click', (event) => this.closeFilterMenusOnOutsideClick(event));
 
         document.querySelectorAll('.cliente-table th[data-sort]').forEach((th) => {
             th.addEventListener('click', () => this.handleSort(th.dataset.sort));
         });
+    },
+
+    prepararEstadoInicial() {
+        this.clientes = [];
+        this.clientesRenderizados = [];
+        this.clientesCarregados = false;
+        this.rotasSelecionadas.clear();
+        this.supervisoresSelecionados.clear();
+        if (this.gridCount) this.gridCount.textContent = '(0)';
+        if (this.filterCount) this.filterCount.textContent = 'Informe os filtros e clique em Buscar.';
+        if (this.btnVisualizarClientesMapa) this.btnVisualizarClientesMapa.disabled = true;
+        if (this.tableBody) {
+            this.tableBody.innerHTML = '<tr><td colspan="13" class="clientes-empty">Nenhuma busca realizada. Informe os filtros e clique em Buscar.</td></tr>';
+        }
+        if (this.rotaFilterOptions) this.rotaFilterOptions.innerHTML = '<div class="clientes-filter-empty">Busque clientes para carregar rotas.</div>';
+        if (this.supervisorFilterOptions) this.supervisorFilterOptions.innerHTML = '<div class="clientes-filter-empty">Busque clientes para carregar supervisores.</div>';
+        this.atualizarResumoFiltroMultiplo('rota');
+        this.atualizarResumoFiltroMultiplo('supervisor');
     },
 
     async verificarPermissaoPagina() {
@@ -409,19 +451,76 @@ const ClientesUI = {
         if (this.tableBody) {
             this.tableBody.innerHTML = '<tr><td colspan="13" class="clientes-empty">Carregando clientes...</td></tr>';
         }
+        if (this.btnBuscarClientes) {
+            this.btnBuscarClientes.disabled = true;
+            this.btnBuscarClientes.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+        }
 
         try {
             this.clientes = await this.buscarClientesComRotas();
+            this.clientesCarregados = true;
         } catch (error) {
             console.error('Erro ao carregar clientes:', error);
             if (this.tableBody) {
                 this.tableBody.innerHTML = '<tr><td colspan="13" class="clientes-empty">Erro ao carregar clientes.</td></tr>';
             }
             return;
+        } finally {
+            if (this.btnBuscarClientes) {
+                this.btnBuscarClientes.disabled = false;
+                this.btnBuscarClientes.innerHTML = '<i class="fas fa-search"></i> Buscar';
+            }
         }
 
         this.atualizarFiltrosSelect();
         this.renderGrid();
+    },
+
+    async carregarOpcoesFiltros() {
+        if (this.rotaFilterOptions) this.rotaFilterOptions.innerHTML = '<div class="clientes-filter-empty">Carregando rotas...</div>';
+        if (this.supervisorFilterOptions) this.supervisorFilterOptions.innerHTML = '<div class="clientes-filter-empty">Carregando supervisores...</div>';
+
+        try {
+            const [clientesFiltros, rotasFiltros] = await Promise.all([
+                this.buscarDadosPaginados('clientes', 'uf, supervisor', 'uf'),
+                this.buscarDadosPaginados('cliente_rotas', 'rota, supervisor', 'rota')
+            ]);
+
+            this.filtroOpcoes = {
+                rotas: [...new Set(rotasFiltros.map((item) => cleanCell(item.rota)).filter(Boolean))]
+                    .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' })),
+                supervisores: [...new Set([
+                    ...clientesFiltros.map((item) => cleanCell(item.supervisor)).filter(Boolean),
+                    ...rotasFiltros.map((item) => cleanCell(item.supervisor)).filter(Boolean)
+                ])].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' })),
+                ufs: [...new Set(clientesFiltros.map((item) => cleanCell(item.uf)).filter(Boolean))]
+                    .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+            };
+
+            this.atualizarFiltrosSelect();
+        } catch (error) {
+            console.error('Erro ao carregar opcoes dos filtros:', error);
+            if (this.rotaFilterOptions) this.rotaFilterOptions.innerHTML = '<div class="clientes-filter-empty">Erro ao carregar rotas.</div>';
+            if (this.supervisorFilterOptions) this.supervisorFilterOptions.innerHTML = '<div class="clientes-filter-empty">Erro ao carregar supervisores.</div>';
+        }
+    },
+
+    async buscarDadosPaginados(tabela, colunas, ordenacao) {
+        const todos = [];
+        const tamanhoPagina = 1000;
+
+        for (let inicio = 0; ; inicio += tamanhoPagina) {
+            const { data, error } = await supabaseClient
+                .from(tabela)
+                .select(colunas)
+                .order(ordenacao, { ascending: true })
+                .range(inicio, inicio + tamanhoPagina - 1);
+            if (error) throw error;
+            todos.push(...(data || []));
+            if (!data || data.length < tamanhoPagina) break;
+        }
+
+        return todos;
     },
 
     async buscarTodosClientes() {
@@ -487,13 +586,16 @@ const ClientesUI = {
     atualizarFiltrosSelect() {
         this.atualizarFiltroUf();
         this.atualizarFiltroRota();
+        this.atualizarFiltroSupervisor();
     },
 
     atualizarFiltroUf() {
         if (!this.ufFilter) return;
         const valorAtual = this.ufFilter.value;
-        const ufs = [...new Set(this.clientes.map((cliente) => cleanCell(cliente.uf)).filter(Boolean))]
-            .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const ufs = this.clientesCarregados
+            ? [...new Set(this.clientes.map((cliente) => cleanCell(cliente.uf)).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+            : this.filtroOpcoes.ufs;
         this.ufFilter.innerHTML = '<option value="">Todas</option>' + ufs
             .map((uf) => `<option value="${escapeHtml(uf)}">${escapeHtml(uf)}</option>`)
             .join('');
@@ -501,24 +603,105 @@ const ClientesUI = {
     },
 
     atualizarFiltroRota() {
-        if (!this.rotaFilter) return;
-        const valorAtual = this.rotaFilter.value;
-        const rotas = [...new Set(this.clientes.map((cliente) => cleanCell(cliente.rota)).filter(Boolean))]
-            .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
-        this.rotaFilter.innerHTML = '<option value="">Todas</option>' + rotas
-            .map((rota) => `<option value="${escapeHtml(rota)}">${escapeHtml(rota)}</option>`)
-            .join('');
-        if (rotas.includes(valorAtual)) this.rotaFilter.value = valorAtual;
+        if (!this.rotaFilterOptions) return;
+        const rotas = this.clientesCarregados
+            ? [...new Set(this.clientes.map((cliente) => cleanCell(cliente.rota)).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }))
+            : this.filtroOpcoes.rotas;
+        this.rotasSelecionadas = new Set([...this.rotasSelecionadas].filter((rota) => rotas.includes(rota)));
+        this.rotaFilterOptions.innerHTML = this.montarOpcoesFiltroMultiplo(rotas, this.rotasSelecionadas, 'rota');
+        this.atualizarResumoFiltroMultiplo('rota');
+    },
+
+    atualizarFiltroSupervisor() {
+        if (!this.supervisorFilterOptions) return;
+        const supervisores = this.clientesCarregados
+            ? [...new Set(this.clientes.map((cliente) => cleanCell(cliente.supervisor)).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }))
+            : this.filtroOpcoes.supervisores;
+        this.supervisoresSelecionados = new Set([...this.supervisoresSelecionados].filter((supervisor) => supervisores.includes(supervisor)));
+        this.supervisorFilterOptions.innerHTML = this.montarOpcoesFiltroMultiplo(supervisores, this.supervisoresSelecionados, 'supervisor');
+        this.atualizarResumoFiltroMultiplo('supervisor');
+    },
+
+    montarOpcoesFiltroMultiplo(opcoes, selecionados, tipo) {
+        if (!opcoes.length) {
+            return '<div class="clientes-filter-empty">Nenhuma opcao</div>';
+        }
+
+        return `
+            <label class="clientes-filter-option clientes-filter-clear">
+                <input type="checkbox" data-filter-type="${tipo}" data-filter-clear="true" ${selecionados.size ? '' : 'checked'}>
+                <span>Todos</span>
+            </label>
+            ${opcoes.map((opcao) => `
+                <label class="clientes-filter-option">
+                    <input type="checkbox" data-filter-type="${tipo}" value="${escapeHtml(opcao)}" ${selecionados.has(opcao) ? 'checked' : ''}>
+                    <span>${escapeHtml(opcao)}</span>
+                </label>
+            `).join('')}
+        `;
+    },
+
+    toggleFilterMenu(tipo) {
+        const combo = tipo === 'rota' ? this.rotaFilter : this.supervisorFilter;
+        const outro = tipo === 'rota' ? this.supervisorFilter : this.rotaFilter;
+        outro?.classList.remove('open');
+        combo?.classList.toggle('open');
+    },
+
+    closeFilterMenusOnOutsideClick(event) {
+        if (!this.rotaFilter?.contains(event.target)) this.rotaFilter?.classList.remove('open');
+        if (!this.supervisorFilter?.contains(event.target)) this.supervisorFilter?.classList.remove('open');
+    },
+
+    handleMultiFilterChange(event, tipo) {
+        const input = event.target.closest('input[type="checkbox"]');
+        if (!input) return;
+
+        const selecionados = tipo === 'rota' ? this.rotasSelecionadas : this.supervisoresSelecionados;
+        const optionsContainer = tipo === 'rota' ? this.rotaFilterOptions : this.supervisorFilterOptions;
+
+        if (input.dataset.filterClear === 'true') {
+            selecionados.clear();
+            optionsContainer?.querySelectorAll('input[type="checkbox"]:not([data-filter-clear])').forEach((checkbox) => {
+                checkbox.checked = false;
+            });
+        } else if (input.checked) {
+            selecionados.add(input.value);
+        } else {
+            selecionados.delete(input.value);
+        }
+
+        const clearInput = optionsContainer?.querySelector('input[data-filter-clear="true"]');
+        if (clearInput) clearInput.checked = selecionados.size === 0;
+        this.atualizarResumoFiltroMultiplo(tipo);
+    },
+
+    atualizarResumoFiltroMultiplo(tipo) {
+        const selecionados = tipo === 'rota' ? this.rotasSelecionadas : this.supervisoresSelecionados;
+        const label = tipo === 'rota' ? this.rotaFilterLabel : this.supervisorFilterLabel;
+        const textoTodos = tipo === 'rota' ? 'Todas' : 'Todos';
+
+        if (!label) return;
+        if (!selecionados.size) {
+            label.textContent = textoTodos;
+            return;
+        }
+
+        label.textContent = selecionados.size === 1
+            ? [...selecionados][0]
+            : `${selecionados.size} selecionados`;
     },
 
     getClientesFiltrados() {
         const termo = normalizeString(this.searchInput?.value || '');
-        const rota = this.rotaFilter?.value || '';
         const uf = this.ufFilter?.value || '';
         const ativo = this.ativoFilter?.value || '';
 
         return this.clientes.filter((cliente) => {
-            const rotaOk = !rota || cliente.rota === rota;
+            const rotaOk = !this.rotasSelecionadas.size || this.rotasSelecionadas.has(cliente.rota);
+            const supervisorOk = !this.supervisoresSelecionados.size || this.supervisoresSelecionados.has(cliente.supervisor);
             const ufOk = !uf || cliente.uf === uf;
             const ativoOk = !ativo || cliente.ativo === ativo;
             const buscaOk = !termo || [
@@ -533,7 +716,7 @@ const ClientesUI = {
                 cliente.consultor,
                 cliente.categoria
             ].some((value) => normalizeString(value).includes(termo));
-            return rotaOk && ufOk && ativoOk && buscaOk;
+            return rotaOk && supervisorOk && ufOk && ativoOk && buscaOk;
         });
     },
 
@@ -552,6 +735,12 @@ const ClientesUI = {
 
     renderGrid() {
         if (!this.tableBody) return;
+        if (!this.clientesCarregados) {
+            this.tableBody.innerHTML = '<tr><td colspan="13" class="clientes-empty">Nenhuma busca realizada. Informe os filtros e clique em Buscar.</td></tr>';
+            if (this.gridCount) this.gridCount.textContent = '(0)';
+            if (this.filterCount) this.filterCount.textContent = 'Informe os filtros e clique em Buscar.';
+            return;
+        }
         const dados = this.getClientesOrdenados();
 
         document.querySelectorAll('.cliente-table th[data-sort] i').forEach((icon) => {
@@ -572,11 +761,13 @@ const ClientesUI = {
 
         if (!dados.length) {
             this.clientesRenderizados = [];
+            if (this.btnVisualizarClientesMapa) this.btnVisualizarClientesMapa.disabled = true;
             this.tableBody.innerHTML = '<tr><td colspan="13" class="clientes-empty">Nenhum cliente encontrado.</td></tr>';
             return;
         }
 
         this.clientesRenderizados = dadosExibidos;
+        if (this.btnVisualizarClientesMapa) this.btnVisualizarClientesMapa.disabled = !dadosExibidos.length;
         if (this.selectAllClientes) this.selectAllClientes.checked = false;
         this.tableBody.innerHTML = dadosExibidos.map((cliente, index) => {
             const statusAtivo = String(cliente.ativo || '').toUpperCase() === 'A';
@@ -607,6 +798,43 @@ const ClientesUI = {
                 </tr>
             `;
         }).join('');
+    },
+
+    abrirClientesNoMapa() {
+        const clientes = this.getClientesOrdenados().slice(0, 2000).map((cliente) => ({
+            codigo: cliente.codigo,
+            fantasia: cliente.fantasia,
+            nome: cliente.nome,
+            endereco: cliente.endereco,
+            bairro: cliente.bairro,
+            municipio: cliente.municipio,
+            uf: cliente.uf,
+            cep: cliente.cep,
+            geolocalizacao: cliente.geolocalizacao,
+            latitude: cliente.latitude ?? cliente.Latitude ?? cliente.LATITUDE ?? cliente.lat ?? cliente.LAT ?? '',
+            longitude: cliente.longitude ?? cliente.Longitude ?? cliente.LONGITUDE ?? cliente.lng ?? cliente.LNG ?? cliente.lon ?? cliente.LON ?? '',
+            rota: cliente.rota,
+            supervisor: cliente.supervisor,
+            ativo: cliente.ativo,
+            categoria: cliente.categoria
+        }));
+
+        if (!clientes.length) {
+            alert('Nenhum cliente listado para visualizar no mapa. Clique em Buscar primeiro.');
+            return;
+        }
+
+        try {
+            localStorage.setItem('clientes_mapa_payload', JSON.stringify({
+                criadoEm: new Date().toISOString(),
+                total: clientes.length,
+                clientes
+            }));
+            window.open('clientes-mapa.html', '_blank', 'noopener,noreferrer');
+        } catch (error) {
+            console.error('Erro ao preparar clientes para o mapa:', error);
+            alert('Nao foi possivel abrir o mapa. Reduza a quantidade de clientes filtrados e tente novamente.');
+        }
     },
 
     handleGridAction(event) {

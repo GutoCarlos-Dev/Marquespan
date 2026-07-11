@@ -32,9 +32,23 @@
               </div>
               <div class="form-group">
                 <label for="clienteRotaFilter">Rota</label>
-                <select id="clienteRotaFilter" class="glass-input">
-                  <option value="">Todas</option>
-                </select>
+                <div class="clientes-filter-combo" id="clienteRotaFilter">
+                  <button type="button" id="clienteRotaFilterButton" class="glass-input clientes-filter-button">
+                    <span id="clienteRotaFilterLabel">Todas</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  <div id="clienteRotaFilterOptions" class="clientes-filter-menu"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="clienteSupervisorFilter">Supervisor</label>
+                <div class="clientes-filter-combo" id="clienteSupervisorFilter">
+                  <button type="button" id="clienteSupervisorFilterButton" class="glass-input clientes-filter-button">
+                    <span id="clienteSupervisorFilterLabel">Todos</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                  <div id="clienteSupervisorFilterOptions" class="clientes-filter-menu"></div>
+                </div>
               </div>
               <div class="form-group">
                 <label for="clienteUfFilter">UF</label>
@@ -57,6 +71,9 @@
           <div class="cliente-actions glass-panel-inner">
             <h3><i class="fas fa-cogs"></i> Acoes</h3>
             <div class="form-actions-inline cliente-actions-buttons">
+              <button type="button" id="btnBuscarClientes" class="btn-glass btn-blue">
+                <i class="fas fa-search"></i> Buscar
+              </button>
               <button type="button" id="btnOpenClienteModal" class="btn-glass btn-green">
                 <i class="fas fa-plus"></i> Incluir
               </button>
@@ -70,6 +87,12 @@
             </div>
             <div id="clientesImportStatus" class="clientes-import-status">Nenhum arquivo importado nesta sessao.</div>
           </div>
+        </div>
+
+        <div class="cliente-grid-toolbar">
+          <button type="button" id="btnVisualizarClientesMapa" class="btn-glass btn-blue" disabled>
+            <i class="fas fa-map-location-dot"></i> Visualizar Clientes no Mapa
+          </button>
         </div>
 
         <div class="table-responsive cliente-table-container">

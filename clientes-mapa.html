@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clientes no Mapa - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/clientes-mapa.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body>
+  <main class="clientes-mapa-page">
+    <aside class="clientes-mapa-sidebar">
+      <header class="clientes-mapa-header">
+        <h1><i class="fas fa-map-location-dot"></i> Clientes no Mapa</h1>
+        <p id="clientesMapaStatus">Carregando clientes...</p>
+      </header>
+
+      <section class="clientes-mapa-card">
+        <h2>Resumo</h2>
+        <div class="clientes-mapa-kpis">
+          <div><span id="mapaTotalClientes">0</span><small>clientes</small></div>
+          <div><span id="mapaTotalLocalizados">0</span><small>localizados</small></div>
+          <div><span id="mapaTotalRotas">0</span><small>rotas</small></div>
+        </div>
+      </section>
+
+      <section class="clientes-mapa-card">
+        <h2>Rotas</h2>
+        <div id="clientesMapaLegenda" class="clientes-mapa-legenda"></div>
+      </section>
+
+      <section class="clientes-mapa-card">
+        <h2>Nao localizados</h2>
+        <div id="clientesMapaPendentes" class="clientes-mapa-pendentes">Nenhum.</div>
+      </section>
+    </aside>
+
+    <section class="clientes-mapa-content">
+      <div id="clientesMapa"></div>
+    </section>
+  </main>
+
+  <script type="module" src="script/clientes-mapa.js"></script>
+</body>
+</html>
