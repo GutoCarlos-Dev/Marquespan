@@ -82,6 +82,86 @@
     transform: scale(1.15);
 }
 
+.acoes-lavagem-linha {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+}
+
+#tbodyDetalhesItens .btn-icon {
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-right: 0;
+    padding: 4px;
+}
+
+#tbodyDetalhesItens .btn-icon.delete {
+    color: #dc3545;
+}
+
+#tbodyDetalhesItens .btn-icon.location {
+    color: #006937;
+}
+
+#tbodyDetalhesItens .btn-icon:hover {
+    transform: scale(1.15);
+}
+
+/* --- Modal Localizacao --- */
+.modal-localizacao-content {
+    max-height: 82vh;
+}
+
+.modal-localizacao-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.localizacao-status-box {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+.localizacao-status-box.sucesso {
+    background: #e8f5e9;
+    color: #006937;
+}
+
+.localizacao-status-box.erro {
+    background: #fff1f2;
+    color: #b91c1c;
+}
+
+#iframeLocalizacaoLavagem {
+    width: 100%;
+    min-height: 360px;
+    border: 0;
+    border-radius: 10px;
+    background: #f3f4f6;
+}
+
+.btn-abrir-maps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #006937;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+}
+
 /* --- Estilos de Modal --- */
 .modal-backdrop {
     position: fixed;

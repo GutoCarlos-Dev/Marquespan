@@ -299,6 +299,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnCloseModalFornecedor')?.addEventListener('click', () => document.getElementById('modalInformarFornecedor').classList.add('hidden'));
     document.getElementById('btnSalvarFornecedorBulk')?.addEventListener('click', bulkAplicarFornecedor);
 
+    // Listener para o modal de Localizacao do Veiculo
+    document.getElementById('btnFecharModalLocalizacaoLavagem')?.addEventListener('click', () => document.getElementById('modalLocalizacaoLavagem').classList.add('hidden'));
+
     // --- NOVOS LISTENERS PARA ADICIONAR VEÍCULO MANUALMENTE ---
     document.getElementById('btnAdicionarVeiculoDetalhes')?.addEventListener('click', abrirModalAdicionarVeiculo);
     document.getElementById('btnCloseModalAdicionarVeiculo')?.addEventListener('click', () => document.getElementById('modalAdicionarVeiculo').classList.add('hidden'));
@@ -1116,7 +1119,10 @@ function renderizarItensDetalhes(itens) {
             <td>${item.usuario_realizou || '-'}</td>
             <td>${item.fornecedor || '-'}</td>
             <td>
-                <button class="btn-icon delete" onclick="removerItemLista('${item.id}')" ${isFinalizada ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-trash"></i></button>
+                <div class="acoes-lavagem-linha">
+                    <button class="btn-icon location" onclick="abrirLocalizacaoLavagemDesktop('${item.placa}')" title="Localizar veiculo"><i class="fas fa-location-dot"></i></button>
+                    <button class="btn-icon delete" onclick="removerItemLista('${item.id}')" ${isFinalizada ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}><i class="fas fa-trash"></i></button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
@@ -1317,6 +1323,87 @@ window.removerItemLista = async function(id) {
         renderizarItensDetalhes(currentListItems);
     } catch (error) {
         alert('Erro ao remover item.');
+    }
+}
+
+function placaSemMascaraLavagem(valor) {
+    return String(valor || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function abrirModalLocalizacaoLavagemCarregando(placa) {
+    const modal = document.getElementById('modalLocalizacaoLavagem');
+    const titulo = document.getElementById('modalLocalizacaoLavagemTitulo');
+    const status = document.getElementById('statusLocalizacaoLavagem');
+    const iframe = document.getElementById('iframeLocalizacaoLavagem');
+    const link = document.getElementById('linkAbrirLocalizacaoLavagemMaps');
+
+    if (titulo) titulo.innerHTML = `<i class="fas fa-location-dot"></i> Localizar ${placa}`;
+    if (status) {
+        status.className = 'localizacao-status-box';
+        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando localizacao...';
+    }
+    if (iframe) {
+        iframe.src = 'about:blank';
+        iframe.classList.add('hidden');
+    }
+    if (link) {
+        link.href = '#';
+        link.classList.add('hidden');
+    }
+
+    if (modal) modal.classList.remove('hidden');
+}
+
+window.abrirLocalizacaoLavagemDesktop = async function(placaOriginal) {
+    const placa = placaSemMascaraLavagem(placaOriginal);
+    const status = document.getElementById('statusLocalizacaoLavagem');
+    const iframe = document.getElementById('iframeLocalizacaoLavagem');
+    const link = document.getElementById('linkAbrirLocalizacaoLavagemMaps');
+
+    if (placa.length !== 7) {
+        alert('Placa invalida para localizacao.');
+        return;
+    }
+
+    abrirModalLocalizacaoLavagemCarregando(placa);
+
+    try {
+        const { data, error } = await supabaseClient.functions.invoke('localizacao-veiculo', {
+            body: { placa }
+        });
+
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.message || 'Nao foi possivel localizar o veiculo.');
+
+        const dados = data.data || {};
+        const latitude = Number(dados.latitude);
+        const longitude = Number(dados.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            throw new Error('O rastreador nao retornou coordenadas para esta placa.');
+        }
+
+        const coordenadas = `${latitude},${longitude}`;
+        const urlMapa = `https://www.google.com/maps?q=${encodeURIComponent(coordenadas)}`;
+        const urlEmbed = `${urlMapa}&output=embed`;
+
+        if (iframe) {
+            iframe.src = urlEmbed;
+            iframe.classList.remove('hidden');
+        }
+        if (link) {
+            link.href = urlMapa;
+            link.classList.remove('hidden');
+        }
+        if (status) {
+            status.className = 'localizacao-status-box sucesso';
+            status.innerHTML = `<i class="fas fa-location-dot"></i> ${dados.endereco || coordenadas}`;
+        }
+    } catch (error) {
+        console.error('Erro ao localizar veiculo:', error);
+        if (status) {
+            status.className = 'localizacao-status-box erro';
+            status.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${error?.message || 'Nao foi possivel localizar o veiculo.'}`;
+        }
     }
 }
 
