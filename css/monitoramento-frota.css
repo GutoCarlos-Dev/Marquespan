@@ -99,7 +99,7 @@ body.frota-fullscreen-active .frota-layout {
   align-items: flex-end;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(150px, 0.8fr) minmax(170px, 0.9fr) minmax(220px, 1.3fr) auto auto;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(170px, 0.9fr) minmax(200px, 1.1fr) minmax(220px, 1fr) auto auto;
   margin-bottom: 15px;
   padding: 17px;
 }
@@ -213,6 +213,59 @@ body.frota-fullscreen-active .frota-layout {
 
 .filtro-busca input {
   padding-left: 36px;
+}
+
+.filtro-raio-controles {
+  display: flex;
+  gap: 6px;
+}
+
+.filtro-raio-controles input {
+  flex: 1;
+  min-width: 0;
+}
+
+.filtro-raio-controles select {
+  flex: 0 0 100px;
+}
+
+.frota-raio-resumo {
+  align-items: center;
+  background: #edf8f2;
+  border: 1px solid #b9e4cc;
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin: -5px 0 15px;
+  padding: 10px 15px;
+}
+
+.frota-raio-resumo.hidden {
+  display: none;
+}
+
+#frota-raio-texto {
+  color: #0d5c39;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.btn-exportar-frota-raio {
+  background: linear-gradient(135deg, #008f57, #00b878);
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.btn-exportar-frota-raio:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .btn-atualizar-frota {

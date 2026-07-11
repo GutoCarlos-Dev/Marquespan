@@ -33,9 +33,15 @@ const listaCores = document.getElementById('lista-cores-tipos');
 const botaoTelaCheia = document.getElementById('btn-fullscreen-frota');
 const botaoAlternarPainel = document.getElementById('btn-alternar-painel-frota');
 const frotaLayout = document.querySelector('.frota-layout');
+const filtroRaioKm = document.getElementById('filtro-raio-km');
+const filtroRaioModo = document.getElementById('filtro-raio-modo');
+const frotaRaioResumo = document.getElementById('frota-raio-resumo');
+const frotaRaioTexto = document.getElementById('frota-raio-texto');
+const botaoExportarRaio = document.getElementById('btn-exportar-frota-raio');
 
 let mapa;
 let camadaMarcadores;
+let circuloRaio;
 let frotaCompleta = [];
 let marcadoresPorPlaca = new Map();
 let timerAtualizacao = null;
@@ -44,6 +50,8 @@ let consultaEmAndamento = false;
 let escalasHojePorVeiculo = new Map();
 let primeiraConsultaRealizada = false;
 let tiposSelecionados = new Set();
+let filiaisCoordenadas = new Map();
+let exportandoFrotaRaio = false;
 
 function escapeHtml(valor) {
   return String(valor ?? '')
@@ -76,6 +84,69 @@ function normalizarPlaca(placa) {
 
 function chaveVeiculo(filial, placa) {
   return `${normalizarTexto(filial)}|${normalizarPlaca(placa)}`;
+}
+
+function parseGeolocalizacaoFilial(valor) {
+  const texto = String(valor || '').trim();
+  if (!texto) return null;
+
+  const match = texto.match(/(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)/);
+  if (!match) return null;
+
+  const lat = Number(match[1].replace(',', '.'));
+  const lng = Number(match[2].replace(',', '.'));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180 || lat === 0 || lng === 0) return null;
+
+  return { lat, lng };
+}
+
+async function carregarFiliaisCoordenadas() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('filiais')
+      .select('nome, sigla, geolocalizacao');
+    if (error) throw error;
+
+    const coordenadas = new Map();
+    (data || []).forEach((filial) => {
+      const chave = normalizarTexto(filial.sigla || filial.nome);
+      const posicao = parseGeolocalizacaoFilial(filial.geolocalizacao);
+      if (chave && posicao) {
+        coordenadas.set(chave, { ...posicao, nome: filial.nome });
+      }
+    });
+    filiaisCoordenadas = coordenadas;
+  } catch (error) {
+    console.warn('Nao foi possivel carregar coordenadas das filiais:', error);
+    filiaisCoordenadas = new Map();
+  }
+}
+
+function centroFilialSelecionada() {
+  const chave = normalizarTexto(filialSelect.value);
+  if (!chave) return null;
+  return filiaisCoordenadas.get(chave) || null;
+}
+
+function distanciaKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function obterFiltroRaio() {
+  const raioKm = Number(filtroRaioKm?.value);
+  const ativo = Number.isFinite(raioKm) && raioKm > 0;
+  return {
+    ativo,
+    raioKm: ativo ? raioKm : null,
+    modo: filtroRaioModo?.value === 'fora' ? 'fora' : 'dentro',
+    centro: ativo ? centroFilialSelecionada() : null
+  };
 }
 
 function dataHojeSaoPaulo() {
@@ -245,13 +316,28 @@ function popupVeiculo(veiculo) {
 
 function obterFrotaFiltrada() {
   const busca = buscaInput.value.trim().toUpperCase();
-  return frotaCompleta.filter((veiculo) => (
-    (tiposSelecionados.size === 0 || tiposSelecionados.has(veiculo.tipo || 'Sem tipo'))
-    && (!busca
-      || String(veiculo.placaFormatada).toUpperCase().includes(busca)
-      || String(veiculo.tipo).toUpperCase().includes(busca)
-      || String(veiculo.modelo).toUpperCase().includes(busca))
-  ));
+  const filtroRaio = obterFiltroRaio();
+
+  return frotaCompleta.filter((veiculo) => {
+    if (tiposSelecionados.size > 0 && !tiposSelecionados.has(veiculo.tipo || 'Sem tipo')) return false;
+
+    if (busca
+      && !String(veiculo.placaFormatada).toUpperCase().includes(busca)
+      && !String(veiculo.tipo).toUpperCase().includes(busca)
+      && !String(veiculo.modelo).toUpperCase().includes(busca)) return false;
+
+    if (filtroRaio.ativo && filtroRaio.centro) {
+      const lat = Number(veiculo.latitude);
+      const lng = Number(veiculo.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+      const dentroDoRaio = distanciaKm(filtroRaio.centro.lat, filtroRaio.centro.lng, lat, lng) <= filtroRaio.raioKm;
+      if (filtroRaio.modo === 'dentro' && !dentroDoRaio) return false;
+      if (filtroRaio.modo === 'fora' && dentroDoRaio) return false;
+    }
+
+    return true;
+  });
 }
 
 function statusVeiculo(veiculo) {
@@ -268,6 +354,51 @@ function focarVeiculo(placa) {
   document.querySelectorAll('.frota-veiculo-item').forEach((item) => {
     item.classList.toggle('ativo', item.dataset.placa === placa);
   });
+}
+
+function atualizarCirculoRaio(centro, raioKm) {
+  if (circuloRaio) {
+    mapa.removeLayer(circuloRaio);
+    circuloRaio = null;
+  }
+  if (!centro || !raioKm) return;
+
+  circuloRaio = L.circle([centro.lat, centro.lng], {
+    radius: raioKm * 1000,
+    color: '#3154e8',
+    weight: 2,
+    fillColor: '#3154e8',
+    fillOpacity: 0.08
+  }).addTo(mapa);
+}
+
+function atualizarResumoRaio(frotaFiltrada) {
+  const filtroRaio = obterFiltroRaio();
+  atualizarCirculoRaio(filtroRaio.centro, filtroRaio.raioKm);
+
+  if (!filtroRaio.ativo) {
+    frotaRaioResumo.classList.add('hidden');
+    return;
+  }
+
+  if (!filialSelect.value) {
+    frotaRaioTexto.textContent = 'Selecione uma filial para aplicar o filtro de raio.';
+    frotaRaioResumo.classList.remove('hidden');
+    botaoExportarRaio.disabled = true;
+    return;
+  }
+
+  if (!filtroRaio.centro) {
+    frotaRaioTexto.textContent = 'Esta filial ainda nao tem coordenadas cadastradas (veja Gestao de Filiais).';
+    frotaRaioResumo.classList.remove('hidden');
+    botaoExportarRaio.disabled = true;
+    return;
+  }
+
+  const modoTexto = filtroRaio.modo === 'fora' ? 'fora' : 'dentro';
+  frotaRaioTexto.textContent = `Raio de ${filtroRaio.raioKm} km a partir de ${filtroRaio.centro.nome} (${modoTexto} do raio): ${frotaFiltrada.length} veiculo(s).`;
+  frotaRaioResumo.classList.remove('hidden');
+  botaoExportarRaio.disabled = exportandoFrotaRaio || frotaFiltrada.length === 0;
 }
 
 function renderizarFrota({ ajustarEnquadramento = false } = {}) {
@@ -338,6 +469,8 @@ function renderizarFrota({ ajustarEnquadramento = false } = {}) {
         `).join('')
       : '<span class="resumo-frota-sem-placas">Nenhuma placa.</span>';
   }
+
+  atualizarResumoRaio(frota);
 
   if (ajustarEnquadramento && limites.length > 0) {
     mapa.fitBounds(L.latLngBounds(limites), { padding: [35, 35], maxZoom: 14 });
@@ -491,6 +624,76 @@ function configurarAtualizacaoAutomatica() {
   }
 }
 
+async function exportarFrotaRaioXlsx() {
+  if (exportandoFrotaRaio) return;
+
+  if (typeof XLSX === 'undefined') {
+    alert('A biblioteca de exportação (XLSX) não foi carregada.');
+    return;
+  }
+
+  const frota = obterFrotaFiltrada();
+  if (frota.length === 0) {
+    alert('Não há veículos para exportar com o filtro de raio atual.');
+    return;
+  }
+
+  if (!confirm(`Buscar o endereço de ${frota.length} veículo(s) e gerar o XLSX? Isso pode levar alguns instantes.`)) {
+    return;
+  }
+
+  exportandoFrotaRaio = true;
+  botaoExportarRaio.disabled = true;
+  const textoOriginal = botaoExportarRaio.innerHTML;
+
+  try {
+    const linhas = [];
+
+    for (let indice = 0; indice < frota.length; indice += 1) {
+      const veiculo = frota[indice];
+      botaoExportarRaio.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${indice + 1}/${frota.length}...`;
+
+      const escala = obterEscalasVeiculo(veiculo)[0] || {};
+      let localizacao = veiculo.referencia || `${veiculo.latitude}, ${veiculo.longitude}`;
+
+      try {
+        const placa = normalizarPlaca(veiculo.placa);
+        if (placa.length === 7) {
+          const { data, error } = await supabaseClient.functions.invoke('localizacao-veiculo', {
+            body: { placa }
+          });
+          if (!error && data?.success && data?.data?.endereco) {
+            localizacao = data.data.endereco;
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar endereço do veículo:', veiculo.placa, error);
+      }
+
+      linhas.push({
+        'PLACA': veiculo.placaFormatada,
+        'TIPO': veiculo.tipo || '-',
+        'ROTA': valorEscala(escala.rota),
+        'MOTORISTA': valorEscala(escala.motorista),
+        'AUXILIAR': valorEscala(escala.auxiliar),
+        'LOCALIZAÇÃO': localizacao
+      });
+    }
+
+    const filtroRaio = obterFiltroRaio();
+    const ws = XLSX.utils.json_to_sheet(linhas);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'FROTA');
+    const modo = filtroRaio.modo === 'fora' ? 'fora' : 'dentro';
+    const raio = filtroRaio.raioKm ?? 0;
+    XLSX.writeFile(wb, `frota_raio_${raio}km_${modo}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  } finally {
+    exportandoFrotaRaio = false;
+    botaoExportarRaio.innerHTML = textoOriginal;
+    botaoExportarRaio.disabled = obterFrotaFiltrada().length === 0;
+  }
+}
+
 function alternarTelaCheia() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch((error) => {
@@ -598,5 +801,12 @@ document.getElementById('lista-placas-frota-desatualizada')?.addEventListener('c
   botao.blur();
 });
 
+filtroRaioKm?.addEventListener('input', () => renderizarFrota());
+filtroRaioModo?.addEventListener('change', () => renderizarFrota());
+botaoExportarRaio?.addEventListener('click', exportarFrotaRaioXlsx);
+
 iniciarMapa();
-await configurarFiltroFilialUsuario(filialSelect);
+await Promise.all([
+  configurarFiltroFilialUsuario(filialSelect),
+  carregarFiliaisCoordenadas()
+]);

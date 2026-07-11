@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
   <div id="menu-container"></div>
@@ -63,6 +64,16 @@
           <input id="filtro-busca-frota" class="glass-input" type="text" placeholder="Placa, tipo ou modelo">
         </div>
       </div>
+      <div class="filtro-item filtro-raio">
+        <label for="filtro-raio-km">Raio da filial (KM)</label>
+        <div class="filtro-raio-controles">
+          <input id="filtro-raio-km" class="glass-input" type="number" min="0" step="0.1" placeholder="Ex: 50">
+          <select id="filtro-raio-modo" class="glass-input">
+            <option value="dentro">Dentro</option>
+            <option value="fora">Fora</option>
+          </select>
+        </div>
+      </div>
       <button id="btn-atualizar-frota" class="btn-atualizar-frota" type="button">
         <i class="fas fa-rotate"></i> Atualizar agora
       </button>
@@ -71,6 +82,13 @@
         <span>Atualizar a cada 60s</span>
       </label>
     </section>
+
+    <div id="frota-raio-resumo" class="frota-raio-resumo hidden">
+      <span id="frota-raio-texto"></span>
+      <button id="btn-exportar-frota-raio" class="btn-exportar-frota-raio" type="button">
+        <i class="fas fa-file-excel"></i> Exportar XLSX
+      </button>
+    </div>
 
     <section class="resumo-frota">
       <article class="glass-panel resumo-frota-card">

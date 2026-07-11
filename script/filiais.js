@@ -57,6 +57,35 @@ function normalizarSiglaFilial(valor) {
     return String(valor || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
 }
 
+function normalizarNumeroCoordenada(valor) {
+    const texto = String(valor || '').trim().replace(',', '.');
+    const numero = Number(texto);
+    return Number.isFinite(numero) ? numero : null;
+}
+
+function coordenadasValidas(lat, lng) {
+    return Number.isFinite(lat)
+        && Number.isFinite(lng)
+        && Math.abs(lat) <= 90
+        && Math.abs(lng) <= 180
+        && lat !== 0
+        && lng !== 0;
+}
+
+function validarGeolocalizacaoFilial(valor) {
+    const texto = String(valor || '').trim();
+    if (!texto) return { valido: true, texto: '' };
+
+    const match = texto.match(/(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)/);
+    if (!match) return { valido: false };
+
+    const lat = normalizarNumeroCoordenada(match[1]);
+    const lng = normalizarNumeroCoordenada(match[2]);
+    if (!coordenadasValidas(lat, lng)) return { valido: false };
+
+    return { valido: true, texto: `${lat}, ${lng}` };
+}
+
 function setupEventListeners() {
     document.getElementById('formFilial').addEventListener('submit', salvarFilial);
     
@@ -72,7 +101,7 @@ async function carregarFiliais() {
     try {
         const { data, error } = await supabaseClient
             .from('filiais')
-            .select('id, nome, sigla')
+            .select('id, nome, sigla, geolocalizacao')
             .order('nome', { ascending: true });
 
         if (error) throw error;
@@ -90,15 +119,19 @@ function renderTable(filiais) {
     tbody.innerHTML = '';
 
     if (!filiais || filiais.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Nenhuma filial cadastrada.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhuma filial cadastrada.</td></tr>';
         return;
     }
 
     filiais.forEach(f => {
         const tr = document.createElement('tr');
+        const coordenadasTexto = f.geolocalizacao
+            ? escapeHtml(f.geolocalizacao)
+            : '<span style="color:#999;">Nao cadastrado</span>';
         tr.innerHTML = `
             <td>${escapeHtml(f.nome)}</td>
             <td><strong>${escapeHtml(f.sigla)}</strong></td>
+            <td>${coordenadasTexto}</td>
             <td>
                 <button class="btn-icon edit" title="Editar"><i class="fas fa-edit"></i></button>
                 <button class="btn-icon delete" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -119,6 +152,8 @@ async function salvarFilial(e) {
     const id = document.getElementById('filialId').value;
     const nome = normalizarNomeFilial(document.getElementById('filialNome').value);
     const sigla = normalizarSiglaFilial(document.getElementById('filialSigla').value);
+    const geolocalizacaoInput = document.getElementById('filialGeolocalizacao');
+    const resultadoGeo = validarGeolocalizacaoFilial(geolocalizacaoInput.value);
 
     if (!nome || !sigla) {
         alert('Preencha todos os campos.');
@@ -130,15 +165,22 @@ async function salvarFilial(e) {
         return;
     }
 
+    if (!resultadoGeo.valido) {
+        alert('Geolocalizacao invalida. Use o formato -23.330692, -47.851799 (ou deixe em branco).');
+        return;
+    }
+
+    const geolocalizacao = resultadoGeo.texto;
+
     try {
         let error;
         if (id) {
             // Update
-            const response = await supabaseClient.from('filiais').update({ nome, sigla }).eq('id', id);
+            const response = await supabaseClient.from('filiais').update({ nome, sigla, geolocalizacao }).eq('id', id);
             error = response.error;
         } else {
             // Insert
-            const response = await supabaseClient.from('filiais').insert([{ nome, sigla }]);
+            const response = await supabaseClient.from('filiais').insert([{ nome, sigla, geolocalizacao }]);
             error = response.error;
         }
 
@@ -158,6 +200,7 @@ function editarFilial(filial) {
     document.getElementById('filialId').value = filial.id;
     document.getElementById('filialNome').value = filial.nome || '';
     document.getElementById('filialSigla').value = filial.sigla || '';
+    document.getElementById('filialGeolocalizacao').value = filial.geolocalizacao || '';
     document.getElementById('btnCancelar').classList.remove('hidden');
 }
 

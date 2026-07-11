@@ -32,7 +32,14 @@
                 <label for="filialSigla">Sigla</label>
                 <input type="text" id="filialSigla" placeholder="Ex: SP" maxlength="3" style="text-transform: uppercase;" required class="glass-input">
             </div>
+            <div class="form-group">
+                <label for="filialGeolocalizacao">Geolocalizacao</label>
+                <input type="text" id="filialGeolocalizacao" placeholder="-23.330692, -47.851799" class="glass-input" title="Informe latitude e longitude separadas por virgula. Exemplo: -23.330692, -47.851799">
+            </div>
         </div>
+        <p class="filial-coordenadas-dica">
+            <i class="fas fa-circle-info"></i> A geolocalizacao e opcional, mas necessaria para o filtro de raio no Monitoramento da Frota. Use o mesmo formato do Cadastro de Clientes (latitude, longitude), copiado do Google Maps.
+        </p>
         <div class="form-actions">
             <button type="button" id="btnCancelar" class="btn-glass btn-red hidden"><i class="fas fa-times"></i> Cancelar</button>
             <button type="submit" id="btnSalvar" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
@@ -48,6 +55,7 @@
             <tr>
               <th>NOME</th>
               <th>SIGLA</th>
+              <th>COORDENADAS</th>
               <th style="width: 120px;">AÇÕES</th>
             </tr>
           </thead>
