@@ -82,6 +82,15 @@
     transform: scale(1.15);
 }
 
+#spanPendentesExportar:hover {
+    text-decoration: underline;
+}
+
+#spanPendentesExportar.exportando {
+    cursor: wait;
+    opacity: 0.65;
+}
+
 .acoes-lavagem-linha {
     display: flex;
     align-items: center;

@@ -302,6 +302,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Listener para o modal de Localizacao do Veiculo
     document.getElementById('btnFecharModalLocalizacaoLavagem')?.addEventListener('click', () => document.getElementById('modalLocalizacaoLavagem').classList.add('hidden'));
 
+    // Exportar XLSX dos veiculos pendentes com localizacao
+    document.getElementById('spanPendentesExportar')?.addEventListener('click', exportarPendentesComLocalizacaoXlsx);
+
     // --- NOVOS LISTENERS PARA ADICIONAR VEÍCULO MANUALMENTE ---
     document.getElementById('btnAdicionarVeiculoDetalhes')?.addEventListener('click', abrirModalAdicionarVeiculo);
     document.getElementById('btnCloseModalAdicionarVeiculo')?.addEventListener('click', () => document.getElementById('modalAdicionarVeiculo').classList.add('hidden'));
@@ -1188,6 +1191,84 @@ async function gerarXLSXLista() {
 
     const fileName = `Lavagem_${nomeLista.replace(/[^a-z0-9]/gi, '_')}.xlsx`;
     XLSX.writeFile(wb, fileName);
+}
+
+let exportandoPendentesLocalizacao = false;
+
+/**
+ * Exporta um XLSX com Placa, Modelo, Marca, Status e a localização atual
+ * (rastreador) de todos os veículos pendentes da lista atualmente aberta.
+ */
+async function exportarPendentesComLocalizacaoXlsx() {
+    if (exportandoPendentesLocalizacao) return;
+
+    if (typeof XLSX === 'undefined') {
+        return alert('A biblioteca de exportação (XLSX) não foi carregada.');
+    }
+    if (!currentListId || currentListItems.length === 0) {
+        return alert('Não há itens na lista para exportar.');
+    }
+
+    const pendentes = currentListItems.filter(item => {
+        const status = (item.status || '').toString().toUpperCase().trim();
+        return !['REALIZADO', 'OK', 'AGENDADO', 'DISPENSADO', 'INTERNADO'].includes(status);
+    });
+
+    if (pendentes.length === 0) {
+        return alert('Não há veículos pendentes nesta lista.');
+    }
+
+    if (!confirm(`Buscar a localização de ${pendentes.length} veículo(s) pendente(s) e gerar o XLSX? Isso pode levar alguns instantes.`)) {
+        return;
+    }
+
+    exportandoPendentesLocalizacao = true;
+    const spanPendentes = document.getElementById('spanPendentesExportar');
+    const contadorPendentes = document.getElementById('countPendentes');
+    const textoContadorOriginal = contadorPendentes ? contadorPendentes.textContent : '';
+    if (spanPendentes) spanPendentes.classList.add('exportando');
+
+    try {
+        const dadosExportacao = [];
+
+        for (let indice = 0; indice < pendentes.length; indice += 1) {
+            const item = pendentes[indice];
+            if (contadorPendentes) contadorPendentes.textContent = `${textoContadorOriginal} (localizando ${indice + 1}/${pendentes.length}...)`;
+
+            let localizacao = 'Não localizado';
+            try {
+                const placa = String(item.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (placa.length === 7) {
+                    const { data, error } = await supabaseClient.functions.invoke('localizacao-veiculo', {
+                        body: { placa }
+                    });
+                    if (!error && data?.success && data?.data?.endereco) {
+                        localizacao = data.data.endereco;
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao localizar veículo:', item.placa, error);
+            }
+
+            dadosExportacao.push({
+                'Placa': item.placa,
+                'Modelo': item.tipo_veiculo || '-',
+                'Marca': item.marca || '-',
+                'Status': getDisplayStatus(item.status) || 'PENDENTE',
+                'Localização': localizacao
+            });
+        }
+
+        const nomeLista = document.getElementById('tituloDetalhesLista')?.textContent || 'lista_lavagem';
+        const ws = XLSX.utils.json_to_sheet(dadosExportacao);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'PENDENTES');
+        XLSX.writeFile(wb, `Pendentes_Localizacao_${nomeLista.replace(/[^a-z0-9]/gi, '_')}.xlsx`);
+    } finally {
+        exportandoPendentesLocalizacao = false;
+        if (spanPendentes) spanPendentes.classList.remove('exportando');
+        if (contadorPendentes) contadorPendentes.textContent = textoContadorOriginal;
+    }
 }
 
 window.atualizarItem = async function(id, campo, valor) {
