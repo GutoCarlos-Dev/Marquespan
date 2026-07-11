@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/monitoramento.css" />
   <link rel="stylesheet" href="css/monitoramento-retorno-rota.css?v=20260612-1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script type="module" src="./script/auth-guard.js"></script>
 </head>
 <body>
@@ -90,7 +91,10 @@
         <div class="retorno-live-grid">
           <div class="glass-panel retorno-column">
             <div class="column-header aguardando">
-              <h3><i class="fas fa-hourglass-half"></i> Aguardando Chegada</h3>
+              <h3 id="label-exportar-aguardando" class="label-exportavel" title="Clique para exportar XLSX com a localizacao dos veiculos aguardando">
+                <i class="fas fa-hourglass-half"></i> Aguardando Chegada
+                <i class="fas fa-file-excel label-exportavel-icone"></i>
+              </h3>
               <span id="count-aguardando-lista">0</span>
             </div>
             <div id="lista-aguardando" class="truck-list"></div>

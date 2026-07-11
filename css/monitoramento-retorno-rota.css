@@ -108,6 +108,27 @@
     color: #333;
 }
 
+.label-exportavel {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 8px;
+}
+
+.label-exportavel:hover {
+    text-decoration: underline;
+}
+
+.label-exportavel-icone {
+    color: #1d7a45;
+    font-size: 0.85rem;
+}
+
+.label-exportavel.exportando {
+    cursor: wait;
+    opacity: 0.65;
+}
+
 .column-header span {
     display: inline-flex;
     min-width: 34px;

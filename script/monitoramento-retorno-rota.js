@@ -30,6 +30,8 @@ let registrosRetorno = [];
 let veiculosPorPlaca = new Map();
 let retornoChannel = null;
 let refreshTimer = null;
+let listaAguardandoAtual = [];
+let exportandoAguardando = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const perfil = await configurarFiltroFilialUsuario(document.getElementById('filtroFilial'));
@@ -49,6 +51,7 @@ function initRetornoRealTime() {
     document.getElementById('dataRetorno')?.addEventListener('change', carregarDados);
     document.getElementById('filtroFilial')?.addEventListener('change', renderDashboard);
     document.getElementById('searchInput')?.addEventListener('input', renderDashboard);
+    document.getElementById('label-exportar-aguardando')?.addEventListener('click', exportarAguardandoXlsx);
 
     document.addEventListener('fullscreenchange', atualizarEstadoTelaCheia);
 
@@ -102,7 +105,7 @@ async function carregarVeiculos(registros) {
     try {
         const { data, error } = await supabaseClient
             .from('veiculos')
-            .select('placa, filial, modelo')
+            .select('placa, filial, modelo, tipo')
             .in('placa', placas);
 
         if (error) throw error;
@@ -149,7 +152,8 @@ function renderDashboard() {
     const progressBar = document.getElementById('progress-bar');
     if (progressBar) progressBar.style.width = `${percentual}%`;
 
-    renderLista('lista-aguardando', ordenarAguardando(aguardando), false);
+    listaAguardandoAtual = ordenarAguardando(aguardando);
+    renderLista('lista-aguardando', listaAguardandoAtual, false);
     renderLista('lista-chegaram', ordenarChegaram(chegaram), true);
 }
 
@@ -231,6 +235,75 @@ function ordenarAguardando(itens) {
 
 function ordenarChegaram(itens) {
     return [...itens].sort((a, b) => String(b.hora_mot || '').localeCompare(String(a.hora_mot || '')));
+}
+
+async function exportarAguardandoXlsx() {
+    if (exportandoAguardando) return;
+
+    if (typeof XLSX === 'undefined') {
+        alert('A biblioteca de exportação (XLSX) não foi carregada.');
+        return;
+    }
+    if (listaAguardandoAtual.length === 0) {
+        alert('Não há veículos aguardando chegada para exportar.');
+        return;
+    }
+
+    if (!confirm(`Buscar a localização de ${listaAguardandoAtual.length} veículo(s) aguardando e gerar o XLSX? Isso pode levar alguns instantes.`)) {
+        return;
+    }
+
+    exportandoAguardando = true;
+    const label = document.getElementById('label-exportar-aguardando');
+    const textoOriginal = label?.innerHTML;
+    label?.classList.add('exportando');
+
+    try {
+        const linhas = [];
+
+        for (let indice = 0; indice < listaAguardandoAtual.length; indice += 1) {
+            const item = listaAguardandoAtual[indice];
+            if (label) {
+                label.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Localizando ${indice + 1}/${listaAguardandoAtual.length}...`;
+            }
+
+            const placa = normalizarPlaca(item.placa);
+            const veiculo = veiculosPorPlaca.get(placa);
+            let localizacao = 'Não localizado';
+
+            try {
+                if (placa.length === 7) {
+                    const { data, error } = await supabaseClient.functions.invoke('localizacao-veiculo', {
+                        body: { placa }
+                    });
+                    if (!error && data?.success && data?.data?.endereco) {
+                        localizacao = data.data.endereco;
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao localizar veículo:', item.placa, error);
+            }
+
+            linhas.push({
+                'PLACA': placa || item.placa || '-',
+                'TIPO': veiculo?.tipo || veiculo?.modelo || '-',
+                'ROTA': item.rota || '-',
+                'MOTORISTA': item.nome_mot || 'Não informado',
+                'AUXILIAR': item.nome_aux || 'Não informado',
+                'LOCALIZAÇÃO': localizacao
+            });
+        }
+
+        const ws = XLSX.utils.json_to_sheet(linhas);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'AGUARDANDO');
+        const dataRetorno = document.getElementById('dataRetorno')?.value || getDataSaoPaulo();
+        XLSX.writeFile(wb, `retorno_rota_aguardando_${dataRetorno}.xlsx`);
+    } finally {
+        exportandoAguardando = false;
+        label?.classList.remove('exportando');
+        if (label && textoOriginal) label.innerHTML = textoOriginal;
+    }
 }
 
 function veiculoChegou(item) {
