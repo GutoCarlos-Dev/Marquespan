@@ -120,15 +120,20 @@ function assinaturaLocalizacaoCliente(cliente) {
     ].map(normalizarAssinatura).join('|');
 }
 
-function hashString(value) {
-    return Array.from(String(value || '')).reduce((hash, char) => {
-        return ((hash << 5) - hash) + char.charCodeAt(0);
-    }, 0);
+function hslParaHex(h, s, l) {
+    const a = s * Math.min(l, 1 - l);
+    const f = (n) => {
+        const k = (n + h / 30) % 12;
+        const cor = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+        return Math.round(255 * cor).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-function corDaRota(rota) {
-    const chave = cleanCell(rota) || 'Sem rota';
-    return PALETA_ROTAS[Math.abs(hashString(chave)) % PALETA_ROTAS.length];
+function gerarCorExtra(indice) {
+    // Angulo dourado garante matizes bem espalhados mesmo para muitas rotas.
+    const hue = (indice * 137.508) % 360;
+    return hslParaHex(hue, 0.62, 0.45);
 }
 
 async function geocodificarEndereco(endereco) {
@@ -172,6 +177,7 @@ const ClientesMapaUI = {
     coordCache: {},
     cacheAlterado: false,
     marcadores: new Map(),
+    rotaCores: new Map(),
 
     init() {
         this.cache();
@@ -229,12 +235,31 @@ const ClientesMapaUI = {
         }
     },
 
+    inicializarCoresRotas() {
+        const rotasUnicas = [...new Set(this.clientes.map((cliente) => cleanCell(cliente.rota) || 'Sem rota'))]
+            .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+
+        rotasUnicas.forEach((rota, indice) => {
+            const cor = indice < PALETA_ROTAS.length ? PALETA_ROTAS[indice] : gerarCorExtra(indice - PALETA_ROTAS.length);
+            this.rotaCores.set(rota, cor);
+        });
+    },
+
+    corDaRota(rota) {
+        const chave = cleanCell(rota) || 'Sem rota';
+        if (!this.rotaCores.has(chave)) {
+            this.rotaCores.set(chave, gerarCorExtra(this.rotaCores.size));
+        }
+        return this.rotaCores.get(chave);
+    },
+
     async processarClientes() {
         if (!this.clientes.length) {
             this.atualizarResumo();
             return;
         }
 
+        this.inicializarCoresRotas();
         this.setStatus(`Localizando ${this.clientes.length.toLocaleString('pt-BR')} cliente(s)...`);
         let geocodificados = 0;
 
@@ -329,7 +354,7 @@ const ClientesMapaUI = {
 
     adicionarClienteNoMapa(cliente, coords) {
         const rota = cleanCell(cliente.rota) || 'Sem rota';
-        const cor = corDaRota(rota);
+        const cor = this.corDaRota(rota);
         const latLng = [coords.lat, coords.lng];
         this.bounds.push(latLng);
 
@@ -469,7 +494,7 @@ const ClientesMapaUI = {
 
         const rota = cleanCell(cliente.rota) || 'Sem rota';
         marcador.setLatLng([coords.lat, coords.lng]);
-        marcador.setPopupContent(this.montarPopup(cliente, coords, corDaRota(rota)));
+        marcador.setPopupContent(this.montarPopup(cliente, coords, this.corDaRota(rota)));
         marcador.openPopup();
         this.bounds = this.localizados.map((item) => [item.coords.lat, item.coords.lng]);
         this.ajustarMapaAosPontos(false);
@@ -490,7 +515,7 @@ const ClientesMapaUI = {
             .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric: true, sensitivity: 'base' }))
             .map(([rota, total]) => `
                 <div class="clientes-mapa-legenda-item">
-                    <span class="clientes-mapa-cor" style="background:${escapeHtml(corDaRota(rota))}"></span>
+                    <span class="clientes-mapa-cor" style="background:${escapeHtml(this.corDaRota(rota))}"></span>
                     <strong>${escapeHtml(rota)}</strong>
                     <span>${total.toLocaleString('pt-BR')}</span>
                 </div>
