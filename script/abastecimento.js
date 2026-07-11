@@ -9,7 +9,6 @@ import {
     calcularEstoqueAntes as obterEstoqueAntes,
     calcularEstoqueAtual
 } from './abastecimento/estoque-service.js';
-import { salvarColetaKmAbastecimento } from './abastecimento/coleta-km-service.js';
 import { criarLinhaDistribuicaoTanque } from './abastecimento/distribuicao-tanques.js';
 import {
     montarPayloadExterno,
@@ -1792,19 +1791,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                // REGISTRA NA TABELA DE COLETA DE KM (Odometer History)
-                if (!isNaN(kmValue) && kmValue > 0) {
-                    await salvarColetaKmAbastecimento({
-                        supabaseClient,
-                        dataColeta: commonData.data_hora,
-                        placa: placaInput,
-                        kmAtual: kmValue,
-                        usuario,
-                        modelo: veiculoObj ? veiculoObj.modelo : '',
-                        observacao: `Abastecimento (${payloads.length} bicos)`
-                    });
-                }
-
                 if (this.saidaEditingId.value) {
                     // Atualiza o registro principal que está sendo editado
                     const { error: updateError } = await supabaseClient
