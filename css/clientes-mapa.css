@@ -76,6 +76,12 @@ body {
     font-size: 0.72rem;
 }
 
+.clientes-mapa-dica {
+    color: #667085;
+    font-size: 0.74rem;
+    margin: -4px 0 10px;
+}
+
 .clientes-mapa-legenda {
     display: flex;
     flex-direction: column;
@@ -84,10 +90,28 @@ body {
 
 .clientes-mapa-legenda-item {
     align-items: center;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
     display: grid;
     grid-template-columns: 14px minmax(0, 1fr) auto;
     gap: 8px;
     font-size: 0.82rem;
+    padding: 3px 6px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.clientes-mapa-legenda-item:hover {
+    background: #f3f6f4;
+}
+
+.clientes-mapa-legenda-item.active {
+    background: #eef8f2;
+    border-color: #006937;
+}
+
+.clientes-mapa-legenda-item.active strong {
+    color: #006937;
 }
 
 .clientes-mapa-cor {

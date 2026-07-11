@@ -178,6 +178,7 @@ const ClientesMapaUI = {
     cacheAlterado: false,
     marcadores: new Map(),
     rotaCores: new Map(),
+    rotasAtivas: new Set(),
 
     init() {
         this.cache();
@@ -201,6 +202,17 @@ const ClientesMapaUI = {
         document.addEventListener('click', (event) => {
             const botao = event.target.closest('[data-action="atualizar-coordenadas-cliente"]');
             if (botao) this.atualizarCoordenadasCliente(botao);
+
+            const itemRota = event.target.closest('[data-action="destacar-rota"]');
+            if (itemRota) this.destacarRota(itemRota.dataset.rota, event.ctrlKey || event.metaKey);
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            const itemRota = event.target.closest('[data-action="destacar-rota"]');
+            if (!itemRota) return;
+            event.preventDefault();
+            this.destacarRota(itemRota.dataset.rota, event.ctrlKey || event.metaKey);
         });
     },
 
@@ -319,7 +331,8 @@ const ClientesMapaUI = {
         const lat = Number(item.lat);
         const lng = Number(item.lng);
         if (!coordenadasValidas(lat, lng)) return null;
-        return { lat, lng, origem: item.origem ? `${item.origem} (cache)` : 'cache' };
+        const origemBase = String(item.origem || '').replace(/\s*\(cache\)\s*$/i, '') || 'cache';
+        return { lat, lng, origem: `${origemBase} (cache)` };
     },
 
     salvarCoordenadasCache(cliente, coords) {
@@ -352,22 +365,75 @@ const ClientesMapaUI = {
         }
     },
 
+    estiloMarcador(rota) {
+        const cor = this.corDaRota(rota);
+        if (!this.rotasAtivas.size) {
+            return { radius: 8, color: '#ffffff', weight: 2, fillColor: cor, fillOpacity: 0.9 };
+        }
+        if (this.rotasAtivas.has(rota)) {
+            return { radius: 11, color: '#111827', weight: 3, fillColor: cor, fillOpacity: 1 };
+        }
+        return { radius: 6, color: '#ffffff', weight: 1, fillColor: cor, fillOpacity: 0.15 };
+    },
+
     adicionarClienteNoMapa(cliente, coords) {
         const rota = cleanCell(cliente.rota) || 'Sem rota';
         const cor = this.corDaRota(rota);
         const latLng = [coords.lat, coords.lng];
         this.bounds.push(latLng);
 
-        const marcador = L.circleMarker(latLng, {
-            radius: 8,
-            color: '#ffffff',
-            weight: 2,
-            fillColor: cor,
-            fillOpacity: 0.9
-        }).addTo(this.layer).bindPopup(this.montarPopup(cliente, coords, cor));
+        const marcador = L.circleMarker(latLng, this.estiloMarcador(rota))
+            .addTo(this.layer)
+            .bindPopup(this.montarPopup(cliente, coords, cor));
+        marcador.rota = rota;
         this.marcadores.set(chaveInstanciaCliente(cliente), marcador);
 
         this.ajustarMapaAosPontos(false);
+    },
+
+    destacarRota(rota, multiplo = false) {
+        const chave = cleanCell(rota) || 'Sem rota';
+
+        if (multiplo) {
+            if (this.rotasAtivas.has(chave)) {
+                this.rotasAtivas.delete(chave);
+            } else {
+                this.rotasAtivas.add(chave);
+            }
+        } else if (this.rotasAtivas.size === 1 && this.rotasAtivas.has(chave)) {
+            this.rotasAtivas.clear();
+        } else {
+            this.rotasAtivas = new Set([chave]);
+        }
+
+        this.aplicarDestaqueRota();
+        this.atualizarLegendaAtiva();
+    },
+
+    aplicarDestaqueRota() {
+        this.marcadores.forEach((marcador) => {
+            marcador.setStyle(this.estiloMarcador(marcador.rota));
+            if (this.rotasAtivas.has(marcador.rota)) marcador.bringToFront();
+        });
+
+        if (this.rotasAtivas.size) {
+            const pontosRotas = this.localizados
+                .filter(({ cliente }) => this.rotasAtivas.has(cleanCell(cliente.rota) || 'Sem rota'))
+                .map(({ coords }) => [coords.lat, coords.lng]);
+            if (pontosRotas.length === 1) {
+                this.map.setView(pontosRotas[0], 15);
+            } else if (pontosRotas.length > 1) {
+                this.map.fitBounds(L.latLngBounds(pontosRotas), { padding: [60, 60], maxZoom: 15 });
+            }
+        } else {
+            this.ajustarMapaAosPontos(true);
+        }
+    },
+
+    atualizarLegendaAtiva() {
+        this.legenda.querySelectorAll('.clientes-mapa-legenda-item').forEach((item) => {
+            item.classList.toggle('active', this.rotasAtivas.has(item.dataset.rota));
+        });
     },
 
     ajustarMapaAosPontos(imediato = false) {
@@ -393,7 +459,6 @@ const ClientesMapaUI = {
         const nome = cliente.fantasia || cliente.nome || `Cliente ${cliente.codigo || ''}`.trim();
         const endereco = montarEndereco(cliente);
         const rota = cleanCell(cliente.rota) || 'Sem rota';
-        const origem = coords.origem === 'endereco' ? 'endereco geocodificado' : coords.origem;
         const chave = chaveInstanciaCliente(cliente);
 
         return `
@@ -403,7 +468,6 @@ const ClientesMapaUI = {
                 <p><b>Rota:</b> <span style="color:${escapeHtml(cor)};font-weight:700">${escapeHtml(rota)}</span></p>
                 <p><b>Supervisor:</b> ${escapeHtml(cliente.supervisor || '-')}</p>
                 <p>${escapeHtml(endereco || 'Endereco nao informado')}</p>
-                <p><small>Origem: ${escapeHtml(origem)}</small></p>
                 <a href="${googleMapsUrl(cliente, coords)}" target="_blank" rel="noopener noreferrer">Abrir no Google Maps</a>
                 <div class="cliente-mapa-coordenadas">
                     <label>Geolocalizacao
@@ -514,7 +578,7 @@ const ClientesMapaUI = {
         this.legenda.innerHTML = [...rotas.entries()]
             .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric: true, sensitivity: 'base' }))
             .map(([rota, total]) => `
-                <div class="clientes-mapa-legenda-item">
+                <div class="clientes-mapa-legenda-item${this.rotasAtivas.has(rota) ? ' active' : ''}" data-action="destacar-rota" data-rota="${escapeHtml(rota)}" role="button" tabindex="0" title="Clique para destacar. Ctrl+clique para selecionar varias rotas">
                     <span class="clientes-mapa-cor" style="background:${escapeHtml(this.corDaRota(rota))}"></span>
                     <strong>${escapeHtml(rota)}</strong>
                     <span>${total.toLocaleString('pt-BR')}</span>
