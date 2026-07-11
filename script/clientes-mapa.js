@@ -196,9 +196,12 @@ const ClientesMapaUI = {
         this.totalRotas = document.getElementById('mapaTotalRotas');
         this.legenda = document.getElementById('clientesMapaLegenda');
         this.pendentesEl = document.getElementById('clientesMapaPendentes');
+        this.btnExportarPendentes = document.getElementById('btnExportarPendentes');
     },
 
     bindEvents() {
+        this.btnExportarPendentes?.addEventListener('click', () => this.exportarPendentesXlsx());
+
         document.addEventListener('click', (event) => {
             const botao = event.target.closest('[data-action="atualizar-coordenadas-cliente"]');
             if (botao) this.atualizarCoordenadasCliente(botao);
@@ -587,8 +590,11 @@ const ClientesMapaUI = {
 
         if (!this.pendentes.length) {
             this.pendentesEl.textContent = 'Nenhum.';
+            if (this.btnExportarPendentes) this.btnExportarPendentes.hidden = true;
             return;
         }
+
+        if (this.btnExportarPendentes) this.btnExportarPendentes.hidden = false;
 
         this.pendentesEl.innerHTML = `
             <ul>
@@ -598,6 +604,31 @@ const ClientesMapaUI = {
             </ul>
             ${this.pendentes.length > 80 ? `<p>Mais ${(this.pendentes.length - 80).toLocaleString('pt-BR')} cliente(s) nao exibidos.</p>` : ''}
         `;
+    },
+
+    exportarPendentesXlsx() {
+        if (typeof window.XLSX === 'undefined') {
+            this.setStatus('Biblioteca XLSX nao carregada. Atualize a pagina e tente novamente.');
+            return;
+        }
+        if (!this.pendentes.length) return;
+
+        const dados = this.pendentes.map((cliente) => ({
+            'CÓD': cliente.codigo || '',
+            'FANTASIA': cliente.fantasia || '',
+            'NOME': cliente.nome || '',
+            'ROTA': cleanCell(cliente.rota) || 'Sem rota',
+            'SUPERVISOR': cliente.supervisor || '',
+            'ENDEREÇO': montarEndereco(cliente),
+            'MUNICIPIO': cliente.municipio || '',
+            'UF': cliente.uf || '',
+            'CEP': cliente.cep || ''
+        }));
+
+        const worksheet = window.XLSX.utils.json_to_sheet(dados);
+        const workbook = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(workbook, worksheet, 'NAO LOCALIZADOS');
+        window.XLSX.writeFile(workbook, `clientes_nao_localizados_${new Date().toISOString().slice(0, 10)}.xlsx`);
     },
 
     setStatus(message) {

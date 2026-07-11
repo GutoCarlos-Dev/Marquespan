@@ -51,6 +51,36 @@ body {
     margin: 0 0 10px;
 }
 
+.clientes-mapa-card-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.clientes-mapa-card-header h2 {
+    margin: 0 0 10px;
+}
+
+.clientes-mapa-btn-exportar {
+    align-items: center;
+    background: #006937;
+    border: 0;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    font-size: 0.74rem;
+    font-weight: 700;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding: 5px 9px;
+}
+
+.clientes-mapa-btn-exportar:hover {
+    background: #00532c;
+}
+
 .clientes-mapa-kpis {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
