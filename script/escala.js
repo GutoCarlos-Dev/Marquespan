@@ -1973,6 +1973,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         painelEscala.addEventListener('focusin', (e) => {
             const input = e.target.closest('input.table-input');
             if (input) input.dataset.valorAnterior = input.value || '';
+            if (e.target.isContentEditable) e.target.dataset.valorAnterior = e.target.innerText || '';
         });
         painelEscala.addEventListener('input', (e) => {
             const input = e.target.closest('input.table-input');
@@ -1981,7 +1982,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             atualizarAlertaMotoristaAusente(tr);
         });
         painelEscala.addEventListener('focusout', (e) => { // Para contenteditable
-            if (e.target.isContentEditable) handleEdit(e);
+            if (!e.target.isContentEditable) return;
+            const valorAtual = e.target.innerText || '';
+            // So salva se o texto realmente mudou; evita registrar "ultima alteracao"
+            // so por abrir e sair da celula sem editar nada.
+            if (valorAtual === (e.target.dataset.valorAnterior || '')) return;
+            handleEdit(e);
         });
 
         // --- CONTEXT MENU (Right-click para Gerar Boleta) ---
