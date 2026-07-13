@@ -44,6 +44,7 @@ let camadaHoteisRota;
 let camadaPostosRota;
 let marcadorSelecionado;
 let pontosAtuais = [];
+let segmentosRotaAtuais = [];
 let clientesAtuais = [];
 let hoteisAtuais = [];
 let postosAtuais = [];
@@ -320,6 +321,50 @@ function coordenadasBrutas(pontos) {
   return pontos.map((ponto) => [ponto.latitude, ponto.longitude]);
 }
 
+// Projeta um ponto bruto de GPS sobre o segmento de reta [a, b] mais proximo, usando uma
+// aproximacao planar (compensando a longitude pelo cosseno da latitude). Suficiente em escala
+// urbana e evita puxar dependencias externas so para achar "ponto mais proximo na linha".
+function projetarPontoNoSegmento(ponto, a, b) {
+  const cosLat = Math.cos((a[0] * Math.PI) / 180) || 1;
+  const ax = a[1] * cosLat;
+  const ay = a[0];
+  const bx = b[1] * cosLat;
+  const by = b[0];
+  const px = ponto.longitude * cosLat;
+  const py = ponto.latitude;
+
+  const dx = bx - ax;
+  const dy = by - ay;
+  const comprimentoQuadrado = dx * dx + dy * dy;
+  let t = comprimentoQuadrado > 0 ? ((px - ax) * dx + (py - ay) * dy) / comprimentoQuadrado : 0;
+  t = Math.max(0, Math.min(1, t));
+
+  const projX = ax + t * dx;
+  const projY = ay + t * dy;
+  const distanciaQuadrada = (px - projX) ** 2 + (py - projY) ** 2;
+
+  return { latitude: projY, longitude: projX / cosLat, distanciaQuadrada };
+}
+
+// Encontra, dentre todos os segmentos da linha roteirizada, o ponto mais proximo do ponto bruto
+// de GPS informado. Usado para "colar" os marcadores (parada/inicio/fim/ignicao) na linha verde,
+// ja que ela e recalculada pelo OSRM e nao coincide pixel a pixel com a coordenada bruta do rastreador.
+function coordenadaVisualNaLinha(ponto, segmentos) {
+  if (!Array.isArray(segmentos) || !segmentos.length) return [ponto.latitude, ponto.longitude];
+
+  let melhor = null;
+  segmentos.forEach((segmento) => {
+    for (let indice = 1; indice < segmento.length; indice += 1) {
+      const candidato = projetarPontoNoSegmento(ponto, segmento[indice - 1], segmento[indice]);
+      if (!melhor || candidato.distanciaQuadrada < melhor.distanciaQuadrada) {
+        melhor = candidato;
+      }
+    }
+  });
+
+  return melhor ? [melhor.latitude, melhor.longitude] : [ponto.latitude, ponto.longitude];
+}
+
 function coordenadaGoogle(ponto) {
   return `${Number(ponto.latitude).toFixed(6)},${Number(ponto.longitude).toFixed(6)}`;
 }
@@ -585,6 +630,7 @@ async function desenharMapa(pontos) {
   atualizarMapaGooglePercurso(pontos);
   atualizarPainelRotaEmulada(pontos);
   const segmentosRoteirizados = await obterSegmentosRoteirizados(pontos);
+  segmentosRotaAtuais = segmentosRoteirizados;
   segmentosRoteirizados.forEach((segmento) => {
     L.polyline(segmento, {
       color: '#008f57',
@@ -595,7 +641,7 @@ async function desenharMapa(pontos) {
 
   const inicio = pontos[0];
   const fim = pontos[pontos.length - 1];
-  L.circleMarker([inicio.latitude, inicio.longitude], {
+  L.circleMarker(coordenadaVisualNaLinha(inicio, segmentosRoteirizados), {
     color: '#fff',
     fillColor: '#198754',
     fillOpacity: 1,
@@ -609,7 +655,7 @@ async function desenharMapa(pontos) {
     .filter((ponto) => ponto.tipo === 'parado' && calcularTempoParadoMs(ponto) >= DURACAO_MIN_PARADA_MS)
     .slice(0, 200);
   paradas.forEach((ponto) => {
-    L.circleMarker([ponto.latitude, ponto.longitude], {
+    L.circleMarker(coordenadaVisualNaLinha(ponto, segmentosRoteirizados), {
       color: '#fff',
       fillColor: '#ff8a34',
       fillOpacity: 0.95,
@@ -631,12 +677,12 @@ async function desenharMapa(pontos) {
       iconSize: [22, 22],
       iconAnchor: [11, 11]
     });
-    L.marker([cur.latitude, cur.longitude], { icon: iconeIgnicao })
+    L.marker(coordenadaVisualNaLinha(cur, segmentosRoteirizados), { icon: iconeIgnicao })
       .bindPopup(popupPonto(cur, ligada ? 'Ignição ligada' : 'Ignição desligada'))
       .addTo(camadaPercurso);
   }
 
-  L.circleMarker([fim.latitude, fim.longitude], {
+  L.circleMarker(coordenadaVisualNaLinha(fim, segmentosRoteirizados), {
     color: '#fff',
     fillColor: '#e62f47',
     fillOpacity: 1,
@@ -1506,14 +1552,15 @@ function destacarPonto(indice) {
   });
 
   if (marcadorSelecionado) mapa.removeLayer(marcadorSelecionado);
-  marcadorSelecionado = L.circleMarker([ponto.latitude, ponto.longitude], {
+  const coordenadaVisual = coordenadaVisualNaLinha(ponto, segmentosRotaAtuais);
+  marcadorSelecionado = L.circleMarker(coordenadaVisual, {
     color: '#17332a',
     fillColor: '#ffe14f',
     fillOpacity: 1,
     radius: 10,
     weight: 3
   }).addTo(mapa).bindPopup(popupPonto(ponto, `Posição ${indice + 1}`)).openPopup();
-  mapa.setView([ponto.latitude, ponto.longitude], Math.max(mapa.getZoom(), 15));
+  mapa.setView(coordenadaVisual, Math.max(mapa.getZoom(), 15));
 }
 
 function centralizarItemNoMapa(item) {
