@@ -54,7 +54,9 @@ const DespesasUI = {
 
         // Tabela e busca
         this.tableBody = document.getElementById('despesaTableBody');
-        this.searchInput = document.getElementById('searchDespesaInput');
+        this.searchRotaInput = document.getElementById('searchDespesaRota');
+        this.searchHotelInput = document.getElementById('searchDespesaHotel');
+        this.searchFuncionarioInput = document.getElementById('searchDespesaFuncionario');
 
         // Filial
         this.filialSelect = document.getElementById('despesaFilial');
@@ -100,7 +102,9 @@ const DespesasUI = {
         this.btnCancelarCamposFixos?.addEventListener('click', () => this.fecharModalCamposFixos());
         this.btnSalvarCamposFixos?.addEventListener('click', () => this.salvarCamposFixos());
         this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
-        this.searchInput.addEventListener('input', () => this.renderGrid());
+        this.searchRotaInput?.addEventListener('input', () => this.renderGrid());
+        this.searchHotelInput?.addEventListener('input', () => this.renderGrid());
+        this.searchFuncionarioInput?.addEventListener('input', () => this.renderGrid());
         this.btnToggleMenuLateral?.addEventListener('click', () => this.toggleMenuLateral());
 
         this.filialSelect?.addEventListener('change', () => {
@@ -642,7 +646,13 @@ const DespesasUI = {
 
             this.editingIdInput.value = despesa.id;
             this.usuarioDespesaEditando = despesa.usuario || '';
-            
+
+            if (this.filialSelect) {
+                this.filialSelect.value = despesa.filial || '';
+                this.filialSelect.classList.remove('campo-invalido');
+                await this.loadRotasPorFilial(despesa.filial || '');
+            }
+
             const rotas = (despesa.numero_rota || '').split(',').map(s => s.trim());
             this.despesaRotaOptions.querySelectorAll('.rota-checkbox').forEach(cb => {
                 cb.checked = rotas.includes(cb.value);
@@ -654,7 +664,7 @@ const DespesasUI = {
                 if (hotelCb) hotelCb.checked = true;
             }
             this.updateMultiselectText(this.despesaHotelOptions, this.despesaHotelText, 'hotel-checkbox');
-            this.handleHotelSelectionChange();
+            if (this.btnGerenciarQuartos) this.btnGerenciarQuartos.disabled = !despesa.id_hotel;
 
             document.getElementById('despesaFuncionario1Input').value = despesa.funcionario1?.nome_completo || '';
             document.getElementById('despesaFuncionario2Input').value = despesa.funcionario2?.nome_completo || '';
@@ -717,48 +727,65 @@ const DespesasUI = {
 
     async renderGrid() {
         try {
-            const searchTerm = this.searchInput.value.trim();
+            const termoRota = this.searchRotaInput?.value.trim() || '';
+            const termoHotel = this.searchHotelInput?.value.trim() || '';
+            const termoFuncionario = this.searchFuncionarioInput?.value.trim() || '';
             let query;
 
-            if (searchTerm) {
-                const [
-                    { data: rotaData, error: rotaError },
-                    { data: quartoData, error: quartoError },
-                    { data: hotelData, error: hotelError },
-                    { data: func1Data, error: func1Error },
-                    { data: func2Data, error: func2Error }
-                ] = await Promise.all([
-                    supabaseClient.from('despesas').select('id').ilike('numero_rota', `%${searchTerm}%`),
-                    supabaseClient.from('despesas').select('id').ilike('tipo_quarto', `%${searchTerm}%`),
-                    supabaseClient.from('despesas').select('id, hoteis!inner(id)').ilike('hoteis.nome', `%${searchTerm}%`),
-                    supabaseClient.from('despesas').select('id, funcionario1:id_funcionario1!inner(id)').ilike('funcionario1.nome_completo', `%${searchTerm}%`),
-                    supabaseClient.from('despesas').select('id, funcionario2:id_funcionario2!inner(id)').ilike('funcionario2.nome_completo', `%${searchTerm}%`)
-                ]);
+            if (termoRota || termoHotel || termoFuncionario) {
+                const buscas = [];
 
-                if (rotaError || quartoError || hotelError || func1Error || func2Error) {
-                    console.error('Erro em uma das buscas parciais:', { rotaError, quartoError, hotelError, func1Error, func2Error });
-                    throw new Error('Ocorreu um erro durante a busca.');
+                if (termoRota) {
+                    buscas.push(
+                        supabaseClient.from('despesas').select('id').ilike('numero_rota', `%${termoRota}%`)
+                            .then(({ data, error }) => {
+                                if (error) throw error;
+                                return new Set((data || []).map(d => d.id));
+                            })
+                    );
                 }
 
-                const ids = new Set([
-                    ...(rotaData || []).map(d => d.id),
-                    ...(quartoData || []).map(d => d.id),
-                    ...(hotelData || []).map(d => d.id),
-                    ...(func1Data || []).map(d => d.id),
-                    ...(func2Data || []).map(d => d.id)
-                ]);
+                if (termoHotel) {
+                    buscas.push(
+                        supabaseClient.from('despesas').select('id, hoteis!inner(id)').ilike('hoteis.nome', `%${termoHotel}%`)
+                            .then(({ data, error }) => {
+                                if (error) throw error;
+                                return new Set((data || []).map(d => d.id));
+                            })
+                    );
+                }
 
-                const matchingIds = Array.from(ids);
+                if (termoFuncionario) {
+                    buscas.push(
+                        Promise.all([
+                            supabaseClient.from('despesas').select('id, funcionario1:id_funcionario1!inner(id)').ilike('funcionario1.nome_completo', `%${termoFuncionario}%`),
+                            supabaseClient.from('despesas').select('id, funcionario2:id_funcionario2!inner(id)').ilike('funcionario2.nome_completo', `%${termoFuncionario}%`)
+                        ]).then(([res1, res2]) => {
+                            if (res1.error) throw res1.error;
+                            if (res2.error) throw res2.error;
+                            return new Set([
+                                ...(res1.data || []).map(d => d.id),
+                                ...(res2.data || []).map(d => d.id)
+                            ]);
+                        })
+                    );
+                }
 
-                if (matchingIds.length === 0) {
-                    this.tableBody.innerHTML = `<tr><td colspan="8">Nenhum resultado encontrado para "${searchTerm}".</td></tr>`;
+                const conjuntos = await Promise.all(buscas);
+                // Interseccao: cada filtro preenchido precisa bater (AND entre campos).
+                const matchingIds = conjuntos.reduce((acumulado, conjunto) => (
+                    acumulado === null ? conjunto : new Set([...acumulado].filter(id => conjunto.has(id)))
+                ), null) || new Set();
+
+                if (matchingIds.size === 0) {
+                    this.tableBody.innerHTML = `<tr><td colspan="8">Nenhum resultado encontrado para os filtros informados.</td></tr>`;
                     return;
                 }
 
                 query = supabaseClient
                     .from('despesas')
                     .select('id, usuario, created_at, numero_rota, tipo_quarto, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
-                    .in('id', matchingIds);
+                    .in('id', Array.from(matchingIds));
 
             } else {
                 query = supabaseClient
