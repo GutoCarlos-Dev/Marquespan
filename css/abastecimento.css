@@ -407,6 +407,28 @@ body.abastecimento-menu-oculto .menu-floating-toggle i {
     border-color: #f5c6cb;
 }
 
+/* Status de Geolocalização no Grid */
+.geo-status {
+    align-items: center;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.75rem;
+    font-weight: 800;
+    gap: 5px;
+    padding: 4px 9px;
+    white-space: nowrap;
+}
+
+.geo-status.cadastrado {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.geo-status.pendente {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 /* Estilos para garantir acessibilidade mobile */
 @media (max-width: 768px) {
     .grid-2-comodato {

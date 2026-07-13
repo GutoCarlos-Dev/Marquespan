@@ -2525,7 +2525,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.tableBodyPostos) return;
             
             if (fetchData) {
-                this.tableBodyPostos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
+                this.tableBodyPostos.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
                 
                 try {
                     this.postosData = await buscarPostosPaginados({

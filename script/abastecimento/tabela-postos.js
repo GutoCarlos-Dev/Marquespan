@@ -25,10 +25,16 @@ export function filtrarOrdenarPostos(postosData, term, sortState) {
 
 export function montarHtmlPostos(postos) {
     if (!postos.length) {
-        return '<tr><td colspan="7" style="text-align:center;">Nenhum posto encontrado.</td></tr>';
+        return '<tr><td colspan="8" style="text-align:center;">Nenhum posto encontrado.</td></tr>';
     }
 
-    return postos.map(posto => `
+    return postos.map(posto => {
+        const geoCadastrada = Boolean(String(posto.geolocalizacao || '').trim());
+        const geoBadge = geoCadastrada
+            ? '<span class="geo-status cadastrado"><i class="fas fa-check"></i> Cadastrado</span>'
+            : '<span class="geo-status pendente"><i class="fas fa-triangle-exclamation"></i> Nao cadastrado</span>';
+
+        return `
         <tr>
             <td>${posto.filial || '-'}</td>
             <td>${posto.razao_social}</td>
@@ -37,11 +43,13 @@ export function montarHtmlPostos(postos) {
             <td>${posto.uf || '-'}</td>
             <td>${posto.faturado ? 'Sim' : 'N&atilde;o'}</td>
             <td>${(posto.valor_negociado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</td>
+            <td>${geoBadge}</td>
             <td style="display: flex; gap: 5px; justify-content: center;">
                 <button class="btn-action btn-locate-posto" data-id="${posto.id}" style="color: #006937; border: none; background: transparent; cursor: pointer;" title="Localizar no Mapa"><i class="fas fa-map-location-dot"></i></button>
                 <button class="btn-action btn-edit-posto" data-id="${posto.id}" style="color: #007bff; border: none; background: transparent; cursor: pointer;" title="Editar"><i class="fas fa-edit"></i></button>
                 <button class="btn-action btn-delete-posto" data-id="${posto.id}" style="color: #dc3545; border: none; background: transparent; cursor: pointer;" title="Excluir"><i class="fas fa-trash"></i></button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
