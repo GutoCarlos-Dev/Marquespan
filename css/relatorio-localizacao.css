@@ -225,6 +225,11 @@
   border-radius: 50% 50% 50% 2px;
 }
 
+.legenda-ponto.posto-rota {
+  background: #d97706;
+  border-radius: 4px;
+}
+
 .legenda-ponto.ignicao-on-legenda {
   background: #16a34a;
 }
@@ -253,6 +258,21 @@
   background: #9333ea;
   border: 2px solid #fff;
   border-radius: 50% 50% 50% 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.32);
+  color: #fff;
+  display: flex;
+  font-size: 0.82rem;
+  font-weight: 800;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.posto-rota-marker {
+  align-items: center;
+  background: #d97706;
+  border: 2px solid #fff;
+  border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.32);
   color: #fff;
   display: flex;

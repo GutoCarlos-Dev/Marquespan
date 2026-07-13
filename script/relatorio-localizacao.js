@@ -36,14 +36,22 @@ let camadaPercurso;
 let camadaClientesRota;
 let camadaFiliaisMarquespan;
 let camadaHoteisRota;
+let camadaPostosRota;
 let marcadorSelecionado;
 let pontosAtuais = [];
 let escalasPorDataAtual = new Map();
+let filialPorPlaca = new Map();
 let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
 const GEOCODE_DELAY_MS = 1200;
 const MAX_CLIENTES_ROTA_MAPA = 120;
 const MAX_HOTEIS_ROTA_MAPA = 60;
+const MAX_POSTOS_ROTA_MAPA = 60;
 const OSRM_ROUTE_SERVICE_URL = 'https://router.project-osrm.org/route/v1/driving';
+// Cadastro de clientes/hoteis/postos muda pouco: guarda local por 24h para evitar reconsultar o Supabase a cada busca.
+const CACHE_CADASTRO_TTL_MS = 24 * 60 * 60 * 1000;
+const CACHE_CLIENTES_KEY = 'relatorio_localizacao_cache_clientes';
+const CACHE_HOTEIS_KEY = 'relatorio_localizacao_cache_hoteis';
+const CACHE_POSTOS_KEY = 'relatorio_localizacao_cache_postos';
 const MAX_PONTOS_ROTEIRIZACAO = 300;
 const MAX_WAYPOINTS_OSRM = 60;
 const MAX_WAYPOINTS_GOOGLE = 8;
@@ -273,6 +281,7 @@ function iniciarMapa() {
   camadaClientesRota = L.layerGroup().addTo(mapa);
   camadaFiliaisMarquespan = L.layerGroup().addTo(mapa);
   camadaHoteisRota = L.layerGroup().addTo(mapa);
+  camadaPostosRota = L.layerGroup().addTo(mapa);
   return true;
 }
 
@@ -555,6 +564,7 @@ async function desenharMapa(pontos) {
   camadaClientesRota?.clearLayers();
   camadaFiliaisMarquespan?.clearLayers();
   camadaHoteisRota?.clearLayers();
+  camadaPostosRota?.clearLayers();
   if (marcadorSelecionado) {
     mapa.removeLayer(marcadorSelecionado);
     marcadorSelecionado = null;
@@ -779,6 +789,7 @@ async function salvarGeolocalizacaoClienteRelatorio(botao) {
     if (input) input.value = valorNormalizado;
     atualizarLinkStreetViewCliente(container, coordenadas);
     if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
+    atualizarItemCacheCadastro(CACHE_CLIENTES_KEY, 'codigo', codigo, { geolocalizacao: valorNormalizado });
     mostrarMensagem(`Geolocalizacao do cliente ${codigo} atualizada.`);
   } catch (error) {
     console.error('Erro ao salvar geolocalizacao do cliente:', error);
@@ -817,6 +828,80 @@ function montarConsultasGeocodeCliente(cliente) {
   if (cidade && uf) consultas.push({ city: cidade, state: uf, country: 'Brasil' });
 
   return consultas;
+}
+
+// Cache local (localStorage) do cadastro de clientes/hoteis/postos, com validade de 24h.
+// Evita reconsultar o Supabase a cada abertura do relatorio quando o cadastro nao mudou.
+function obterCacheCadastro(chave) {
+  try {
+    const bruto = JSON.parse(localStorage.getItem(chave) || 'null');
+    if (!bruto || !Array.isArray(bruto.dados) || !Number.isFinite(bruto.salvoEm)) return null;
+    if (Date.now() - bruto.salvoEm > CACHE_CADASTRO_TTL_MS) return null;
+    return bruto.dados;
+  } catch {
+    return null;
+  }
+}
+
+function salvarCacheCadastro(chave, dados) {
+  try {
+    localStorage.setItem(chave, JSON.stringify({ dados, salvoEm: Date.now() }));
+  } catch (error) {
+    console.warn(`Não foi possível salvar cache local (${chave}):`, error);
+  }
+}
+
+function atualizarItemCacheCadastro(chave, campoChave, valorChave, atualizacoes) {
+  const cache = obterCacheCadastro(chave);
+  if (!cache) return;
+  const item = cache.find((registro) => String(registro[campoChave]) === String(valorChave));
+  if (!item) return;
+  Object.assign(item, atualizacoes);
+  salvarCacheCadastro(chave, cache);
+}
+
+async function obterDadosCadastroComCache(chave, buscarFn) {
+  const cache = obterCacheCadastro(chave);
+  if (cache) return cache;
+  const dados = await buscarFn();
+  salvarCacheCadastro(chave, dados);
+  return dados;
+}
+
+async function buscarClientesCadastro() {
+  const { data, error } = await supabaseClient
+    .from('clientes')
+    .select('codigo, fantasia, nome, uf, municipio, endereco, geolocalizacao, bairro, cep, categoria, ativo');
+  if (error) throw error;
+  return data || [];
+}
+
+function obterClientesCadastroComCache() {
+  return obterDadosCadastroComCache(CACHE_CLIENTES_KEY, buscarClientesCadastro);
+}
+
+async function buscarHoteisCadastro() {
+  const { data, error } = await supabaseClient
+    .from('hoteis')
+    .select('id, nome, razao_social, cnpj, telefone, responsavel, endereco, geolocalizacao');
+  if (error) throw error;
+  return data || [];
+}
+
+function obterHoteisCadastroComCache() {
+  return obterDadosCadastroComCache(CACHE_HOTEIS_KEY, buscarHoteisCadastro);
+}
+
+async function buscarPostosCadastro() {
+  const { data, error } = await supabaseClient
+    .from('postos')
+    .select('id, filial, razao_social, cnpj, cidade, uf, endereco, geolocalizacao');
+  if (error) throw error;
+  return data || [];
+}
+
+function obterPostosCadastroComCache() {
+  return obterDadosCadastroComCache(CACHE_POSTOS_KEY, buscarPostosCadastro);
 }
 
 function obterCacheGeocodeClientes() {
@@ -918,17 +1003,18 @@ async function buscarClientesDasRotas(rotas) {
   const codigos = Array.from(new Set(rotasClientes.map((item) => item.cliente_codigo).filter(Boolean)));
   if (!codigos.length) return [];
 
-  const { data, error } = await supabaseClient
-    .from('clientes')
-    .select('codigo, fantasia, nome, uf, municipio, endereco, geolocalizacao, bairro, cep, categoria, ativo')
-    .in('codigo', codigos);
-  if (error) throw error;
+  const clientesCadastro = await obterClientesCadastroComCache();
+  const clientesPorCodigo = new Map(clientesCadastro.map((cliente) => [cliente.codigo, cliente]));
 
   const rotaPorCodigo = new Map(rotasClientes.map((item) => [item.cliente_codigo, item.rota]));
-  return (data || []).map((cliente) => ({
-    ...cliente,
-    rota: rotaPorCodigo.get(cliente.codigo) || ''
-  })).slice(0, MAX_CLIENTES_ROTA_MAPA);
+  return codigos
+    .map((codigo) => clientesPorCodigo.get(codigo))
+    .filter(Boolean)
+    .map((cliente) => ({
+      ...cliente,
+      rota: rotaPorCodigo.get(cliente.codigo) || ''
+    }))
+    .slice(0, MAX_CLIENTES_ROTA_MAPA);
 }
 
 async function plotarClientesDasRotas(escalas) {
@@ -981,11 +1067,9 @@ async function plotarFiliaisMarquespan() {
   if (!camadaFiliaisMarquespan) return;
   camadaFiliaisMarquespan.clearLayers();
 
-  const { data, error } = await supabaseClient
-    .from('clientes')
-    .select('codigo, fantasia, nome, uf, municipio, endereco, geolocalizacao, bairro, cep, categoria, ativo')
-    .eq('categoria', 'Grupo Marquespan');
-  if (error || !data?.length) return;
+  const clientesCadastro = await obterClientesCadastroComCache();
+  const data = clientesCadastro.filter((cliente) => cliente.categoria === 'Grupo Marquespan');
+  if (!data.length) return;
 
   const cache = obterCacheGeocodeClientes();
   for (const cliente of data) {
@@ -1098,6 +1182,7 @@ async function salvarGeolocalizacaoHotelRelatorio(botao) {
     if (input) input.value = valorNormalizado;
     atualizarLinkStreetViewCliente(container, coordenadas);
     if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
+    atualizarItemCacheCadastro(CACHE_HOTEIS_KEY, 'id', idHotel, { geolocalizacao: valorNormalizado });
     mostrarMensagem('Geolocalizacao do hotel atualizada.');
   } catch (error) {
     console.error('Erro ao salvar geolocalizacao do hotel:', error);
@@ -1185,16 +1270,16 @@ async function buscarHoteisDasRotas(rotas) {
   const idsHotel = Array.from(rotasPorHotel.keys()).slice(0, MAX_HOTEIS_ROTA_MAPA);
   if (!idsHotel.length) return [];
 
-  const { data, error } = await supabaseClient
-    .from('hoteis')
-    .select('id, nome, razao_social, cnpj, telefone, responsavel, endereco, geolocalizacao')
-    .in('id', idsHotel);
-  if (error) throw error;
+  const hoteisCadastro = await obterHoteisCadastroComCache();
+  const hoteisPorId = new Map(hoteisCadastro.map((hotel) => [String(hotel.id), hotel]));
 
-  return (data || []).map((hotel) => ({
-    ...hotel,
-    rotas: Array.from(rotasPorHotel.get(hotel.id) || []).join(', ')
-  }));
+  return idsHotel
+    .map((id) => hoteisPorId.get(String(id)))
+    .filter(Boolean)
+    .map((hotel) => ({
+      ...hotel,
+      rotas: Array.from(rotasPorHotel.get(hotel.id) || []).join(', ')
+    }));
 }
 
 async function plotarHoteisDasRotas(escalas) {
@@ -1235,6 +1320,155 @@ async function plotarHoteisDasRotas(escalas) {
   }
 
   mostrarMensagem(`Histórico carregado. Clientes e hoteis da rota no mapa (${localizados} hotel(is)).`);
+}
+
+function montarEnderecoPosto(posto) {
+  return [posto.endereco, posto.cidade, posto.uf, 'Brasil'].map(limparTexto).filter(Boolean).join(', ');
+}
+
+function aplicarGeolocalizacaoPosto(posto) {
+  const coordenadas = obterCoordenadasGeolocalizacao(posto?.geolocalizacao);
+  if (!coordenadas) return false;
+  posto.lat = coordenadas.lat;
+  posto.lng = coordenadas.lng;
+  return true;
+}
+
+function valorGeolocalizacaoPosto(posto) {
+  const coordenadasCadastradas = obterCoordenadasGeolocalizacao(posto?.geolocalizacao);
+  if (coordenadasCadastradas) {
+    return `${coordenadasCadastradas.lat.toFixed(6)}, ${coordenadasCadastradas.lng.toFixed(6)}`;
+  }
+  if (Number.isFinite(posto?.lat) && Number.isFinite(posto?.lng)) {
+    return `${posto.lat.toFixed(6)}, ${posto.lng.toFixed(6)}`;
+  }
+  return '';
+}
+
+function controlesGeolocalizacaoPosto(posto) {
+  const valor = valorGeolocalizacaoPosto(posto);
+  return `
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
+      <label style="display:block;font-size:11px;font-weight:700;color:#374151;margin-bottom:3px;">Geolocalizacao</label>
+      <input
+        type="text"
+        class="input-geolocalizacao-posto"
+        value="${escaparHTML(valor)}"
+        placeholder="-23.330692, -47.851799"
+        style="box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:5px 7px;font-size:12px;"
+      >
+      <button
+        type="button"
+        data-id-posto="${escaparHTML(posto.id)}"
+        onclick="window.salvarGeolocalizacaoPostoRelatorio(this)"
+        style="margin-top:6px;border:0;border-radius:6px;background:#006937;color:#fff;padding:5px 8px;font-size:12px;cursor:pointer;"
+      >Salvar geolocalizacao</button>
+      <span class="status-geolocalizacao-posto" style="display:block;margin-top:4px;font-size:11px;color:#64748b;"></span>
+    </div>
+  `;
+}
+
+async function salvarGeolocalizacaoPostoRelatorio(botao) {
+  const container = obterContainerPopupCliente(botao);
+  const input = container?.querySelector('.input-geolocalizacao-posto');
+  const status = container?.querySelector('.status-geolocalizacao-posto');
+  const idPosto = limparTexto(botao?.dataset?.idPosto);
+  const valor = limparTexto(input?.value);
+  const coordenadas = obterCoordenadasGeolocalizacao(valor);
+
+  if (!idPosto) {
+    if (status) status.textContent = 'Posto nao identificado.';
+    return;
+  }
+  if (!coordenadas) {
+    if (status) status.textContent = 'Informe no formato latitude, longitude.';
+    input?.focus();
+    return;
+  }
+
+  const valorNormalizado = `${coordenadas.lat.toFixed(6)}, ${coordenadas.lng.toFixed(6)}`;
+  botao.disabled = true;
+  if (status) status.textContent = 'Salvando...';
+
+  try {
+    const { error } = await supabaseClient
+      .from('postos')
+      .update({ geolocalizacao: valorNormalizado })
+      .eq('id', idPosto);
+    if (error) throw error;
+
+    if (input) input.value = valorNormalizado;
+    atualizarLinkStreetViewCliente(container, coordenadas);
+    if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
+    atualizarItemCacheCadastro(CACHE_POSTOS_KEY, 'id', idPosto, { geolocalizacao: valorNormalizado });
+    mostrarMensagem('Geolocalizacao do posto atualizada.');
+  } catch (error) {
+    console.error('Erro ao salvar geolocalizacao do posto:', error);
+    if (status) status.textContent = 'Erro ao salvar geolocalizacao.';
+    mostrarMensagem(error?.message || 'Nao foi possivel salvar a geolocalizacao do posto.', true);
+  } finally {
+    botao.disabled = false;
+  }
+}
+
+window.salvarGeolocalizacaoPostoRelatorio = salvarGeolocalizacaoPostoRelatorio;
+
+function adicionarPostoRotaNoMapa(posto) {
+  if (!Number.isFinite(posto.lat) || !Number.isFinite(posto.lng)) return;
+  if (!camadaPostosRota) return;
+
+  const icone = L.divIcon({
+    className: '',
+    html: '<div class="posto-rota-marker"><i class="fas fa-gas-pump"></i></div>',
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -28]
+  });
+
+  const streetViewUrl = urlStreetViewPorCoordenadas(obterCoordenadasGeolocalizacao(valorGeolocalizacaoPosto(posto)));
+  L.marker([posto.lat, posto.lng], { icon: icone })
+    .bindPopup(`
+      <strong>${escaparHTML(posto.razao_social || 'Posto')}</strong><br>
+      ${posto.filial ? `Filial: ${escaparHTML(posto.filial)}<br>` : ''}
+      ${posto.cnpj ? `CNPJ: ${escaparHTML(posto.cnpj)}<br>` : ''}
+      ${escaparHTML(posto.enderecoMapa || montarEnderecoPosto(posto))}<br>
+      ${controlesGeolocalizacaoPosto(posto)}<br>
+      <a href="${streetViewUrl}" class="link-streetview-cliente" onclick="return window.abrirStreetViewClienteRelatorio(this)" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;color:#1a73e8;font-size:13px;text-decoration:none;">
+        <i class="fas fa-street-view"></i> Abrir no Street View
+      </a>
+    `)
+    .addTo(camadaPostosRota);
+}
+
+async function buscarPostosDaFilial(filial) {
+  const filialNormalizada = limparTexto(filial).toUpperCase();
+  if (!filialNormalizada) return [];
+
+  const postosCadastro = await obterPostosCadastroComCache();
+  return postosCadastro
+    .filter((posto) => limparTexto(posto.filial).toUpperCase() === filialNormalizada)
+    .slice(0, MAX_POSTOS_ROTA_MAPA);
+}
+
+async function plotarPostosDaFilial(filial) {
+  if (!camadaPostosRota) return;
+  camadaPostosRota.clearLayers();
+
+  const postos = await buscarPostosDaFilial(filial);
+  if (!postos.length) return;
+
+  let localizados = 0;
+  postos.forEach((posto) => {
+    posto.enderecoMapa = montarEnderecoPosto(posto);
+    if (aplicarGeolocalizacaoPosto(posto) && Number.isFinite(posto.lat) && Number.isFinite(posto.lng)) {
+      adicionarPostoRotaNoMapa(posto);
+      localizados += 1;
+    }
+  });
+
+  if (localizados) {
+    mostrarMensagem(`Histórico carregado. Postos da filial no mapa: ${localizados} de ${postos.length}.`);
+  }
 }
 
 function destacarPonto(indice) {
@@ -1519,9 +1753,13 @@ async function carregarVeiculos() {
   }
 
   listaVeiculos.innerHTML = '';
+  filialPorPlaca = new Map();
   (data || []).forEach((veiculo) => {
+    const placaNormalizada = normalizarPlaca(veiculo.placa);
+    filialPorPlaca.set(placaNormalizada, veiculo.filial || '');
+
     const option = document.createElement('option');
-    option.value = normalizarPlaca(veiculo.placa);
+    option.value = placaNormalizada;
     option.label = [
       formatarPlaca(veiculo.placa),
       veiculo.modelo,
@@ -1529,6 +1767,10 @@ async function carregarVeiculos() {
     ].filter(Boolean).join(' - ');
     listaVeiculos.appendChild(option);
   });
+}
+
+function obterFilialDaPlaca(placa) {
+  return filialPorPlaca.get(normalizarPlaca(placa)) || '';
 }
 
 function renderizarResultadosEscala(registros) {
@@ -1695,6 +1937,11 @@ async function consultarHistorico() {
       await plotarHoteisDasRotas(escalasDoPeriodo);
     } catch (erroHoteis) {
       console.warn('Erro ao plotar hoteis da rota:', erroHoteis);
+    }
+    try {
+      await plotarPostosDaFilial(obterFilialDaPlaca(placa));
+    } catch (erroPostos) {
+      console.warn('Erro ao plotar postos da filial:', erroPostos);
     }
   } catch (error) {
     console.error('Erro ao consultar histórico:', error);
