@@ -374,7 +374,9 @@
 .painel-abas-rota {
   align-items: center;
   display: flex;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow-x: auto;
 }
 
 .aba-painel-rota {
@@ -385,12 +387,13 @@
   color: #3f4d47;
   cursor: pointer;
   display: inline-flex;
-  font-size: 0.78rem;
+  flex-shrink: 0;
+  font-size: 0.76rem;
   font-weight: 700;
-  gap: 6px;
+  gap: 5px;
   height: 34px;
   justify-content: center;
-  padding: 0 13px;
+  padding: 0 10px;
 }
 
 .aba-painel-rota:hover {

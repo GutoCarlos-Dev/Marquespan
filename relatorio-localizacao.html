@@ -155,6 +155,9 @@
                 <button type="button" class="aba-painel-rota ativo" data-aba="rota" role="tab" aria-selected="true">
                   <i class="fas fa-route"></i> Rota
                 </button>
+                <button type="button" class="aba-painel-rota" data-aba="cliente" role="tab" aria-selected="false">
+                  <i class="fas fa-store"></i> Cliente
+                </button>
                 <button type="button" class="aba-painel-rota" data-aba="hotel" role="tab" aria-selected="false">
                   <i class="fas fa-hotel"></i> Hotel
                 </button>
@@ -168,6 +171,7 @@
             </div>
             <div id="painel-rota-resumo" class="painel-rota-resumo"></div>
             <ol id="painel-rota-paradas" class="painel-rota-paradas"></ol>
+            <ol id="painel-cliente-lista" class="painel-rota-paradas painel-lista-secundaria" hidden></ol>
             <ol id="painel-hotel-lista" class="painel-rota-paradas painel-lista-secundaria" hidden></ol>
             <ol id="painel-posto-lista" class="painel-rota-paradas painel-lista-secundaria" hidden></ol>
             <div id="painel-rota-acoes" class="painel-rota-acoes">
@@ -256,6 +260,6 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="./script/relatorio-localizacao.js?v=20260713-1"></script>
+  <script type="module" src="./script/relatorio-localizacao.js?v=20260713-3"></script>
 </body>
 </html>

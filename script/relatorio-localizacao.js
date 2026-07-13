@@ -28,6 +28,7 @@ const painelRotaEmulada = document.getElementById('painel-rota-emulada');
 const painelRotaResumo = document.getElementById('painel-rota-resumo');
 const painelRotaParadas = document.getElementById('painel-rota-paradas');
 const painelRotaAcoes = document.getElementById('painel-rota-acoes');
+const painelClienteLista = document.getElementById('painel-cliente-lista');
 const painelHotelLista = document.getElementById('painel-hotel-lista');
 const painelPostoLista = document.getElementById('painel-posto-lista');
 const abasPainelRota = document.querySelectorAll('.aba-painel-rota');
@@ -43,6 +44,7 @@ let camadaHoteisRota;
 let camadaPostosRota;
 let marcadorSelecionado;
 let pontosAtuais = [];
+let clientesAtuais = [];
 let hoteisAtuais = [];
 let postosAtuais = [];
 let abaPainelAtiva = 'rota';
@@ -54,9 +56,10 @@ const MAX_CLIENTES_ROTA_MAPA = 120;
 const MAX_HOTEIS_ROTA_MAPA = 60;
 const MAX_POSTOS_ROTA_MAPA = 60;
 const OSRM_ROUTE_SERVICE_URL = 'https://router.project-osrm.org/route/v1/driving';
-// Cadastro de clientes/hoteis/postos muda pouco: guarda local por 24h para evitar reconsultar o Supabase a cada busca.
+// Cadastro de hoteis/postos muda pouco: guarda local por 24h para evitar reconsultar o Supabase a cada busca.
+// Clientes NAO entra nesse cache: a tabela tem dezenas de milhares de linhas e um select sem paginacao
+// e sem filtro fica sujeito ao limite padrao de linhas do Supabase, retornando so uma fatia da tabela.
 const CACHE_CADASTRO_TTL_MS = 24 * 60 * 60 * 1000;
-const CACHE_CLIENTES_KEY = 'relatorio_localizacao_cache_clientes';
 const CACHE_HOTEIS_KEY = 'relatorio_localizacao_cache_hoteis';
 const CACHE_POSTOS_KEY = 'relatorio_localizacao_cache_postos';
 const MAX_PONTOS_ROTEIRIZACAO = 300;
@@ -797,7 +800,6 @@ async function salvarGeolocalizacaoClienteRelatorio(botao) {
     if (input) input.value = valorNormalizado;
     atualizarLinkStreetViewCliente(container, coordenadas);
     if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
-    atualizarItemCacheCadastro(CACHE_CLIENTES_KEY, 'codigo', codigo, { geolocalizacao: valorNormalizado });
     mostrarMensagem(`Geolocalizacao do cliente ${codigo} atualizada.`);
   } catch (error) {
     console.error('Erro ao salvar geolocalizacao do cliente:', error);
@@ -876,36 +878,38 @@ async function obterDadosCadastroComCache(chave, buscarFn) {
   return dados;
 }
 
-async function buscarClientesCadastro() {
-  const { data, error } = await supabaseClient
-    .from('clientes')
-    .select('codigo, fantasia, nome, uf, municipio, endereco, geolocalizacao, bairro, cep, categoria, ativo');
-  if (error) throw error;
-  return data || [];
+// Busca em paginas de 1000 linhas: um select simples fica sujeito ao limite padrao de linhas
+// do Supabase/PostgREST e trunca silenciosamente o resultado se a tabela crescer.
+async function buscarTodasLinhas(nomeTabela, colunas) {
+  const linhas = [];
+  const passo = 1000;
+  let inicio = 0;
+
+  while (true) {
+    const { data, error } = await supabaseClient
+      .from(nomeTabela)
+      .select(colunas)
+      .range(inicio, inicio + passo - 1);
+    if (error) throw error;
+
+    linhas.push(...(data || []));
+    if (!data || data.length < passo) break;
+    inicio += passo;
+  }
+
+  return linhas;
 }
 
-function obterClientesCadastroComCache() {
-  return obterDadosCadastroComCache(CACHE_CLIENTES_KEY, buscarClientesCadastro);
-}
-
-async function buscarHoteisCadastro() {
-  const { data, error } = await supabaseClient
-    .from('hoteis')
-    .select('id, nome, razao_social, cnpj, telefone, responsavel, endereco, geolocalizacao');
-  if (error) throw error;
-  return data || [];
+function buscarHoteisCadastro() {
+  return buscarTodasLinhas('hoteis', 'id, nome, razao_social, cnpj, telefone, responsavel, endereco, geolocalizacao');
 }
 
 function obterHoteisCadastroComCache() {
   return obterDadosCadastroComCache(CACHE_HOTEIS_KEY, buscarHoteisCadastro);
 }
 
-async function buscarPostosCadastro() {
-  const { data, error } = await supabaseClient
-    .from('postos')
-    .select('id, filial, razao_social, cnpj, cidade, uf, endereco, geolocalizacao');
-  if (error) throw error;
-  return data || [];
+function buscarPostosCadastro() {
+  return buscarTodasLinhas('postos', 'id, filial, razao_social, cnpj, cidade, uf, endereco, geolocalizacao');
 }
 
 function obterPostosCadastroComCache() {
@@ -978,7 +982,7 @@ function adicionarClienteRotaNoMapa(cliente) {
   });
 
   const streetViewUrl = urlStreetViewPorCoordenadas(obterCoordenadasGeolocalizacao(valorGeolocalizacaoCliente(cliente)));
-  L.marker([cliente.lat, cliente.lng], { icon: icone })
+  cliente._marker = L.marker([cliente.lat, cliente.lng], { icon: icone })
     .bindPopup(`
       <strong>${escaparHTML(cliente.fantasia || cliente.nome || cliente.codigo)}</strong>${labelTipo}<br>
       Cliente: ${escaparHTML(cliente.codigo)}<br>
@@ -1011,23 +1015,24 @@ async function buscarClientesDasRotas(rotas) {
   const codigos = Array.from(new Set(rotasClientes.map((item) => item.cliente_codigo).filter(Boolean)));
   if (!codigos.length) return [];
 
-  const clientesCadastro = await obterClientesCadastroComCache();
-  const clientesPorCodigo = new Map(clientesCadastro.map((cliente) => [cliente.codigo, cliente]));
+  const { data, error } = await supabaseClient
+    .from('clientes')
+    .select('codigo, fantasia, nome, uf, municipio, endereco, geolocalizacao, bairro, cep, categoria, ativo')
+    .in('codigo', codigos);
+  if (error) throw error;
 
   const rotaPorCodigo = new Map(rotasClientes.map((item) => [item.cliente_codigo, item.rota]));
-  return codigos
-    .map((codigo) => clientesPorCodigo.get(codigo))
-    .filter(Boolean)
-    .map((cliente) => ({
-      ...cliente,
-      rota: rotaPorCodigo.get(cliente.codigo) || ''
-    }))
-    .slice(0, MAX_CLIENTES_ROTA_MAPA);
+  return (data || []).map((cliente) => ({
+    ...cliente,
+    rota: rotaPorCodigo.get(cliente.codigo) || ''
+  })).slice(0, MAX_CLIENTES_ROTA_MAPA);
 }
 
 async function plotarClientesDasRotas(escalas) {
   if (!camadaClientesRota) return;
   camadaClientesRota.clearLayers();
+  clientesAtuais = [];
+  renderizarListaClientes();
 
   const rotas = Array.from(new Set((escalas || []).map((escala) => escala.rota).filter(Boolean)));
   if (!rotas.length) return;
@@ -1068,6 +1073,8 @@ async function plotarClientesDasRotas(escalas) {
     }
   }
 
+  clientesAtuais = clientes.filter((cliente) => Number.isFinite(cliente.lat) && Number.isFinite(cliente.lng));
+  renderizarListaClientes();
   mostrarMensagem(`Histórico carregado. Clientes da rota no mapa: ${localizados} de ${clientes.length}.`);
 }
 
@@ -1075,9 +1082,11 @@ async function plotarFiliaisMarquespan() {
   if (!camadaFiliaisMarquespan) return;
   camadaFiliaisMarquespan.clearLayers();
 
-  const clientesCadastro = await obterClientesCadastroComCache();
-  const data = clientesCadastro.filter((cliente) => cliente.categoria === 'Grupo Marquespan');
-  if (!data.length) return;
+  const { data, error } = await supabaseClient
+    .from('clientes')
+    .select('codigo, fantasia, nome, uf, municipio, endereco, geolocalizacao, bairro, cep, categoria, ativo')
+    .eq('categoria', 'Grupo Marquespan');
+  if (error || !data?.length) return;
 
   const cache = obterCacheGeocodeClientes();
   for (const cliente of data) {
@@ -1513,6 +1522,25 @@ function centralizarItemNoMapa(item) {
   item._marker?.openPopup();
 }
 
+function renderizarListaClientes() {
+  if (!painelClienteLista) return;
+
+  if (!clientesAtuais.length) {
+    painelClienteLista.innerHTML = '<li class="painel-lista-vazia">Nenhum cliente encontrado na rota.</li>';
+    return;
+  }
+
+  painelClienteLista.innerHTML = clientesAtuais.map((cliente, indice) => `
+    <li>
+      <span class="rota-ponto-marcador"></span>
+      <button type="button" data-indice-cliente="${indice}">
+        <strong>${escaparHTML(cliente.fantasia || cliente.nome || cliente.codigo)}</strong>
+        <small>${escaparHTML(cliente.enderecoMapa || montarEnderecoCliente(cliente))}</small>
+      </button>
+    </li>
+  `).join('');
+}
+
 function renderizarListaHoteis() {
   if (!painelHotelLista) return;
 
@@ -1563,6 +1591,7 @@ function selecionarAbaPainel(aba) {
   if (painelRotaResumo) painelRotaResumo.hidden = aba !== 'rota';
   if (painelRotaParadas) painelRotaParadas.hidden = aba !== 'rota';
   if (painelRotaAcoes) painelRotaAcoes.hidden = aba !== 'rota';
+  if (painelClienteLista) painelClienteLista.hidden = aba !== 'cliente';
   if (painelHotelLista) painelHotelLista.hidden = aba !== 'hotel';
   if (painelPostoLista) painelPostoLista.hidden = aba !== 'posto';
 }
@@ -2126,6 +2155,13 @@ painelRotaParadas?.addEventListener('click', (event) => {
 
 abasPainelRota.forEach((botao) => {
   botao.addEventListener('click', () => selecionarAbaPainel(botao.dataset.aba));
+});
+
+painelClienteLista?.addEventListener('click', (event) => {
+  const botao = event.target.closest('button[data-indice-cliente]');
+  if (!botao) return;
+
+  centralizarItemNoMapa(clientesAtuais[Number(botao.dataset.indiceCliente)]);
 });
 
 painelHotelLista?.addEventListener('click', (event) => {
