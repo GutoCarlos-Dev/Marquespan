@@ -413,7 +413,11 @@ const DespesasUI = {
 
         if (deveFixar('filial')) valores.filial = this.filialSelect?.value || '';
         if (deveFixar('rota')) valores.rota = this.getSelectedValues(this.despesaRotaOptions, 'rota-checkbox');
-        if (deveFixar('hotel')) valores.hotel = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
+        // Tipo de Quarto so existe no contexto de um Hotel: sem o hotel fixado junto,
+        // o select fica sem opcoes e a fixacao do tipo de quarto nao teria efeito.
+        if (deveFixar('hotel') || deveFixar('tipoQuarto')) {
+            valores.hotel = this.getSelectedValues(this.despesaHotelOptions, 'hotel-checkbox');
+        }
         if (deveFixar('tipoQuarto')) valores.tipoQuarto = this.tipoQuartoSelect.value;
         if (deveFixar('funcionario1')) valores.funcionario1 = document.getElementById('despesaFuncionario1Input').value;
         if (deveFixar('funcionario2')) valores.funcionario2 = document.getElementById('despesaFuncionario2Input').value;
@@ -429,10 +433,12 @@ const DespesasUI = {
         return valores;
     },
 
-    restaurarValoresFixos(valores) {
+    async restaurarValoresFixos(valores) {
         if (Object.prototype.hasOwnProperty.call(valores, 'filial') && this.filialSelect) {
             this.filialSelect.value = valores.filial;
-            this.loadRotasPorFilial(valores.filial);
+            // Precisa terminar de recarregar as rotas da filial ANTES de marcar
+            // os checkboxes de rota abaixo, senao o rebuild da lista apaga a selecao.
+            await this.loadRotasPorFilial(valores.filial);
         }
 
         if (Object.prototype.hasOwnProperty.call(valores, 'rota')) {
@@ -470,13 +476,6 @@ const DespesasUI = {
         }
         if (Object.prototype.hasOwnProperty.call(valores, 'observacao')) {
             document.getElementById('despesaObservacao').value = valores.observacao;
-        }
-
-        if (Object.prototype.hasOwnProperty.call(valores, 'tipoQuarto')) {
-            if (!Object.prototype.hasOwnProperty.call(valores, 'hotel')) {
-                this.tipoQuartoSelect.value = valores.tipoQuarto;
-                this.tipoQuartoSelect.dispatchEvent(new Event('change'));
-            }
         }
 
         this.calcularCheckout();
