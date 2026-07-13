@@ -2559,6 +2559,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.editPosto(id);
             } else if (btn.classList.contains('btn-delete-posto')) {
                 this.deletePosto(id);
+            } else if (btn.classList.contains('btn-locate-posto')) {
+                this.abrirPostoNoMapa(id);
+            }
+        },
+
+        abrirPostoNoMapa(id) {
+            const posto = (this.postosData || []).find(p => String(p.id) === String(id));
+            if (!posto) {
+                alert('Posto nao encontrado na lista atual. Atualize a busca e tente novamente.');
+                return;
+            }
+
+            const payload = {
+                id: posto.id,
+                razao_social: posto.razao_social,
+                cnpj: posto.cnpj,
+                filial: posto.filial,
+                cidade: posto.cidade,
+                uf: posto.uf,
+                endereco: posto.endereco,
+                geolocalizacao: posto.geolocalizacao,
+                faturado: posto.faturado
+            };
+
+            try {
+                localStorage.setItem('postos_mapa_payload', JSON.stringify({
+                    criadoEm: new Date().toISOString(),
+                    total: 1,
+                    postos: [payload]
+                }));
+                window.open('postos-mapa.html', '_blank', 'noopener,noreferrer');
+            } catch (error) {
+                console.error('Erro ao preparar posto para o mapa:', error);
+                alert('Nao foi possivel abrir o mapa. Tente novamente.');
             }
         },
 

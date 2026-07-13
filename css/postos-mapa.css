@@ -1,0 +1,199 @@
+﻿html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    background: #f3f6f4;
+    color: #1f2933;
+    font-family: Arial, sans-serif;
+}
+
+.postos-mapa-page {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.postos-mapa-sidebar {
+    background: #fff;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.postos-mapa-header h1 {
+    color: #006937;
+    font-size: 1.25rem;
+    margin: 0 0 6px;
+}
+
+.postos-mapa-header p {
+    color: #5f6b63;
+    font-size: 0.88rem;
+    margin: 0;
+}
+
+.postos-mapa-card {
+    border: 1px solid rgba(0, 105, 55, 0.12);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.postos-mapa-card h2 {
+    color: #006937;
+    font-size: 0.92rem;
+    margin: 0 0 10px;
+}
+
+.postos-mapa-card-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.postos-mapa-card-header h2 {
+    margin: 0 0 10px;
+}
+
+.postos-mapa-btn-exportar {
+    align-items: center;
+    background: #006937;
+    border: 0;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    font-size: 0.74rem;
+    font-weight: 700;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding: 5px 9px;
+}
+
+.postos-mapa-btn-exportar:hover {
+    background: #00532c;
+}
+
+.postos-mapa-kpis {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.postos-mapa-kpis div {
+    background: #eef8f2;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+}
+
+.postos-mapa-kpis span {
+    color: #006937;
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 800;
+}
+
+.postos-mapa-kpis small {
+    color: #4b5563;
+    font-size: 0.72rem;
+}
+
+.postos-mapa-pendentes {
+    color: #667085;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.postos-mapa-pendentes ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.postos-mapa-content,
+#postosMapa {
+    height: 100%;
+    min-height: 0;
+}
+
+.posto-mapa-popup {
+    min-width: 220px;
+}
+
+.posto-mapa-popup strong {
+    color: #006937;
+}
+
+.posto-mapa-popup p {
+    margin: 6px 0;
+}
+
+.posto-mapa-popup a {
+    color: #2563eb;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.posto-mapa-coordenadas {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 8px;
+}
+
+.posto-mapa-coordenadas label {
+    color: #4b5563;
+    display: grid;
+    font-size: 0.76rem;
+    gap: 3px;
+}
+
+.posto-mapa-coordenadas input {
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    padding: 6px 8px;
+}
+
+.posto-mapa-coordenadas button {
+    background: #006937;
+    border: 0;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 700;
+    padding: 7px 10px;
+}
+
+.posto-mapa-coordenadas button:disabled {
+    cursor: wait;
+    opacity: 0.75;
+}
+
+.posto-mapa-update-status {
+    color: #006937;
+    min-height: 14px;
+}
+
+@media (max-width: 900px) {
+    .postos-mapa-page {
+        grid-template-columns: 1fr;
+        grid-template-rows: 280px minmax(0, 1fr);
+    }
+
+    .postos-mapa-sidebar {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        border-right: 0;
+    }
+}
+
