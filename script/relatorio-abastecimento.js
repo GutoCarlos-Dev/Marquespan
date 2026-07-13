@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnExportarXLS = document.getElementById('btnExportarXLS');
             this.btnExportarPDF = document.getElementById('btnExportarPDF');
             this.btnFullscreenGrid = document.getElementById('btnFullscreenGrid');
+            this.filtroFilialResumoDiesel = document.getElementById('filtroFilialResumoDiesel');
             this.semanaResumoDiesel = document.getElementById('semanaResumoDiesel');
             this.btnGerarResumoDiesel = document.getElementById('btnGerarResumoDiesel');
             this.btnExportarResumoDieselPDF = document.getElementById('btnExportarResumoDieselPDF');
@@ -273,6 +274,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return this.filtroFilial?.value || this.getFilialUsuario();
         },
 
+        getFilialResumoDieselSelecionada() {
+            return this.filtroFilialResumoDiesel?.value || this.getFilialUsuario();
+        },
+
         getValoresFilialSelecionada() {
             const filial = this.getFilialSelecionada();
             if (!filial) return [];
@@ -321,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const filialUsuario = this.getFilialUsuario();
             if (!filialUsuario) {
                 this.filtroFilial.disabled = false;
+                if (this.filtroFilialResumoDiesel) this.filtroFilialResumoDiesel.disabled = false;
                 return;
             }
 
@@ -332,6 +338,15 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtroFilial.value = valorFilial;
             this.filtroFilial.disabled = true;
             this.filtroFilial.title = 'Filial definida pelo usuario logado.';
+
+            if (this.filtroFilialResumoDiesel) {
+                if (valorFilial && !Array.from(this.filtroFilialResumoDiesel.options).some(option => option.value === valorFilial)) {
+                    this.filtroFilialResumoDiesel.add(new Option(valorFilial, valorFilial));
+                }
+                this.filtroFilialResumoDiesel.value = valorFilial;
+                this.filtroFilialResumoDiesel.disabled = true;
+                this.filtroFilialResumoDiesel.title = 'Filial definida pelo usuario logado.';
+            }
         },
 
         aplicarRestricaoResumoDiesel() {
@@ -372,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .select('id, nome, tipo_combustivel, filial')
                     .order('nome');
 
-                const filial = this.getFilialUsuario();
+                const filial = this.getFilialResumoDieselSelecionada();
                 if (filial) queryTanques = queryTanques.eq('filial', filial);
 
                 const { data: tanquesData, error: tanquesError } = await queryTanques;
@@ -637,12 +652,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 this.filiaisCache = data || [];
                 this.filtroFilial.innerHTML = '<option value="">Todas</option>';
+                if (this.filtroFilialResumoDiesel) this.filtroFilialResumoDiesel.innerHTML = '<option value="">Todas</option>';
                 this.filiaisCache.forEach(filial => {
                     const valor = filial.sigla || filial.nome;
+                    const label = filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome;
+
                     const option = document.createElement('option');
                     option.value = valor;
-                    option.textContent = filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome;
+                    option.textContent = label;
                     this.filtroFilial.appendChild(option);
+
+                    if (this.filtroFilialResumoDiesel) {
+                        const optionResumo = document.createElement('option');
+                        optionResumo.value = valor;
+                        optionResumo.textContent = label;
+                        this.filtroFilialResumoDiesel.appendChild(optionResumo);
+                    }
                 });
 
                 this.aplicarBloqueioFiltroFilial();
