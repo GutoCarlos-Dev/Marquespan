@@ -50,19 +50,18 @@ let hoteisAtuais = [];
 let postosAtuais = [];
 let abaPainelAtiva = 'rota';
 let escalasPorDataAtual = new Map();
-let filialPorPlaca = new Map();
 let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
 const GEOCODE_DELAY_MS = 1200;
 const MAX_CLIENTES_ROTA_MAPA = 120;
 const MAX_HOTEIS_ROTA_MAPA = 60;
 const MAX_POSTOS_ROTA_MAPA = 60;
 const OSRM_ROUTE_SERVICE_URL = 'https://router.project-osrm.org/route/v1/driving';
-// Cadastro de hoteis/postos muda pouco: guarda local por 24h para evitar reconsultar o Supabase a cada busca.
-// Clientes NAO entra nesse cache: a tabela tem dezenas de milhares de linhas e um select sem paginacao
-// e sem filtro fica sujeito ao limite padrao de linhas do Supabase, retornando so uma fatia da tabela.
+// Cadastro de hoteis muda pouco: guarda local por 24h para evitar reconsultar o Supabase a cada busca.
+// Clientes e Postos NAO entram nesse cache: Clientes tem dezenas de milhares de linhas (um select sem
+// paginacao ficaria sujeito ao limite padrao do Supabase); Postos e sempre buscado ao vivo, filtrado por
+// Data/Rota, pois o mapa mostra so o(s) posto(s) onde o veiculo realmente abasteceu naquele periodo.
 const CACHE_CADASTRO_TTL_MS = 24 * 60 * 60 * 1000;
 const CACHE_HOTEIS_KEY = 'relatorio_localizacao_cache_hoteis';
-const CACHE_POSTOS_KEY = 'relatorio_localizacao_cache_postos';
 const MAX_PONTOS_ROTEIRIZACAO = 300;
 const MAX_WAYPOINTS_OSRM = 60;
 const MAX_WAYPOINTS_GOOGLE = 8;
@@ -954,14 +953,6 @@ function obterHoteisCadastroComCache() {
   return obterDadosCadastroComCache(CACHE_HOTEIS_KEY, buscarHoteisCadastro);
 }
 
-function buscarPostosCadastro() {
-  return buscarTodasLinhas('postos', 'id, filial, razao_social, cnpj, cidade, uf, endereco, geolocalizacao');
-}
-
-function obterPostosCadastroComCache() {
-  return obterDadosCadastroComCache(CACHE_POSTOS_KEY, buscarPostosCadastro);
-}
-
 function obterCacheGeocodeClientes() {
   try {
     return JSON.parse(localStorage.getItem('roteirizar_rota_geocode_cache') || '{}');
@@ -1467,7 +1458,6 @@ async function salvarGeolocalizacaoPostoRelatorio(botao) {
     if (input) input.value = valorNormalizado;
     atualizarLinkStreetViewCliente(container, coordenadas);
     if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
-    atualizarItemCacheCadastro(CACHE_POSTOS_KEY, 'id', idPosto, { geolocalizacao: valorNormalizado });
     mostrarMensagem('Geolocalizacao do posto atualizada.');
   } catch (error) {
     console.error('Erro ao salvar geolocalizacao do posto:', error);
@@ -1498,6 +1488,7 @@ function adicionarPostoRotaNoMapa(posto) {
       <strong>${escaparHTML(posto.razao_social || 'Posto')}</strong><br>
       ${posto.filial ? `Filial: ${escaparHTML(posto.filial)}<br>` : ''}
       ${posto.cnpj ? `CNPJ: ${escaparHTML(posto.cnpj)}<br>` : ''}
+      ${posto.rotas ? `Rota(s) abastecida(s): ${escaparHTML(posto.rotas)}<br>` : ''}
       ${escaparHTML(posto.enderecoMapa || montarEnderecoPosto(posto))}<br>
       ${controlesGeolocalizacaoPosto(posto)}<br>
       <a href="${streetViewUrl}" class="link-streetview-cliente" onclick="return window.abrirStreetViewClienteRelatorio(this)" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;color:#1a73e8;font-size:13px;text-decoration:none;">
@@ -1507,23 +1498,53 @@ function adicionarPostoRotaNoMapa(posto) {
     .addTo(camadaPostosRota);
 }
 
-async function buscarPostosDaFilial(filial) {
-  const filialNormalizada = limparTexto(filial).toUpperCase();
-  if (!filialNormalizada) return [];
+// Posto no mapa segue o mesmo criterio da aba "Abastecimento Externo" de relatorio-abastecimento.html:
+// olha o campo Tanque/Posto (posto_id) de abastecimento_externo, filtrado pela Data e Rota do periodo
+// consultado, e usa a identificacao do posto ali informado - nao "todos os postos da filial".
+async function buscarPostosAbastecidos(escalas, dataInicioISO, dataFimISO) {
+  const rotasNormalizadas = Array.from(new Set((escalas || []).map((escala) => escala.rota).filter(Boolean).map(normalizarRotaCliente).filter(Boolean)));
+  if (!rotasNormalizadas.length) return [];
 
-  const postosCadastro = await obterPostosCadastroComCache();
-  return postosCadastro
-    .filter((posto) => limparTexto(posto.filial).toUpperCase() === filialNormalizada)
+  const registrosEncontrados = [];
+  for (const rota of rotasNormalizadas) {
+    let query = supabaseClient
+      .from('abastecimento_externo')
+      .select('id, data_hora, posto_id, rota, postos(id, filial, razao_social, cnpj, cidade, uf, endereco, geolocalizacao)')
+      .ilike('rota', `%${rota}%`)
+      .limit(MAX_POSTOS_ROTA_MAPA);
+    if (dataInicioISO) query = query.gte('data_hora', dataInicioISO);
+    if (dataFimISO) query = query.lte('data_hora', dataFimISO);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    registrosEncontrados.push(...(data || []));
+  }
+
+  // Confere com precisao (evita "1" casar com "12"), igual ao buscarHoteisDasRotas.
+  const postosPorId = new Map();
+  registrosEncontrados.forEach((registro) => {
+    if (!registro.posto_id || !registro.postos) return;
+    const rotasDoRegistro = normalizarListaRotas(registro.rota).filter((r) => rotasNormalizadas.includes(r));
+    if (!rotasDoRegistro.length) return;
+
+    if (!postosPorId.has(registro.posto_id)) {
+      postosPorId.set(registro.posto_id, { ...registro.postos, rotas: new Set() });
+    }
+    rotasDoRegistro.forEach((r) => postosPorId.get(registro.posto_id).rotas.add(r));
+  });
+
+  return Array.from(postosPorId.values())
+    .map((posto) => ({ ...posto, rotas: Array.from(posto.rotas).join(', ') }))
     .slice(0, MAX_POSTOS_ROTA_MAPA);
 }
 
-async function plotarPostosDaFilial(filial) {
+async function plotarPostosAbastecidos(escalas, dataInicioISO, dataFimISO) {
   if (!camadaPostosRota) return;
   camadaPostosRota.clearLayers();
   postosAtuais = [];
   renderizarListaPostos();
 
-  const postos = await buscarPostosDaFilial(filial);
+  const postos = await buscarPostosAbastecidos(escalas, dataInicioISO, dataFimISO);
   if (!postos.length) return;
 
   let localizados = 0;
@@ -1539,7 +1560,7 @@ async function plotarPostosDaFilial(filial) {
   renderizarListaPostos();
 
   if (localizados) {
-    mostrarMensagem(`Histórico carregado. Postos da filial no mapa: ${localizados} de ${postos.length}.`);
+    mostrarMensagem(`Histórico carregado. Postos abastecidos no mapa: ${localizados} de ${postos.length}.`);
   }
 }
 
@@ -1611,7 +1632,7 @@ function renderizarListaPostos() {
   if (!painelPostoLista) return;
 
   if (!postosAtuais.length) {
-    painelPostoLista.innerHTML = '<li class="painel-lista-vazia">Nenhum posto encontrado na filial.</li>';
+    painelPostoLista.innerHTML = '<li class="painel-lista-vazia">Nenhum abastecimento externo encontrado na rota/período.</li>';
     return;
   }
 
@@ -1906,13 +1927,9 @@ async function carregarVeiculos() {
   }
 
   listaVeiculos.innerHTML = '';
-  filialPorPlaca = new Map();
   (data || []).forEach((veiculo) => {
-    const placaNormalizada = normalizarPlaca(veiculo.placa);
-    filialPorPlaca.set(placaNormalizada, veiculo.filial || '');
-
     const option = document.createElement('option');
-    option.value = placaNormalizada;
+    option.value = normalizarPlaca(veiculo.placa);
     option.label = [
       formatarPlaca(veiculo.placa),
       veiculo.modelo,
@@ -1920,10 +1937,6 @@ async function carregarVeiculos() {
     ].filter(Boolean).join(' - ');
     listaVeiculos.appendChild(option);
   });
-}
-
-function obterFilialDaPlaca(placa) {
-  return filialPorPlaca.get(normalizarPlaca(placa)) || '';
 }
 
 function renderizarResultadosEscala(registros) {
@@ -2092,9 +2105,9 @@ async function consultarHistorico() {
       console.warn('Erro ao plotar hoteis da rota:', erroHoteis);
     }
     try {
-      await plotarPostosDaFilial(obterFilialDaPlaca(placa));
+      await plotarPostosAbastecidos(escalasDoPeriodo, inicio.toISOString(), termino.toISOString());
     } catch (erroPostos) {
-      console.warn('Erro ao plotar postos da filial:', erroPostos);
+      console.warn('Erro ao plotar postos abastecidos:', erroPostos);
     }
   } catch (error) {
     console.error('Erro ao consultar histórico:', error);
