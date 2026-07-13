@@ -35,12 +35,14 @@ let mapa;
 let camadaPercurso;
 let camadaClientesRota;
 let camadaFiliaisMarquespan;
+let camadaHoteisRota;
 let marcadorSelecionado;
 let pontosAtuais = [];
 let escalasPorDataAtual = new Map();
 let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
 const GEOCODE_DELAY_MS = 1200;
 const MAX_CLIENTES_ROTA_MAPA = 120;
+const MAX_HOTEIS_ROTA_MAPA = 60;
 const OSRM_ROUTE_SERVICE_URL = 'https://router.project-osrm.org/route/v1/driving';
 const MAX_PONTOS_ROTEIRIZACAO = 300;
 const MAX_WAYPOINTS_OSRM = 60;
@@ -270,6 +272,7 @@ function iniciarMapa() {
   camadaPercurso = L.layerGroup().addTo(mapa);
   camadaClientesRota = L.layerGroup().addTo(mapa);
   camadaFiliaisMarquespan = L.layerGroup().addTo(mapa);
+  camadaHoteisRota = L.layerGroup().addTo(mapa);
   return true;
 }
 
@@ -551,6 +554,7 @@ async function desenharMapa(pontos) {
   camadaPercurso.clearLayers();
   camadaClientesRota?.clearLayers();
   camadaFiliaisMarquespan?.clearLayers();
+  camadaHoteisRota?.clearLayers();
   if (marcadorSelecionado) {
     mapa.removeLayer(marcadorSelecionado);
     marcadorSelecionado = null;
@@ -1009,6 +1013,230 @@ async function plotarFiliaisMarquespan() {
   }
 }
 
+function montarEnderecoHotel(hotel) {
+  return [hotel.endereco, 'Brasil'].map(limparTexto).filter(Boolean).join(', ');
+}
+
+function aplicarGeolocalizacaoHotel(hotel) {
+  const coordenadas = obterCoordenadasGeolocalizacao(hotel?.geolocalizacao);
+  if (!coordenadas) return false;
+  hotel.lat = coordenadas.lat;
+  hotel.lng = coordenadas.lng;
+  return true;
+}
+
+function normalizarListaRotas(valor) {
+  return String(valor || '')
+    .split(/[,;]/)
+    .map((parte) => normalizarRotaCliente(parte))
+    .filter(Boolean);
+}
+
+function valorGeolocalizacaoHotel(hotel) {
+  const coordenadasCadastradas = obterCoordenadasGeolocalizacao(hotel?.geolocalizacao);
+  if (coordenadasCadastradas) {
+    return `${coordenadasCadastradas.lat.toFixed(6)}, ${coordenadasCadastradas.lng.toFixed(6)}`;
+  }
+  if (Number.isFinite(hotel?.lat) && Number.isFinite(hotel?.lng)) {
+    return `${hotel.lat.toFixed(6)}, ${hotel.lng.toFixed(6)}`;
+  }
+  return '';
+}
+
+function controlesGeolocalizacaoHotel(hotel) {
+  const valor = valorGeolocalizacaoHotel(hotel);
+  return `
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;">
+      <label style="display:block;font-size:11px;font-weight:700;color:#374151;margin-bottom:3px;">Geolocalizacao</label>
+      <input
+        type="text"
+        class="input-geolocalizacao-hotel"
+        value="${escaparHTML(valor)}"
+        placeholder="-23.330692, -47.851799"
+        style="box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:5px 7px;font-size:12px;"
+      >
+      <button
+        type="button"
+        data-id-hotel="${escaparHTML(hotel.id)}"
+        onclick="window.salvarGeolocalizacaoHotelRelatorio(this)"
+        style="margin-top:6px;border:0;border-radius:6px;background:#006937;color:#fff;padding:5px 8px;font-size:12px;cursor:pointer;"
+      >Salvar geolocalizacao</button>
+      <span class="status-geolocalizacao-hotel" style="display:block;margin-top:4px;font-size:11px;color:#64748b;"></span>
+    </div>
+  `;
+}
+
+async function salvarGeolocalizacaoHotelRelatorio(botao) {
+  const container = obterContainerPopupCliente(botao);
+  const input = container?.querySelector('.input-geolocalizacao-hotel');
+  const status = container?.querySelector('.status-geolocalizacao-hotel');
+  const idHotel = limparTexto(botao?.dataset?.idHotel);
+  const valor = limparTexto(input?.value);
+  const coordenadas = obterCoordenadasGeolocalizacao(valor);
+
+  if (!idHotel) {
+    if (status) status.textContent = 'Hotel nao identificado.';
+    return;
+  }
+  if (!coordenadas) {
+    if (status) status.textContent = 'Informe no formato latitude, longitude.';
+    input?.focus();
+    return;
+  }
+
+  const valorNormalizado = `${coordenadas.lat.toFixed(6)}, ${coordenadas.lng.toFixed(6)}`;
+  botao.disabled = true;
+  if (status) status.textContent = 'Salvando...';
+
+  try {
+    const { error } = await supabaseClient
+      .from('hoteis')
+      .update({ geolocalizacao: valorNormalizado })
+      .eq('id', idHotel);
+    if (error) throw error;
+
+    if (input) input.value = valorNormalizado;
+    atualizarLinkStreetViewCliente(container, coordenadas);
+    if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
+    mostrarMensagem('Geolocalizacao do hotel atualizada.');
+  } catch (error) {
+    console.error('Erro ao salvar geolocalizacao do hotel:', error);
+    if (status) status.textContent = 'Erro ao salvar geolocalizacao.';
+    mostrarMensagem(error?.message || 'Nao foi possivel salvar a geolocalizacao do hotel.', true);
+  } finally {
+    botao.disabled = false;
+  }
+}
+
+window.salvarGeolocalizacaoHotelRelatorio = salvarGeolocalizacaoHotelRelatorio;
+
+function montarConsultaGeocodeHotel(hotel) {
+  const endereco = limparTexto(hotel.endereco);
+  return endereco ? [{ q: `${endereco}, Brasil` }] : [];
+}
+
+async function geocodificarHotelRota(hotel) {
+  const consultas = montarConsultaGeocodeHotel(hotel);
+  for (const consulta of consultas) {
+    const posicao = await geocodificarConsultaCliente(consulta);
+    if (posicao) return posicao;
+    await sleep(250);
+  }
+  return null;
+}
+
+function adicionarHotelRotaNoMapa(hotel) {
+  if (!Number.isFinite(hotel.lat) || !Number.isFinite(hotel.lng)) return;
+  if (!camadaHoteisRota) return;
+
+  const icone = L.divIcon({
+    className: '',
+    html: '<div class="hotel-rota-marker"><i class="fas fa-hotel"></i></div>',
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -28]
+  });
+
+  const streetViewUrl = urlStreetViewPorCoordenadas(obterCoordenadasGeolocalizacao(valorGeolocalizacaoHotel(hotel)));
+  L.marker([hotel.lat, hotel.lng], { icon: icone })
+    .bindPopup(`
+      <strong>${escaparHTML(hotel.nome || hotel.razao_social || 'Hotel')}</strong><br>
+      ${hotel.razao_social ? `Razao Social: ${escaparHTML(hotel.razao_social)}<br>` : ''}
+      ${hotel.cnpj ? `CNPJ: ${escaparHTML(hotel.cnpj)}<br>` : ''}
+      ${hotel.telefone ? `Telefone: ${escaparHTML(hotel.telefone)}<br>` : ''}
+      ${hotel.responsavel ? `Responsavel: ${escaparHTML(hotel.responsavel)}<br>` : ''}
+      Rota(s): ${escaparHTML(hotel.rotas || '—')}<br>
+      ${escaparHTML(hotel.enderecoMapa || montarEnderecoHotel(hotel))}<br>
+      ${controlesGeolocalizacaoHotel(hotel)}<br>
+      <a href="${streetViewUrl}" class="link-streetview-cliente" onclick="return window.abrirStreetViewClienteRelatorio(this)" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;color:#1a73e8;font-size:13px;text-decoration:none;">
+        <i class="fas fa-street-view"></i> Abrir no Street View
+      </a>
+    `)
+    .addTo(camadaHoteisRota);
+}
+
+async function buscarHoteisDasRotas(rotas) {
+  const rotasNormalizadas = Array.from(new Set((rotas || []).map(normalizarRotaCliente).filter(Boolean)));
+  if (!rotasNormalizadas.length) return [];
+
+  const despesasEncontradas = [];
+  for (const rota of rotasNormalizadas) {
+    const { data, error } = await supabaseClient
+      .from('despesas')
+      .select('id_hotel, numero_rota')
+      .ilike('numero_rota', `%${rota}%`)
+      .limit(200);
+    if (error) throw error;
+    despesasEncontradas.push(...(data || []));
+  }
+
+  // Confere com precisao (evita "1" casar com "12") comparando a lista normalizada de rotas de cada despesa.
+  const rotasPorHotel = new Map();
+  despesasEncontradas.forEach((despesa) => {
+    if (!despesa.id_hotel) return;
+    const rotasDaDespesa = normalizarListaRotas(despesa.numero_rota).filter((r) => rotasNormalizadas.includes(r));
+    if (!rotasDaDespesa.length) return;
+
+    const rotasAssociadas = rotasPorHotel.get(despesa.id_hotel) || new Set();
+    rotasDaDespesa.forEach((r) => rotasAssociadas.add(r));
+    rotasPorHotel.set(despesa.id_hotel, rotasAssociadas);
+  });
+
+  const idsHotel = Array.from(rotasPorHotel.keys()).slice(0, MAX_HOTEIS_ROTA_MAPA);
+  if (!idsHotel.length) return [];
+
+  const { data, error } = await supabaseClient
+    .from('hoteis')
+    .select('id, nome, razao_social, cnpj, telefone, responsavel, endereco, geolocalizacao')
+    .in('id', idsHotel);
+  if (error) throw error;
+
+  return (data || []).map((hotel) => ({
+    ...hotel,
+    rotas: Array.from(rotasPorHotel.get(hotel.id) || []).join(', ')
+  }));
+}
+
+async function plotarHoteisDasRotas(escalas) {
+  if (!camadaHoteisRota) return;
+  camadaHoteisRota.clearLayers();
+
+  const rotas = Array.from(new Set((escalas || []).map((escala) => escala.rota).filter(Boolean)));
+  if (!rotas.length) return;
+
+  const hoteis = await buscarHoteisDasRotas(rotas);
+  if (!hoteis.length) return;
+
+  const cache = obterCacheGeocodeClientes();
+  let localizados = 0;
+  for (const hotel of hoteis) {
+    const endereco = montarEnderecoHotel(hotel);
+    hotel.enderecoMapa = endereco;
+
+    const temCoordenadaDireta = aplicarGeolocalizacaoHotel(hotel);
+    if (!temCoordenadaDireta && cache[endereco]) {
+      hotel.lat = cache[endereco].lat;
+      hotel.lng = cache[endereco].lng;
+    } else if (!temCoordenadaDireta) {
+      const posicao = await geocodificarHotelRota(hotel);
+      if (posicao) {
+        hotel.lat = posicao.lat;
+        hotel.lng = posicao.lng;
+        cache[endereco] = posicao;
+        salvarCacheGeocodeClientes(cache);
+      }
+      await sleep(GEOCODE_DELAY_MS);
+    }
+
+    if (Number.isFinite(hotel.lat) && Number.isFinite(hotel.lng)) {
+      adicionarHotelRotaNoMapa(hotel);
+      localizados += 1;
+    }
+  }
+
+  mostrarMensagem(`Histórico carregado. Clientes e hoteis da rota no mapa (${localizados} hotel(is)).`);
+}
+
 function destacarPonto(indice) {
   const ponto = pontosAtuais[indice];
   if (!ponto) return;
@@ -1462,6 +1690,11 @@ async function consultarHistorico() {
     } catch (erroClientes) {
       console.warn('Erro ao plotar clientes da rota:', erroClientes);
       mostrarMensagem('Histórico carregado. Não foi possível geocodificar os clientes da rota (serviço temporariamente indisponível).');
+    }
+    try {
+      await plotarHoteisDasRotas(escalasDoPeriodo);
+    } catch (erroHoteis) {
+      console.warn('Erro ao plotar hoteis da rota:', erroHoteis);
     }
   } catch (error) {
     console.error('Erro ao consultar histórico:', error);
