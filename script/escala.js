@@ -1934,7 +1934,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             tr.innerHTML = `
                                 <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector-dia"></td>
                                 <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa" style="${getCellStyle('escala', item.id, 'placa')}"></td>
-                                <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly style="${getCellStyle('escala', item.id, 'modelo')}"></td>
+                                <td>${montarModeloCellHtml('escala', item)}</td>
                                 <td><input type="text" list="listaRotas" class="table-input" value="${item.rota || ''}" data-key="rota" placeholder="Rota" style="${getCellStyle('escala', item.id, 'rota')}"></td>
                                 <td><input type="text" list="listaStatus" class="table-input" value="${item.status || ''}" data-key="status" placeholder="Status" title="${getStatusTitleAttr(item.status)}" style="${getCellStyle('escala', item.id, 'status', item.status)}"></td>
                                 <td><input type="text" list="listaMotoristas" class="table-input" value="${item.motorista || ''}" data-key="motorista" placeholder="Motorista" style="${getCellStyle('escala', item.id, 'motorista')}"></td>
@@ -2239,14 +2239,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (key === 'placa' && (tabela === 'escala' || tabela === 'planejamento_semanal')) {
             const placaBusca = normalizeVehiclePlate(valor);
             const veiculoEncontrado = listaVeiculos.find(v => v.placa_normalizada === placaBusca || normalizeVehiclePlate(v.placa) === placaBusca);
+            const inputModelo = tr.querySelector('input[data-key="modelo"]');
             if (veiculoEncontrado) {
                 extraUpdates.modelo = veiculoEncontrado.modelo;
-                const inputModelo = tr.querySelector('input[data-key="modelo"]');
-                if (inputModelo) inputModelo.value = veiculoEncontrado.modelo;
+                if (inputModelo) {
+                    inputModelo.value = veiculoEncontrado.modelo;
+                    inputModelo.style.color = '';
+                    inputModelo.style.fontWeight = '';
+                    inputModelo.title = '';
+                }
                 if (tabela === 'planejamento_semanal') {
                     extraUpdates.tipo = veiculoEncontrado.tipo || '';
                     const inputTipo = tr.querySelector('input[data-key="tipo"]');
                     if (inputTipo) inputTipo.value = veiculoEncontrado.tipo || '';
+                }
+            } else {
+                // Placa digitada nao corresponde a nenhum veiculo cadastrado: alerta visual "N/L"
+                extraUpdates.modelo = '';
+                if (inputModelo) {
+                    inputModelo.value = placaBusca ? 'N/L' : '';
+                    inputModelo.style.color = placaBusca ? '#dc3545' : '';
+                    inputModelo.style.fontWeight = placaBusca ? '700' : '';
+                    inputModelo.title = placaBusca ? 'Placa não localizada no cadastro de veículos' : '';
+                }
+                if (tabela === 'planejamento_semanal') {
+                    extraUpdates.tipo = '';
+                    const inputTipo = tr.querySelector('input[data-key="tipo"]');
+                    if (inputTipo) inputTipo.value = '';
                 }
             }
         }
@@ -2796,6 +2815,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         const placaBusca = normalizeVehiclePlate(placa);
         const veiculo = listaVeiculos.find(v => v.placa_normalizada === placaBusca || normalizeVehiclePlate(v.placa) === placaBusca);
         return veiculo ? cleanImportValue(veiculo.tipo) : '';
+    }
+
+    // Placa preenchida mas sem correspondencia no cadastro de veiculos: alerta "N/L" em vermelho
+    function getModeloCellState(placa, modeloArmazenado) {
+        const placaBusca = normalizeVehiclePlate(placa);
+        if (!placaBusca) return { valor: modeloArmazenado || '', naoLocalizado: false };
+
+        const modeloEncontrado = getModeloVisualByPlaca(placa);
+        if (modeloEncontrado) return { valor: modeloEncontrado, naoLocalizado: false };
+
+        return { valor: 'N/L', naoLocalizado: true };
+    }
+
+    function montarModeloCellHtml(tabela, item) {
+        const estado = getModeloCellState(item.placa, item.modelo);
+        const styleAlerta = 'color:#dc3545;font-weight:700;';
+        const style = estado.naoLocalizado ? styleAlerta : getCellStyle(tabela, item.id, 'modelo');
+        const title = estado.naoLocalizado ? 'Placa não localizada no cadastro de veículos' : '';
+        return `<input type="text" list="listaModelos" class="table-input non-editable" value="${estado.valor}" data-key="modelo" placeholder="Modelo" readonly title="${title}" style="${style}">`;
     }
 
     function splitPlacaModelo(value) {
@@ -10941,7 +10979,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         tr.innerHTML = `
             <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector-plan" data-id="${item.id}"></td>
             <td><input type="text" list="listaVeiculos" class="table-input" value="${item.placa || ''}" data-key="placa" placeholder="Placa" style="${getCellStyle('planejamento_semanal', item.id, 'placa')}"></td>
-            <td><input type="text" list="listaModelos" class="table-input non-editable" value="${item.modelo || ''}" data-key="modelo" placeholder="Modelo" readonly style="${getCellStyle('planejamento_semanal', item.id, 'modelo')}"></td>
+            <td>${montarModeloCellHtml('planejamento_semanal', item)}</td>
             <td><input type="text" class="table-input non-editable" value="${item.tipo || getTipoVisualByPlaca(item.placa) || ''}" data-key="tipo" placeholder="Tipo" readonly style="${getCellStyle('planejamento_semanal', item.id, 'tipo')}"></td>
             ${diasHtml}
             <td><input type="text" list="listaMotoristas" class="table-input" value="${getNomeFuncionarioExibicao(item.motorista)}" data-key="motorista" placeholder="Motorista" style="${getCellStyle('planejamento_semanal', item.id, 'motorista')}"></td>
