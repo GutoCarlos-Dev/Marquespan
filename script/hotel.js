@@ -77,6 +77,8 @@ class HotelManager {
         this.btnSubmitHotel = document.getElementById('btnSubmitHotel');
         this.hotelRazaoSocialInput = document.getElementById('hotelRazaoSocial');
         this.searchHotelInput = document.getElementById('searchHotelInput');
+        this.btnVisualizarHoteisMapa = document.getElementById('btnVisualizarHoteisMapa');
+        this.hoteisRenderizados = [];
         // Elementos de importação
         this.btnImportarLista = document.getElementById('btnImportarLista');
         this.importFileInput = document.getElementById('importFile');
@@ -97,6 +99,7 @@ class HotelManager {
         document.getElementById('btnClearHotelForm').addEventListener('click', () => this.clearHotelForm());
         this.hotelTableBody.addEventListener('click', (e) => this.handleHotelTableClick(e));
         this.searchHotelInput.addEventListener('input', () => this.renderHotels());
+        this.btnVisualizarHoteisMapa?.addEventListener('click', () => this.abrirHoteisNoMapa());
 
         // Eventos do painel de quartos
         document.getElementById('btnCloseModalQuartos').addEventListener('click', () => this.closeQuartosPanel());
@@ -129,6 +132,9 @@ class HotelManager {
             return;
         }
 
+        this.hoteisRenderizados = data || [];
+        if (this.btnVisualizarHoteisMapa) this.btnVisualizarHoteisMapa.disabled = !this.hoteisRenderizados.length;
+
         this.hotelTableBody.innerHTML = '';
         data.forEach(hotel => {
             const tr = document.createElement('tr');
@@ -146,6 +152,36 @@ class HotelManager {
             `;
             this.hotelTableBody.appendChild(tr);
         });
+    }
+
+    abrirHoteisNoMapa() {
+        const hoteis = (this.hoteisRenderizados || []).map((hotel) => ({
+            id: hotel.id,
+            razao_social: hotel.razao_social,
+            nome: hotel.nome,
+            cnpj: hotel.cnpj,
+            endereco: hotel.endereco,
+            telefone: hotel.telefone,
+            responsavel: hotel.responsavel,
+            geolocalizacao: hotel.geolocalizacao
+        }));
+
+        if (!hoteis.length) {
+            alert('Nenhum hotel listado para visualizar no mapa.');
+            return;
+        }
+
+        try {
+            localStorage.setItem('hoteis_mapa_payload', JSON.stringify({
+                criadoEm: new Date().toISOString(),
+                total: hoteis.length,
+                hoteis
+            }));
+            window.open('hoteis-mapa.html', '_blank', 'noopener,noreferrer');
+        } catch (error) {
+            console.error('Erro ao preparar hoteis para o mapa:', error);
+            alert('Nao foi possivel abrir o mapa. Tente novamente.');
+        }
     }
 
     async handleHotelSubmit(e) {
