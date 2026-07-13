@@ -138,14 +138,21 @@ class HotelManager {
         this.hotelTableBody.innerHTML = '';
         data.forEach(hotel => {
             const tr = document.createElement('tr');
+            const geoCadastrada = Boolean(String(hotel.geolocalizacao || '').trim());
+            const geoBadge = geoCadastrada
+                ? '<span class="hotel-geo-status cadastrado"><i class="fas fa-check"></i> Cadastrado</span>'
+                : '<span class="hotel-geo-status pendente"><i class="fas fa-triangle-exclamation"></i> Nao cadastrado</span>';
+
             tr.innerHTML = `
                 <td>${hotel.razao_social || ''}</td>
                 <td>${hotel.nome || ''}</td>
                 <td>${hotel.cnpj || ''}</td>
                 <td>${hotel.telefone || ''}</td>
                 <td>${hotel.responsavel || ''}</td>
+                <td>${geoBadge}</td>
                 <td>
                     <button class="btn-icon info btn-manage-rooms" data-id="${hotel.id}" data-name="${hotel.nome}" title="Gerenciar Quartos"><i class="fas fa-bed"></i></button>
+                    <button class="btn-icon locate btn-locate-map" data-id="${hotel.id}" title="Localizar no Mapa"><i class="fas fa-map-location-dot"></i></button>
                     <button class="btn-icon edit btn-edit" data-id="${hotel.id}" title="Editar"><i class="fas fa-edit"></i></button>
                     <button class="btn-icon delete btn-delete" data-id="${hotel.id}" title="Excluir"><i class="fas fa-trash"></i></button>
                 </td>
@@ -249,6 +256,39 @@ class HotelManager {
             }
         } else if (btn.classList.contains('btn-manage-rooms')) {
             this.openQuartosPanel(id, btn.dataset.name);
+        } else if (btn.classList.contains('btn-locate-map')) {
+            this.abrirHotelNoMapa(id);
+        }
+    }
+
+    abrirHotelNoMapa(id) {
+        const hotel = (this.hoteisRenderizados || []).find(h => String(h.id) === String(id));
+        if (!hotel) {
+            alert('Hotel nao encontrado na lista atual. Atualize a busca e tente novamente.');
+            return;
+        }
+
+        const payload = {
+            id: hotel.id,
+            razao_social: hotel.razao_social,
+            nome: hotel.nome,
+            cnpj: hotel.cnpj,
+            endereco: hotel.endereco,
+            telefone: hotel.telefone,
+            responsavel: hotel.responsavel,
+            geolocalizacao: hotel.geolocalizacao
+        };
+
+        try {
+            localStorage.setItem('hoteis_mapa_payload', JSON.stringify({
+                criadoEm: new Date().toISOString(),
+                total: 1,
+                hoteis: [payload]
+            }));
+            window.open('hoteis-mapa.html', '_blank', 'noopener,noreferrer');
+        } catch (error) {
+            console.error('Erro ao preparar hotel para o mapa:', error);
+            alert('Nao foi possivel abrir o mapa. Tente novamente.');
         }
     }
 

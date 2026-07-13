@@ -213,6 +213,31 @@
 .btn-icon.info { color: #17a2b8; }
 .btn-icon.info:hover { color: #138496; }
 
+.btn-icon.locate { color: #006937; }
+.btn-icon.locate:hover { color: #00532c; }
+
+/* Status de Geolocalizacao no Grid */
+.hotel-geo-status {
+    align-items: center;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.75rem;
+    font-weight: 800;
+    gap: 5px;
+    padding: 4px 9px;
+    white-space: nowrap;
+}
+
+.hotel-geo-status.cadastrado {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.hotel-geo-status.pendente {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 /* Modal */
 .modal-backdrop {
     position: fixed;
