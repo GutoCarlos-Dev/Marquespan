@@ -371,26 +371,39 @@
   padding: 12px 14px 8px;
 }
 
-.painel-modos-rota {
+.painel-abas-rota {
   align-items: center;
   display: flex;
-  gap: 15px;
+  gap: 6px;
 }
 
-.painel-modos-rota span {
+.aba-painel-rota {
   align-items: center;
-  border-bottom: 3px solid transparent;
+  background: transparent;
+  border: 0;
+  border-radius: 18px;
   color: #3f4d47;
+  cursor: pointer;
   display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  gap: 6px;
   height: 34px;
   justify-content: center;
-  min-width: 36px;
+  padding: 0 13px;
 }
 
-.painel-modos-rota span.ativo {
+.aba-painel-rota:hover {
+  background: #eef3f1;
+}
+
+.aba-painel-rota.ativo {
   background: #d7f0f6;
-  border-radius: 18px;
   color: #006d7d;
+}
+
+.painel-lista-secundaria[hidden] {
+  display: none;
 }
 
 #btn-fechar-painel-rota {
@@ -409,6 +422,10 @@
   display: flex;
   gap: 12px;
   padding: 12px 22px;
+}
+
+.painel-rota-resumo[hidden] {
+  display: none;
 }
 
 .painel-rota-resumo strong {
@@ -434,6 +451,13 @@
   grid-template-columns: 24px 1fr;
   gap: 9px;
   position: relative;
+}
+
+.painel-rota-paradas li.painel-lista-vazia {
+  color: #66746d;
+  display: block;
+  font-size: 0.8rem;
+  padding: 8px 2px;
 }
 
 .painel-rota-paradas li:not(:last-child)::before {
@@ -507,6 +531,10 @@
   display: grid;
   gap: 8px;
   padding: 12px 16px 14px;
+}
+
+.painel-rota-acoes[hidden] {
+  display: none;
 }
 
 .painel-rota-acoes a,

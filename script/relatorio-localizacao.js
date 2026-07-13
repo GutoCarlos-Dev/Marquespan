@@ -27,6 +27,10 @@ const linkGoogleMaps = document.getElementById('link-google-maps-relatorio');
 const painelRotaEmulada = document.getElementById('painel-rota-emulada');
 const painelRotaResumo = document.getElementById('painel-rota-resumo');
 const painelRotaParadas = document.getElementById('painel-rota-paradas');
+const painelRotaAcoes = document.getElementById('painel-rota-acoes');
+const painelHotelLista = document.getElementById('painel-hotel-lista');
+const painelPostoLista = document.getElementById('painel-posto-lista');
+const abasPainelRota = document.querySelectorAll('.aba-painel-rota');
 const linkPainelGoogleMaps = document.getElementById('link-painel-google-maps');
 const btnFecharPainelRota = document.getElementById('btn-fechar-painel-rota');
 const btnMostrarPainelRota = document.getElementById('btn-mostrar-painel-rota');
@@ -39,6 +43,9 @@ let camadaHoteisRota;
 let camadaPostosRota;
 let marcadorSelecionado;
 let pontosAtuais = [];
+let hoteisAtuais = [];
+let postosAtuais = [];
+let abaPainelAtiva = 'rota';
 let escalasPorDataAtual = new Map();
 let filialPorPlaca = new Map();
 let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
@@ -525,6 +532,7 @@ function atualizarPainelRotaEmulada(pontos) {
   linkPainelGoogleMaps.href = urlGoogle;
   painelRotaEmulada.hidden = false;
   btnMostrarPainelRota.hidden = true;
+  selecionarAbaPainel('rota');
 }
 
 function popupPonto(ponto, titulo) {
@@ -1223,7 +1231,7 @@ function adicionarHotelRotaNoMapa(hotel) {
   });
 
   const streetViewUrl = urlStreetViewPorCoordenadas(obterCoordenadasGeolocalizacao(valorGeolocalizacaoHotel(hotel)));
-  L.marker([hotel.lat, hotel.lng], { icon: icone })
+  hotel._marker = L.marker([hotel.lat, hotel.lng], { icon: icone })
     .bindPopup(`
       <strong>${escaparHTML(hotel.nome || hotel.razao_social || 'Hotel')}</strong><br>
       ${hotel.razao_social ? `Razao Social: ${escaparHTML(hotel.razao_social)}<br>` : ''}
@@ -1285,6 +1293,8 @@ async function buscarHoteisDasRotas(rotas) {
 async function plotarHoteisDasRotas(escalas) {
   if (!camadaHoteisRota) return;
   camadaHoteisRota.clearLayers();
+  hoteisAtuais = [];
+  renderizarListaHoteis();
 
   const rotas = Array.from(new Set((escalas || []).map((escala) => escala.rota).filter(Boolean)));
   if (!rotas.length) return;
@@ -1319,6 +1329,8 @@ async function plotarHoteisDasRotas(escalas) {
     }
   }
 
+  hoteisAtuais = hoteis.filter((hotel) => Number.isFinite(hotel.lat) && Number.isFinite(hotel.lng));
+  renderizarListaHoteis();
   mostrarMensagem(`Histórico carregado. Clientes e hoteis da rota no mapa (${localizados} hotel(is)).`);
 }
 
@@ -1426,7 +1438,7 @@ function adicionarPostoRotaNoMapa(posto) {
   });
 
   const streetViewUrl = urlStreetViewPorCoordenadas(obterCoordenadasGeolocalizacao(valorGeolocalizacaoPosto(posto)));
-  L.marker([posto.lat, posto.lng], { icon: icone })
+  posto._marker = L.marker([posto.lat, posto.lng], { icon: icone })
     .bindPopup(`
       <strong>${escaparHTML(posto.razao_social || 'Posto')}</strong><br>
       ${posto.filial ? `Filial: ${escaparHTML(posto.filial)}<br>` : ''}
@@ -1453,6 +1465,8 @@ async function buscarPostosDaFilial(filial) {
 async function plotarPostosDaFilial(filial) {
   if (!camadaPostosRota) return;
   camadaPostosRota.clearLayers();
+  postosAtuais = [];
+  renderizarListaPostos();
 
   const postos = await buscarPostosDaFilial(filial);
   if (!postos.length) return;
@@ -1465,6 +1479,9 @@ async function plotarPostosDaFilial(filial) {
       localizados += 1;
     }
   });
+
+  postosAtuais = postos.filter((posto) => Number.isFinite(posto.lat) && Number.isFinite(posto.lng));
+  renderizarListaPostos();
 
   if (localizados) {
     mostrarMensagem(`Histórico carregado. Postos da filial no mapa: ${localizados} de ${postos.length}.`);
@@ -1488,6 +1505,66 @@ function destacarPonto(indice) {
     weight: 3
   }).addTo(mapa).bindPopup(popupPonto(ponto, `Posição ${indice + 1}`)).openPopup();
   mapa.setView([ponto.latitude, ponto.longitude], Math.max(mapa.getZoom(), 15));
+}
+
+function centralizarItemNoMapa(item) {
+  if (!item || !Number.isFinite(item.lat) || !Number.isFinite(item.lng)) return;
+  mapa.setView([item.lat, item.lng], Math.max(mapa.getZoom(), 15));
+  item._marker?.openPopup();
+}
+
+function renderizarListaHoteis() {
+  if (!painelHotelLista) return;
+
+  if (!hoteisAtuais.length) {
+    painelHotelLista.innerHTML = '<li class="painel-lista-vazia">Nenhum hotel encontrado na rota.</li>';
+    return;
+  }
+
+  painelHotelLista.innerHTML = hoteisAtuais.map((hotel, indice) => `
+    <li>
+      <span class="rota-ponto-marcador"></span>
+      <button type="button" data-indice-hotel="${indice}">
+        <strong>${escaparHTML(hotel.nome || hotel.razao_social || 'Hotel')}</strong>
+        <small>${escaparHTML(hotel.enderecoMapa || montarEnderecoHotel(hotel))}</small>
+      </button>
+    </li>
+  `).join('');
+}
+
+function renderizarListaPostos() {
+  if (!painelPostoLista) return;
+
+  if (!postosAtuais.length) {
+    painelPostoLista.innerHTML = '<li class="painel-lista-vazia">Nenhum posto encontrado na filial.</li>';
+    return;
+  }
+
+  painelPostoLista.innerHTML = postosAtuais.map((posto, indice) => `
+    <li>
+      <span class="rota-ponto-marcador"></span>
+      <button type="button" data-indice-posto="${indice}">
+        <strong>${escaparHTML(posto.razao_social || 'Posto')}</strong>
+        <small>${escaparHTML(posto.enderecoMapa || montarEnderecoPosto(posto))}</small>
+      </button>
+    </li>
+  `).join('');
+}
+
+function selecionarAbaPainel(aba) {
+  abaPainelAtiva = aba;
+
+  abasPainelRota.forEach((botao) => {
+    const ativa = botao.dataset.aba === aba;
+    botao.classList.toggle('ativo', ativa);
+    botao.setAttribute('aria-selected', String(ativa));
+  });
+
+  if (painelRotaResumo) painelRotaResumo.hidden = aba !== 'rota';
+  if (painelRotaParadas) painelRotaParadas.hidden = aba !== 'rota';
+  if (painelRotaAcoes) painelRotaAcoes.hidden = aba !== 'rota';
+  if (painelHotelLista) painelHotelLista.hidden = aba !== 'hotel';
+  if (painelPostoLista) painelPostoLista.hidden = aba !== 'posto';
 }
 
 function valorOrdenacao(ponto, campo) {
@@ -2045,6 +2122,24 @@ painelRotaParadas?.addEventListener('click', (event) => {
   if (!botao) return;
 
   destacarPonto(Number(botao.dataset.indice));
+});
+
+abasPainelRota.forEach((botao) => {
+  botao.addEventListener('click', () => selecionarAbaPainel(botao.dataset.aba));
+});
+
+painelHotelLista?.addEventListener('click', (event) => {
+  const botao = event.target.closest('button[data-indice-hotel]');
+  if (!botao) return;
+
+  centralizarItemNoMapa(hoteisAtuais[Number(botao.dataset.indiceHotel)]);
+});
+
+painelPostoLista?.addEventListener('click', (event) => {
+  const botao = event.target.closest('button[data-indice-posto]');
+  if (!botao) return;
+
+  centralizarItemNoMapa(postosAtuais[Number(botao.dataset.indicePosto)]);
 });
 
 btnFecharPainelRota?.addEventListener('click', () => {
