@@ -33,6 +33,15 @@ const ESCALA_NIVEIS_RESTRITOS_FALTAS_RESERVAS = new Set([
     'adm_colisao',
     'adm_pedido'
 ]);
+// Adicionar/Remover e Excluir em FALTAS/FÉRIAS/AFASTADOS/DESCONTOS DA SEMANA e a Troca de
+// Funcionário em RESERVAS DA SEMANA ficam liberados só para estes níveis (lista de permissão,
+// mais restrita que ESCALA_NIVEIS_RESTRITOS_FALTAS_RESERVAS que só bloqueia adm_colisao/adm_pedido).
+const FALTAS_RESERVAS_SEMANA_NIVEIS_PERMITIDOS = new Set([
+    'administrador',
+    'gerencia',
+    'balanca',
+    'lider_balanca'
+]);
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Página de Controle de Escala carregada.');
@@ -53,6 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const podeAcessarDiaria = DIARIA_NIVEIS_PERMITIDOS.has(nivelUsuarioEscala);
     const isAdmPedidoEscala = nivelUsuarioEscala === 'adm_pedido';
     const restringeFaltasReservasPlanejamento = ESCALA_NIVEIS_RESTRITOS_FALTAS_RESERVAS.has(nivelUsuarioEscala);
+    const restringeFaltasReservasSemana = !FALTAS_RESERVAS_SEMANA_NIVEIS_PERMITIDOS.has(nivelUsuarioEscala);
 
     const acessoPermitido = await verificarPermissaoPaginaEscala();
     if (!acessoPermitido) {
@@ -167,15 +177,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (restringeFaltasReservasPlanejamento) {
-            [
-                'btnCalculoPeso',
-                'btnAdicionarFaltaPlanejamento'
-            ].forEach(id => {
+            ['btnCalculoPeso'].forEach(id => {
                 const element = document.getElementById(id);
                 if (!element) return;
                 element.disabled = true;
                 element.classList.add('hidden');
                 element.title = 'Disponivel apenas para niveis autorizados.';
+            });
+        }
+
+        if (restringeFaltasReservasSemana) {
+            ['btnAdicionarFaltaPlanejamento'].forEach(id => {
+                const element = document.getElementById(id);
+                if (!element) return;
+                element.disabled = true;
+                element.classList.add('hidden');
+                element.title = 'Disponivel apenas para administrador, gerencia, balanca ou lider_balanca.';
             });
         }
 
@@ -10494,7 +10511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${DIAS_FALTAS_PLANEJAMENTO.map(dia => {
                             const registro = item.dias[dia];
                             if (!registro) return '<td style="text-align: center;"></td>';
-                            const botaoRemover = restringeFaltasReservasPlanejamento ? '' : `
+                            const botaoRemover = restringeFaltasReservasSemana ? '' : `
                                 <button type="button" class="btn-icon delete btn-remover-falta-plan" data-id="${registro.id}" data-campo="${registro.campo}" title="Remover lançamento" style="padding: 2px 4px; margin-left: 4px; font-size: 0.85em;">
                                     <i class="fas fa-times"></i>
                                 </button>`;
@@ -10640,7 +10657,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${DIAS_FALTAS_PLANEJAMENTO.map(dia => {
                             const registro = item.dias[dia];
                             if (registro) {
-                                const botaoTrocar = restringeFaltasReservasPlanejamento ? '' : `
+                                const botaoTrocar = restringeFaltasReservasSemana ? '' : `
                                     <button type="button" class="btn-icon edit btn-trocar-reserva-plan" data-dia="${dia}" title="Trocar funcionário em ${dia}" style="padding: 2px 4px; margin-left: 4px; font-size: 0.85em;">
                                         <i class="fas fa-right-left"></i>
                                     </button>`;
@@ -10657,7 +10674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             const resumosUnicos = Array.from(new Set(resumos.map(r => JSON.stringify(r)))).map(s => JSON.parse(s));
                             const tooltip = resumosUnicos.map(montarResumoEscalado).join('\n');
-                            const botaoTrocar = restringeFaltasReservasPlanejamento ? '' : `
+                            const botaoTrocar = restringeFaltasReservasSemana ? '' : `
                                 <button type="button" class="btn-icon edit btn-trocar-reserva-plan" data-dia="${dia}" title="Trocar funcionário em ${dia}" style="padding: 2px 4px; margin-left: 4px; font-size: 0.85em;">
                                     <i class="fas fa-right-left"></i>
                                 </button>`;
@@ -10736,13 +10753,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('click', (e) => {
         const btnTrocarReservaPlan = e.target.closest('.btn-trocar-reserva-plan');
         if (btnTrocarReservaPlan) {
-            if (restringeFaltasReservasPlanejamento) return;
+            if (restringeFaltasReservasSemana) return;
             abrirTrocaFuncionarioNoDiaPlanejamento(btnTrocarReservaPlan.dataset.dia);
         }
     });
 
     async function removerFaltaPlanejamento(id, campo) {
-        if (restringeFaltasReservasPlanejamento) {
+        if (restringeFaltasReservasSemana) {
             alert('Seu nivel de acesso nao permite adicionar ou remover faltas/ferias/afastamentos/descontos da semana.');
             return;
         }
@@ -10864,7 +10881,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function abrirModalFaltasPlanejamentoSemana() {
-        if (restringeFaltasReservasPlanejamento) {
+        if (restringeFaltasReservasSemana) {
             alert('Seu nivel de acesso nao permite adicionar ou remover faltas/ferias/afastamentos/descontos da semana.');
             return;
         }
@@ -10883,7 +10900,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function aplicarFaltaPlanejamentoSemana() {
-        if (restringeFaltasReservasPlanejamento) {
+        if (restringeFaltasReservasSemana) {
             alert('Seu nivel de acesso nao permite adicionar ou remover faltas/ferias/afastamentos/descontos da semana.');
             return;
         }
