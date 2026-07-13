@@ -211,6 +211,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.postoRazao = document.getElementById('postoRazao');
             this.postoCnpj = document.getElementById('postoCnpj');
             this.postoCidade = document.getElementById('postoCidade');
+            this.postoEndereco = document.getElementById('postoEndereco');
+            this.postoGeolocalizacao = document.getElementById('postoGeolocalizacao');
             this.postoUf = document.getElementById('postoUf');
             this.postoFaturado = document.getElementById('postoFaturado');
             this.postoValorNegociadoInput = document.getElementById('postoValorNegociado'); // Adicionado ao cache
@@ -2485,6 +2487,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 cnpj: cnpjValue,
                 cidade: this.postoCidade.value,
                 uf: this.postoUf.value,
+                endereco: this.postoEndereco.value,
+                geolocalizacao: this.postoGeolocalizacao.value,
                 faturado: this.postoFaturado.value,
                 valorNegociado: this.postoValorNegociadoInput.value
             });
@@ -2572,6 +2576,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.postoRazao.value = data.razao_social || '';
             this.postoCnpj.value = data.cnpj || '';
             this.postoCidade.value = data.cidade || '';
+            this.postoEndereco.value = data.endereco || '';
+            this.postoGeolocalizacao.value = data.geolocalizacao || '';
             this.postoUf.value = data.uf || '';
             this.postoFaturado.value = data.faturado ? 'Sim' : 'Não';
 

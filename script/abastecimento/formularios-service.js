@@ -168,6 +168,8 @@ export function montarPayloadPosto({
     cnpj,
     cidade,
     uf,
+    endereco,
+    geolocalizacao,
     faturado,
     valorNegociado
 }) {
@@ -177,6 +179,8 @@ export function montarPayloadPosto({
         cnpj,
         cidade,
         uf,
+        endereco,
+        geolocalizacao,
         faturado: faturado === 'Sim',
         valor_negociado: parseFloat(valorNegociado) || null
     };

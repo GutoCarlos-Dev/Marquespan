@@ -58,6 +58,8 @@ function montarPayloadsPostos(rows, existingCnpjs) {
             razao_social: razao,
             cidade: row['CIDADE'] || '',
             uf: row['UF'] || '',
+            endereco: row['ENDERECO'] || row['ENDEREÇO'] || '',
+            geolocalizacao: row['GEOLOCALIZACAO'] || row['GEOLOCALIZAÇÃO'] || '',
             filial: row['FILIAL'] || '',
             cnpj: cnpjRaw,
             faturado: false
