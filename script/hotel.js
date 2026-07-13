@@ -158,6 +158,7 @@ class HotelManager {
             endereco: document.getElementById('hotelEndereco').value,
             telefone: document.getElementById('hotelTelefone').value,
             responsavel: document.getElementById('hotelResponsavel').value,
+            geolocalizacao: document.getElementById('hotelGeolocalizacao').value.trim(),
         };
 
         let result;
@@ -223,6 +224,7 @@ class HotelManager {
         document.getElementById('hotelEndereco').value = hotel.endereco;
         document.getElementById('hotelTelefone').value = hotel.telefone || '';
         document.getElementById('hotelResponsavel').value = hotel.responsavel || '';
+        document.getElementById('hotelGeolocalizacao').value = hotel.geolocalizacao || '';
         this.btnSubmitHotel.innerHTML = '<i class="fas fa-save"></i> Atualizar Hotel';
     }
 
