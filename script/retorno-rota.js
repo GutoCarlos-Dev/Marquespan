@@ -127,7 +127,14 @@ function canManageGrid() {
 
 function canImportarEscalaOnline() {
     const nivel = getUserLevel();
-    return canManageGrid() || isEncarregadoRetorno() || nivel === 'pr_lider';
+    return canManageGrid() || isEncarregadoRetorno() || nivel === 'pr_lider' || nivel === 'mg_lider';
+}
+
+// Libera edição das células, Salvar Tudo e Incluir Dia Seguinte para mg_lider, sem conceder
+// Adicionar Linha/Excluir Selecionados/Importar Roteiro nem os botões Materiais/Devoluções por
+// linha (esses continuam restritos a canManageGrid()).
+function podeEditarRetornoBasico() {
+    return canManageGrid() || getUserLevel() === 'mg_lider';
 }
 
 function isPrEncarregado() {
@@ -148,10 +155,18 @@ function applyGridPermissionUI() {
 
     if (canManageGrid()) return;
 
-    ['btnAdicionarLinha', 'btnFabAdicionarLinha', 'btnSalvarTudo', 'btnExcluirSelecionados', 'btnFabExcluirSelecionados', 'btnIncluirSelecionadosDiaSeguinte', 'btnFabIncluirSelecionadosDiaSeguinte', 'btnImportarRoteiro'].forEach(id => {
+    ['btnAdicionarLinha', 'btnFabAdicionarLinha', 'btnExcluirSelecionados', 'btnFabExcluirSelecionados', 'btnImportarRoteiro'].forEach(id => {
         const element = document.getElementById(id);
         if (element) element.style.display = 'none';
     });
+
+    // Salvar Tudo e Incluir Dia Seguinte usam uma permissao mais ampla que inclui mg_lider.
+    if (!podeEditarRetornoBasico()) {
+        ['btnSalvarTudo', 'btnIncluirSelecionadosDiaSeguinte', 'btnFabIncluirSelecionadosDiaSeguinte'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.style.display = 'none';
+        });
+    }
 
     const btnImportarEscalaOnline = document.getElementById('btnImportarEscalaOnline');
     if (btnImportarEscalaOnline) {
@@ -159,12 +174,14 @@ function applyGridPermissionUI() {
     }
 
     const pasteInfo = document.querySelector('.info-paste');
-    if (pasteInfo) pasteInfo.style.display = 'none';
+    if (pasteInfo && !podeEditarRetornoBasico()) pasteInfo.style.display = 'none';
 
     const table = document.getElementById('gridRetornoRota') || document.getElementById('tableRetornoRota');
     const headers = table?.querySelectorAll('thead th');
     if (headers && headers.length > 0) {
-        headers[0].style.display = 'none';
+        // A coluna de checkbox (primeira) precisa ficar visivel para quem so tem
+        // podeEditarRetornoBasico(), pois Incluir Dia Seguinte depende da selecao de linhas.
+        if (!podeEditarRetornoBasico()) headers[0].style.display = 'none';
         headers[headers.length - 1].style.display = 'none';
     }
 }
@@ -568,7 +585,7 @@ function criarLinhaParaDiaSeguinte(rowData, dataDiaSeguinte, filialSelecionada) 
 }
 
 async function incluirSelecionadosNoDiaSeguinte() {
-    if (!canManageGrid()) {
+    if (!podeEditarRetornoBasico()) {
         alert('Voce nao tem permissao para alterar os lancamentos do grid.');
         return;
     }
@@ -721,20 +738,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateSelectAllState();
     });
 
-    // Oculta funcionalidades de exclusão para usuários não autorizados
-    if (!canDelete()) {
-        const btnExcluir = document.getElementById('btnExcluirSelecionados');
-        if (btnExcluir) btnExcluir.style.display = 'none';
-        const fabExcluir = document.getElementById('btnFabExcluirSelecionados');
-        if (fabExcluir) fabExcluir.style.display = 'none';
-        
-        const table = document.getElementById('gridRetornoRota') || document.getElementById('tableRetornoRota');
-        const headers = table?.querySelectorAll('thead th');
-        if (headers && headers.length > 0) {
-            headers[0].style.display = 'none'; // Coluna do Checkbox de Seleção
-            headers[headers.length - 1].style.display = 'none'; // Coluna da Lixeira
-        }
-    }
+    // Oculta funcionalidades de exclusão/edição para usuários não autorizados (logica completa,
+    // incluindo o caso mg_lider, fica centralizada em applyGridPermissionUI).
     applyGridPermissionUI();
 });
 
@@ -937,7 +942,7 @@ async function loadDataFromSupabase() {
  * @param {ClipboardEvent} event - O evento de colar.
  */
 function handlePaste(event) {
-    if (!canManageGrid()) {
+    if (!podeEditarRetornoBasico()) {
         event.preventDefault();
         return;
     }
@@ -1100,7 +1105,10 @@ function renderGrid() {
         return;
     }
 
-    const userCanEdit = canManageGrid();
+    // userCanEdit: campos principais + checkbox de selecao (inclui mg_lider, necessario p/ Incluir Dia Seguinte).
+    // userCanManageRows: excluir linha e os botoes Materiais/Devolucoes (continua restrito a canManageGrid()).
+    const userCanEdit = podeEditarRetornoBasico();
+    const userCanManageRows = canManageGrid();
 
     dataToRender.forEach((rowData) => {
         // É crucial pegar o índice original para que a edição e o salvamento funcionem corretamente
@@ -1148,9 +1156,9 @@ function renderGrid() {
         tr.dataset.rowIndex = index;
 
         const selectCell = userCanEdit ? `<td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector" data-index="${index}"></td>` : '<td style="display:none"></td>';
-        const deleteCell = userCanEdit ? `<td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Excluir Linha"><i class="fas fa-trash-alt"></i></button></td>` : '<td style="display:none"></td>';
+        const deleteCell = userCanManageRows ? `<td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Excluir Linha"><i class="fas fa-trash-alt"></i></button></td>` : '<td style="display:none"></td>';
         const readOnlyAttr = userCanEdit ? '' : ' readonly';
-        const disabledAttr = userCanEdit ? '' : ' disabled';
+        const disabledAttr = userCanManageRows ? '' : ' disabled';
 
         // Cria as células principais
         tr.innerHTML = `
@@ -1187,7 +1195,7 @@ function renderGrid() {
         // Adiciona listener para salvar alterações nos inputs diretamente no objeto de dados
         tr.querySelectorAll('input').forEach(input => {
             input.addEventListener('change', async (e) => {
-                if (!canManageGrid()) return;
+                if (!podeEditarRetornoBasico()) return;
 
                 const field = e.target.dataset.field;
                 if (!field) return; // Ignora inputs que não possuem mapeamento de campo (ex: checkbox de seleção)
@@ -1489,7 +1497,7 @@ function mapRowToPayload(rowData, dataRetorno) {
  * @param {number} index - O índice da linha a ser salva.
  */
 async function saveRow(index) {
-    if (!canManageGrid()) return;
+    if (!podeEditarRetornoBasico()) return;
 
     const rowData = gridData[index];
     const tr = document.querySelector(`tr[data-row-index='${index}']`);
@@ -1573,7 +1581,7 @@ async function deleteRow(index) {
  * Salva todos os dados da grid no Supabase.
  */
 async function saveAllData() {
-    if (!canManageGrid()) {
+    if (!podeEditarRetornoBasico()) {
         alert('Você não tem permissão para alterar os lançamentos do grid.');
         return;
     }
