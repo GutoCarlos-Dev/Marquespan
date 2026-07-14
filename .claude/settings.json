@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node --check script/retorno-rota.js)"
+      "Bash(node --check script/retorno-rota.js)",
+      "Bash(node --check script/mobile-abastecimento.js)"
     ]
   }
 }

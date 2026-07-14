@@ -325,17 +325,14 @@ async function carregarDadosIniciais() {
 
     // Carregar Veículos
     try {
-        let queryVeiculos = supabaseClient
+        // Sem filtro de filial: um caminhao de SP pode abastecer num posto de MG, entao a lista
+        // de placas do Saida precisa trazer todos os veiculos cadastrados no sistema, de
+        // qualquer filial.
+        const { data: veiculos, error: errVeic } = await supabaseClient
             .from('veiculos')
-            .select('placa, modelo, tipo, volume_tanque');
+            .select('placa, modelo, tipo, volume_tanque, filial')
+            .order('placa');
 
-        const filiaisUsuario = await getValoresFilialUsuario();
-        if (filiaisUsuario.length > 0) {
-            queryVeiculos = queryVeiculos.in('filial', filiaisUsuario);
-        }
-
-        const { data: veiculos, error: errVeic } = await queryVeiculos.order('placa');
-        
         if (errVeic) throw errVeic;
 
         veiculosDisponiveisCache = veiculos || []; // Armazena no cache
