@@ -4614,6 +4614,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         return contexto;
     }
 
+    // Le a grid PADRAO na ordem atual da tela (a mesma que o usuario organizou/ordenou), em vez de
+    // buscar do banco e reordenar por Modelo/Rota/Placa - mantem o PDF de Expedicao fiel ao grid.
+    function coletarDadosExpedicaoDoGridAtual() {
+        const tbody = document.getElementById('tbodyPadrao');
+        if (!tbody) return [];
+
+        return coletarLinhasVisiveisDoTbody(tbody)
+            .map(tr => ({
+                placa: getValorLinhaGrid(tr, 'placa'),
+                modelo: getValorLinhaGrid(tr, 'modelo'),
+                rota: getValorLinhaGrid(tr, 'rota'),
+                status: getValorLinhaGrid(tr, 'status'),
+                motorista: getValorLinhaGrid(tr, 'motorista'),
+                auxiliar: getValorLinhaGrid(tr, 'auxiliar'),
+                terceiro: getValorLinhaGrid(tr, 'terceiro')
+            }))
+            .filter(item => normalizeVehiclePlate(item.placa))
+            .filter(item => !isStatusExcluidoPDFExpedicao(item.status));
+    }
+
     async function buscarDadosPDFExpedicao(contexto) {
         const { data, error } = await aplicarFiltroFilial(
             supabaseClient
@@ -4713,7 +4733,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!contexto) return;
 
         try {
-            const dados = await buscarDadosPDFExpedicao(contexto);
+            const dados = coletarDadosExpedicaoDoGridAtual();
             if (dados.length === 0) return alert('Nenhuma placa encontrada para esta data apos excluir status P e R.');
 
             const modelos = [...new Set(dados.map(item => cleanImportValue(item.modelo) || 'SEM MODELO'))]
@@ -4747,20 +4767,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!contexto) return;
 
         try {
-            const dados = (await buscarDadosPDFExpedicao(contexto))
+            // Mantem a ordem atual do grid PADRAO (nao reordena por Modelo/Rota/Placa).
+            const dadosOrdenados = coletarDadosExpedicaoDoGridAtual()
                 .filter(item => modelosSelecionados.includes(cleanImportValue(item.modelo) || 'SEM MODELO'));
 
-            if (dados.length === 0) return alert('Nenhuma placa encontrada para os modelos selecionados.');
+            if (dadosOrdenados.length === 0) return alert('Nenhuma placa encontrada para os modelos selecionados.');
 
             const margin = 3;
-
-            const dadosOrdenados = [...dados].sort((a, b) => {
-                const modeloCompare = cleanImportValue(a.modelo).localeCompare(cleanImportValue(b.modelo), 'pt-BR', { numeric: true, sensitivity: 'base' });
-                if (modeloCompare !== 0) return modeloCompare;
-                const rotaCompare = cleanImportValue(a.rota, { keepZero: true }).localeCompare(cleanImportValue(b.rota, { keepZero: true }), 'pt-BR', { numeric: true, sensitivity: 'base' });
-                if (rotaCompare !== 0) return rotaCompare;
-                return normalizeVehiclePlate(a.placa).localeCompare(normalizeVehiclePlate(b.placa), 'pt-BR', { numeric: true, sensitivity: 'base' });
-            });
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
