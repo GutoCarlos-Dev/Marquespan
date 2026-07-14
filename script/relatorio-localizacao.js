@@ -57,10 +57,11 @@ const MAX_HOTEIS_ROTA_MAPA = 60;
 const MAX_POSTOS_ROTA_MAPA = 60;
 const OSRM_ROUTE_SERVICE_URL = 'https://router.project-osrm.org/route/v1/driving';
 // Cadastro de hoteis muda pouco: guarda local por 24h para evitar reconsultar o Supabase a cada busca.
-// Clientes e Postos NAO entram nesse cache: Clientes tem dezenas de milhares de linhas (um select sem
-// paginacao ficaria sujeito ao limite padrao do Supabase); Postos e sempre buscado ao vivo, filtrado por
-// Data/Rota, pois o mapa mostra so o(s) posto(s) onde o veiculo realmente abasteceu naquele periodo.
 const CACHE_CADASTRO_TTL_MS = 24 * 60 * 60 * 1000;
+// Clientes-por-rota e Postos-por-rota/periodo sao mais "operacionais" (vinculo cliente-rota, historico
+// de abastecimento) do que cadastro puro, entao usam um TTL bem mais curto - qualquer alteracao feita
+// nesta pagina (ex.: salvar geolocalizacao) tambem limpa esse cache na hora, sem esperar o TTL vencer.
+const CACHE_ROTA_TTL_MS = 30 * 60 * 1000;
 const CACHE_HOTEIS_KEY = 'relatorio_localizacao_cache_hoteis';
 const MAX_PONTOS_ROTEIRIZACAO = 300;
 const MAX_WAYPOINTS_OSRM = 60;
@@ -845,6 +846,7 @@ async function salvarGeolocalizacaoClienteRelatorio(botao) {
     if (input) input.value = valorNormalizado;
     atualizarLinkStreetViewCliente(container, coordenadas);
     if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
+    limparCachesComPrefixo('relatorio_localizacao_cache_clientes_rota_');
     mostrarMensagem(`Geolocalizacao do cliente ${codigo} atualizada.`);
   } catch (error) {
     console.error('Erro ao salvar geolocalizacao do cliente:', error);
@@ -885,13 +887,13 @@ function montarConsultasGeocodeCliente(cliente) {
   return consultas;
 }
 
-// Cache local (localStorage) do cadastro de clientes/hoteis/postos, com validade de 24h.
+// Cache local (localStorage) do cadastro de clientes/hoteis/postos.
 // Evita reconsultar o Supabase a cada abertura do relatorio quando o cadastro nao mudou.
-function obterCacheCadastro(chave) {
+function obterCacheCadastro(chave, ttlMs = CACHE_CADASTRO_TTL_MS) {
   try {
     const bruto = JSON.parse(localStorage.getItem(chave) || 'null');
     if (!bruto || !Array.isArray(bruto.dados) || !Number.isFinite(bruto.salvoEm)) return null;
-    if (Date.now() - bruto.salvoEm > CACHE_CADASTRO_TTL_MS) return null;
+    if (Date.now() - bruto.salvoEm > ttlMs) return null;
     return bruto.dados;
   } catch {
     return null;
@@ -921,6 +923,25 @@ async function obterDadosCadastroComCache(chave, buscarFn) {
   const dados = await buscarFn();
   salvarCacheCadastro(chave, dados);
   return dados;
+}
+
+// Monta uma chave de cache estavel para um conjunto de rotas (ordem nao importa).
+function chaveCacheRota(prefixo, partes) {
+  return `relatorio_localizacao_cache_${prefixo}_${[...partes].sort().join('|')}`;
+}
+
+// Invalidacao "grosseira": quando o usuario edita a geolocalizacao de um registro nesta pagina,
+// apaga todo cache por-rota daquele tipo (cliente/posto) para forcar uma releitura fresca na
+// proxima consulta. Mais simples e seguro do que tentar localizar o registro dentro de cada
+// combinacao de rotas ja cacheada.
+function limparCachesComPrefixo(prefixo) {
+  try {
+    Object.keys(localStorage)
+      .filter((chave) => chave.startsWith(prefixo))
+      .forEach((chave) => localStorage.removeItem(chave));
+  } catch (error) {
+    console.warn(`Não foi possível limpar cache local (${prefixo}):`, error);
+  }
 }
 
 // Busca em paginas de 1000 linhas: um select simples fica sujeito ao limite padrao de linhas
@@ -1037,20 +1058,25 @@ async function buscarClientesDasRotas(rotas) {
   const rotasNormalizadas = Array.from(new Set((rotas || []).map(normalizarRotaCliente).filter(Boolean)));
   if (!rotasNormalizadas.length) return [];
 
-  const rotasClientes = [];
-  for (const rota of rotasNormalizadas) {
-    const { data, error } = await supabaseClient
-      .from('cliente_rotas')
-      .select('cliente_codigo, rota, ativo')
-      .eq('rota', rota)
-      .eq('ativo', 'A')
-      .limit(MAX_CLIENTES_ROTA_MAPA);
-    if (error) throw error;
-    rotasClientes.push(...(data || []));
-  }
+  const chaveCache = chaveCacheRota('clientes_rota', rotasNormalizadas);
+  const cache = obterCacheCadastro(chaveCache, CACHE_ROTA_TTL_MS);
+  if (cache) return cache;
 
-  const codigos = Array.from(new Set(rotasClientes.map((item) => item.cliente_codigo).filter(Boolean)));
-  if (!codigos.length) return [];
+  // Uma unica consulta para todas as rotas (em vez de uma consulta por rota em sequencia) -
+  // .eq/.in fazem comparacao exata, entao nao ha risco de "1" casar com "12" aqui.
+  const { data: rotasClientes, error: rotasError } = await supabaseClient
+    .from('cliente_rotas')
+    .select('cliente_codigo, rota, ativo')
+    .in('rota', rotasNormalizadas)
+    .eq('ativo', 'A')
+    .limit(MAX_CLIENTES_ROTA_MAPA * rotasNormalizadas.length);
+  if (rotasError) throw rotasError;
+
+  const codigos = Array.from(new Set((rotasClientes || []).map((item) => item.cliente_codigo).filter(Boolean)));
+  if (!codigos.length) {
+    salvarCacheCadastro(chaveCache, []);
+    return [];
+  }
 
   const { data, error } = await supabaseClient
     .from('clientes')
@@ -1058,11 +1084,14 @@ async function buscarClientesDasRotas(rotas) {
     .in('codigo', codigos);
   if (error) throw error;
 
-  const rotaPorCodigo = new Map(rotasClientes.map((item) => [item.cliente_codigo, item.rota]));
-  return (data || []).map((cliente) => ({
+  const rotaPorCodigo = new Map((rotasClientes || []).map((item) => [item.cliente_codigo, item.rota]));
+  const resultado = (data || []).map((cliente) => ({
     ...cliente,
     rota: rotaPorCodigo.get(cliente.codigo) || ''
   })).slice(0, MAX_CLIENTES_ROTA_MAPA);
+
+  salvarCacheCadastro(chaveCache, resultado);
+  return resultado;
 }
 
 async function plotarClientesDasRotas(escalas) {
@@ -1298,16 +1327,18 @@ async function buscarHoteisDasRotas(rotas) {
   const rotasNormalizadas = Array.from(new Set((rotas || []).map(normalizarRotaCliente).filter(Boolean)));
   if (!rotasNormalizadas.length) return [];
 
-  const despesasEncontradas = [];
-  for (const rota of rotasNormalizadas) {
-    const { data, error } = await supabaseClient
-      .from('despesas')
-      .select('id_hotel, numero_rota')
-      .ilike('numero_rota', `%${rota}%`)
-      .limit(200);
-    if (error) throw error;
-    despesasEncontradas.push(...(data || []));
-  }
+  // Uma consulta por rota (o "ilike" nao permite unificar num .in() sem risco de "1" casar com
+  // "12"), mas disparadas em paralelo em vez de uma esperar a outra terminar.
+  const resultadosPorRota = await Promise.all(rotasNormalizadas.map((rota) => supabaseClient
+    .from('despesas')
+    .select('id_hotel, numero_rota')
+    .ilike('numero_rota', `%${rota}%`)
+    .limit(200)));
+
+  const erroDespesas = resultadosPorRota.find((res) => res.error);
+  if (erroDespesas) throw erroDespesas.error;
+
+  const despesasEncontradas = resultadosPorRota.flatMap((res) => res.data || []);
 
   // Confere com precisao (evita "1" casar com "12") comparando a lista normalizada de rotas de cada despesa.
   const rotasPorHotel = new Map();
@@ -1458,6 +1489,7 @@ async function salvarGeolocalizacaoPostoRelatorio(botao) {
     if (input) input.value = valorNormalizado;
     atualizarLinkStreetViewCliente(container, coordenadas);
     if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
+    limparCachesComPrefixo('relatorio_localizacao_cache_postos_rota_');
     mostrarMensagem('Geolocalizacao do posto atualizada.');
   } catch (error) {
     console.error('Erro ao salvar geolocalizacao do posto:', error);
@@ -1505,8 +1537,13 @@ async function buscarPostosAbastecidos(escalas, dataInicioISO, dataFimISO) {
   const rotasNormalizadas = Array.from(new Set((escalas || []).map((escala) => escala.rota).filter(Boolean).map(normalizarRotaCliente).filter(Boolean)));
   if (!rotasNormalizadas.length) return [];
 
-  const registrosEncontrados = [];
-  for (const rota of rotasNormalizadas) {
+  const chaveCache = chaveCacheRota('postos_rota', [...rotasNormalizadas, dataInicioISO || '', dataFimISO || '']);
+  const cache = obterCacheCadastro(chaveCache, CACHE_ROTA_TTL_MS);
+  if (cache) return cache;
+
+  // Uma consulta por rota (o "ilike" nao permite unificar num .in() sem risco de "1" casar com
+  // "12"), mas disparadas em paralelo em vez de uma esperar a outra terminar.
+  const resultadosPorRota = await Promise.all(rotasNormalizadas.map((rota) => {
     let query = supabaseClient
       .from('abastecimento_externo')
       .select('id, data_hora, posto_id, rota, postos(id, filial, razao_social, cnpj, cidade, uf, endereco, geolocalizacao)')
@@ -1514,11 +1551,13 @@ async function buscarPostosAbastecidos(escalas, dataInicioISO, dataFimISO) {
       .limit(MAX_POSTOS_ROTA_MAPA);
     if (dataInicioISO) query = query.gte('data_hora', dataInicioISO);
     if (dataFimISO) query = query.lte('data_hora', dataFimISO);
+    return query;
+  }));
 
-    const { data, error } = await query;
-    if (error) throw error;
-    registrosEncontrados.push(...(data || []));
-  }
+  const erroPostos = resultadosPorRota.find((res) => res.error);
+  if (erroPostos) throw erroPostos.error;
+
+  const registrosEncontrados = resultadosPorRota.flatMap((res) => res.data || []);
 
   // Confere com precisao (evita "1" casar com "12"), igual ao buscarHoteisDasRotas.
   const postosPorId = new Map();
@@ -1533,9 +1572,12 @@ async function buscarPostosAbastecidos(escalas, dataInicioISO, dataFimISO) {
     rotasDoRegistro.forEach((r) => postosPorId.get(registro.posto_id).rotas.add(r));
   });
 
-  return Array.from(postosPorId.values())
+  const resultado = Array.from(postosPorId.values())
     .map((posto) => ({ ...posto, rotas: Array.from(posto.rotas).join(', ') }))
     .slice(0, MAX_POSTOS_ROTA_MAPA);
+
+  salvarCacheCadastro(chaveCache, resultado);
+  return resultado;
 }
 
 async function plotarPostosAbastecidos(escalas, dataInicioISO, dataFimISO) {
