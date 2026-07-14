@@ -4408,6 +4408,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 headStyles: { fillColor: [0, 105, 55], textColor: 255 },
                 columnStyles: getColumnStylesPDF(columns, orientation),
                 alternateRowStyles: { fillColor: [220, 220, 220] },
+                rowPageBreak: 'avoid',
                 didDrawPage: (data) => { finalY = data.cursor.y; },
                 didParseCell: function(data) {
                     if (data.section === 'body' && !['FALTAS', 'VEICULOS'].includes(sec.id) && data.column.index === 3) {
@@ -4793,6 +4794,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 styles: { fontSize: 10, cellPadding: 0.8, lineWidth: 0.08, overflow: 'ellipsize', valign: 'middle' },
                 headStyles: { fillColor: [0, 105, 55], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9.5 },
                 alternateRowStyles: { fillColor: [244, 248, 245] },
+                rowPageBreak: 'avoid',
                 didParseCell: (data) => {
                     if (data.section !== 'body') return;
                     const row = data.row.raw || [];
@@ -5526,6 +5528,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle' },
             headStyles: { fillColor: [0, 105, 55], textColor: 255 },
             alternateRowStyles: { fillColor: [242, 247, 244] },
+            rowPageBreak: 'avoid',
             columnStyles: {
                 0: { cellWidth: 28 },
                 1: { cellWidth: 40 },
