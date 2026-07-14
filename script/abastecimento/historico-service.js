@@ -90,8 +90,8 @@ export async function buscarPostosPaginados({ supabaseClient, filial }) {
             .from('postos')
             .select('*');
 
-        if (Array.isArray(filial) && filial.length > 0) {
-            query = query.in('filial', filial);
+        if (Array.isArray(filial)) {
+            if (filial.length > 0) query = query.in('filial', filial);
         } else if (filial) {
             query = query.eq('filial', filial);
         }

@@ -74,23 +74,19 @@ export async function buscarRotas(supabaseClient) {
     ));
 }
 
-export async function buscarPostosParaDatalist(supabaseClient, filiais) {
+// Posto e compartilhado entre filiais: nao filtra por filial, senao um posto cadastrado por uma
+// filial fica invisivel para outra que tambem abastece la (ex.: mesmo posto usado por SP e MG).
+export async function buscarPostosParaDatalist(supabaseClient) {
     const postos = [];
     let from = 0;
     const step = 1000;
-    const filiaisValidas = (filiais || []).filter(Boolean);
 
     while (true) {
-        let query = supabaseClient
+        const { data, error } = await supabaseClient
             .from('postos')
             .select('id, razao_social, cnpj, valor_negociado')
-            .order('razao_social');
-
-        if (filiaisValidas.length > 0) {
-            query = query.in('filial', filiaisValidas);
-        }
-
-        const { data, error } = await query.range(from, from + step - 1);
+            .order('razao_social')
+            .range(from, from + step - 1);
         if (error) throw error;
 
         if (data && data.length > 0) {

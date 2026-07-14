@@ -564,7 +564,7 @@
             </div>
           </form>
 
-          <div style="margin-top: 20px; margin-bottom: 10px; display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 10px; align-items: end;">
+          <div style="margin-top: 20px; margin-bottom: 10px; display: grid; grid-template-columns: minmax(180px, 260px) 1fr auto; gap: 10px; align-items: end;">
               <div class="form-group" style="margin-bottom: 0;">
                   <label for="filtroPostoFilial">Filial</label>
                   <select id="filtroPostoFilial" class="glass-input">
@@ -572,6 +572,7 @@
                   </select>
               </div>
               <input type="text" id="searchPostoInput" class="glass-input" placeholder="🔍 Buscar por Razão Social, CNPJ ou Cidade..." style="width: 100%;">
+              <button type="button" id="btnBuscarPostos" class="btn-glass" style="padding: 5px 10px; color: black;"><i class="fas fa-search"></i> Buscar</button>
           </div>
 
           <div class="table-responsive table-scroll-y">

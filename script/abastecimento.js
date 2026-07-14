@@ -225,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.listaMotoristasExt = document.getElementById('listaMotoristasExt'); // Datalist para Motorista
             this.filtroPostoFilial = document.getElementById('filtroPostoFilial');
             this.searchPostoInput = document.getElementById('searchPostoInput'); // Input de busca de postos
+            this.btnBuscarPostos = document.getElementById('btnBuscarPostos');
        // Elementos do filtro de histórico de entrada
             this.filtroDataInicial = document.getElementById('filtroDataInicial');
 
@@ -418,6 +419,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Listeners para Busca e Ordenação de Postos
             if (this.searchPostoInput) {
                 this.searchPostoInput.addEventListener('input', () => this.renderPostosTable(false));
+                this.searchPostoInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.renderPostosTable(true);
+                    }
+                });
+            }
+            if (this.btnBuscarPostos) {
+                this.btnBuscarPostos.addEventListener('click', () => this.renderPostosTable(true));
             }
             if (this.filtroPostoFilial) {
                 this.filtroPostoFilial.addEventListener('change', () => this.renderPostosTable(true));
@@ -686,9 +696,9 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         getValoresFiltroPostos() {
-            const filialSelecionada = this.getUserFilial()
-                ? this.getFilialUsuarioSelecionavel()
-                : (this.filtroPostoFilial?.value || '');
+            // Posto e compartilhado entre filiais: o filtro reflete so a escolha explicita do
+            // usuario no combo (inclusive "Todas"), sem forcar a filial do usuario logado.
+            const filialSelecionada = this.filtroPostoFilial?.value || '';
 
             if (!filialSelecionada) return [];
 
@@ -713,12 +723,14 @@ document.addEventListener('DOMContentLoaded', () => {
         aplicarBloqueioFiltroPostos() {
             if (!this.filtroPostoFilial) return;
 
+            // Posto e compartilhado entre filiais: o combo fica sempre habilitado (o usuario pode
+            // trocar para "Todas" e ver postos de outra filial), so pre-selecionamos a filial dele
+            // por conveniencia.
+            this.filtroPostoFilial.disabled = false;
+            this.filtroPostoFilial.title = '';
+
             const userFilial = this.getUserFilial();
-            if (!userFilial) {
-                this.filtroPostoFilial.disabled = false;
-                this.filtroPostoFilial.title = '';
-                return;
-            }
+            if (!userFilial) return;
 
             const valorFilial = this.getFilialUsuarioSelecionavel();
             if (valorFilial && !Array.from(this.filtroPostoFilial.options).some(option => option.value === valorFilial)) {
@@ -726,8 +738,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             this.filtroPostoFilial.value = valorFilial;
-            this.filtroPostoFilial.disabled = true;
-            this.filtroPostoFilial.title = 'Filial definida pelo usuario logado.';
         },
 
         getUserLevel() {
@@ -2020,27 +2030,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const datalist = document.getElementById('listaPostosExternos');
             if (!datalist) return;
 
-            const filialSelecionada = this.extFilial ? this.extFilial.value : this.getUserFilial();
-            
-            // Tenta encontrar o objeto da filial no cache para pegar Nome e Sigla e fazer um filtro mais flexível (Nome ou Sigla)
-            let filiaisParaFiltrar = [filialSelecionada];
-            if (this.filiaisCache && filialSelecionada) {
-                const f = this.filiaisCache.find(x => x.nome === filialSelecionada || x.sigla === filialSelecionada || (x.sigla || x.nome) === filialSelecionada);
-                if (f) {
-                    if (f.nome) filiaisParaFiltrar.push(f.nome);
-                    if (f.sigla) filiaisParaFiltrar.push(f.sigla);
-                }
-            }
-            filiaisParaFiltrar = [...new Set(filiaisParaFiltrar.filter(Boolean))];
-
-            // 1. Limpa o valor do campo Posto e garante que ele esteja habilitado para seleção
+            // Posto e compartilhado entre filiais (o mesmo posto pode ser usado por SP e MG, por
+            // exemplo), entao a lista nao e filtrada pela filial selecionada no formulario.
             if (this.extPosto) {
                 this.extPosto.value = '';
                 this.extPosto.disabled = false;
             }
 
             try {
-                this.postosCache = await buscarPostosParaDatalist(supabaseClient, filiaisParaFiltrar);
+                this.postosCache = await buscarPostosParaDatalist(supabaseClient);
                 datalist.innerHTML = '';
                 this.postosCache.forEach(p => {
                     const option = document.createElement('option');
@@ -2048,10 +2046,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     datalist.appendChild(option);
                 });
 
-                // 2. Feedback visual se não houver postos para a filial selecionada
-                if (this.postosCache.length === 0 && filialSelecionada) {
-                    console.warn(`Nenhum posto encontrado para a filial: ${filialSelecionada} (Filtros tentados: ${filiaisParaFiltrar.join(', ')})`);
-                    if (this.extPosto) this.extPosto.placeholder = "Nenhum posto encontrado...";
+                if (this.postosCache.length === 0) {
+                    if (this.extPosto) this.extPosto.placeholder = "Nenhum posto cadastrado...";
                 } else if (this.extPosto) {
                     this.extPosto.placeholder = "Digite o nome ou CNPJ...";
                 }
