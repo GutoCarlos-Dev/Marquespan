@@ -9496,6 +9496,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         fontStyle: 'bold'
                     },
                     alternateRowStyles: { fillColor: [235, 247, 235] },
+                    rowPageBreak: 'avoid',
                     columnStyles: {
                         0: { cellWidth: 18 }, // Placa
                         1: { cellWidth: 22 }, // Modelo
@@ -9504,7 +9505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         4: { cellWidth: 'auto' } // Motorista
                     },
                     // Define a margem inferior para 10mm (1cm)
-                    margin: { left: startX, bottom: 10 }, 
+                    margin: { left: startX, bottom: 10 },
                     tableWidth: contentWidth,
                 });
 
@@ -9602,6 +9603,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 styles: { fontSize: 8, cellPadding: 2, valign: 'middle' },
                 headStyles: { fillColor: [0, 105, 55], fontSize: 8, fontStyle: 'bold' },
                 alternateRowStyles: { fillColor: [235, 247, 235] }, // Verde claro igual ao PDF de Expedição
+                rowPageBreak: 'avoid',
                 columnStyles: {
                     0: { cellWidth: 25 },
                     1: { cellWidth: 30 },
