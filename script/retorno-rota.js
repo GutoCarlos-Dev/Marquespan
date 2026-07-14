@@ -130,9 +130,9 @@ function canImportarEscalaOnline() {
     return canManageGrid() || isEncarregadoRetorno() || nivel === 'pr_lider' || nivel === 'mg_lider';
 }
 
-// Libera edição das células, Salvar Tudo e Incluir Dia Seguinte para mg_lider, sem conceder
-// Adicionar Linha/Excluir Selecionados/Importar Roteiro nem os botões Materiais/Devoluções por
-// linha (esses continuam restritos a canManageGrid()).
+// Libera edição das células, Salvar Tudo e Incluir Dia Seguinte para mg_lider. Excluir linha
+// (botão e flutuante) é liberado à parte por canDelete(). Adicionar Linha/Importar Roteiro e os
+// botões Materiais/Devoluções por linha continuam restritos a canManageGrid().
 function podeEditarRetornoBasico() {
     return canManageGrid() || getUserLevel() === 'mg_lider';
 }
@@ -142,7 +142,7 @@ function isPrEncarregado() {
 }
 
 function canDelete() {
-    return canManageGrid();
+    return canManageGrid() || getUserLevel() === 'mg_lider';
 }
 
 function applyGridPermissionUI() {
@@ -155,10 +155,18 @@ function applyGridPermissionUI() {
 
     if (canManageGrid()) return;
 
-    ['btnAdicionarLinha', 'btnFabAdicionarLinha', 'btnExcluirSelecionados', 'btnFabExcluirSelecionados', 'btnImportarRoteiro'].forEach(id => {
+    ['btnAdicionarLinha', 'btnFabAdicionarLinha', 'btnImportarRoteiro'].forEach(id => {
         const element = document.getElementById(id);
         if (element) element.style.display = 'none';
     });
+
+    // Excluir (botao e flutuante) usa canDelete(), que tambem inclui mg_lider.
+    if (!canDelete()) {
+        ['btnExcluirSelecionados', 'btnFabExcluirSelecionados'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.style.display = 'none';
+        });
+    }
 
     // Salvar Tudo e Incluir Dia Seguinte usam uma permissao mais ampla que inclui mg_lider.
     if (!podeEditarRetornoBasico()) {
@@ -182,7 +190,8 @@ function applyGridPermissionUI() {
         // A coluna de checkbox (primeira) precisa ficar visivel para quem so tem
         // podeEditarRetornoBasico(), pois Incluir Dia Seguinte depende da selecao de linhas.
         if (!podeEditarRetornoBasico()) headers[0].style.display = 'none';
-        headers[headers.length - 1].style.display = 'none';
+        // A coluna da lixeira (ultima) precisa ficar visivel para quem tem canDelete().
+        if (!canDelete()) headers[headers.length - 1].style.display = 'none';
     }
 }
 
@@ -801,7 +810,10 @@ async function handleTableClick(e) {
     const target = e.target.closest('button');
     if (!target) return;
 
-    if (!canManageGrid() && (target.classList.contains('btn-devolucoes') || target.classList.contains('btn-materiais') || target.classList.contains('btn-delete-row'))) {
+    if (!canManageGrid() && (target.classList.contains('btn-devolucoes') || target.classList.contains('btn-materiais'))) {
+        return;
+    }
+    if (!canDelete() && target.classList.contains('btn-delete-row')) {
         return;
     }
 
@@ -1106,8 +1118,10 @@ function renderGrid() {
     }
 
     // userCanEdit: campos principais + checkbox de selecao (inclui mg_lider, necessario p/ Incluir Dia Seguinte).
-    // userCanManageRows: excluir linha e os botoes Materiais/Devolucoes (continua restrito a canManageGrid()).
+    // userCanDelete: botao de excluir linha (inclui mg_lider).
+    // userCanManageRows: botoes Materiais/Devolucoes (continua restrito a canManageGrid()).
     const userCanEdit = podeEditarRetornoBasico();
+    const userCanDelete = canDelete();
     const userCanManageRows = canManageGrid();
 
     dataToRender.forEach((rowData) => {
@@ -1156,7 +1170,7 @@ function renderGrid() {
         tr.dataset.rowIndex = index;
 
         const selectCell = userCanEdit ? `<td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector" data-index="${index}"></td>` : '<td style="display:none"></td>';
-        const deleteCell = userCanManageRows ? `<td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Excluir Linha"><i class="fas fa-trash-alt"></i></button></td>` : '<td style="display:none"></td>';
+        const deleteCell = userCanDelete ? `<td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Excluir Linha"><i class="fas fa-trash-alt"></i></button></td>` : '<td style="display:none"></td>';
         const readOnlyAttr = userCanEdit ? '' : ' readonly';
         const disabledAttr = userCanManageRows ? '' : ' disabled';
 
