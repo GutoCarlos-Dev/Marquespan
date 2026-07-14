@@ -9922,16 +9922,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         rows.sort((rowA, rowB) => {
             const valueA = getCellSortValue(rowA, key);
             const valueB = getCellSortValue(rowB, key);
-            const numericA = parseFloat(valueA.replace(',', '.'));
-            const numericB = parseFloat(valueB.replace(',', '.'));
-
-            let result;
-            if (!Number.isNaN(numericA) && !Number.isNaN(numericB)) {
-                result = numericA - numericB;
-            } else {
-                result = valueA.localeCompare(valueB, 'pt-BR', { sensitivity: 'base', numeric: true });
-            }
-
+            // Um unico criterio (numeric:true faz "ordenacao natural": numeros dentro do texto sao
+            // comparados como numero, ex.: "2" < "10"). Alternar entre parseFloat e localeCompare
+            // conforme o par comparado quebra a transitividade e bagunca o Array.sort quando a
+            // coluna mistura rotas numericas (1017, 1026...) com nomes (TRIGO, EXTRABH...).
+            const result = valueA.localeCompare(valueB, 'pt-BR', { sensitivity: 'base', numeric: true });
             return nextDirection === 'asc' ? result : -result;
         });
 
