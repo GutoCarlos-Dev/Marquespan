@@ -51,6 +51,13 @@ let postosAtuais = [];
 let abaPainelAtiva = 'rota';
 let escalasPorDataAtual = new Map();
 let ordenacaoTabela = { campo: 'dataInicial', direcao: 'asc' };
+// Indice codigo/id -> marcador do Leaflet, para mover o pino no mapa na hora ao salvar uma
+// geolocalizacao no popup, sem precisar refazer a consulta inteira. Cada "adicionarXNoMapa"
+// registra/sobrescreve sua entrada aqui; entradas de consultas antigas somem sozinhas do uso
+// (o popup delas ja fecha quando o marcador antigo e removido do mapa).
+const marcadoresClientesPorCodigo = new Map();
+const marcadoresHoteisPorId = new Map();
+const marcadoresPostosPorId = new Map();
 const GEOCODE_DELAY_MS = 1200;
 const MAX_CLIENTES_ROTA_MAPA = 120;
 const MAX_HOTEIS_ROTA_MAPA = 60;
@@ -847,6 +854,8 @@ async function salvarGeolocalizacaoClienteRelatorio(botao) {
     atualizarLinkStreetViewCliente(container, coordenadas);
     if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
     limparCachesComPrefixo('relatorio_localizacao_cache_clientes_rota_');
+    // Move o pino no mapa na hora, sem esperar uma nova consulta.
+    marcadoresClientesPorCodigo.get(codigo)?.setLatLng([coordenadas.lat, coordenadas.lng]);
     mostrarMensagem(`Geolocalizacao do cliente ${codigo} atualizada.`);
   } catch (error) {
     console.error('Erro ao salvar geolocalizacao do cliente:', error);
@@ -1052,6 +1061,8 @@ function adicionarClienteRotaNoMapa(cliente) {
       </a>
     `)
     .addTo(camada);
+
+  if (cliente.codigo) marcadoresClientesPorCodigo.set(cliente.codigo, cliente._marker);
 }
 
 async function buscarClientesDasRotas(rotas) {
@@ -1266,6 +1277,8 @@ async function salvarGeolocalizacaoHotelRelatorio(botao) {
     atualizarLinkStreetViewCliente(container, coordenadas);
     if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
     atualizarItemCacheCadastro(CACHE_HOTEIS_KEY, 'id', idHotel, { geolocalizacao: valorNormalizado });
+    // Move o pino no mapa na hora, sem esperar uma nova consulta.
+    marcadoresHoteisPorId.get(String(idHotel))?.setLatLng([coordenadas.lat, coordenadas.lng]);
     mostrarMensagem('Geolocalizacao do hotel atualizada.');
   } catch (error) {
     console.error('Erro ao salvar geolocalizacao do hotel:', error);
@@ -1321,6 +1334,8 @@ function adicionarHotelRotaNoMapa(hotel) {
       </a>
     `)
     .addTo(camadaHoteisRota);
+
+  if (hotel.id != null) marcadoresHoteisPorId.set(String(hotel.id), hotel._marker);
 }
 
 async function buscarHoteisDasRotas(rotas) {
@@ -1490,6 +1505,8 @@ async function salvarGeolocalizacaoPostoRelatorio(botao) {
     atualizarLinkStreetViewCliente(container, coordenadas);
     if (status) status.textContent = 'Geolocalizacao salva no cadastro.';
     limparCachesComPrefixo('relatorio_localizacao_cache_postos_rota_');
+    // Move o pino no mapa na hora, sem esperar uma nova consulta.
+    marcadoresPostosPorId.get(String(idPosto))?.setLatLng([coordenadas.lat, coordenadas.lng]);
     mostrarMensagem('Geolocalizacao do posto atualizada.');
   } catch (error) {
     console.error('Erro ao salvar geolocalizacao do posto:', error);
@@ -1528,6 +1545,8 @@ function adicionarPostoRotaNoMapa(posto) {
       </a>
     `)
     .addTo(camadaPostosRota);
+
+  if (posto.id != null) marcadoresPostosPorId.set(String(posto.id), posto._marker);
 }
 
 // Posto no mapa segue o mesmo criterio da aba "Abastecimento Externo" de relatorio-abastecimento.html:
