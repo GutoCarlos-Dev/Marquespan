@@ -9922,6 +9922,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         rows.sort((rowA, rowB) => {
             const valueA = getCellSortValue(rowA, key);
             const valueB = getCellSortValue(rowB, key);
+
+            // Linhas em branco (adicionadas so para reservar espaco no fim da secao) ficam sempre
+            // no final, em qualquer direcao de ordenacao - senao "somem" no meio da lista ordenada.
+            const vazioA = valueA === '';
+            const vazioB = valueB === '';
+            if (vazioA && vazioB) return 0;
+            if (vazioA) return 1;
+            if (vazioB) return -1;
+
             // Um unico criterio (numeric:true faz "ordenacao natural": numeros dentro do texto sao
             // comparados como numero, ex.: "2" < "10"). Alternar entre parseFloat e localeCompare
             // conforme o par comparado quebra a transitividade e bagunca o Array.sort quando a
