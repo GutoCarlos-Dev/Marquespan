@@ -637,30 +637,34 @@ async function compartilharDadosPeloWhatsapp(dados, botao) {
   const file = new File([arquivo.blob], arquivo.filename, { type: 'application/pdf' });
 
   const linhaMapa = linkMapa ? `\nRota no mapa: ${linkMapa}` : '';
-
-  // O link do mapa sempre vai como mensagem de texto separada pelo wa.me. Quando o PDF e
-  // compartilhado junto via Web Share API (navigator.share, caminho do celular), o WhatsApp
-  // no Android descarta o texto/legenda que acompanha um arquivo de documento - so o anexo
-  // chega, o link do mapa nunca aparecia. Enviando por wa.me garante que o link sempre chega,
-  // tanto no computador quanto no celular.
   const texto = encodeURIComponent(`Ordem de Requisicao gerada.${linhaMapa}`);
-  window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener');
 
+  // Ordem importa aqui: abrir o wa.me primeiro entrega o controle da pagina para o app do
+  // WhatsApp no celular (navegacao/troca de app), o que interrompe o script antes do
+  // navigator.share rodar - por isso o PDF parava de ser encaminhado. O compartilhamento/
+  // download do PDF (que so abre uma folha do sistema por cima da pagina, sem navegar) roda
+  // primeiro, e o link do mapa pelo wa.me e aberto por ultimo.
   if (navigator.canShare?.({ files: [file] }) && navigator.share) {
-    await navigator.share({
-      title: 'Ordem de Requisicao',
-      text: 'Segue Ordem de Requisicao em PDF.',
-      files: [file]
-    });
-    return;
+    try {
+      await navigator.share({
+        title: 'Ordem de Requisicao',
+        text: 'Segue Ordem de Requisicao em PDF.',
+        files: [file]
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') return; // usuario cancelou o compartilhamento do PDF
+      console.warn('Nao foi possivel compartilhar o PDF.', error);
+    }
+  } else {
+    const url = URL.createObjectURL(arquivo.blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = arquivo.filename;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
-  const url = URL.createObjectURL(arquivo.blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = arquivo.filename;
-  link.click();
-  URL.revokeObjectURL(url);
+  window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener');
 }
 
 function limparFormulario() {
