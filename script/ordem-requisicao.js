@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('supervisorNome').addEventListener('input', aplicarMaiusculo);
   adicionarCliente({}, false);
   renderizarRequisicoesSalvas();
+  verificarRotaCompartilhadaNaUrl();
 });
 
 function aplicarMaiusculo(event) {
@@ -262,7 +263,7 @@ async function desenharRotaOsrm(pontos) {
 // Geocodifica uma lista de clientes (usando o cache local), retornando os pontos localizados
 // (na mesma ordem recebida) e os nomes que nao foi possivel localizar. Compartilhado entre a
 // visualizacao no mapa e o link de rota enviado no WhatsApp.
-async function obterPontosGeocodificados(clientes, aoLocalizar) {
+async function obterPontosGeocodificados(clientes) {
   const cache = obterCacheGeocodeCidade();
   const pontos = [];
   const naoLocalizados = [];
@@ -285,9 +286,7 @@ async function obterPontosGeocodificados(clientes, aoLocalizar) {
     }
 
     if (coords) {
-      const ponto = { cliente, coords };
-      pontos.push(ponto);
-      aoLocalizar?.(ponto);
+      pontos.push({ cliente, coords });
     } else {
       naoLocalizados.push(cliente.nome);
     }
@@ -296,26 +295,87 @@ async function obterPontosGeocodificados(clientes, aoLocalizar) {
   return { pontos, naoLocalizados };
 }
 
-function montarUrlGoogleMapsRota(pontos) {
-  if (pontos.length === 1) {
-    const { lat, lng } = pontos[0].coords;
-    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+// O link de rota do Google Maps tem limite de waypoints (na pratica, poucos pontos via URL sem
+// chave de API). Para nao depender desse limite, o link compartilhado aponta para esta mesma
+// pagina com os pontos codificados na URL - quem abrir ve o mesmo mapa gratuito (Leaflet/OSM +
+// OSRM), com todos os pontos marcados, sem limitador nenhum.
+function codificarPontosParaUrl(pontos) {
+  const compacto = pontos.map(({ cliente, coords }) => ({
+    o: cliente.ordem,
+    n: cliente.nome,
+    c: cliente.cidade,
+    u: cliente.uf,
+    b: cliente.obs,
+    la: Number(coords.lat.toFixed(6)),
+    lo: Number(coords.lng.toFixed(6))
+  }));
+  return encodeURIComponent(JSON.stringify(compacto));
+}
+
+function decodificarPontosDaUrl(texto) {
+  try {
+    const compacto = JSON.parse(decodeURIComponent(texto));
+    if (!Array.isArray(compacto) || !compacto.length) return null;
+
+    return compacto
+      .map(item => ({
+        cliente: { ordem: item.o, nome: item.n, cidade: item.c, uf: item.u, obs: item.b },
+        coords: { lat: Number(item.la), lng: Number(item.lo) }
+      }))
+      .filter(({ coords }) => Number.isFinite(coords.lat) && Number.isFinite(coords.lng));
+  } catch {
+    return null;
   }
-  if (pontos.length < 2) return '';
+}
 
-  const origem = pontos[0].coords;
-  const destino = pontos[pontos.length - 1].coords;
-  const waypoints = pontos.slice(1, -1).map(({ coords }) => `${coords.lat},${coords.lng}`);
+function montarUrlMapaCompartilhavel(pontos) {
+  if (!pontos.length) return '';
+  const base = `${window.location.origin}${window.location.pathname}`;
+  return `${base}?rota=${codificarPontosParaUrl(pontos)}`;
+}
 
-  const params = new URLSearchParams({
-    api: '1',
-    origin: `${origem.lat},${origem.lng}`,
-    destination: `${destino.lat},${destino.lng}`,
-    travelmode: 'driving'
+function exibirPontosNoMapa(pontos) {
+  const secaoMapa = document.getElementById('ordemMapaCard');
+  const status = document.getElementById('ordemMapaStatus');
+  secaoMapa.hidden = false;
+
+  inicializarMapaOrdem();
+  camadaMapaOrdemMarcadores.clearLayers();
+  camadaMapaOrdemRota.clearLayers();
+  setTimeout(() => mapaOrdem.invalidateSize(), 50);
+
+  pontos.forEach(({ cliente, coords }) => adicionarMarcadorOrdemNoMapa(cliente, coords));
+  mapaOrdem.fitBounds(L.latLngBounds(pontos.map(({ coords }) => [coords.lat, coords.lng])), {
+    padding: [40, 40],
+    maxZoom: 12
   });
-  if (waypoints.length) params.set('waypoints', waypoints.join('|'));
 
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
+  if (pontos.length <= 1) {
+    status.textContent = `${pontos.length} ponto(s) no mapa.`;
+    return Promise.resolve();
+  }
+
+  status.textContent = 'Calculando rota pelas estradas...';
+  return desenharRotaOsrm(pontos)
+    .then(() => { status.textContent = `${pontos.length} ponto(s) no mapa, na ordem definida.`; })
+    .catch(error => {
+      console.warn('Nao foi possivel calcular a rota pelas estradas.', error);
+      status.textContent = `${pontos.length} ponto(s) no mapa (sem tracado pelas estradas).`;
+    });
+}
+
+function verificarRotaCompartilhadaNaUrl() {
+  const parametro = new URLSearchParams(window.location.search).get('rota');
+  if (!parametro) return;
+
+  const pontos = decodificarPontosDaUrl(parametro);
+  if (!pontos || !pontos.length) {
+    alert('Nao foi possivel abrir a rota compartilhada: link invalido ou incompleto.');
+    return;
+  }
+
+  exibirPontosNoMapa(pontos);
+  document.getElementById('ordemMapaCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function visualizarRotaNoMapa() {
@@ -332,41 +392,20 @@ async function visualizarRotaNoMapa() {
   const status = document.getElementById('ordemMapaStatus');
   secaoMapa.hidden = false;
   secaoMapa.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  inicializarMapaOrdem();
-  camadaMapaOrdemMarcadores.clearLayers();
-  camadaMapaOrdemRota.clearLayers();
-  setTimeout(() => mapaOrdem.invalidateSize(), 50);
-
   status.textContent = 'Localizando as cidades...';
 
-  const { pontos, naoLocalizados } = await obterPontosGeocodificados(
-    clientesComCidade,
-    ({ cliente, coords }) => adicionarMarcadorOrdemNoMapa(cliente, coords)
-  );
+  const { pontos, naoLocalizados } = await obterPontosGeocodificados(clientesComCidade);
 
   if (!pontos.length) {
     status.textContent = 'Nenhuma cidade foi localizada. Verifique os nomes informados.';
     return;
   }
 
-  mapaOrdem.fitBounds(L.latLngBounds(pontos.map(({ coords }) => [coords.lat, coords.lng])), {
-    padding: [40, 40],
-    maxZoom: 12
-  });
+  await exibirPontosNoMapa(pontos);
 
-  if (pontos.length > 1) {
-    status.textContent = 'Calculando rota pelas estradas...';
-    try {
-      await desenharRotaOsrm(pontos);
-    } catch (error) {
-      console.warn('Nao foi possivel calcular a rota pelas estradas.', error);
-    }
+  if (naoLocalizados.length) {
+    status.textContent = `${status.textContent} Nao localizada(s): ${naoLocalizados.join(', ')}.`;
   }
-
-  status.textContent = naoLocalizados.length
-    ? `${pontos.length} cidade(s) no mapa. Nao localizada(s): ${naoLocalizados.join(', ')}.`
-    : `${pontos.length} cidade(s) localizadas no mapa, na ordem definida.`;
 }
 
 async function criarPDFBlob() {
@@ -482,7 +521,7 @@ async function compartilharWhatsapp() {
     const clientesComCidade = dados.clientes.filter(cliente => cliente.cidade);
     if (clientesComCidade.length) {
       const { pontos } = await obterPontosGeocodificados(clientesComCidade);
-      linkMapa = montarUrlGoogleMapsRota(pontos);
+      linkMapa = montarUrlMapaCompartilhavel(pontos);
     }
   } catch (error) {
     console.warn('Nao foi possivel montar o link da rota para o WhatsApp.', error);
