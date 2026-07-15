@@ -311,10 +311,30 @@ async function obterPontosGeocodificados(clientes) {
   return { pontos, naoLocalizados };
 }
 
+// Converte texto UTF-8 (acentos, etc.) para base64 "seguro para URL" (sem +, / ou = que
+// precisariam de percent-encoding). Isso evita ter que combinar base64 com
+// encodeURIComponent/decodeURIComponent, fonte do bug de decodificacao dupla abaixo.
+function utf8ParaBase64Url(texto) {
+  const bytes = new TextEncoder().encode(texto);
+  let binario = '';
+  bytes.forEach(byte => { binario += String.fromCharCode(byte); });
+  return btoa(binario).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlParaUtf8(base64url) {
+  let base64 = String(base64url || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4) base64 += '=';
+  const binario = atob(base64);
+  const bytes = Uint8Array.from(binario, char => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 // O link de rota do Google Maps tem limite de waypoints (na pratica, poucos pontos via URL sem
 // chave de API). Para nao depender desse limite, o link compartilhado aponta para esta mesma
 // pagina com os pontos codificados na URL - quem abrir ve o mesmo mapa gratuito (Leaflet/OSM +
-// OSRM), com todos os pontos marcados, sem limitador nenhum.
+// OSRM), com todos os pontos marcados, sem limitador nenhum. Usa base64url (em vez de JSON +
+// encodeURIComponent) pra deixar o link bem mais curto e evitar caracteres que precisem de
+// percent-encoding, que causavam erro ao decodificar o link recebido pelo WhatsApp.
 function codificarPontosParaUrl(pontos) {
   const compacto = pontos.map(({ cliente, coords }) => ({
     o: cliente.ordem,
@@ -325,12 +345,12 @@ function codificarPontosParaUrl(pontos) {
     la: Number(coords.lat.toFixed(6)),
     lo: Number(coords.lng.toFixed(6))
   }));
-  return encodeURIComponent(JSON.stringify(compacto));
+  return utf8ParaBase64Url(JSON.stringify(compacto));
 }
 
 function decodificarPontosDaUrl(texto) {
   try {
-    const compacto = JSON.parse(decodeURIComponent(texto));
+    const compacto = JSON.parse(base64UrlParaUtf8(texto));
     if (!Array.isArray(compacto) || !compacto.length) return null;
 
     return compacto
