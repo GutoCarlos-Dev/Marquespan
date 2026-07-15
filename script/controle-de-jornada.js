@@ -1491,7 +1491,18 @@ function downloadS2XLSX(){if(!s2Bin)return;dl(s2Bin,`CONTROLE_DE_JORNADA_${new D
 function usarS2NoPasso3(){
   if(!s2Bin) return alert('Gere o resultado do Passo 2 primeiro (preencher controle).');
   wb_ctrl2 = XLSX.read(s2Bin, {type:'array', cellFormula:true});
+  const dateSheets = (wb_ctrl2.SheetNames||[]).filter(s=>/^\d{2}\.\d{2}\.\d{2}$/.test(s));
   setUZ('dz-ctrl2', '✓ Recebido do Passo 2 (em memória)', `${wb_ctrl2.SheetNames.length} abas`, true);
+
+  // Habilita o botão "Carregar escala automaticamente" (mesmo comportamento do upload manual
+  // em handleCtrl2File) — sem isso, quem usa o atalho de encadeamento fica com o botão travado.
+  const btnAuto = document.getElementById('btn-escala-auto');
+  const hint    = document.getElementById('escala-auto-hint');
+  if(btnAuto){ btnAuto.disabled=false; btnAuto.style.opacity='1'; }
+  if(hint && dateSheets.length){
+    hint.textContent = `${dateSheets.length} data(s) encontrada(s): ${dateSheets.slice(0,3).join(', ')}${dateSheets.length>3?'…':''}`;
+  }
+
   goPage('step3');
   if(wb_ctrl2 && (rotList.length || wb_rot || window._s3EscalaSupabase)) buildS3Mapping();
   setTimeout(()=>{
@@ -4481,7 +4492,7 @@ async function updateFuncionarioWhatsApp(funcId, field, tel){
     }
   }catch(e){
     console.warn('[updateFuncionarioWhatsApp]', e);
-    alert('NÃ£o foi possÃ­vel atualizar o contato no cadastro do funcionÃ¡rio.\n' + (e.message || e));
+    alert('Não foi possível atualizar o contato no cadastro do funcionário.\n' + (e.message || e));
   }
   return false;
 }
@@ -4500,83 +4511,11 @@ function chooseWhatsAppContact(func){
   return usarCorp ? corp : pessoal;
 }
 
-async function openPhoneModal(row){
-  phoneModalRow=row;
-  // Use nome completo (nomePonto) as primary — fallback to nome abreviado
-  const nomeDisplay=row.nomePonto&&row.nomePonto!==row.nome ? row.nomePonto : row.nome||'';
-  const nomeAbrev=row.nome||'';
-  document.getElementById('phone-nome-inp').value=nomeDisplay;
-  const dispEl=document.getElementById('phone-nome-display');
-  if(dispEl) dispEl.textContent=nomeDisplay;
-  document.getElementById('phone-modal-title').textContent=`WhatsApp — ${nomeDisplay}`;
-  const funcao=row.role||'';
-  const rota=row.rota?` · Rota ${row.rota}`:'';
-  const placa=row.placa?` · ${row.placa}`:'';
-  document.getElementById('phone-modal-sub').textContent=`${funcao}${rota}${placa}`;
-  document.getElementById('phone-obs-inp').value='';
-  // Look up by BOTH names (completo e abreviado)
-  const existing = await dbGetPhone(nomeDisplay) || await dbGetPhone(nomeAbrev);
-  document.getElementById('phone-tel-inp').value=existing?existing.tel:'';
-  if(existing&&existing.obs) document.getElementById('phone-obs-inp').value=existing.obs;
-  document.getElementById('phone-modal-overlay').classList.add('open');
-  setTimeout(()=>document.getElementById('phone-tel-inp').focus(),100);
-}
-
 function closePhoneModal(){
   document.getElementById('phone-modal-overlay').classList.remove('open');
   phoneModalRow=null;
 }
 
-async function savePhone(){
-  const nomeDisplay=document.getElementById('phone-nome-inp').value.trim();
-  const tel=document.getElementById('phone-tel-inp').value.trim();
-  const obs=document.getElementById('phone-obs-inp').value.trim();
-  if(!tel){alert('Informe o número de WhatsApp.');return;}
-  // Save under nome completo (from input)
-  await dbSavePhone(nomeDisplay,tel,obs);
-  // Also save under nome abreviado (from row) if different
-  if(phoneModalRow){
-    const nomeAbrev=(phoneModalRow.nome||'').trim();
-    if(nomeAbrev && norm(nomeAbrev)!==norm(nomeDisplay)){
-      await dbSavePhone(nomeAbrev,tel,obs);
-    }
-  }
-  closePhoneModal();
-  renderS4Table(); // refresh to show updated WA icon
-  // Open WhatsApp immediately
-  openWhatsApp(nomeDisplay,tel,phoneModalRow);
-}
-
-async function handleWaClick(row){
-  // Collect all possible name variants for this person
-  const nomeCompleto = (row.nomePonto&&row.nomePonto!==row.nome) ? row.nomePonto : '';
-  const nomeAbrev    = row.nome||'';
-  const nomeDisplay  = nomeCompleto||nomeAbrev;
-  const variants     = [...new Set([nomeCompleto,nomeAbrev].filter(Boolean))];
-
-  // Priority 1: telefone already in row (from buildS3XLSX tel_m/tel_a columns)
-  if(row.telefone){
-    openWhatsApp(nomeDisplay,row.telefone,row);
-    return;
-  }
-
-  // Priority 2: from cadData cadastro (motoristas/auxiliares)
-  for(const v of variants){
-    const t=getTelFromCad(v);
-    if(t){openWhatsApp(nomeDisplay,t,row);return;}
-  }
-
-  // Priority 3: from phones DB (IndexedDB/localStorage) — check all variants
-  for(const v of variants){
-    const rec=await dbGetPhone(v);
-    if(rec&&rec.tel){openWhatsApp(nomeDisplay,rec.tel,row);return;}
-  }
-
-  // Not found → open registration modal
-  openPhoneModal(row);
-}
-
-// Converte "ABNER CARRIEL TELES" → "Abner" (primeiro nome capitalizado)
 async function openPhoneModal(row){
   phoneModalRow=row;
   const nomeDisplay=row.nomePonto&&row.nomePonto!==row.nome ? row.nomePonto : row.nome||'';
@@ -9604,9 +9543,16 @@ function dlBlob(blob,name){const a=document.createElement('a');a.href=URL.create
 //  INIT
 // ═══════════════════════════════════════════════════════
 // ── BOOT ──────────────────────────────────────────
-// Safe initialization wrapped in DOMContentLoaded
-bootAuth();
-initDB().then(()=>updateActionsBadge()).catch(()=>{});
+// Espera o DOMContentLoaded: este script roda como <script> classico (sincrono), mas
+// window._supa so e definido por um <script type="module"> mais abaixo no HTML - modulos
+// sao deferred e so executam depois de scripts classicos, porem antes do DOMContentLoaded.
+// Chamar bootAuth() direto no topo do arquivo (como era antes) rodava antes de window._supa
+// existir, fazendo a recuperacao de sessao via Supabase em cdjEnsureSupabaseSession() nunca
+// encontrar o client e cair sempre no fallback de localStorage.
+document.addEventListener('DOMContentLoaded', () => {
+  bootAuth();
+  initDB().then(()=>updateActionsBadge()).catch(()=>{});
+});
 
 
 // ── Tweaks de paleta, densidade e superfície ──────────
