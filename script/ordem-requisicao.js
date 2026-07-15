@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnVisualizarMapa').addEventListener('click', visualizarRotaNoMapa);
   document.getElementById('btnFabAdicionarCliente').addEventListener('click', () => adicionarCliente({}, true));
   document.getElementById('btnFabRemoverCliente').addEventListener('click', removerUltimoCliente);
+  document.getElementById('btnTelaCheiaMapa').addEventListener('click', alternarTelaCheiaMapa);
+  document.addEventListener('fullscreenchange', atualizarBotaoTelaCheiaMapa);
+  document.addEventListener('webkitfullscreenchange', atualizarBotaoTelaCheiaMapa);
   document.getElementById('supervisorNome').addEventListener('input', aplicarMaiusculo);
   adicionarCliente({}, false);
   renderizarRequisicoesSalvas();
@@ -410,8 +413,38 @@ function verificarRotaCompartilhadaNaUrl() {
     return;
   }
 
+  // Modo "link compartilhado": esconde o formulario e mostra so a Rota no Mapa preenchida.
+  document.body.classList.add('ordem-modo-compartilhado');
+  document.getElementById('linkNovaOrdemMapa').hidden = false;
+
   exibirPontosNoMapa(pontos);
   document.getElementById('ordemMapaCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function obterElementoTelaCheia() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function alternarTelaCheiaMapa() {
+  const secaoMapa = document.getElementById('ordemMapaCard');
+  if (!obterElementoTelaCheia()) {
+    const metodoEntrar = secaoMapa.requestFullscreen || secaoMapa.webkitRequestFullscreen;
+    // webkitRequestFullscreen (Safari) nao retorna Promise, entao o .catch precisa ser opcional.
+    metodoEntrar?.call(secaoMapa)?.catch?.(error => console.warn('Nao foi possivel entrar em tela cheia.', error));
+  } else {
+    const metodoSair = document.exitFullscreen || document.webkitExitFullscreen;
+    metodoSair?.call(document);
+  }
+}
+
+function atualizarBotaoTelaCheiaMapa() {
+  if (mapaOrdem) setTimeout(() => mapaOrdem.invalidateSize(), 100);
+
+  const botao = document.getElementById('btnTelaCheiaMapa');
+  if (!botao) return;
+  botao.innerHTML = obterElementoTelaCheia()
+    ? '<i class="fas fa-compress"></i> Sair da Tela Cheia'
+    : '<i class="fas fa-expand"></i> Tela Cheia';
 }
 
 async function visualizarRotaNoMapa() {

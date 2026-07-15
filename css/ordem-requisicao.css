@@ -193,6 +193,29 @@ body {
   border: 1px solid var(--ordem-border);
 }
 
+/* Modo "link compartilhado": esconde o formulario e mostra so a Rota no Mapa. */
+body.ordem-modo-compartilhado .ordem-secao-normal {
+  display: none;
+}
+
+body.ordem-modo-compartilhado .ordem-page {
+  padding-top: 18px;
+}
+
+.ordem-mapa-card:fullscreen,
+.ordem-mapa-card:-webkit-full-screen {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  background: #fff;
+}
+
+.ordem-mapa-card:fullscreen .ordem-mapa,
+.ordem-mapa-card:-webkit-full-screen .ordem-mapa {
+  flex: 1;
+  height: auto;
+}
+
 .ordem-mapa-numero-marker {
   align-items: center;
   background: var(--ordem-green);
