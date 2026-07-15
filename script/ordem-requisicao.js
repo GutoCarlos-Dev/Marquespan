@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnCompartilharWhatsapp').addEventListener('click', compartilharWhatsapp);
   document.getElementById('btnLimparFormulario').addEventListener('click', limparFormulario);
   document.getElementById('btnVisualizarMapa').addEventListener('click', visualizarRotaNoMapa);
+  document.getElementById('btnFabAdicionarCliente').addEventListener('click', () => adicionarCliente({}, true));
+  document.getElementById('btnFabRemoverCliente').addEventListener('click', removerUltimoCliente);
   document.getElementById('supervisorNome').addEventListener('input', aplicarMaiusculo);
   adicionarCliente({}, false);
   renderizarRequisicoesSalvas();
@@ -39,6 +41,10 @@ function aplicarMaiusculo(event) {
 function adicionarCliente(dados = {}, focar = true) {
   clienteIndex += 1;
   const container = document.getElementById('clientesContainer');
+  // A Ordem padrao segue a quantidade atual de cards (proxima posicao livre), nao um contador
+  // que so cresce - senao, depois de excluir clientes, o proximo adicionado vem com um numero
+  // de ordem bem maior do que a quantidade real de clientes na lista.
+  const proximaOrdem = dados.ordem || container.querySelectorAll('.cliente-card').length + 1;
   const card = document.createElement('article');
   card.className = 'cliente-card';
   card.dataset.clienteId = String(clienteIndex);
@@ -49,7 +55,7 @@ function adicionarCliente(dados = {}, focar = true) {
     </div>
     <div class="form-group">
       <label>Ordem</label>
-      <input type="number" class="glass-input cliente-ordem" min="1" step="1" inputmode="numeric" value="${escapeHtml(dados.ordem || clienteIndex)}">
+      <input type="number" class="glass-input cliente-ordem" min="1" step="1" inputmode="numeric" value="${escapeHtml(proximaOrdem)}">
     </div>
     <div class="form-group">
       <label>Nome do Cliente</label>
@@ -73,16 +79,7 @@ function adicionarCliente(dados = {}, focar = true) {
   card.querySelector('.cliente-cidade').addEventListener('input', aplicarMaiusculo);
   card.querySelector('.cliente-uf').addEventListener('input', aplicarMaiusculo);
   card.querySelector('.cliente-obs').addEventListener('input', aplicarMaiusculo);
-  card.querySelector('.btn-remove').addEventListener('click', () => {
-    if (document.querySelectorAll('.cliente-card').length === 1) {
-      card.querySelectorAll('input, textarea').forEach(input => {
-        input.value = input.classList.contains('cliente-ordem') ? '1' : '';
-      });
-      return;
-    }
-    card.remove();
-    renumerarOrdensVazias();
-  });
+  card.querySelector('.btn-remove').addEventListener('click', () => removerCliente(card));
 
   container.appendChild(card);
   atualizarTitulosClientes();
@@ -90,6 +87,25 @@ function adicionarCliente(dados = {}, focar = true) {
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => card.querySelector('.cliente-nome').focus(), 250);
   }
+}
+
+// Remove o card informado (ou so limpa os campos se for o unico restante, pra sempre sobrar
+// pelo menos um cliente no formulario). Usado tanto pelo "x" de cada card quanto pelo flutuante "-".
+function removerCliente(card) {
+  if (!card) return;
+  if (document.querySelectorAll('.cliente-card').length === 1) {
+    card.querySelectorAll('input, textarea').forEach(input => {
+      input.value = input.classList.contains('cliente-ordem') ? '1' : '';
+    });
+    return;
+  }
+  card.remove();
+  renumerarOrdensVazias();
+}
+
+function removerUltimoCliente() {
+  const cards = document.querySelectorAll('.cliente-card');
+  removerCliente(cards[cards.length - 1]);
 }
 
 function renumerarOrdensVazias() {
