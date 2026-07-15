@@ -483,7 +483,7 @@ async function criarPDFBlob() {
   return criarPDFBlobDeDados(dados);
 }
 
-async function criarPDFBlobDeDados(dados) {
+async function criarPDFBlobDeDados(dados, linkMapa = '') {
   const { jsPDF } = window.jspdf || {};
   if (!jsPDF) {
     alert('Biblioteca PDF nao carregada.');
@@ -508,8 +508,19 @@ async function criarPDFBlobDeDados(dados) {
   doc.text(`Data: ${formatarData(dados.dataOrdem)}`, pageWidth - 14, 34, { align: 'right' });
   doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 40, { align: 'right' });
 
+  // O link do mapa vai gravado dentro do proprio PDF (texto clicavel), nao so na mensagem do
+  // WhatsApp: assim ele sempre viaja junto com o arquivo, mesmo quando o app de destino
+  // descarta o texto/legenda que acompanha um documento compartilhado.
+  let tabelaStartY = 50;
+  if (linkMapa) {
+    doc.setTextColor(0, 105, 55);
+    doc.textWithLink('Ver rota no mapa (toque aqui para abrir)', 14, 46, { url: linkMapa });
+    doc.setTextColor(80);
+    tabelaStartY = 54;
+  }
+
   doc.autoTable({
-    startY: 50,
+    startY: tabelaStartY,
     head: [['Ordem', 'Cliente', 'Cidade', 'OBS.']],
     body: dados.clientes.map(cliente => [
       String(cliente.ordem),
@@ -616,8 +627,15 @@ async function compartilharRequisicaoSalva(id, botao) {
 async function compartilharDadosPeloWhatsapp(dados, botao) {
   const textoOriginalBotao = botao.innerHTML;
   botao.disabled = true;
-  botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Localizando rota...';
 
+  // 1) Localiza as cidades e monta o link do mapa ANTES de gerar o PDF, para poder gravar o
+  //    link dentro do proprio arquivo (texto clicavel). Depender de mandar o link como uma
+  //    segunda mensagem separada (wa.me) depois de compartilhar o PDF nao e confiavel no
+  //    celular: ao aceitar o compartilhamento do PDF, o navegador perde o foco pro app do
+  //    WhatsApp, e a chamada seguinte ao wa.me fica bloqueada ou e descartada silenciosamente
+  //    (mesmo com atraso via setTimeout, que costuma ficar suspenso em abas em segundo plano).
+  //    Gravando o link no PDF, ele sempre viaja junto com o arquivo, numa unica mensagem.
+  botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Localizando rota...';
   let linkMapa = '';
   try {
     const clientesComCidade = dados.clientes.filter(cliente => cliente.cidade);
@@ -627,47 +645,41 @@ async function compartilharDadosPeloWhatsapp(dados, botao) {
     }
   } catch (error) {
     console.warn('Nao foi possivel montar o link da rota para o WhatsApp.', error);
-  } finally {
-    botao.disabled = false;
-    botao.innerHTML = textoOriginalBotao;
   }
 
-  const arquivo = await criarPDFBlobDeDados(dados);
+  // 2) So depois de ter o link em maos, gera o PDF (com o link ja embutido nele).
+  botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando PDF...';
+  const arquivo = await criarPDFBlobDeDados(dados, linkMapa);
+  botao.disabled = false;
+  botao.innerHTML = textoOriginalBotao;
   if (!arquivo) return;
+
   const file = new File([arquivo.blob], arquivo.filename, { type: 'application/pdf' });
-
   const linhaMapa = linkMapa ? `\nRota no mapa: ${linkMapa}` : '';
-  const texto = encodeURIComponent(`Ordem de Requisicao gerada.${linhaMapa}`);
 
-  // Ordem importa aqui: abrir o wa.me primeiro entrega o controle da pagina para o app do
-  // WhatsApp no celular (navegacao/troca de app), o que interrompe o script antes do
-  // navigator.share rodar - por isso o PDF parava de ser encaminhado. O compartilhamento/
-  // download do PDF (que so abre uma folha do sistema por cima da pagina, sem navegar) roda
-  // primeiro, e o link do mapa pelo wa.me e aberto por ultimo.
+  // 3) Compartilha (celular) ou baixa (computador) o PDF - unica acao, arquivo e link sempre
+  //    juntos. O texto tambem leva o link como legenda, para quando o app de destino suportar.
   if (navigator.canShare?.({ files: [file] }) && navigator.share) {
     try {
       await navigator.share({
         title: 'Ordem de Requisicao',
-        text: 'Segue Ordem de Requisicao em PDF.',
+        text: `Segue Ordem de Requisicao em PDF.${linhaMapa}`,
         files: [file]
       });
     } catch (error) {
-      if (error?.name === 'AbortError') return; // usuario cancelou o compartilhamento do PDF
-      console.warn('Nao foi possivel compartilhar o PDF.', error);
+      if (error?.name !== 'AbortError') console.warn('Nao foi possivel compartilhar o PDF.', error);
     }
-  } else {
-    const url = URL.createObjectURL(arquivo.blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = arquivo.filename;
-    link.click();
-    URL.revokeObjectURL(url);
+    return;
   }
 
-  // Pausa antes de abrir o link: disparar o wa.me logo em seguida do compartilhamento do PDF
-  // (enquanto o celular ainda esta trocando para a folha do sistema/app do WhatsApp) fazia o
-  // link ser descartado silenciosamente. Esperar a transicao terminar evita esse erro.
-  await new Promise(resolve => setTimeout(resolve, 3000));
+  const url = URL.createObjectURL(arquivo.blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = arquivo.filename;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  const texto = encodeURIComponent(`Ordem de Requisicao gerada. O PDF foi baixado neste dispositivo para envio pelo WhatsApp.${linhaMapa}`);
   window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener');
 }
 
