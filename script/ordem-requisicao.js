@@ -664,6 +664,10 @@ async function compartilharDadosPeloWhatsapp(dados, botao) {
     URL.revokeObjectURL(url);
   }
 
+  // Pequena pausa antes de abrir o link: disparar o wa.me logo em seguida do compartilhamento
+  // do PDF (enquanto o celular ainda esta trocando para a folha do sistema/app do WhatsApp)
+  // fazia o link ser descartado silenciosamente. Esperar a transicao terminar evita esse erro.
+  await new Promise(resolve => setTimeout(resolve, 1200));
   window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener');
 }
 
