@@ -480,6 +480,10 @@ async function visualizarRotaNoMapa() {
 async function criarPDFBlob() {
   const dados = validarFormulario();
   if (!dados) return null;
+  return criarPDFBlobDeDados(dados);
+}
+
+async function criarPDFBlobDeDados(dados) {
   const { jsPDF } = window.jspdf || {};
   if (!jsPDF) {
     alert('Biblioteca PDF nao carregada.');
@@ -579,8 +583,37 @@ async function baixarPDF() {
 async function compartilharWhatsapp() {
   const dados = validarFormulario();
   if (!dados) return;
+  await compartilharDadosPeloWhatsapp(dados, document.getElementById('btnCompartilharWhatsapp'));
+}
 
-  const botao = document.getElementById('btnCompartilharWhatsapp');
+// Compartilha uma requisicao salva localmente direto pelo WhatsApp, sem precisar carregar os
+// clientes no grid do formulario antes. Usado tanto pelo botao principal (dados do formulario)
+// quanto pelo botao "Compartilhar" de cada linha da tabela de Requisicoes Salvas.
+async function compartilharRequisicaoSalva(id, botao) {
+  const registro = obterRequisicoesSalvas().find(item => item.id === id);
+  if (!registro) {
+    alert('Requisicao salva nao encontrada.');
+    renderizarRequisicoesSalvas();
+    return;
+  }
+
+  const clientes = Array.isArray(registro.clientes) ? registro.clientes : [];
+  if (!clientes.length) {
+    alert('Esta requisicao nao possui clientes para compartilhar.');
+    return;
+  }
+
+  const dados = {
+    semana: registro.semana || '',
+    supervisor: registro.supervisor || '',
+    dataOrdem: registro.dataOrdem || '',
+    clientes
+  };
+
+  await compartilharDadosPeloWhatsapp(dados, botao);
+}
+
+async function compartilharDadosPeloWhatsapp(dados, botao) {
   const textoOriginalBotao = botao.innerHTML;
   botao.disabled = true;
   botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Localizando rota...';
@@ -599,7 +632,7 @@ async function compartilharWhatsapp() {
     botao.innerHTML = textoOriginalBotao;
   }
 
-  const arquivo = await criarPDFBlob();
+  const arquivo = await criarPDFBlobDeDados(dados);
   if (!arquivo) return;
   const file = new File([arquivo.blob], arquivo.filename, { type: 'application/pdf' });
 
@@ -696,6 +729,9 @@ function renderizarRequisicoesSalvas() {
           <button type="button" class="btn-grid btn-excluir" data-excluir-requisicao="${escapeHtml(registro.id)}">
             <i class="fas fa-trash"></i> Excluir
           </button>
+          <button type="button" class="btn-grid btn-compartilhar" data-compartilhar-requisicao="${escapeHtml(registro.id)}">
+            <i class="fab fa-whatsapp"></i> Compartilhar
+          </button>
         </div>
       </td>
     </tr>
@@ -706,6 +742,9 @@ function renderizarRequisicoesSalvas() {
   });
   tbody.querySelectorAll('[data-excluir-requisicao]').forEach(botao => {
     botao.addEventListener('click', () => excluirRequisicaoSalva(botao.dataset.excluirRequisicao));
+  });
+  tbody.querySelectorAll('[data-compartilhar-requisicao]').forEach(botao => {
+    botao.addEventListener('click', () => compartilharRequisicaoSalva(botao.dataset.compartilharRequisicao, botao));
   });
 }
 
