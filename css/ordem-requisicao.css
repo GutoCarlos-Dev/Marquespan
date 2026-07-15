@@ -384,7 +384,9 @@ body.ordem-modo-compartilhado .ordem-page {
 
 @media (max-width: 900px) {
   body {
-    padding-bottom: calc(320px + env(safe-area-inset-bottom));
+    /* So precisa reservar espaco pro FAB flutuante: a barra de acoes agora fica no fluxo
+       normal da pagina (nao fixa), pra nunca cobrir a lista de Requisicoes Salvas. */
+    padding-bottom: calc(150px + env(safe-area-inset-bottom));
   }
 
   .ordem-page {
@@ -476,7 +478,7 @@ body.ordem-modo-compartilhado .ordem-page {
   }
 
   .ordem-fab-container {
-    bottom: calc(180px + env(safe-area-inset-bottom));
+    bottom: calc(16px + env(safe-area-inset-bottom));
     right: 16px;
     z-index: 51;
   }
@@ -487,19 +489,18 @@ body.ordem-modo-compartilhado .ordem-page {
     font-size: 17px;
   }
 
+  /* Fica no fluxo normal da pagina (nao fixa) para nunca sobrepor a lista de Requisicoes
+     Salvas logo abaixo - so o FAB de adicionar/remover cliente continua flutuante. */
   .ordem-actions {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 50;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
-    padding: 10px 9px calc(10px + env(safe-area-inset-bottom));
+    padding: 10px 9px;
+    margin: 4px 0 16px;
     background: rgba(255, 255, 255, 0.96);
-    border-top: 1px solid #dbe5df;
-    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.14);
+    border: 1px solid #dbe5df;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
   }
 
   .ordem-actions .btn-glass {
@@ -566,15 +567,7 @@ body.ordem-modo-compartilhado .ordem-page {
 }
 
 @media (max-width: 380px) {
-  body {
-    padding-bottom: calc(420px + env(safe-area-inset-bottom));
-  }
-
   .ordem-actions {
     grid-template-columns: 1fr;
-  }
-
-  .ordem-fab-container {
-    bottom: calc(284px + env(safe-area-inset-bottom));
   }
 }
