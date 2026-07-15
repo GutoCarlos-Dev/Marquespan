@@ -73,6 +73,7 @@ class HotelManager {
         this.formHotel = document.getElementById('formCadastrarHotel');
         this.redirectUrlOnPanelClose = null; // Armazena a URL de redirecionamento
         this.hotelTableBody = document.getElementById('hotelTableBody');
+        this.countHoteisGrid = document.getElementById('countHoteisGrid');
         this.hotelEditingId = document.getElementById('hotelEditingId');
         this.btnSubmitHotel = document.getElementById('btnSubmitHotel');
         this.hotelRazaoSocialInput = document.getElementById('hotelRazaoSocial');
@@ -134,6 +135,7 @@ class HotelManager {
 
         this.hoteisRenderizados = data || [];
         if (this.btnVisualizarHoteisMapa) this.btnVisualizarHoteisMapa.disabled = !this.hoteisRenderizados.length;
+        if (this.countHoteisGrid) this.countHoteisGrid.textContent = `(${this.hoteisRenderizados.length})`;
 
         this.hotelTableBody.innerHTML = '';
         data.forEach(hotel => {

@@ -216,6 +216,13 @@
 .btn-icon.locate { color: #006937; }
 .btn-icon.locate:hover { color: #00532c; }
 
+.hotel-count {
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: normal;
+    margin-left: 8px;
+}
+
 /* Status de Geolocalizacao no Grid */
 .hotel-geo-status {
     align-items: center;
