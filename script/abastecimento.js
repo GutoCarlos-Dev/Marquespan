@@ -1427,9 +1427,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Carregar Bicos
             await this.loadBicos();
 
-            // Carregar Veiculos
+            // Carregar Veiculos: sem filtro de filial - um veiculo de outra filial tambem pode
+            // registrar saida de combustivel aqui (mesmo criterio usado no mobile-abastecimento.html).
             try {
-                this.veiculosDisponiveis = await buscarVeiculos(supabaseClient, this.getValoresFilialUsuario());
+                this.veiculosDisponiveis = await buscarVeiculos(supabaseClient);
                 this.listaVeiculos.innerHTML = this.veiculosDisponiveis.map(v => `<option value="${v.placa}">${v.modelo}</option>`).join('');
             } catch (e) { console.error('Erro ao carregar veiculos', e); }
 
