@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnAtualizarOrdem').addEventListener('click', atualizarGridPelaOrdem);
   document.getElementById('btnSalvarLocal').addEventListener('click', salvarRequisicaoLocal);
   document.getElementById('btnGerarPDF').addEventListener('click', baixarPDF);
-  document.getElementById('btnCompartilharWhatsapp').addEventListener('click', compartilharWhatsapp);
+  document.getElementById('btnCompartilharPDF').addEventListener('click', compartilharPDF);
+  document.getElementById('btnCompartilharRoteiro').addEventListener('click', compartilharRoteiro);
   document.getElementById('btnLimparFormulario').addEventListener('click', limparFormulario);
   document.getElementById('btnVisualizarMapa').addEventListener('click', visualizarRotaNoMapa);
   document.getElementById('btnFabAdicionarCliente').addEventListener('click', () => adicionarCliente({}, true));
@@ -483,7 +484,7 @@ async function criarPDFBlob() {
   return criarPDFBlobDeDados(dados);
 }
 
-async function criarPDFBlobDeDados(dados, linkMapa = '') {
+async function criarPDFBlobDeDados(dados) {
   const { jsPDF } = window.jspdf || {};
   if (!jsPDF) {
     alert('Biblioteca PDF nao carregada.');
@@ -508,19 +509,8 @@ async function criarPDFBlobDeDados(dados, linkMapa = '') {
   doc.text(`Data: ${formatarData(dados.dataOrdem)}`, pageWidth - 14, 34, { align: 'right' });
   doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 40, { align: 'right' });
 
-  // O link do mapa vai gravado dentro do proprio PDF (texto clicavel), nao so na mensagem do
-  // WhatsApp: assim ele sempre viaja junto com o arquivo, mesmo quando o app de destino
-  // descarta o texto/legenda que acompanha um documento compartilhado.
-  let tabelaStartY = 50;
-  if (linkMapa) {
-    doc.setTextColor(0, 105, 55);
-    doc.textWithLink('Ver rota no mapa (toque aqui para abrir)', 14, 46, { url: linkMapa });
-    doc.setTextColor(80);
-    tabelaStartY = 54;
-  }
-
   doc.autoTable({
-    startY: tabelaStartY,
+    startY: 50,
     head: [['Ordem', 'Cliente', 'Cidade', 'OBS.']],
     body: dados.clientes.map(cliente => [
       String(cliente.ordem),
@@ -591,79 +581,77 @@ async function baixarPDF() {
   URL.revokeObjectURL(url);
 }
 
-async function compartilharWhatsapp() {
+async function compartilharPDF() {
   const dados = validarFormulario();
   if (!dados) return;
-  await compartilharDadosPeloWhatsapp(dados, document.getElementById('btnCompartilharWhatsapp'));
+  await compartilharPDFComDados(dados, document.getElementById('btnCompartilharPDF'));
+}
+
+async function compartilharRoteiro() {
+  const dados = validarFormulario();
+  if (!dados) return;
+  await compartilharRoteiroComDados(dados, document.getElementById('btnCompartilharRoteiro'));
 }
 
 // Compartilha uma requisicao salva localmente direto pelo WhatsApp, sem precisar carregar os
-// clientes no grid do formulario antes. Usado tanto pelo botao principal (dados do formulario)
-// quanto pelo botao "Compartilhar" de cada linha da tabela de Requisicoes Salvas.
-async function compartilharRequisicaoSalva(id, botao) {
+// clientes no grid do formulario antes. Usado pelos botoes "Compartilhar PDF"/"Compartilhar
+// Roteiro" de cada linha da tabela de Requisicoes Salvas.
+function obterDadosRequisicaoSalva(id) {
   const registro = obterRequisicoesSalvas().find(item => item.id === id);
   if (!registro) {
     alert('Requisicao salva nao encontrada.');
     renderizarRequisicoesSalvas();
-    return;
+    return null;
   }
 
   const clientes = Array.isArray(registro.clientes) ? registro.clientes : [];
   if (!clientes.length) {
     alert('Esta requisicao nao possui clientes para compartilhar.');
-    return;
+    return null;
   }
 
-  const dados = {
+  return {
     semana: registro.semana || '',
     supervisor: registro.supervisor || '',
     dataOrdem: registro.dataOrdem || '',
     clientes
   };
-
-  await compartilharDadosPeloWhatsapp(dados, botao);
 }
 
-async function compartilharDadosPeloWhatsapp(dados, botao) {
+async function compartilharPDFRequisicaoSalva(id, botao) {
+  const dados = obterDadosRequisicaoSalva(id);
+  if (!dados) return;
+  await compartilharPDFComDados(dados, botao);
+}
+
+async function compartilharRoteiroRequisicaoSalva(id, botao) {
+  const dados = obterDadosRequisicaoSalva(id);
+  if (!dados) return;
+  await compartilharRoteiroComDados(dados, botao);
+}
+
+// Fluxo dividido em dois botoes independentes (PDF e Roteiro): antes, uma unica acao tentava
+// compartilhar o arquivo e depois abrir o link do mapa em sequencia, mas no celular a segunda
+// chamada ficava sujeita a ser bloqueada/descartada (o navegador perde o foco assim que o
+// usuario aceita compartilhar o PDF). Com cada botao disparando sua propria acao, cada
+// compartilhamento tem seu proprio gesto do usuario e roda isolado, sem essa disputa.
+async function compartilharPDFComDados(dados, botao) {
   const textoOriginalBotao = botao.innerHTML;
   botao.disabled = true;
-
-  // 1) Localiza as cidades e monta o link do mapa ANTES de gerar o PDF, para poder gravar o
-  //    link dentro do proprio arquivo (texto clicavel). Depender de mandar o link como uma
-  //    segunda mensagem separada (wa.me) depois de compartilhar o PDF nao e confiavel no
-  //    celular: ao aceitar o compartilhamento do PDF, o navegador perde o foco pro app do
-  //    WhatsApp, e a chamada seguinte ao wa.me fica bloqueada ou e descartada silenciosamente
-  //    (mesmo com atraso via setTimeout, que costuma ficar suspenso em abas em segundo plano).
-  //    Gravando o link no PDF, ele sempre viaja junto com o arquivo, numa unica mensagem.
-  botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Localizando rota...';
-  let linkMapa = '';
-  try {
-    const clientesComCidade = dados.clientes.filter(cliente => cliente.cidade);
-    if (clientesComCidade.length) {
-      const { pontos } = await obterPontosGeocodificados(clientesComCidade);
-      linkMapa = montarUrlMapaCompartilhavel(pontos);
-    }
-  } catch (error) {
-    console.warn('Nao foi possivel montar o link da rota para o WhatsApp.', error);
-  }
-
-  // 2) So depois de ter o link em maos, gera o PDF (com o link ja embutido nele).
   botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando PDF...';
-  const arquivo = await criarPDFBlobDeDados(dados, linkMapa);
+
+  const arquivo = await criarPDFBlobDeDados(dados);
   botao.disabled = false;
   botao.innerHTML = textoOriginalBotao;
   if (!arquivo) return;
 
   const file = new File([arquivo.blob], arquivo.filename, { type: 'application/pdf' });
-  const linhaMapa = linkMapa ? `\nRota no mapa: ${linkMapa}` : '';
 
-  // 3) Compartilha (celular) ou baixa (computador) o PDF - unica acao, arquivo e link sempre
-  //    juntos. O texto tambem leva o link como legenda, para quando o app de destino suportar.
   if (navigator.canShare?.({ files: [file] }) && navigator.share) {
     try {
       await navigator.share({
         title: 'Ordem de Requisicao',
-        text: `Segue Ordem de Requisicao em PDF.${linhaMapa}`,
+        text: 'Segue Ordem de Requisicao em PDF.',
         files: [file]
       });
     } catch (error) {
@@ -679,7 +667,38 @@ async function compartilharDadosPeloWhatsapp(dados, botao) {
   link.click();
   URL.revokeObjectURL(url);
 
-  const texto = encodeURIComponent(`Ordem de Requisicao gerada. O PDF foi baixado neste dispositivo para envio pelo WhatsApp.${linhaMapa}`);
+  const texto = encodeURIComponent('Ordem de Requisicao gerada. O PDF foi baixado neste dispositivo para envio pelo WhatsApp.');
+  window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener');
+}
+
+async function compartilharRoteiroComDados(dados, botao) {
+  const clientesComCidade = dados.clientes.filter(cliente => cliente.cidade);
+  if (!clientesComCidade.length) {
+    alert('Informe a cidade de pelo menos um cliente para compartilhar o roteiro.');
+    return;
+  }
+
+  const textoOriginalBotao = botao.innerHTML;
+  botao.disabled = true;
+  botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Localizando rota...';
+
+  let linkMapa = '';
+  try {
+    const { pontos } = await obterPontosGeocodificados(clientesComCidade);
+    linkMapa = montarUrlMapaCompartilhavel(pontos);
+  } catch (error) {
+    console.warn('Nao foi possivel montar o link da rota para o WhatsApp.', error);
+  } finally {
+    botao.disabled = false;
+    botao.innerHTML = textoOriginalBotao;
+  }
+
+  if (!linkMapa) {
+    alert('Nao foi possivel localizar as cidades para montar o roteiro.');
+    return;
+  }
+
+  const texto = encodeURIComponent(`Roteiro da Ordem de Requisicao (Semana ${dados.semana || '-'}):\nRota no mapa: ${linkMapa}`);
   window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener');
 }
 
