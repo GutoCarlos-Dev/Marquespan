@@ -638,10 +638,18 @@ async function compartilharDadosPeloWhatsapp(dados, botao) {
 
   const linhaMapa = linkMapa ? `\nRota no mapa: ${linkMapa}` : '';
 
+  // O link do mapa sempre vai como mensagem de texto separada pelo wa.me. Quando o PDF e
+  // compartilhado junto via Web Share API (navigator.share, caminho do celular), o WhatsApp
+  // no Android descarta o texto/legenda que acompanha um arquivo de documento - so o anexo
+  // chega, o link do mapa nunca aparecia. Enviando por wa.me garante que o link sempre chega,
+  // tanto no computador quanto no celular.
+  const texto = encodeURIComponent(`Ordem de Requisicao gerada.${linhaMapa}`);
+  window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener');
+
   if (navigator.canShare?.({ files: [file] }) && navigator.share) {
     await navigator.share({
       title: 'Ordem de Requisicao',
-      text: `Segue Ordem de Requisicao em PDF.${linhaMapa}`,
+      text: 'Segue Ordem de Requisicao em PDF.',
       files: [file]
     });
     return;
@@ -653,9 +661,6 @@ async function compartilharDadosPeloWhatsapp(dados, botao) {
   link.download = arquivo.filename;
   link.click();
   URL.revokeObjectURL(url);
-
-  const texto = encodeURIComponent(`Ordem de Requisicao gerada. O PDF foi baixado neste dispositivo para envio pelo WhatsApp.${linhaMapa}`);
-  window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener');
 }
 
 function limparFormulario() {
