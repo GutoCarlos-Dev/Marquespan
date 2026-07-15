@@ -108,6 +108,12 @@ body {
   font-size: 0.86rem;
 }
 
+.ordem-section-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .clientes-container {
   display: grid;
   gap: 12px;
@@ -290,7 +296,13 @@ body {
     font-size: 16px;
   }
 
-  .ordem-section-header #btnAdicionarCliente {
+  .ordem-section-header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .ordem-section-header-actions #btnAdicionarCliente,
+  .ordem-section-header-actions #btnAtualizarOrdem {
     width: 100%;
     justify-content: center;
   }

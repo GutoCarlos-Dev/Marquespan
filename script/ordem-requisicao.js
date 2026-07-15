@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   atualizarSemanaPorData();
   document.getElementById('dataOrdem').addEventListener('change', atualizarSemanaPorData);
   document.getElementById('btnAdicionarCliente').addEventListener('click', () => adicionarCliente({}, true));
+  document.getElementById('btnAtualizarOrdem').addEventListener('click', atualizarGridPelaOrdem);
   document.getElementById('btnSalvarLocal').addEventListener('click', salvarRequisicaoLocal);
   document.getElementById('btnGerarPDF').addEventListener('click', baixarPDF);
   document.getElementById('btnCompartilharWhatsapp').addEventListener('click', compartilharWhatsapp);
@@ -89,6 +90,25 @@ function atualizarTitulosClientes() {
     const titulo = card.querySelector('.cliente-card-header strong');
     if (titulo) titulo.textContent = `Cliente ${index + 1}`;
   });
+}
+
+// Reordena os cards na tela conforme o campo "Ordem" de cada um, para o usuario visualizar na
+// hora como a lista vai sair (mesmo criterio usado ao gerar o PDF em obterDadosFormulario).
+function atualizarGridPelaOrdem() {
+  const container = document.getElementById('clientesContainer');
+  const cards = Array.from(container.querySelectorAll('.cliente-card'));
+  if (!cards.length) return;
+
+  cards
+    .map((card, index) => ({
+      card,
+      ordem: Number(card.querySelector('.cliente-ordem').value) || index + 1
+    }))
+    .sort((a, b) => a.ordem - b.ordem)
+    .forEach(({ card }) => container.appendChild(card));
+
+  atualizarTitulosClientes();
+  container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function obterDadosFormulario() {
