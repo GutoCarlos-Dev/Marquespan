@@ -1,7 +1,15 @@
 const STORAGE_KEY_REQUISICOES = 'marquespan_ordem_requisicao_salvas_v1';
+const CACHE_GEOCODE_CIDADE_KEY = 'marquespan_ordem_requisicao_geocode_cache_v1';
+// Mesma chave publica ja usada em hoteis-mapa.js. Esta pagina nao tem sessao/Supabase (funciona
+// so localmente no navegador), entao a geocodificacao precisa ser feita direto pelo navegador.
+const GEOAPIFY_API_KEY = '0f54f744cbbb4620b9eb08a407a2a40f';
+const OSRM_ROUTE_SERVICE_URL = 'https://router.project-osrm.org/route/v1/driving';
 
 let clienteIndex = 0;
 let requisicaoAtualId = null;
+let mapaOrdem = null;
+let camadaMapaOrdemMarcadores = null;
+let camadaMapaOrdemRota = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dataOrdem').value = new Date().toISOString().slice(0, 10);
@@ -13,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnGerarPDF').addEventListener('click', baixarPDF);
   document.getElementById('btnCompartilharWhatsapp').addEventListener('click', compartilharWhatsapp);
   document.getElementById('btnLimparFormulario').addEventListener('click', limparFormulario);
+  document.getElementById('btnVisualizarMapa').addEventListener('click', visualizarRotaNoMapa);
   document.getElementById('supervisorNome').addEventListener('input', aplicarMaiusculo);
   adicionarCliente({}, false);
   renderizarRequisicoesSalvas();
@@ -50,6 +59,10 @@ function adicionarCliente(dados = {}, focar = true) {
       <input type="text" class="glass-input cliente-cidade" placeholder="Cidade" autocomplete="off" autocapitalize="characters" value="${escapeHtml(dados.cidade || '')}">
     </div>
     <div class="form-group">
+      <label>UF</label>
+      <input type="text" class="glass-input cliente-uf" placeholder="UF" maxlength="2" autocomplete="off" value="${escapeHtml(dados.uf || '')}">
+    </div>
+    <div class="form-group">
       <label>OBS.</label>
       <textarea class="glass-input cliente-obs" rows="2" placeholder="Observacao" autocapitalize="characters">${escapeHtml(dados.obs || '')}</textarea>
     </div>
@@ -57,6 +70,7 @@ function adicionarCliente(dados = {}, focar = true) {
 
   card.querySelector('.cliente-nome').addEventListener('input', aplicarMaiusculo);
   card.querySelector('.cliente-cidade').addEventListener('input', aplicarMaiusculo);
+  card.querySelector('.cliente-uf').addEventListener('input', aplicarMaiusculo);
   card.querySelector('.cliente-obs').addEventListener('input', aplicarMaiusculo);
   card.querySelector('.btn-remove').addEventListener('click', () => {
     if (document.querySelectorAll('.cliente-card').length === 1) {
@@ -120,6 +134,7 @@ function obterDadosFormulario() {
       ordem: Number(card.querySelector('.cliente-ordem').value || index + 1),
       nome: normalizarTexto(card.querySelector('.cliente-nome').value),
       cidade: normalizarTexto(card.querySelector('.cliente-cidade').value),
+      uf: normalizarTexto(card.querySelector('.cliente-uf').value),
       obs: normalizarTexto(card.querySelector('.cliente-obs').value)
     }))
     .filter(cliente => cliente.nome || cliente.cidade || cliente.obs)
@@ -149,6 +164,209 @@ function validarFormulario() {
     return null;
   }
   return dados;
+}
+
+// --- Rota no mapa ---
+
+function inicializarMapaOrdem() {
+  if (mapaOrdem) return;
+
+  mapaOrdem = L.map('ordemMapa').setView([-23.330692, -47.851799], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(mapaOrdem);
+
+  camadaMapaOrdemRota = L.layerGroup().addTo(mapaOrdem);
+  camadaMapaOrdemMarcadores = L.layerGroup().addTo(mapaOrdem);
+}
+
+function chaveGeocodeCidade(cliente) {
+  return `${normalizarTexto(cliente.cidade)}|${normalizarTexto(cliente.uf)}`;
+}
+
+function obterCacheGeocodeCidade() {
+  try {
+    return JSON.parse(localStorage.getItem(CACHE_GEOCODE_CIDADE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function salvarCacheGeocodeCidade(cache) {
+  try {
+    localStorage.setItem(CACHE_GEOCODE_CIDADE_KEY, JSON.stringify(cache));
+  } catch (error) {
+    console.warn('Nao foi possivel salvar cache de geocodificacao.', error);
+  }
+}
+
+async function geocodificarCidade(cidade, uf) {
+  const texto = [cidade, uf, 'Brasil'].filter(Boolean).join(', ');
+  const params = new URLSearchParams({
+    text: texto,
+    lang: 'pt',
+    filter: 'countrycode:br',
+    limit: '1',
+    apiKey: GEOAPIFY_API_KEY
+  });
+
+  const resposta = await fetch(`https://api.geoapify.com/v1/geocode/search?${params.toString()}`);
+  if (!resposta.ok) return null;
+
+  const dados = await resposta.json();
+  const coordenadas = dados?.features?.[0]?.geometry?.coordinates;
+  if (!Array.isArray(coordenadas) || coordenadas.length < 2) return null;
+
+  const lng = Number(coordenadas[0]);
+  const lat = Number(coordenadas[1]);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
+function adicionarMarcadorOrdemNoMapa(cliente, coords) {
+  const icone = L.divIcon({
+    className: '',
+    html: `<div class="ordem-mapa-numero-marker"><span>${escapeHtml(String(cliente.ordem))}</span></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 28],
+    popupAnchor: [0, -28]
+  });
+
+  L.marker([coords.lat, coords.lng], { icon: icone })
+    .bindPopup(`
+      <div class="ordem-mapa-popup">
+        <span class="ordem-mapa-popup-numero">Ordem ${escapeHtml(String(cliente.ordem))}</span>
+        <strong>${escapeHtml(cliente.nome)}</strong>
+        <div class="ordem-mapa-popup-cidade">${escapeHtml(formatarCidadeUf(cliente) || 'Cidade nao informada')}</div>
+        ${cliente.obs ? `<div class="ordem-mapa-popup-obs">${escapeHtml(cliente.obs)}</div>` : ''}
+      </div>
+    `)
+    .addTo(camadaMapaOrdemMarcadores);
+}
+
+async function desenharRotaOsrm(pontos) {
+  const coordenadas = pontos.map(({ coords }) => `${coords.lng},${coords.lat}`).join(';');
+  const url = `${OSRM_ROUTE_SERVICE_URL}/${coordenadas}?overview=full&geometries=geojson&steps=false`;
+
+  const resposta = await fetch(url);
+  if (!resposta.ok) throw new Error(`OSRM retornou ${resposta.status}`);
+
+  const dados = await resposta.json();
+  const rota = dados?.routes?.[0]?.geometry?.coordinates;
+  if (!Array.isArray(rota) || rota.length < 2) throw new Error('OSRM nao retornou geometria para a rota.');
+
+  const linha = rota.map(([lng, lat]) => [lat, lng]);
+  L.polyline(linha, { color: '#006937', weight: 5, opacity: 0.85 }).addTo(camadaMapaOrdemRota);
+}
+
+// Geocodifica uma lista de clientes (usando o cache local), retornando os pontos localizados
+// (na mesma ordem recebida) e os nomes que nao foi possivel localizar. Compartilhado entre a
+// visualizacao no mapa e o link de rota enviado no WhatsApp.
+async function obterPontosGeocodificados(clientes, aoLocalizar) {
+  const cache = obterCacheGeocodeCidade();
+  const pontos = [];
+  const naoLocalizados = [];
+
+  for (const cliente of clientes) {
+    const chave = chaveGeocodeCidade(cliente);
+    let coords = cache[chave];
+
+    if (!coords) {
+      try {
+        coords = await geocodificarCidade(cliente.cidade, cliente.uf);
+      } catch (error) {
+        console.warn('Erro ao geocodificar cidade:', cliente.cidade, error);
+        coords = null;
+      }
+      if (coords) {
+        cache[chave] = coords;
+        salvarCacheGeocodeCidade(cache);
+      }
+    }
+
+    if (coords) {
+      const ponto = { cliente, coords };
+      pontos.push(ponto);
+      aoLocalizar?.(ponto);
+    } else {
+      naoLocalizados.push(cliente.nome);
+    }
+  }
+
+  return { pontos, naoLocalizados };
+}
+
+function montarUrlGoogleMapsRota(pontos) {
+  if (pontos.length === 1) {
+    const { lat, lng } = pontos[0].coords;
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+  if (pontos.length < 2) return '';
+
+  const origem = pontos[0].coords;
+  const destino = pontos[pontos.length - 1].coords;
+  const waypoints = pontos.slice(1, -1).map(({ coords }) => `${coords.lat},${coords.lng}`);
+
+  const params = new URLSearchParams({
+    api: '1',
+    origin: `${origem.lat},${origem.lng}`,
+    destination: `${destino.lat},${destino.lng}`,
+    travelmode: 'driving'
+  });
+  if (waypoints.length) params.set('waypoints', waypoints.join('|'));
+
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+async function visualizarRotaNoMapa() {
+  const dados = validarFormulario();
+  if (!dados) return;
+
+  const clientesComCidade = dados.clientes.filter(cliente => cliente.cidade);
+  if (!clientesComCidade.length) {
+    alert('Informe a cidade de pelo menos um cliente para visualizar no mapa.');
+    return;
+  }
+
+  const secaoMapa = document.getElementById('ordemMapaCard');
+  const status = document.getElementById('ordemMapaStatus');
+  secaoMapa.hidden = false;
+  secaoMapa.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  inicializarMapaOrdem();
+  camadaMapaOrdemMarcadores.clearLayers();
+  camadaMapaOrdemRota.clearLayers();
+  setTimeout(() => mapaOrdem.invalidateSize(), 50);
+
+  status.textContent = 'Localizando as cidades...';
+
+  const { pontos, naoLocalizados } = await obterPontosGeocodificados(
+    clientesComCidade,
+    ({ cliente, coords }) => adicionarMarcadorOrdemNoMapa(cliente, coords)
+  );
+
+  if (!pontos.length) {
+    status.textContent = 'Nenhuma cidade foi localizada. Verifique os nomes informados.';
+    return;
+  }
+
+  mapaOrdem.fitBounds(L.latLngBounds(pontos.map(({ coords }) => [coords.lat, coords.lng])), {
+    padding: [40, 40],
+    maxZoom: 12
+  });
+
+  if (pontos.length > 1) {
+    status.textContent = 'Calculando rota pelas estradas...';
+    try {
+      await desenharRotaOsrm(pontos);
+    } catch (error) {
+      console.warn('Nao foi possivel calcular a rota pelas estradas.', error);
+    }
+  }
+
+  status.textContent = naoLocalizados.length
+    ? `${pontos.length} cidade(s) no mapa. Nao localizada(s): ${naoLocalizados.join(', ')}.`
+    : `${pontos.length} cidade(s) localizadas no mapa, na ordem definida.`;
 }
 
 async function criarPDFBlob() {
@@ -184,7 +402,7 @@ async function criarPDFBlob() {
     body: dados.clientes.map(cliente => [
       String(cliente.ordem),
       cliente.nome,
-      cliente.cidade || '-',
+      formatarCidadeUf(cliente) || '-',
       cliente.obs || '-'
     ]),
     styles: {
@@ -251,14 +469,38 @@ async function baixarPDF() {
 }
 
 async function compartilharWhatsapp() {
+  const dados = validarFormulario();
+  if (!dados) return;
+
+  const botao = document.getElementById('btnCompartilharWhatsapp');
+  const textoOriginalBotao = botao.innerHTML;
+  botao.disabled = true;
+  botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Localizando rota...';
+
+  let linkMapa = '';
+  try {
+    const clientesComCidade = dados.clientes.filter(cliente => cliente.cidade);
+    if (clientesComCidade.length) {
+      const { pontos } = await obterPontosGeocodificados(clientesComCidade);
+      linkMapa = montarUrlGoogleMapsRota(pontos);
+    }
+  } catch (error) {
+    console.warn('Nao foi possivel montar o link da rota para o WhatsApp.', error);
+  } finally {
+    botao.disabled = false;
+    botao.innerHTML = textoOriginalBotao;
+  }
+
   const arquivo = await criarPDFBlob();
   if (!arquivo) return;
   const file = new File([arquivo.blob], arquivo.filename, { type: 'application/pdf' });
 
+  const linhaMapa = linkMapa ? `\nRota no mapa: ${linkMapa}` : '';
+
   if (navigator.canShare?.({ files: [file] }) && navigator.share) {
     await navigator.share({
       title: 'Ordem de Requisicao',
-      text: 'Segue Ordem de Requisicao em PDF.',
+      text: `Segue Ordem de Requisicao em PDF.${linhaMapa}`,
       files: [file]
     });
     return;
@@ -271,7 +513,7 @@ async function compartilharWhatsapp() {
   link.click();
   URL.revokeObjectURL(url);
 
-  const texto = encodeURIComponent('Ordem de Requisicao gerada. O PDF foi baixado neste dispositivo para envio pelo WhatsApp.');
+  const texto = encodeURIComponent(`Ordem de Requisicao gerada. O PDF foi baixado neste dispositivo para envio pelo WhatsApp.${linhaMapa}`);
   window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener');
 }
 
@@ -444,6 +686,10 @@ function calcularSemanaAno(dataISO) {
 
 function normalizarTexto(value) {
   return String(value || '').trim().toLocaleUpperCase('pt-BR');
+}
+
+function formatarCidadeUf(cliente) {
+  return [cliente.cidade, cliente.uf].filter(Boolean).join('/');
 }
 
 function escapeHtml(value) {

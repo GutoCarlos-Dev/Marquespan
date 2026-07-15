@@ -121,7 +121,7 @@ body {
 
 .cliente-card {
   display: grid;
-  grid-template-columns: 90px minmax(220px, 1.3fr) minmax(180px, 0.8fr) minmax(220px, 1fr) 42px;
+  grid-template-columns: 90px minmax(200px, 1.2fr) minmax(140px, 0.65fr) 74px minmax(200px, 1fr) 42px;
   gap: 10px;
   align-items: end;
   padding: 12px;
@@ -157,7 +157,8 @@ body {
   filter: brightness(1.08);
 }
 
-.cliente-nome {
+.cliente-nome,
+.cliente-uf {
   text-transform: uppercase;
 }
 
@@ -173,6 +174,76 @@ body {
   gap: 10px;
   flex-wrap: wrap;
   padding-bottom: 18px;
+}
+
+.ordem-mapa-card[hidden] {
+  display: none;
+}
+
+.ordem-mapa-status {
+  margin: 0 0 12px;
+  color: var(--ordem-muted);
+  font-size: 0.86rem;
+}
+
+.ordem-mapa {
+  height: 480px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--ordem-border);
+}
+
+.ordem-mapa-numero-marker {
+  align-items: center;
+  background: var(--ordem-green);
+  border: 2px solid #fff;
+  border-radius: 50% 50% 50% 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.32);
+  color: #fff;
+  display: flex;
+  font-size: 0.85rem;
+  font-weight: 800;
+  height: 30px;
+  justify-content: center;
+  transform: rotate(45deg);
+  width: 30px;
+}
+
+.ordem-mapa-numero-marker span {
+  transform: rotate(-45deg);
+}
+
+.ordem-mapa-popup-numero {
+  background: var(--ordem-green);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 0.95rem;
+  font-weight: 800;
+  padding: 3px 11px;
+  margin-bottom: 6px;
+}
+
+.ordem-mapa-popup strong {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.ordem-mapa-popup-cidade {
+  color: var(--ordem-muted);
+  font-size: 0.86rem;
+  margin-bottom: 4px;
+}
+
+.ordem-mapa-popup-obs {
+  background: #f8fafc;
+  border-radius: 6px;
+  color: #334155;
+  font-size: 0.82rem;
+  margin-top: 4px;
+  padding: 6px 8px;
+  white-space: pre-wrap;
 }
 
 .ordem-salvas-card {
@@ -332,6 +403,10 @@ body {
     height: auto;
     min-height: 88px;
     resize: vertical;
+  }
+
+  .ordem-mapa {
+    height: 360px;
   }
 
   .ordem-actions {
