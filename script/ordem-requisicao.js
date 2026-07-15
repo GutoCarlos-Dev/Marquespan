@@ -773,8 +773,11 @@ function renderizarRequisicoesSalvas() {
           <button type="button" class="btn-grid btn-excluir" data-excluir-requisicao="${escapeHtml(registro.id)}">
             <i class="fas fa-trash"></i> Excluir
           </button>
-          <button type="button" class="btn-grid btn-compartilhar" data-compartilhar-requisicao="${escapeHtml(registro.id)}">
-            <i class="fab fa-whatsapp"></i> Compartilhar
+          <button type="button" class="btn-grid btn-compartilhar" data-compartilhar-pdf-requisicao="${escapeHtml(registro.id)}">
+            <i class="fas fa-file-pdf"></i> PDF
+          </button>
+          <button type="button" class="btn-grid btn-compartilhar-roteiro" data-compartilhar-roteiro-requisicao="${escapeHtml(registro.id)}">
+            <i class="fas fa-route"></i> Roteiro
           </button>
         </div>
       </td>
@@ -787,8 +790,11 @@ function renderizarRequisicoesSalvas() {
   tbody.querySelectorAll('[data-excluir-requisicao]').forEach(botao => {
     botao.addEventListener('click', () => excluirRequisicaoSalva(botao.dataset.excluirRequisicao));
   });
-  tbody.querySelectorAll('[data-compartilhar-requisicao]').forEach(botao => {
-    botao.addEventListener('click', () => compartilharRequisicaoSalva(botao.dataset.compartilharRequisicao, botao));
+  tbody.querySelectorAll('[data-compartilhar-pdf-requisicao]').forEach(botao => {
+    botao.addEventListener('click', () => compartilharPDFRequisicaoSalva(botao.dataset.compartilharPdfRequisicao, botao));
+  });
+  tbody.querySelectorAll('[data-compartilhar-roteiro-requisicao]').forEach(botao => {
+    botao.addEventListener('click', () => compartilharRoteiroRequisicaoSalva(botao.dataset.compartilharRoteiroRequisicao, botao));
   });
 }
 

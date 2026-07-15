@@ -330,6 +330,10 @@ body.ordem-modo-compartilhado .ordem-page {
   background: #25d366;
 }
 
+.ordem-salvas-table .btn-compartilhar-roteiro {
+  background: #007bff;
+}
+
 .ordem-salvas-vazio {
   padding: 18px 8px;
   color: var(--ordem-muted);
@@ -555,10 +559,6 @@ body.ordem-modo-compartilhado .ordem-page {
     display: grid;
     grid-template-columns: 1fr 1fr;
     width: 100%;
-  }
-
-  .ordem-salvas-table .acoes-salvas .btn-compartilhar {
-    grid-column: 1 / -1;
   }
 
   .ordem-footer {
