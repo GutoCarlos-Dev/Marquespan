@@ -450,9 +450,13 @@ const FuncionarioUI = {
 
         if (this.tableBody) {
             this.tableBody.addEventListener('click', (event) => {
+                const viewButton = event.target.closest('.btn-view');
                 const editButton = event.target.closest('.btn-edit');
                 const deleteButton = event.target.closest('.btn-delete');
 
+                // Visualizar funciona para qualquer usuario com acesso a pagina, mesmo em modo
+                // somente-leitura - so Editar/Excluir continuam exigindo acesso total.
+                if (viewButton?.dataset.id) this.loadForViewing(viewButton.dataset.id);
                 if (!this.acessoTotal && (editButton || deleteButton)) return;
                 if (editButton?.dataset.id) this.loadForEditing(editButton.dataset.id);
                 if (deleteButton?.dataset.id) this.deleteFuncionario(deleteButton.dataset.id);
@@ -547,13 +551,15 @@ const FuncionarioUI = {
         }
     },
 
-    openFuncionarioModal() {
-        if (!this.acessoTotal) return;
-        if (this.bloquearSeSemFilialUsuario()) return;
+    openFuncionarioModal(somenteLeitura = false) {
+        if (!somenteLeitura) {
+            if (!this.acessoTotal) return;
+            if (this.bloquearSeSemFilialUsuario()) return;
+        }
         if (!this.modalFuncionario) return;
         this.modalFuncionario.classList.remove('hidden');
         document.body.classList.add('funcionario-modal-open');
-        setTimeout(() => document.getElementById('funcRH')?.focus(), 0);
+        if (!somenteLeitura) setTimeout(() => document.getElementById('funcRH')?.focus(), 0);
     },
 
     closeFuncionarioModal() {
@@ -1276,6 +1282,7 @@ const FuncionarioUI = {
 
     clearForm(options = {}) {
         const { fecharModal = true } = options;
+        this.setFormReadOnly(false); // Garante que o formulário volte a ficar editável ao sair do modo Visualizar
         this.form?.reset();
         this.editingIdInput.value = '';
         this.currentFuncaoBeforeEdit = null;
@@ -1446,6 +1453,7 @@ const FuncionarioUI = {
                         <td><span class="status-badge status-${statusClass(f.status)}">${escapeHtml(f.status)}</span></td>
                         <td>${f.escala_ativa === false ? 'NAO' : 'SIM'}</td>
                         <td>
+                            <button class="btn-icon view btn-view" data-id="${escapeHtml(f.id)}" title="Visualizar"><i class="fas fa-eye"></i></button>
                             <button class="btn-icon edit btn-edit" data-id="${escapeHtml(f.id)}" title="Editar"><i class="fas fa-edit"></i></button>
                             <button class="btn-icon delete btn-delete" data-id="${escapeHtml(f.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
                         </td>
@@ -1657,16 +1665,7 @@ const FuncionarioUI = {
         } catch (e) { console.error('Erro ao carregar resumo:', e); }
     },
 
-    async loadForEditing(id) {
-        if (!this.acessoTotal) return;
-        let query = supabaseClient.from('funcionario').select('*').eq('id', id);
-        query = this.aplicarFiltroFilialRestrita(query);
-        const { data: f } = await query.maybeSingle();
-        if (!f) return;
-        if (!this.usuarioPodeAcessarFilial(f.filial)) {
-            alert('Voce nao tem permissao para alterar funcionarios de outra filial.');
-            return;
-        }
+    async preencherFormularioFuncionario(f) {
         if (this.funcDocumentosInput) this.funcDocumentosInput.value = '';
         if (this.funcDocumentosHint) this.funcDocumentosHint.textContent = 'Selecione um ou mais arquivos para anexar ao salvar.';
         this.currentFuncaoBeforeEdit = f.funcao;
@@ -1695,8 +1694,58 @@ const FuncionarioUI = {
         this.toggleDesligamentoField();
         await this.carregarHistoricoFuncao(f.rh_registro);
         await this.carregarDocumentosFuncionario(f.id);
+    },
+
+    async loadForEditing(id) {
+        if (!this.acessoTotal) return;
+        let query = supabaseClient.from('funcionario').select('*').eq('id', id);
+        query = this.aplicarFiltroFilialRestrita(query);
+        const { data: f } = await query.maybeSingle();
+        if (!f) return;
+        if (!this.usuarioPodeAcessarFilial(f.filial)) {
+            alert('Voce nao tem permissao para alterar funcionarios de outra filial.');
+            return;
+        }
+        await this.preencherFormularioFuncionario(f);
+        this.setFormReadOnly(false);
         this.btnSubmit.textContent = 'Atualizar Registro';
         this.openFuncionarioModal();
+    },
+
+    // Abre o mesmo formulário em modo somente-leitura, sem exigir acesso de edição - permite
+    // ver o cadastro completo do colaborador sem risco de alterar nada por engano.
+    async loadForViewing(id) {
+        let query = supabaseClient.from('funcionario').select('*').eq('id', id);
+        query = this.aplicarFiltroFilialRestrita(query);
+        const { data: f } = await query.maybeSingle();
+        if (!f) return;
+        if (!this.usuarioPodeAcessarFilial(f.filial)) {
+            alert('Voce nao tem permissao para visualizar funcionarios de outra filial.');
+            return;
+        }
+        await this.preencherFormularioFuncionario(f);
+        this.setFormReadOnly(true);
+        this.openFuncionarioModal(true);
+    },
+
+    // Alterna o formulário entre editável e somente-leitura (usado ao abrir para Visualizar e
+    // desfeito ao fechar o modal / abrir para Incluir ou Editar).
+    setFormReadOnly(somenteLeitura) {
+        if (this.form) {
+            this.form.querySelectorAll('input, select, textarea').forEach(el => {
+                if (el.id === 'funcEditingId') return;
+                el.disabled = somenteLeitura;
+            });
+        }
+        if (this.btnAbrirCadastroFuncao) this.btnAbrirCadastroFuncao.disabled = somenteLeitura;
+        if (this.btnSubmit) this.btnSubmit.classList.toggle('hidden', somenteLeitura);
+        if (this.btnClearForm) this.btnClearForm.textContent = somenteLeitura ? 'Fechar' : 'Cancelar';
+        const tituloModal = document.getElementById('funcionarioModalTitulo');
+        if (tituloModal) {
+            tituloModal.innerHTML = somenteLeitura
+                ? '<i class="fas fa-eye"></i> Visualizar Colaborador'
+                : '<i class="fas fa-user-plus"></i> Formulário do Colaborador';
+        }
     },
 
     async deleteFuncionario(id) {

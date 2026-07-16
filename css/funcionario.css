@@ -517,6 +517,9 @@ body.funcionario-modal-open {
     margin: 0 5px;
 }
 
+.btn-icon.view { color: #17a2b8; }
+.btn-icon.view:hover { color: #117a8b; }
+
 .btn-icon.edit { color: #007bff; }
 .btn-icon.edit:hover { color: #0056b3; }
 
