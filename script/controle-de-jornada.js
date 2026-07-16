@@ -6662,24 +6662,41 @@ const exportRelatorioInterjornadasCategoria = exportRelatorioInterjornadas;
 // Relatório de Tratativas (ligação/advertência/suspensão)
 async function exportRelatorioTratativas(){
   if(!s4Rows.length) return alert('Carregue uma planilha no Passo 4 antes.');
-  // 1) Pre-filtra apenas linhas com infracao de interjornada
-  const baseRows = s4Rows.filter(r => {
+  // 1) Pre-filtra linhas com infracao de interjornada (base historica deste relatorio)
+  const interjRows = s4Rows.filter(r => {
     const iss = checkIssues(r.saida, r.entrada, r.interj);
     return iss.some(i => i.type === 'IJ_CURTA') ||
            String(r.obs||'').toUpperCase().includes('INTERJORNADA');
   });
+  // Mesma deteccao usada no Relatorio de Sem Registros - essas linhas so entram no relatorio
+  // de Tratativas se o usuario selecionar "Sem registro" no filtro de Tipo de Ocorrencia do
+  // modal de periodo (senao o STAT/periodo nunca teria linhas SEM REGISTRO pra filtrar).
+  const semRegistroRows = s4Rows.filter(r => {
+    const iss = checkIssues(r.saida, r.entrada, r.interj);
+    const semIssue = iss.some(i =>
+      i.type === 'SEM_SAIDA' || i.type === 'SEM_ENTRADA' || i.type === 'SEM_INTERJ' ||
+      String(i.text||'').toUpperCase().includes('SEM REGISTRO')
+    );
+    return semIssue || String(r.obs||'').toUpperCase().includes('SEM REGISTRO');
+  });
+  const baseRows = interjRows.concat(semRegistroRows.filter(r => !interjRows.includes(r)));
   if(!baseRows.length) return alert('Nenhuma infracao de interjornada para gerar relatorio de tratativas.');
 
   // 2) Filtro por STAT
   const filtroStat = await pedirFiltrosStat('STATs do Relatorio de Tratativas', baseRows);
   if(filtroStat === null) return;
 
-  // 3) Modal de periodo
+  // 3) Modal de periodo (com filtro de Tipo de Ocorrencia)
   const periodo = await pedirPeriodo('Periodo do Relatorio de Tratativas');
   if(periodo === null) return;
 
+  // "Todas as ocorrencias" (nenhum tipo marcado) continua mostrando so interjornada, igual
+  // sempre foi - Sem Registro so entra quando o usuario marca esse tipo explicitamente.
+  const tipoEspecificoSelecionado = Boolean(periodo.types && periodo.types.length);
+  const poolBase = tipoEspecificoSelecionado ? baseRows : interjRows;
+
   // 4) Aplica filtros
-  let infraRows = filtrarPorStat(baseRows, filtroStat);
+  let infraRows = filtrarPorStat(poolBase, filtroStat);
   infraRows = filterByPeriodo(infraRows, periodo);
   if(!infraRows.length) return alert('Nenhuma infracao no periodo/STAT selecionados.');
 
@@ -6737,6 +6754,8 @@ async function exportRelatorioTratativas(){
     ? '<img src="' + logoSrc + '" style="height:48px;width:auto" />'
     : '<div style="font-weight:800;color:#0B6E46;font-size:22px;letter-spacing:.5px">MARQUE<span style="color:#C5160A">SPAN</span></div>';
   const periodoHTML = fmtPeriodo(periodo) ? '<div style="font-size:10.5px;color:#666;margin-top:2px">Periodo: ' + fmtPeriodo(periodo) + '</div>' : '';
+  const tipoFilterTxt = tipoEspecificoSelecionado ? fmtTypeFilters(periodo) : 'Interjornada < 11h';
+  const tipoFilterHTML = '<div style="font-size:10.5px;color:#666;margin-top:2px">Tipos: <strong>' + esc(tipoFilterTxt) + '</strong></div>';
 
   // 9) Sumario visual
   const sumarioHTML =
@@ -6750,9 +6769,10 @@ async function exportRelatorioTratativas(){
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:3px solid #d97706">' +
       logoHTML +
       '<div style="text-align:right">' +
-        '<div style="font-weight:700;font-size:13px;color:#d97706">TRATATIVAS - INTERJORNADA</div>' +
+        '<div style="font-weight:700;font-size:13px;color:#d97706">TRATATIVAS' + (tipoEspecificoSelecionado ? '' : ' - INTERJORNADA') + '</div>' +
         '<div style="font-size:10.5px;color:#222;margin-top:3px;font-weight:600">STAT: ' + esc(fmtFiltroStat(filtroStat)) + '</div>' +
         periodoHTML +
+        tipoFilterHTML +
         '<div style="color:#666;font-size:10px;margin-top:3px">' + tratativas.length + ' infracao(oes) | ' + new Date().toLocaleDateString('pt-BR') + '</div>' +
       '</div>' +
     '</div>' +
