@@ -3358,6 +3358,8 @@ async function renderS4Table(){
     return;
   }
 
+  window._s4RenderedRows = rows;
+
   tbody.innerHTML=rows.map(({row,iss,hasIss,hasSem,acts},rIdx)=>{
     const statusText=iss.length?iss.map(i=>i.text).join(' | '):'OK';
     const last=acts.length?acts.slice().reverse()[0]:null;
@@ -4576,7 +4578,7 @@ async function savePhone(){
   openWhatsApp(nomeDisplay,tel,rowForWhatsApp);
 }
 
-async function handleWaClick(row){
+async function handleWaClick(row,existingWin){
   const variants = waNameVariants(row);
   const nomeDisplay = variants[0] || row.nome || '';
 
@@ -4587,30 +4589,130 @@ async function handleWaClick(row){
     if(chosen?.tel){
       row.telefone = chosen.tel;
       await dbSavePhone(nomeDisplay, chosen.tel, `Funcionario: ${chosen.label}`).catch(()=>{});
-      openWhatsApp(nomeDisplay, chosen.tel, row);
-      return;
+      return openWhatsApp(nomeDisplay, chosen.tel, row, existingWin);
     }
     row._wa_phone_field = confirm(
       `${func.nome_completo || func.nome} nao possui contato corporativo nem pessoal preenchido.\n\n` +
       `Deseja cadastrar agora como Contato Corporativo?\n\nOK = Corporativo\nCancelar = Pessoal`
     ) ? 'contato_corp' : 'contato_pessoal';
     openPhoneModal(row);
-    return;
+    return null;
   }
 
   if(row.telefone){
-    openWhatsApp(nomeDisplay,row.telefone,row);
-    return;
+    return openWhatsApp(nomeDisplay,row.telefone,row,existingWin);
   }
   for(const v of variants){
     const t=getTelFromCad(v);
-    if(t){openWhatsApp(nomeDisplay,t,row);return;}
+    if(t){return openWhatsApp(nomeDisplay,t,row,existingWin);}
   }
   for(const v of variants){
     const rec=await dbGetPhone(v);
-    if(rec&&rec.tel){openWhatsApp(nomeDisplay,rec.tel,row);return;}
+    if(rec&&rec.tel){return openWhatsApp(nomeDisplay,rec.tel,row,existingWin);}
   }
   openPhoneModal(row);
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════
+// ENVIO EM MASSA — dispara o WhatsApp dos selecionados, um por vez,
+// reaproveitando o mesmo fluxo do botão individual (handleWaClick)
+// ═══════════════════════════════════════════════════════
+function getS4SelectedRows(){
+  const all = window._s4RenderedRows || [];
+  const checked = [];
+  document.querySelectorAll('#s4-tbody .rowSel').forEach((cb,i)=>{
+    if(cb.checked && all[i]) checked.push(all[i].row);
+  });
+  return checked;
+}
+
+let waAutoQueue = [];
+let waAutoTimer = null;
+let waAutoRunning = false;
+let waAutoTotal = 0;
+let waAutoWindow = null;
+
+function toggleEnvioEmMassa(){
+  if(waAutoRunning){ pararEnvioEmMassa(true); return; }
+  iniciarEnvioEmMassa();
+}
+
+function iniciarEnvioEmMassa(){
+  const selected = getS4SelectedRows();
+  if(!selected.length){
+    alert('Selecione ao menos um registro na tabela (checkbox) para enviar mensagens em massa.');
+    return;
+  }
+  const intervaloStr = prompt(
+    `Enviar WhatsApp para ${selected.length} colaborador(es) selecionado(s), um de cada vez.\n\n`+
+    `Cada mensagem vai reaproveitar a MESMA aba do WhatsApp Web (para o navegador não bloquear como pop-up). `+
+    `Clique em Enviar em cada uma antes do intervalo acabar, senão ela é substituída pela próxima.\n\n`+
+    `Intervalo entre cada envio (em segundos):`,
+    '15'
+  );
+  if(intervaloStr === null) return;
+  let intervalo = parseInt(intervaloStr, 10);
+  if(!intervalo || intervalo < 2) intervalo = 2;
+  if(intervalo > 120) intervalo = 120;
+
+  // Abre a aba AGORA, de forma síncrona no clique, pra não ser bloqueada como pop-up.
+  // As próximas mensagens só navegam essa mesma aba (isso não conta como pop-up novo).
+  waAutoWindow = window.open('https://web.whatsapp.com', 'wa_envio_massa');
+  if(!waAutoWindow){
+    alert('O navegador bloqueou a abertura do WhatsApp.\n\nLibere pop-ups para este site (ícone de bloqueio/pop-up na barra de endereço → Sempre permitir pop-ups) e clique novamente.');
+    return;
+  }
+
+  waAutoQueue = selected.slice();
+  waAutoTotal = waAutoQueue.length;
+  waAutoRunning = true;
+  atualizarBotaoEnvioMassa();
+  processarProximoEnvioMassa(intervalo);
+}
+
+async function processarProximoEnvioMassa(intervalo){
+  if(!waAutoRunning || !waAutoQueue.length){
+    const concluido = waAutoRunning;
+    pararEnvioEmMassa(false);
+    if(concluido) alert(`Envio em massa concluído: ${waAutoTotal} mensagem(ns) disparada(s).`);
+    return;
+  }
+  const row = waAutoQueue.shift();
+  atualizarBotaoEnvioMassa();
+  try{
+    await handleWaClick(row, waAutoWindow);
+  }catch(e){
+    console.warn('[processarProximoEnvioMassa]', e);
+  }
+  if(!waAutoRunning) return;
+  waAutoTimer = setTimeout(()=>processarProximoEnvioMassa(intervalo), intervalo*1000);
+}
+
+function pararEnvioEmMassa(avisar){
+  const estavaRodando = waAutoRunning;
+  waAutoRunning = false;
+  clearTimeout(waAutoTimer);
+  waAutoTimer = null;
+  waAutoWindow = null;
+  const restantes = waAutoQueue.length;
+  waAutoQueue = [];
+  atualizarBotaoEnvioMassa();
+  if(avisar && estavaRodando) alert(`Envio em massa interrompido. ${restantes} mensagem(ns) não enviada(s).`);
+}
+
+function atualizarBotaoEnvioMassa(){
+  const btn = document.getElementById('wa-bulk-btn');
+  if(!btn) return;
+  if(waAutoRunning){
+    btn.textContent = `⏸ Parar envio (${waAutoQueue.length} restante${waAutoQueue.length!==1?'s':''})`;
+    btn.style.background = '#c5160a';
+    btn.style.borderColor = '#c5160a';
+  }else{
+    btn.textContent = '📲 WhatsApp em massa';
+    btn.style.background = '#25D366';
+    btn.style.borderColor = '#25D366';
+  }
 }
 
 function toProperFirstName(nomeCompleto){
@@ -4671,9 +4773,9 @@ function buildWhatsAppMessage(nome, row){
   return msg;
 }
 
-function openWhatsApp(nome,tel,row){
+function openWhatsApp(nome,tel,row,existingWin){
   const digits=formatPhone(tel);
-  if(!digits){alert('Número inválido: '+tel);return;}
+  if(!digits){alert('Número inválido: '+tel);return null;}
   const msg = buildWhatsAppMessage(nome, row);
   const encoded = encodeURIComponent(msg);
   // Prioridade: web.whatsapp.com/send (WhatsApp Web direto, geralmente não bloqueado)
@@ -4681,18 +4783,27 @@ function openWhatsApp(nome,tel,row){
   const provider = lsGet('wa_provider', 'web'); // 'web' | 'wame' | 'copy'
   if(provider === 'copy'){
     copyWhatsAppText(digits, msg);
-    return;
+    return null;
   }
   const url = provider === 'wame'
     ? `https://wa.me/${digits}?text=${encoded}`
     : `https://web.whatsapp.com/send?phone=${digits}&text=${encoded}`;
-  const win = window.open(url, '_blank');
+
+  let win;
+  if(existingWin && !existingWin.closed){
+    // Reaproveita uma aba já aberta (evita bloqueio de pop-up em disparos sequenciais/automatizados)
+    existingWin.location.href = url;
+    win = existingWin;
+  }else{
+    win = window.open(url, '_blank');
+  }
   // Detecta se a aba foi bloqueada (popup blocker) ou se vai falhar
   if(!win){
     if(confirm('Não foi possível abrir o WhatsApp.\n\nDeseja COPIAR o telefone e a mensagem para colar manualmente no WhatsApp?')){
       copyWhatsAppText(digits, msg);
     }
   }
+  return win;
 }
 
 function copyWhatsAppText(digits, msg){
