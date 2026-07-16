@@ -837,6 +837,73 @@ body.escala-menu-oculto .menu-floating-toggle i {
     justify-content: flex-end;
 }
 
+/* Totalizador exibido logo abaixo do grid, antes dos botoes de Salvar/XLSX - destacado para o
+   usuario conferir os valores antes de confirmar o lancamento. */
+.janta-pernoite-escala-totais {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 4px 18px 16px;
+    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f0fdf4, #ecfeff);
+    border: 1px solid #bbf7d0;
+}
+
+.jp-escala-total-item {
+    text-align: center;
+    padding: 10px 8px;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.jp-escala-total-item span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 4px;
+}
+
+.jp-escala-total-item strong {
+    display: block;
+    font-size: 19px;
+    font-weight: 800;
+}
+
+.jp-total-janta strong,
+.jp-total-pernoite strong {
+    color: #0f5132;
+}
+
+.jp-total-desconto strong {
+    color: #dc3545;
+}
+
+.jp-total-geral {
+    background: linear-gradient(135deg, #006937, #0f5132);
+    box-shadow: 0 4px 12px rgba(0, 105, 55, 0.35);
+}
+
+.jp-total-geral span {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.jp-total-geral strong {
+    color: #fff;
+    font-size: 23px;
+}
+
+@media (max-width: 720px) {
+    .janta-pernoite-escala-totais {
+        grid-template-columns: repeat(2, 1fr);
+        margin: 4px 12px 14px;
+    }
+}
+
 .janta-pernoite-escala-actions .pdf-expedicao-btn {
     min-height: 34px;
     padding: 8px 12px;

@@ -5839,6 +5839,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <tbody id="tbodyJantaPernoiteEscala"></tbody>
                     </table>
                 </div>
+                <div class="janta-pernoite-escala-totais">
+                    <div class="jp-escala-total-item jp-total-janta">
+                        <span>Total Janta</span>
+                        <strong id="jantaPernoiteEscalaTotalJanta">R$ 0,00</strong>
+                    </div>
+                    <div class="jp-escala-total-item jp-total-pernoite">
+                        <span>Total Per Noite</span>
+                        <strong id="jantaPernoiteEscalaTotalPerNoite">R$ 0,00</strong>
+                    </div>
+                    <div class="jp-escala-total-item jp-total-desconto">
+                        <span>Total Desconto</span>
+                        <strong id="jantaPernoiteEscalaTotalDesconto">R$ 0,00</strong>
+                    </div>
+                    <div class="jp-escala-total-item jp-total-geral">
+                        <span>Valor Total</span>
+                        <strong id="jantaPernoiteEscalaTotalGeral">R$ 0,00</strong>
+                    </div>
+                </div>
                 <div class="boleta-modal-actions">
                     <button type="button" id="btnXLSXJantaPernoiteEscala" class="pdf-expedicao-btn excel">
                         <i class="fas fa-file-excel"></i> XLSX
@@ -6008,9 +6026,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Soma os totais com base em TODOS os funcionarios do lancamento (nao so os visiveis pelo
+    // filtro/busca atual), ja que e isso que efetivamente sera salvo - assim o usuario sempre
+    // ve o total real antes de clicar em Salvar, mesmo com um filtro aplicado na tela.
+    function atualizarTotaisJantaPernoiteEscala() {
+        const totalJanta = jantaPernoiteEscalaDados.reduce((soma, item) =>
+            soma + (!item.desconto && item.pagaJanta ? Number(jantaPernoiteEscalaValores.valorJanta || 0) : 0), 0);
+        const totalPerNoite = jantaPernoiteEscalaDados.reduce((soma, item) =>
+            soma + (!item.desconto && item.pagaPerNoite ? Number(jantaPernoiteEscalaValores.valorPerNoite || 0) : 0), 0);
+        const totalDesconto = jantaPernoiteEscalaDados.reduce((soma, item) => soma + getValorDescontoJantaPernoiteEscala(item), 0);
+        const totalGeral = totalJanta + totalPerNoite;
+
+        const elJanta = document.getElementById('jantaPernoiteEscalaTotalJanta');
+        const elPerNoite = document.getElementById('jantaPernoiteEscalaTotalPerNoite');
+        const elDesconto = document.getElementById('jantaPernoiteEscalaTotalDesconto');
+        const elGeral = document.getElementById('jantaPernoiteEscalaTotalGeral');
+        if (elJanta) elJanta.textContent = formatMoedaBR(totalJanta);
+        if (elPerNoite) elPerNoite.textContent = formatMoedaBR(totalPerNoite);
+        if (elDesconto) elDesconto.textContent = formatMoedaBR(totalDesconto);
+        if (elGeral) elGeral.textContent = formatMoedaBR(totalGeral);
+    }
+
     function renderJantaPernoiteEscalaTabela() {
         const tbody = document.getElementById('tbodyJantaPernoiteEscala');
         if (!tbody) return;
+
+        atualizarTotaisJantaPernoiteEscala();
 
         const dadosOrdenados = getDadosVisiveisJantaPernoiteEscala();
 
