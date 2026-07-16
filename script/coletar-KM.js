@@ -163,6 +163,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function carregarVeiculos() {
     try {
+        // Restringe pela filial "efetiva" (do usuario logado, ou a escolhida manualmente por
+        // quem nao tem filial cadastrada). No app mobile a lista SO pode ser criada com placas
+        // da filial do usuario - se ele nao tiver filial cadastrada, nao carrega veiculo nenhum
+        // (em vez de mostrar todas as filiais misturadas), para nunca deixar montar uma lista
+        // com placas de outra filial.
+        const filialEfetiva = getFilialAtualColetaKm();
+        if (IS_MOBILE_COLETA_KM && !filialEfetiva) {
+            veiculosCache = [];
+            const datalist = document.getElementById('listaVeiculos');
+            if (datalist) datalist.innerHTML = '';
+            const container = document.getElementById('listaVisualColetaKm');
+            if (container) {
+                container.innerHTML = '<div class="coleta-km-vazio">Seu usuario nao tem filial cadastrada. Fale com o administrador para liberar a coleta de KM.</div>';
+            }
+            const filialLabel = document.getElementById('coletaKmFilial');
+            if (filialLabel) filialLabel.textContent = 'Sem filial';
+            return;
+        }
+
         let query = supabaseClient
             .from('veiculos')
             .select('placa, modelo, id, filial, tipo')
@@ -172,12 +191,8 @@ async function carregarVeiculos() {
         if (IS_MOBILE_COLETA_KM) {
             query = query.not('tipo', 'in', '("EMPILHADEIRA","GERADOR","SEMI-REBOQUE","HR/VAN")');
         }
-        // Restringe pela filial "efetiva" (do usuario logado, ou a escolhida manualmente por
-        // quem nao tem filial cadastrada) - cada lancamento e gravado com essa filial, entao
-        // nao faz sentido oferecer veiculos de outras filiais para adicionar na coleta. Quando
-        // nao ha filial nenhuma definida ainda, nao filtra - mostra todas (ate o usuario optar
-        // por uma no seletor, se ele tiver essa opcao disponivel).
-        const filialEfetiva = getFilialAtualColetaKm();
+        // No desktop, sem filial nenhuma definida ainda nao filtra - mostra todas (ate o
+        // usuario optar por uma no seletor, se ele tiver essa opcao disponivel).
         if (filialEfetiva) query = query.eq('filial', filialEfetiva);
 
         const { data, error } = await query;
