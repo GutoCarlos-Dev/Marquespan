@@ -10,7 +10,57 @@ let veiculosCache = [];
 let filtroMobileColetaKm = 'TODOS';
 let salvandoColeta = false;
 let originalDataColeta = null; // Armazena a data original do lote em edição
+let originalFilialColeta = null; // Armazena a filial original do lote em edição
 let currentSort = { key: null, asc: true }; // Estado da ordenação
+let filialSelecionadaManual = null; // Filial escolhida na tela quando o usuario nao tem filial fixa
+
+// Filial "efetiva" do lançamento: a do usuário logado quando definida, senão a escolhida
+// manualmente no seletor (para usuários sem filial cadastrada).
+function getFilialAtualColetaKm() {
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+    return usuario?.filial || filialSelecionadaManual || null;
+}
+
+async function inicializarFilialColetaKm() {
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+    const input = document.getElementById('coletaKmFilialDesktop');
+    const select = document.getElementById('coletaKmFilialSelect');
+
+    if (usuario?.filial) {
+        if (input) { input.classList.remove('hidden'); input.value = usuario.filial; }
+        if (select) select.classList.add('hidden');
+        return;
+    }
+
+    // Usuário sem filial cadastrada: oferece a opção de escolher manualmente (e de ver/lançar
+    // para qualquer filial), em vez de toda coleta ficar travada como "SEM FILIAL".
+    if (input) input.classList.add('hidden');
+    if (!select) return;
+    select.classList.remove('hidden');
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('nome, sigla')
+            .order('nome', { ascending: true });
+        if (error) throw error;
+
+        select.innerHTML = '<option value="">Selecione a filial...</option>';
+        (data || []).forEach(f => {
+            const value = f.sigla || f.nome;
+            if (!value) return;
+            select.add(new Option(f.sigla ? `${f.nome} (${f.sigla})` : f.nome, value));
+        });
+    } catch (error) {
+        console.warn('Não foi possível carregar filiais para seleção manual:', error);
+    }
+
+    select.addEventListener('change', () => {
+        filialSelecionadaManual = select.value || null;
+        carregarVeiculos();
+        carregarHistorico();
+    });
+}
 
 function getNivelUsuarioColetaKm() {
     try {
@@ -40,7 +90,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('coletaData').value = now.toISOString().slice(0, 16);
 
-    // 3. Carregar Veículos para o Datalist
+    // 3. Preparar seleção de filial (se o usuário não tiver uma cadastrada) e carregar Veículos
+    await inicializarFilialColetaKm();
     await carregarVeiculos();
 
     // 4. Event Listeners
@@ -79,15 +130,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnExportarPDF')?.addEventListener('click', exportarPDF);
 
     // 5. Carregar Histórico
+    await carregarFiliaisFiltroHistorico();
     carregarHistorico();
-    
+
     // Listeners do Histórico
     document.getElementById('btnFiltrarHistorico')?.addEventListener('click', () => {
         const dataIni = document.getElementById('filtroHistoricoDataIni').value;
         const dataFim = document.getElementById('filtroHistoricoDataFim').value;
         carregarHistorico(dataIni, dataFim);
     });
-    
+    document.getElementById('filtroHistoricoFilial')?.addEventListener('change', () => {
+        const dataIni = document.getElementById('filtroHistoricoDataIni').value;
+        const dataFim = document.getElementById('filtroHistoricoDataFim').value;
+        carregarHistorico(dataIni, dataFim);
+    });
+
     // Botões de Atualizar (limpam filtros e recarregam)
     const btnUpdateHist = document.getElementById('btnAtualizarHistorico');
     if(btnUpdateHist) btnUpdateHist.addEventListener('click', atualizarColeta);
@@ -106,7 +163,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function carregarVeiculos() {
     try {
-        const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
         let query = supabaseClient
             .from('veiculos')
             .select('placa, modelo, id, filial, tipo')
@@ -115,8 +171,14 @@ async function carregarVeiculos() {
 
         if (IS_MOBILE_COLETA_KM) {
             query = query.not('tipo', 'in', '("EMPILHADEIRA","GERADOR","SEMI-REBOQUE","HR/VAN")');
-            if (usuario?.filial) query = query.eq('filial', usuario.filial);
         }
+        // Restringe pela filial "efetiva" (do usuario logado, ou a escolhida manualmente por
+        // quem nao tem filial cadastrada) - cada lancamento e gravado com essa filial, entao
+        // nao faz sentido oferecer veiculos de outras filiais para adicionar na coleta. Quando
+        // nao ha filial nenhuma definida ainda, nao filtra - mostra todas (ate o usuario optar
+        // por uma no seletor, se ele tiver essa opcao disponivel).
+        const filialEfetiva = getFilialAtualColetaKm();
+        if (filialEfetiva) query = query.eq('filial', filialEfetiva);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -124,7 +186,7 @@ async function carregarVeiculos() {
         veiculosCache = data || [];
         const datalist = document.getElementById('listaVeiculos');
         datalist.innerHTML = '';
-        
+
         veiculosCache.forEach(v => {
             const option = document.createElement('option');
             option.value = v.placa;
@@ -132,7 +194,7 @@ async function carregarVeiculos() {
         });
 
         const filialLabel = document.getElementById('coletaKmFilial');
-        if (filialLabel) filialLabel.textContent = usuario?.filial || 'Todas';
+        if (filialLabel) filialLabel.textContent = filialEfetiva || 'Todas';
         renderizarListaVisualMobile();
     } catch (error) {
         console.error('Erro ao carregar veículos:', error);
@@ -342,6 +404,7 @@ function definirListaMobileAberta(aberta) {
 function iniciarNovaListaMobile() {
     itensColeta = [];
     originalDataColeta = null;
+    originalFilialColeta = null;
     filtroMobileColetaKm = 'TODOS';
     document.querySelectorAll('[data-km-filter]').forEach(botao => {
         botao.classList.toggle('active', botao.dataset.kmFilter === 'TODOS');
@@ -607,7 +670,13 @@ async function salvarColetaCompleta(event) {
 
     const dataColetaInput = document.getElementById('coletaData').value;
     if (!dataColetaInput) return alert('Data inválida');
-    
+
+    if (!getFilialAtualColetaKm() && document.getElementById('coletaKmFilialSelect')) {
+        if (!confirm('Nenhuma filial selecionada. A coleta será salva sem filial vinculada. Deseja continuar mesmo assim?')) {
+            return;
+        }
+    }
+
     // Usa o valor do input diretamente (Hora Local) pois o banco é TIMESTAMP WITHOUT TIME ZONE
     // Isso evita a conversão automática para UTC que estava adicionando 3 horas
     salvandoColeta = true;
@@ -633,17 +702,25 @@ async function salvarColetaCompleta(event) {
     // Garante que o usuário salvo seja o atual logado, atualizando a autoria da edição
     const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
     const responsavel = usuarioLogado ? (usuarioLogado.nome || usuarioLogado.email) : document.getElementById('coletaResponsavel').value;
+    const filialAtual = getFilialAtualColetaKm();
 
-    // Define qual data usar para exclusão (a original se for edição, ou a atual se for novo/sobrescrever)
+    // Define qual data/filial usar para exclusão (a original se for edição, ou a atual se for
+    // novo/sobrescrever). Usar a filial original do lote (nao a do usuario atual) garante que
+    // so o lote realmente aberto para edicao seja substituido, mesmo que quem esteja salvando
+    // agora seja de outra filial.
     const dataParaExcluir = originalDataColeta || dataColetaISO;
+    const filialParaExcluir = originalDataColeta ? originalFilialColeta : filialAtual;
 
-    // Verifica se estamos editando um lote existente (mesma data)
-    // Se sim, removemos os registros antigos dessa data para substituir pelos novos
-    // Isso evita duplicação ao editar um lote.
-    const { error: deleteError } = await supabaseClient
+    // Verifica se estamos editando um lote existente (mesma data + filial)
+    // Se sim, removemos os registros antigos desse lote para substituir pelos novos
+    // Isso evita duplicação ao editar um lote, e nao mexe em lotes de outras filiais que
+    // coincidam de ter a mesma data/hora.
+    let deleteQuery = supabaseClient
         .from('coleta_km')
         .delete()
         .eq('data_coleta', dataParaExcluir);
+    deleteQuery = filialParaExcluir ? deleteQuery.eq('filial', filialParaExcluir) : deleteQuery.is('filial', null);
+    const { error: deleteError } = await deleteQuery;
 
     if (deleteError) {
         console.error('Erro ao limpar registros antigos para atualização:', deleteError);
@@ -658,7 +735,8 @@ async function salvarColetaCompleta(event) {
     const dadosParaInserir = itensColeta.map(({ id, ...resto }) => ({
         ...resto,
         data_coleta: dataColetaISO,
-        usuario: responsavel
+        usuario: responsavel,
+        filial: filialAtual
     }));
 
     try {
@@ -672,6 +750,7 @@ async function salvarColetaCompleta(event) {
         if (salvarParcial) {
             itensColeta = [];
             originalDataColeta = null;
+            originalFilialColeta = null;
             limparRascunho();
             renderizarTabela();
             carregarHistorico();
@@ -680,6 +759,7 @@ async function salvarColetaCompleta(event) {
         alert('Coleta de KM salva com sucesso!');
         itensColeta = []; // Limpa a lista de itens em memória
         originalDataColeta = null; // Reseta a referência de edição para um novo lote
+        originalFilialColeta = null;
         renderizarTabela(); // Limpa a tabela na tela
         carregarHistorico(); // Atualiza o histórico após salvar
         limparRascunho(); // Remove o rascunho do localStorage, já que a coleta foi salva
@@ -700,7 +780,8 @@ function cancelarColeta() {
         if (confirm('Tem certeza que deseja cancelar a operação atual? Todas as alterações não salvas serão perdidas.')) {
             itensColeta = [];
             originalDataColeta = null;
-            
+            originalFilialColeta = null;
+
             // Resetar data para o momento atual
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -715,6 +796,28 @@ function cancelarColeta() {
 
 // --- Funções para Gerenciamento no Banco de Dados (Editar/Excluir) ---
 // Estas funções estão prontas para serem usadas caso adicione uma listagem de histórico
+
+async function carregarFiliaisFiltroHistorico() {
+    const select = document.getElementById('filtroHistoricoFilial');
+    if (!select) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('filiais')
+            .select('nome, sigla')
+            .order('nome', { ascending: true });
+        if (error) throw error;
+
+        select.innerHTML = '<option value="">Todas</option>';
+        (data || []).forEach(f => {
+            const value = f.sigla || f.nome;
+            if (!value) return;
+            select.add(new Option(f.sigla ? `${f.nome} (${f.sigla})` : f.nome, value));
+        });
+    } catch (error) {
+        console.warn('Nao foi possivel carregar filiais para o filtro de historico:', error);
+    }
+}
 
 async function carregarHistorico(dataIni = null, dataFim = null) {
     const tbody = document.getElementById('tableBodyHistorico');
@@ -744,6 +847,12 @@ async function carregarHistorico(dataIni = null, dataFim = null) {
             query = query.lte('data_coleta', `${dataFim}T23:59:59`);
         }
 
+        // Aplica filtro de filial (desktop), se selecionado
+        const filialFiltro = document.getElementById('filtroHistoricoFilial')?.value || '';
+        if (filialFiltro) {
+            query = query.eq('filial', filialFiltro);
+        }
+
         // Verifica se é a versão Mobile pela existência da classe específica no HTML
         const isMobile = document.querySelector('.mobile-container');
         const dataSelecionada = document.getElementById('coletaData').value;
@@ -752,7 +861,7 @@ async function carregarHistorico(dataIni = null, dataFim = null) {
             const placasFilial = veiculosCache.map(veiculo => veiculo.placa);
             query = query.in('placa', placasFilial.length ? placasFilial : ['__SEM_PLACAS__']);
         }
-        
+
         // Aplica filtro de data APENAS se for Mobile (App)
         if (isMobile && dataSelecionada && !dataIni && !dataFim) {
             const dataIso = dataSelecionada.split('T')[0];
@@ -771,14 +880,16 @@ async function carregarHistorico(dataIni = null, dataFim = null) {
             return;
         }
 
-        // Agrupar por Data e Usuário
+        // Agrupar por Data + Filial: um lote e definido pela data/hora do lancamento E pela
+        // filial - sem a filial na chave, dois lotes de filiais diferentes salvos no mesmo
+        // minuto seriam tratados como um so (e um poderia sobrescrever/excluir o outro).
         const grupos = {};
         data.forEach(item => {
-            // Chave de agrupamento: A data da coleta, que é única para cada lote salvo.
-            const key = item.data_coleta;
+            const key = `${item.data_coleta}|${item.filial || ''}`;
             if (!grupos[key]) {
                 grupos[key] = {
                     data_coleta: item.data_coleta,
+                    filial: item.filial || '',
                     usuario: item.usuario,
                     qtd: 0,
                     ids: []
@@ -798,7 +909,7 @@ async function carregarHistorico(dataIni = null, dataFim = null) {
         // Renderizar os lotes agrupados
         lotesParaExibir.forEach(grupo => {
             const tr = document.createElement('tr');
-            
+
             // Formatar Data
             let dataDisplay = '-';
             if (grupo.data_coleta) {
@@ -806,15 +917,17 @@ async function carregarHistorico(dataIni = null, dataFim = null) {
                 dataDisplay = dateObj.toLocaleDateString('pt-BR') + ' ' + dateObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
             }
 
-            const btnDelete = isAdmin ? `<button type="button" class="btn-danger" style="padding: 6px 10px;" onclick="excluirBatchColeta('${grupo.data_coleta}')" title="Excluir Lote"><i class="fas fa-trash"></i></button>` : '';
+            const filialArg = grupo.filial ? `'${grupo.filial}'` : 'null';
+            const btnDelete = isAdmin ? `<button type="button" class="btn-danger" style="padding: 6px 10px;" onclick="excluirBatchColeta('${grupo.data_coleta}', ${filialArg})" title="Excluir Lote"><i class="fas fa-trash"></i></button>` : '';
 
             tr.innerHTML = `
                 <td data-label="Data">${dataDisplay}</td>
+                <td data-label="Filial">${grupo.filial || 'SEM FILIAL'}</td>
                 <td data-label="Responsável">${grupo.usuario || '-'}</td>
                 <td data-label="Qtd. Veículos" style="text-align: center;">${grupo.qtd}</td>
                     <td data-label="Ações" class="actions-cell">
                         <div class="coleta-km-historico-acoes">
-                            <button type="button" class="btn-glass btn-blue" onclick="carregarBatchParaEdicao('${grupo.data_coleta}')" title="Abrir lista" aria-label="Abrir lista"><i class="fas fa-folder-open"></i></button>
+                            <button type="button" class="btn-glass btn-blue" onclick="carregarBatchParaEdicao('${grupo.data_coleta}', ${filialArg})" title="Abrir lista" aria-label="Abrir lista"><i class="fas fa-folder-open"></i></button>
                             ${btnDelete ? btnDelete.replace('btn-danger', 'btn-glass btn-red') : ''}
                         </div>
                     </td>
@@ -864,23 +977,37 @@ function prepararEdicaoItem(index) {
 }
 
 // Função para carregar um lote inteiro para edição na tabela principal
-window.carregarBatchParaEdicao = async function(dataColeta) {
+window.carregarBatchParaEdicao = async function(dataColeta, filial) {
     try {
-        // Busca todos os itens daquela data
-        const { data, error } = await supabaseClient
+        // Busca todos os itens daquele lote (data + filial) - restringir por filial evita
+        // puxar junto itens de outra filial que coincidam de ter a mesma data/hora.
+        let query = supabaseClient
             .from('coleta_km')
             .select('*')
             .eq('data_coleta', dataColeta);
-            
+        query = filial ? query.eq('filial', filial) : query.is('filial', null);
+        const { data, error } = await query;
+
         if (error) throw error;
-        
+
         if (!data || data.length === 0) {
-            alert('Nenhum item encontrado para esta data.');
+            alert('Nenhum item encontrado para este lote.');
             return;
         }
 
-        // Armazena a data original para garantir que o lote correto seja atualizado/substituído
+        // Armazena a data/filial original para garantir que o lote correto seja atualizado/substituído
         originalDataColeta = dataColeta;
+        originalFilialColeta = filial || null;
+
+        // Sincroniza o seletor de filial (quando o usuario nao tem filial fixa) com a filial
+        // do lote que esta sendo editado, para o re-salvamento manter a mesma filial em vez de
+        // usar a ultima selecionada na tela (que pode ser diferente).
+        const selectFilial = document.getElementById('coletaKmFilialSelect');
+        if (selectFilial && !selectFilial.classList.contains('hidden')) {
+            filialSelecionadaManual = filial || null;
+            selectFilial.value = filial || '';
+            await carregarVeiculos(); // Atualiza a lista de veiculos para a filial do lote aberto
+        }
 
         // Preenche o cabeçalho com a DATA ATUAL para garantir que a edição salve com o horário do momento
         if (IS_MOBILE_COLETA_KM) {
@@ -923,18 +1050,20 @@ window.carregarBatchParaEdicao = async function(dataColeta) {
 }
 
 // Função para excluir um lote inteiro
-window.excluirBatchColeta = async function(dataColeta) {
+window.excluirBatchColeta = async function(dataColeta, filial) {
     if (!confirm('Tem certeza que deseja excluir TODO este lote de coletas? Esta ação não pode ser desfeita.')) return;
 
     try {
-        const { error } = await supabaseClient
+        let query = supabaseClient
             .from('coleta_km')
             .delete()
             .eq('data_coleta', dataColeta);
+        query = filial ? query.eq('filial', filial) : query.is('filial', null);
+        const { error } = await query;
 
         if (error) throw error;
-        
-        registrarAuditoria('EXCLUIR', 'Coleta KM', `Exclusão do lote de coleta de KM da data ${dataColeta}`);
+
+        registrarAuditoria('EXCLUIR', 'Coleta KM', `Exclusão do lote de coleta de KM da data ${dataColeta} (filial ${filial || 'sem filial'})`);
         alert('Lote excluído com sucesso!');
         carregarHistorico();
     } catch (error) {
@@ -1190,7 +1319,8 @@ function salvarRascunho() {
         dataColeta: document.getElementById('coletaData').value,
         responsavel: document.getElementById('coletaResponsavel').value,
         itens: itensColeta,
-        originalDataColeta: originalDataColeta
+        originalDataColeta: originalDataColeta,
+        originalFilialColeta: originalFilialColeta
     };
     localStorage.setItem(getStorageKeyRascunho(), JSON.stringify(data));
     // Opcional: Feedback visual discreto
@@ -1212,6 +1342,7 @@ function carregarRascunho() {
                     ? data.itens.filter(item => veiculosCache.some(veiculo => veiculo.placa === item.placa))
                     : data.itens;
                 if (data.originalDataColeta) originalDataColeta = data.originalDataColeta;
+                if (data.originalFilialColeta) originalFilialColeta = data.originalFilialColeta;
                 renderizarTabela();
                 definirListaMobileAberta(true);
                 console.log('Rascunho restaurado com sucesso.');
@@ -1233,8 +1364,10 @@ function limparRascunho() {
 function atualizarColeta() {
     const inputIni = document.getElementById('filtroHistoricoDataIni');
     const inputFim = document.getElementById('filtroHistoricoDataFim');
+    const selectFilial = document.getElementById('filtroHistoricoFilial');
     if (inputIni) inputIni.value = '';
     if (inputFim) inputFim.value = '';
+    if (selectFilial) selectFilial.value = '';
     carregarHistorico();
 }
 
@@ -1242,8 +1375,8 @@ function atualizarColeta() {
  * Atalho para exclusão de lote
  * Resolve o erro: excluirColeta is not defined
  */
-function excluirColeta(dataColeta) {
-    return excluirBatchColeta(dataColeta);
+function excluirColeta(dataColeta, filial) {
+    return excluirBatchColeta(dataColeta, filial);
 }
 
 // Expor funções para uso global se necessário

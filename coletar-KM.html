@@ -39,6 +39,13 @@
                 <label for="coletaResponsavel">Responsável</label>
                 <input type="text" id="coletaResponsavel" readonly class="glass-input">
               </div>
+              <div class="form-group">
+                <label>Filial</label>
+                <input type="text" id="coletaKmFilialDesktop" readonly class="glass-input hidden" title="Cada lançamento é salvo automaticamente com a filial do usuário logado">
+                <select id="coletaKmFilialSelect" class="glass-input hidden" title="Seu usuário não tem filial cadastrada — selecione para qual filial é este lançamento">
+                  <option value="">Selecione a filial...</option>
+                </select>
+              </div>
             </form>
         </section>
 
@@ -136,6 +143,12 @@
                 <label for="filtroHistoricoDataFim" style="font-size: 0.8rem; margin-right: 5px;">Até:</label>
                 <input type="date" id="filtroHistoricoDataFim" class="glass-input" style="padding: 5px; height: 32px; width: 130px;">
             </div>
+            <div class="form-group-filter" style="margin-bottom: 0;">
+                <label for="filtroHistoricoFilial" style="font-size: 0.8rem; margin-right: 5px;">Filial:</label>
+                <select id="filtroHistoricoFilial" class="glass-input" style="padding: 5px; height: 32px; width: 130px;">
+                    <option value="">Todas</option>
+                </select>
+            </div>
             <button id="btnFiltrarHistorico" class="btn-glass btn-blue" style="padding: 6px 12px; font-size: 0.8rem;" title="Filtrar por data"><i class="fas fa-search"></i></button>
             <button id="btnAtualizarHistoricoDesktop" class="btn-glass btn-blue" style="padding: 6px 12px; font-size: 0.8rem;" title="Recarregar"><i class="fas fa-sync-alt"></i> Atualizar</button>
         </div>
@@ -145,6 +158,7 @@
           <thead>
             <tr>
               <th>DATA</th>
+              <th>FILIAL</th>
               <th>RESPONSÁVEL</th>
               <th>QTD. VEÍCULOS</th>
               <th>AÇÕES</th>
@@ -165,6 +179,6 @@
 
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="./script/coletar-KM.js"></script>
+  <script type="module" src="./script/coletar-KM.js?v=20260716-2"></script>
 </body>
 </html>
