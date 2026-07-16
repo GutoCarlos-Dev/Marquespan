@@ -402,7 +402,8 @@ body {
     text-transform: uppercase;
 }
 
-.coleta-km-info-campo input {
+.coleta-km-info-campo input,
+.coleta-km-info-campo select {
     background: transparent;
     border: 0;
     color: #253b31;
@@ -412,6 +413,11 @@ body {
     min-height: 30px;
     outline: 0;
     padding: 0;
+    width: 100%;
+}
+
+.coleta-km-info-campo select {
+    cursor: pointer;
 }
 
 .coleta-km-info-campo input[readonly] {

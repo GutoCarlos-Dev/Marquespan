@@ -25,18 +25,28 @@ async function inicializarFilialColetaKm() {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
     const input = document.getElementById('coletaKmFilialDesktop');
     const select = document.getElementById('coletaKmFilialSelect');
+    // No mobile cada campo tem seu proprio "cartao" (icone + label) que precisa ser
+    // escondido/mostrado junto com o input/select; no desktop esses ids nao existem
+    // (ambos ficam dentro do mesmo form-group), entao os getElementById aqui retornam
+    // null e os toggles abaixo simplesmente nao fazem nada.
+    const campoInput = document.getElementById('campoFilialColetaKmDesktop');
+    const campoSelect = document.getElementById('campoFilialColetaKmSelect');
 
     if (usuario?.filial) {
         if (input) { input.classList.remove('hidden'); input.value = usuario.filial; }
         if (select) select.classList.add('hidden');
+        campoInput?.classList.remove('hidden');
+        campoSelect?.classList.add('hidden');
         return;
     }
 
     // Usuário sem filial cadastrada: oferece a opção de escolher manualmente (e de ver/lançar
     // para qualquer filial), em vez de toda coleta ficar travada como "SEM FILIAL".
     if (input) input.classList.add('hidden');
+    campoInput?.classList.add('hidden');
     if (!select) return;
     select.classList.remove('hidden');
+    campoSelect?.classList.remove('hidden');
 
     try {
         const { data, error } = await supabaseClient
@@ -175,7 +185,7 @@ async function carregarVeiculos() {
             if (datalist) datalist.innerHTML = '';
             const container = document.getElementById('listaVisualColetaKm');
             if (container) {
-                container.innerHTML = '<div class="coleta-km-vazio">Seu usuario nao tem filial cadastrada. Fale com o administrador para liberar a coleta de KM.</div>';
+                container.innerHTML = '<div class="coleta-km-vazio">Seu usuario nao tem filial cadastrada. Selecione a filial em "Dados da Coleta" acima para carregar os veiculos.</div>';
             }
             const filialLabel = document.getElementById('coletaKmFilial');
             if (filialLabel) filialLabel.textContent = 'Sem filial';
