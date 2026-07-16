@@ -6158,7 +6158,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function aplicarSelecaoLoteJantaPernoiteEscala(campo, acao) {
         const checked = acao === 'selecionar';
+        // Restringe aos dados VISIVEIS (respeitando busca/status/funcao) - sem isso, os botoes
+        // "Selecionar/Limpar" agiam sobre a lista inteira, ignorando o filtro aplicado na tela.
+        const keysVisiveis = new Set(getDadosVisiveisJantaPernoiteEscala().map(item => item.key));
         jantaPernoiteEscalaDados.forEach(item => {
+            if (!keysVisiveis.has(item.key)) return;
             if (campo === 'janta') item.pagaJanta = checked;
             if (campo === 'pernoite') item.pagaPerNoite = checked;
             if (campo === 'desconto') item.desconto = checked;
@@ -6254,6 +6258,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
+    async function carregarSelecaoSalvaJantaPernoiteEscala(dataISO, filial) {
+        try {
+            const { data: lancamento, error: lancamentoError } = await supabaseClient
+                .from('diaria_janta_pernoite')
+                .select('id')
+                .eq('data_ref', dataISO)
+                .eq('filial', filial)
+                .maybeSingle();
+            if (lancamentoError || !lancamento) return new Map();
+
+            const { data: itens, error: itensError } = await supabaseClient
+                .from('diaria_janta_pernoite_itens')
+                .select('funcionario_nome, paga_janta, paga_per_noite, desconto')
+                .eq('lancamento_id', lancamento.id);
+            if (itensError) return new Map();
+
+            return new Map((itens || []).map(item => [normalizeString(item.funcionario_nome), item]));
+        } catch (error) {
+            console.warn('Nao foi possivel carregar a selecao ja salva de Janta e Per Noite:', error);
+            return new Map();
+        }
+    }
+
     async function abrirModalJantaPernoiteEscala() {
         const contexto = getDataEscalaAberta();
         if (!contexto) return alert('Abra uma semana e um dia antes de salvar Janta e Per Noite.');
@@ -6265,6 +6292,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             jantaPernoiteEscalaValores = await carregarValoresJantaPernoiteEscala(filial);
             jantaPernoiteEscalaDados = await aplicarCadastroFuncionariosJantaPernoiteEscala(coletarFuncionariosJantaPernoiteEscala(), filial);
+
+            // Se ja existe um lancamento salvo para esta data/filial, restaura o que foi
+            // realmente marcado da ultima vez - sem isso, o modal sempre abria em branco
+            // (mesmo reeditando um lancamento existente), escondendo o estado atual e levando
+            // o usuario a clicar em "Selecionar Janta"/"Selecionar Per Noite" as cegas.
+            const selecaoSalva = await carregarSelecaoSalvaJantaPernoiteEscala(contexto.dataISO, filial);
+            if (selecaoSalva.size) {
+                jantaPernoiteEscalaDados.forEach(item => {
+                    const salvo = selecaoSalva.get(item.key);
+                    if (!salvo) return;
+                    item.pagaJanta = Boolean(salvo.paga_janta);
+                    item.pagaPerNoite = Boolean(salvo.paga_per_noite);
+                    item.desconto = Boolean(salvo.desconto);
+                });
+            }
+
             jantaPernoiteEscalaUltimoCheck.janta = null;
             jantaPernoiteEscalaUltimoCheck.pernoite = null;
             jantaPernoiteEscalaUltimoCheck.desconto = null;

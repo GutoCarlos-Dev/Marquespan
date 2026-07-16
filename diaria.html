@@ -345,13 +345,13 @@
                         <table class="data-grid diaria-jp-table">
                             <thead>
                                 <tr>
-                                    <th>FUNCIONARIO</th>
-                                    <th>NOME COMPLETO</th>
-                                    <th>CPF</th>
-                                    <th>FUNCAO</th>
-                                    <th>TIPO</th>
-                                    <th>ROTA</th>
-                                    <th>PLACA</th>
+                                    <th><button type="button" class="diaria-sort-btn" data-jp-sort="nome">FUNCIONARIO <i class="fas fa-sort"></i></button></th>
+                                    <th><button type="button" class="diaria-sort-btn" data-jp-sort="nomeCompleto">NOME COMPLETO <i class="fas fa-sort"></i></button></th>
+                                    <th><button type="button" class="diaria-sort-btn" data-jp-sort="cpf">CPF <i class="fas fa-sort"></i></button></th>
+                                    <th><button type="button" class="diaria-sort-btn" data-jp-sort="funcao">FUNCAO <i class="fas fa-sort"></i></button></th>
+                                    <th><button type="button" class="diaria-sort-btn" data-jp-sort="tipo">TIPO <i class="fas fa-sort"></i></button></th>
+                                    <th><button type="button" class="diaria-sort-btn" data-jp-sort="rota">ROTA <i class="fas fa-sort"></i></button></th>
+                                    <th><button type="button" class="diaria-sort-btn" data-jp-sort="placa">PLACA <i class="fas fa-sort"></i></button></th>
                                     <th>
                                         <div class="diaria-jp-th-actions">
                                             <span>JANTA</span>
@@ -371,12 +371,13 @@
                                         </div>
                                     </th>
                                     <th>DESCONTO</th>
-                                    <th>MOTIVO/DATA</th>
-                                    <th>VALOR A PAGAR</th>
+                                    <th><button type="button" class="diaria-sort-btn" data-jp-sort="motivoFalta">MOTIVO/DATA <i class="fas fa-sort"></i></button></th>
+                                    <th><button type="button" class="diaria-sort-btn" data-jp-sort="valorPagar">VALOR A PAGAR <i class="fas fa-sort"></i></button></th>
+                                    <th>AÇÕES</th>
                                 </tr>
                             </thead>
                             <tbody id="tbodyJantaPernoite">
-                                <tr><td colspan="12" style="text-align:center;">Nenhum registro carregado.</td></tr>
+                                <tr><td colspan="13" style="text-align:center;">Nenhum registro carregado.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -389,7 +390,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="script/supabase.js"></script>
     <script type="module" src="script/menu.js?v=20260609-1" defer></script>
-    <script type="module" src="script/diaria.js?v=20260716-1"></script>
+    <script type="module" src="script/diaria.js?v=20260716-3"></script>
     <footer class="footer">
         &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>

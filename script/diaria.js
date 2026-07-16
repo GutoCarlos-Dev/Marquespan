@@ -5,6 +5,7 @@ const IMPORT_DAYS = ['DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA',
 const CACHE_DATAS = {};
 const DIARIA_COLUMN_WIDTHS_KEY = 'marquespan_diaria_column_widths';
 const diariaSortState = { key: 'nome', direction: 'asc' };
+const jantaPernoiteSortState = { key: '', direction: 'asc' };
 const NIVEIS_GERENCIAMENTO = new Set([
     'administrador',
     'gerencia',
@@ -126,6 +127,19 @@ function configurarEventos() {
         const toggle = event.target.closest('[data-jp-field]');
         if (!toggle) return;
         atualizarJantaPernoiteManual(toggle.dataset.jpKey, toggle.dataset.jpField, toggle.checked);
+    });
+    document.getElementById('tbodyJantaPernoite')?.addEventListener('click', (event) => {
+        const removeButton = event.target.closest('[data-jp-remove-key]');
+        if (!removeButton) return;
+        removerFuncionarioJantaPernoite(removeButton.dataset.jpRemoveKey);
+    });
+    document.querySelector('.diaria-jp-table')?.addEventListener('click', (event) => {
+        const sortButton = event.target.closest('[data-jp-sort]');
+        if (!sortButton) return;
+        const key = sortButton.dataset.jpSort;
+        jantaPernoiteSortState.direction = jantaPernoiteSortState.key === key && jantaPernoiteSortState.direction === 'asc' ? 'desc' : 'asc';
+        jantaPernoiteSortState.key = key;
+        renderJantaPernoiteTabela();
     });
     document.querySelectorAll('[data-jp-bulk-field]').forEach(button => {
         button.addEventListener('click', (event) => {
@@ -973,9 +987,7 @@ function getJantaPernoiteTermoBusca() {
 
 function getJantaPernoiteDadosFiltrados() {
     const termo = getJantaPernoiteTermoBusca();
-    if (!termo) return jantaPernoiteDadosAtual;
-
-    return jantaPernoiteDadosAtual.filter(item => [
+    const dados = !termo ? jantaPernoiteDadosAtual : jantaPernoiteDadosAtual.filter(item => [
         item.nome,
         item.nomeCompleto,
         item.cpf,
@@ -984,6 +996,24 @@ function getJantaPernoiteDadosFiltrados() {
         item.rota,
         item.placa
     ].some(value => normalizeString(value).includes(termo)));
+
+    const { key, direction } = jantaPernoiteSortState;
+    if (!key) return dados;
+
+    const fator = direction === 'desc' ? -1 : 1;
+    return [...dados].sort((a, b) => {
+        if (key === 'valorPagar') return (Number(a.valorPagar || 0) - Number(b.valorPagar || 0)) * fator;
+        return String(a[key] || '').localeCompare(String(b[key] || ''), 'pt-BR', { sensitivity: 'base' }) * fator;
+    });
+}
+
+function removerFuncionarioJantaPernoite(key) {
+    const item = jantaPernoiteDadosAtual.find(row => row.key === key);
+    if (!item) return;
+    if (!confirm(`Remover ${item.nome} deste lancamento? Ele deixara de constar quando voce salvar novamente.`)) return;
+
+    jantaPernoiteDadosAtual = jantaPernoiteDadosAtual.filter(row => row.key !== key);
+    renderJantaPernoiteTabela();
 }
 
 function aplicarSelecaoJantaPernoiteEmMassa(field, checked) {
@@ -1005,9 +1035,16 @@ function renderJantaPernoiteTabela() {
     if (!tbody) return;
 
     const dadosFiltrados = getJantaPernoiteDadosFiltrados();
+    document.querySelectorAll('[data-jp-sort] i').forEach(icon => {
+        const button = icon.closest('[data-jp-sort]');
+        const ativo = button?.dataset.jpSort === jantaPernoiteSortState.key;
+        icon.className = ativo
+            ? (jantaPernoiteSortState.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
+            : 'fas fa-sort';
+    });
 
     if (jantaPernoiteDadosAtual.length === 0 || dadosFiltrados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">${jantaPernoiteDadosAtual.length === 0 ? 'Nenhum funcionario ativo escalado para os filtros selecionados.' : 'Nenhum funcionario encontrado para a busca.'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;">${jantaPernoiteDadosAtual.length === 0 ? 'Nenhum funcionario ativo escalado para os filtros selecionados.' : 'Nenhum funcionario encontrado para a busca.'}</td></tr>`;
         atualizarResumoJantaPernoite();
         return;
     }
@@ -1029,6 +1066,13 @@ function renderJantaPernoiteTabela() {
             </td>
             <td>${escapeAttribute(item.motivoFalta || '')}</td>
             <td>${formatMoedaBR(item.valorPagar)}</td>
+            <td>
+                <div class="diaria-financeiro-row-actions">
+                    <button type="button" data-jp-remove-key="${escapeAttribute(item.key)}" title="Remover deste lancamento">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
         </tr>
     `).join('');
 
