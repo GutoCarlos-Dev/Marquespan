@@ -6189,8 +6189,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         rota: cleanImportValue(tr.querySelector('input[data-key="rota"]')?.value, { keepZero: true }),
                         placa: normalizeVehiclePlate(tr.querySelector('input[data-key="placa"]')?.value),
                         status: cleanImportValue(tr.querySelector('input[data-key="status"]')?.value),
-                        pagaJanta: true,
-                        pagaPerNoite: true,
+                        pagaJanta: false,
+                        pagaPerNoite: false,
                         desconto: false
                     });
                 });
@@ -6379,7 +6379,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (itensError) throw itensError;
 
             const existentesPorNome = new Map((itensExistentes || []).map(item => [normalizeString(item.funcionario_nome), item]));
-            const itensParaTotais = [...(itensExistentes || [])];
+            let itensParaTotais = [...(itensExistentes || [])];
+
+            // Remove do lancamento quem estava salvo antes (ex.: de uma selecao anterior) mas
+            // nao esta mais marcado agora - sem isso, refazer o lancamento com uma selecao
+            // menor so atualizava/inseria os marcados e deixava os demais intactos no banco,
+            // fazendo o total continuar somando gente que nao foi selecionada desta vez.
+            const roteiroAtualKeys = new Set(jantaPernoiteEscalaDados.map(item => normalizeString(item.nome)));
+            const selecionadosKeys = new Set(itensSelecionados.map(item => normalizeString(item.funcionario_nome)));
+            for (const existente of (itensExistentes || [])) {
+                const key = normalizeString(existente.funcionario_nome);
+                if (!roteiroAtualKeys.has(key) || selecionadosKeys.has(key)) continue;
+
+                const { error } = await supabaseClient
+                    .from('diaria_janta_pernoite_itens')
+                    .delete()
+                    .eq('id', existente.id);
+                if (error) throw error;
+
+                itensParaTotais = itensParaTotais.filter(row => row.id !== existente.id);
+            }
 
             for (const item of itensSelecionados) {
                 const key = normalizeString(item.funcionario_nome);
