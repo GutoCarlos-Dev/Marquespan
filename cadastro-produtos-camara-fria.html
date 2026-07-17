@@ -127,10 +127,14 @@
               </div>
             </div>
             <div class="form-group">
-              <label for="produtoFilial">Filial (em branco = Todas as Filiais)</label>
-              <select id="produtoFilial" class="glass-input">
-                <option value="">Todas as Filiais</option>
-              </select>
+              <label for="produtoFilialDisplay">Filial (nenhuma selecionada = Todas as Filiais)</label>
+              <div class="custom-multiselect" style="position: relative;">
+                <div id="produtoFilialDisplay" class="glass-input multiselect-display" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #000;">
+                  <span id="produtoFilialText">Todas as Filiais</span> <i class="fas fa-chevron-down"></i>
+                </div>
+                <div id="produtoFilialOptions" class="glass-dropdown hidden" style="position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 220px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 5px; top: 100%; color: #000;"></div>
+              </div>
+              <p style="font-size: 0.78rem; color: #777; margin: 4px 0 0;">Filiais nao marcadas nao poderao preencher este produto em Transferencias CDS (fica travado como VENDA FECHADA).</p>
             </div>
           </div>
           <div class="form-row">
@@ -200,6 +204,6 @@
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/cadastro-produtos-camara-fria.js?v=20260717-ordem-tipo" defer></script>
+  <script type="module" src="script/cadastro-produtos-camara-fria.js?v=20260717-multifilial" defer></script>
 </body>
 </html>

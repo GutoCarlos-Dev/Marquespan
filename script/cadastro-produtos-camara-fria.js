@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.cache();
             this.bind();
             this.aplicarRestricaoFilial();
+            this.configurarFiltroFilialProduto();
             this.loadFiliais();
             this.loadTipos();
             this.renderTable();
@@ -31,7 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tipoSelect = document.getElementById('produtoTipo');
             this.pesoCaixaInput = document.getElementById('produtoPesoCaixa');
             this.caixasPaleteInput = document.getElementById('produtoCaixasPalete');
-            this.filialSelect = document.getElementById('produtoFilial');
+            this.produtoFilialDisplay = document.getElementById('produtoFilialDisplay');
+            this.produtoFilialText = document.getElementById('produtoFilialText');
+            this.produtoFilialOptions = document.getElementById('produtoFilialOptions');
             this.sortableHeaders = document.querySelectorAll('th.sortable');
             this.buscaGridProdutoInput = document.getElementById('buscaGridProduto');
             this.countBadge = document.getElementById('produtosRecordsCount');
@@ -92,6 +95,48 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filialRestrita = this.acessoGlobal ? '' : String(usuarioLogado.filial).trim();
         },
 
+        // --- Multiselect de Filial (produto pode pertencer a mais de uma) ---
+
+        configurarFiltroFilialProduto() {
+            this.produtoFilialDisplay?.addEventListener('click', (event) => {
+                if (this.filialRestrita) return;
+                event.stopPropagation();
+                this.produtoFilialOptions?.classList.toggle('hidden');
+            });
+            document.addEventListener('click', (event) => {
+                if (!this.produtoFilialDisplay?.contains(event.target) && !this.produtoFilialOptions?.contains(event.target)) {
+                    this.produtoFilialOptions?.classList.add('hidden');
+                }
+            });
+        },
+
+        atualizarProdutoFilialTexto() {
+            if (!this.produtoFilialText) return;
+            const checked = this.getProdutoFiliaisSelecionadas();
+            this.produtoFilialText.textContent = checked.length === 0
+                ? 'Todas as Filiais'
+                : (checked.length <= 2 ? checked.join(', ') : `${checked.length} selecionadas`);
+        },
+
+        getProdutoFiliaisSelecionadas() {
+            return Array.from(this.produtoFilialOptions?.querySelectorAll('.produto-filial-checkbox:checked') || [])
+                .map(cb => cb.value);
+        },
+
+        setProdutoFiliaisSelecionadas(valores) {
+            const selecionadas = this.filialRestrita ? [this.filialRestrita] : (valores || []);
+            const set = new Set(selecionadas);
+            this.produtoFilialOptions?.querySelectorAll('.produto-filial-checkbox').forEach(cb => {
+                cb.checked = set.has(cb.value);
+            });
+            this.atualizarProdutoFilialTexto();
+        },
+
+        formatFiliaisProduto(produto) {
+            if (Array.isArray(produto.filiais) && produto.filiais.length) return produto.filiais.join(', ');
+            return produto.filial || 'TODAS';
+        },
+
         async loadFiliais() {
             try {
                 const { data, error } = await supabaseClient
@@ -106,17 +151,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         + (data || []).map(f => `<option value="${this.escapeHtml(f.sigla || f.nome)}">${this.escapeHtml(f.sigla ? `${f.nome} (${f.sigla})` : f.nome)}</option>`).join('');
                 }
 
-                if (this.filialSelect) {
-                    this.filialSelect.innerHTML = '<option value="">Todas as Filiais</option>'
-                        + (data || []).map(f => `<option value="${this.escapeHtml(f.sigla || f.nome)}">${this.escapeHtml(f.sigla ? `${f.nome} (${f.sigla})` : f.nome)}</option>`).join('');
+                if (this.produtoFilialOptions) {
+                    this.produtoFilialOptions.innerHTML = (data || []).map(f => {
+                        const valor = this.escapeHtml(f.sigla || f.nome);
+                        const label = this.escapeHtml(f.sigla ? `${f.nome} (${f.sigla})` : f.nome);
+                        return `<label style="display: block; padding: 5px; cursor: pointer;"><input type="checkbox" class="produto-filial-checkbox" value="${valor}"> ${label}</label>`;
+                    }).join('');
+                    this.produtoFilialOptions.querySelectorAll('.produto-filial-checkbox').forEach(cb => {
+                        cb.addEventListener('change', () => this.atualizarProdutoFilialTexto());
+                    });
                 }
 
                 if (this.filialRestrita) {
                     this.filtroFilialSelect.value = this.filialRestrita;
                     this.filtroFilialSelect.disabled = true;
-                    this.filialSelect.value = this.filialRestrita;
-                    this.filialSelect.disabled = true;
+                    this.produtoFilialOptions?.querySelectorAll('.produto-filial-checkbox').forEach(cb => {
+                        cb.disabled = true;
+                    });
+                    if (this.produtoFilialDisplay) this.produtoFilialDisplay.style.cursor = 'not-allowed';
                 }
+                this.setProdutoFiliaisSelecionadas([]);
             } catch (err) {
                 console.error('Erro ao carregar filiais:', err);
             }
@@ -208,13 +262,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const filiaisSelecionadas = this.getProdutoFiliaisSelecionadas();
             const payload = {
                 codigo: this.codigoInput.value.trim(),
                 nome: this.nomeInput.value.trim(),
                 tipo: this.tipoSelect.value,
                 peso_caixa: pesoCaixa,
                 caixas_por_palete: caixasPorPalete,
-                filial: this.filialSelect.value || null
+                filiais: filiaisSelecionadas.length ? filiaisSelecionadas : null,
+                // Compatibilidade com as demais telas do modulo (Contagem, Estoque, Carregamento),
+                // que ainda leem só a filial unica: espelha quando ha exatamente 1 filial marcada;
+                // com 0 ou 2+ marcadas, fica null (= "Todas as Filiais" para essas telas antigas).
+                filial: filiaisSelecionadas.length === 1 ? filiaisSelecionadas[0] : null
             };
 
             const editingId = this.editingIdInput.value;
@@ -268,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return Number(produto[key]) || 0;
             }
             if (key === 'filial') {
-                return produto.filial || 'TODAS';
+                return this.formatFiliaisProduto(produto);
             }
             return String(produto[key] || '');
         },
@@ -326,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${this.escapeHtml(produto.tipo) || '-'}</td>
                 <td>${produto.peso_caixa != null ? `${this.formatPeso(produto.peso_caixa)} KG` : '-'}</td>
                 <td>${produto.caixas_por_palete ?? '-'}</td>
-                <td>${this.escapeHtml(produto.filial) || 'TODAS'}</td>
+                <td>${this.escapeHtml(this.formatFiliaisProduto(produto))}</td>
                 <td class="actions-cell">
                     <button class="btn-icon edit" data-id="${produto.id}" title="Editar"><i class="fas fa-pen"></i></button>
                     <button class="btn-icon delete" data-id="${produto.id}" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -386,7 +445,10 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tipoSelect.value = produto.tipo || '';
             this.pesoCaixaInput.value = produto.peso_caixa != null ? this.formatPeso(produto.peso_caixa) : '';
             this.caixasPaleteInput.value = produto.caixas_por_palete || '';
-            if (!this.filialRestrita) this.filialSelect.value = produto.filial || '';
+            const filiaisProduto = Array.isArray(produto.filiais) && produto.filiais.length
+                ? produto.filiais
+                : (produto.filial ? [produto.filial] : []);
+            this.setProdutoFiliaisSelecionadas(filiaisProduto);
             this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Atualizar Produto';
             this.modalProduto.classList.remove('hidden');
         },
@@ -408,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const { focus = true } = options;
             this.form.reset();
             this.editingIdInput.value = '';
-            if (this.filialRestrita) this.filialSelect.value = this.filialRestrita;
+            this.setProdutoFiliaisSelecionadas([]);
             this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar Produto';
             if (focus) this.codigoInput.focus();
         },

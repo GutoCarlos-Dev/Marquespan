@@ -97,6 +97,25 @@
     min-width: 150px;
 }
 
+.transf-linha-bloqueada td {
+    background: repeating-linear-gradient(
+        135deg,
+        #f4f4f5,
+        #f4f4f5 8px,
+        #ececef 8px,
+        #ececef 16px
+    ) !important;
+    opacity: 0.85;
+}
+
+.transf-linha-bloqueada td:nth-child(2)::after {
+    content: ' 🔒 indisponível para esta filial';
+    color: #9a9aa2;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 .select-transferir.marcado {
     background: #fff3cd;
     border-color: #ffc107;

@@ -176,11 +176,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dataContagem = this.dataContagemInput.value;
 
                 const [produtosResult, existentesResult, tiposResult] = await Promise.all([
+                    // Busca TODOS os produtos ativos (nao filtra por filial aqui): produtos de
+                    // outras filiais continuam aparecendo na lista, so ficam travados/zerados
+                    // (ver produtoBloqueadoParaFilial), para dar visibilidade do catalogo completo.
                     supabaseClient
                         .from('produtos_camara_fria')
-                        .select('id, codigo, nome, tipo, filial')
+                        .select('id, codigo, nome, tipo, filial, filiais')
                         .eq('ativo', true)
-                        .or(`filial.eq.${filial},filial.is.null`)
                         .order('nome'),
                     supabaseClient
                         .from('transferencias_camara_fria')
@@ -240,13 +242,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 .map(tipo => [tipo, grupos.get(tipo)]);
         },
 
+        // Produto so fica disponivel para preenchimento nas filiais marcadas no seu
+        // cadastro (produtos_camara_fria.filiais). Sem nenhuma filial marcada = Todas.
+        produtoBloqueadoParaFilial(produto, filialAtual) {
+            const lista = Array.isArray(produto.filiais) && produto.filiais.length
+                ? produto.filiais
+                : (produto.filial ? [produto.filial] : null);
+            if (!lista) return false;
+            return !lista.includes(filialAtual);
+        },
+
         renderTabela() {
             if (this.recordsCount) {
                 this.recordsCount.textContent = `${this.produtosCache.length} produto${this.produtosCache.length === 1 ? '' : 's'}`;
             }
 
             if (this.produtosCache.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Nenhum produto cadastrado para esta filial.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Nenhum produto cadastrado.</td></tr>';
                 this.atualizarKpis();
                 return;
             }
@@ -258,23 +270,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 html += `<tr class="transf-tipo-row" data-tipo-header="${this.escapeHtml(tipo)}"><td colspan="11">${this.escapeHtml(tipo)}</td></tr>`;
                 html += `<tr class="transf-subheader-row" data-tipo-subheader="${this.escapeHtml(tipo)}">${this.montarSubheaderColunas(tipo)}</tr>`;
                 produtos.forEach(produto => {
-                    const existente = this.existentesCache.get(String(produto.id));
+                    const bloqueado = this.produtoBloqueadoParaFilial(produto, this.filialSelect.value);
+                    const existente = bloqueado ? null : this.existentesCache.get(String(produto.id));
                     const nomeBusca = this.normalizarTexto(`${produto.codigo || ''} ${produto.nome} ${tipo}`);
+                    const disabledAttr = bloqueado ? 'disabled' : '';
                     const inputsDias = DIAS_SEMANA.map(dia => `
-                        <td><input type="number" min="0" step="1" class="input-transf" data-field="${dia.field}" value="${existente?.[dia.field] ?? ''}"></td>
+                        <td><input type="number" min="0" step="1" class="input-transf" data-field="${dia.field}" value="${bloqueado ? '' : (existente?.[dia.field] ?? '')}" ${disabledAttr}></td>
                     `).join('');
-                    const marcado = existente?.transferir === 'VENDA FECHADA';
+                    const marcado = bloqueado || existente?.transferir === 'VENDA FECHADA';
+                    const linhaAttrs = bloqueado
+                        ? ` class="transf-linha-bloqueada" title="Produto nao disponivel para esta filial — Transferir travado como VENDA FECHADA"`
+                        : '';
 
                     html += `
-                        <tr data-produto-id="${produto.id}" data-existing-id="${existente?.id || ''}" data-tipo="${this.escapeHtml(tipo)}" data-busca="${this.escapeHtml(nomeBusca)}">
+                        <tr data-produto-id="${produto.id}" data-existing-id="${bloqueado ? '' : (existente?.id || '')}" data-tipo="${this.escapeHtml(tipo)}" data-busca="${this.escapeHtml(nomeBusca)}"${linhaAttrs}>
                             <td>${this.escapeHtml(produto.codigo) || '-'}</td>
                             <td>${this.escapeHtml(produto.nome)}</td>
-                            <td><input type="number" min="0" step="1" class="input-transf" data-field="estoque" value="${existente?.estoque ?? ''}"></td>
+                            <td><input type="number" min="0" step="1" class="input-transf" data-field="estoque" value="${bloqueado ? '' : (existente?.estoque ?? '')}" ${disabledAttr}></td>
                             ${inputsDias}
                             <td class="transf-total-cell" data-total>0</td>
                             <td class="transf-saldo-cell" data-saldo>0</td>
                             <td>
-                                <select class="select-transferir ${marcado ? 'marcado' : ''}" data-field="transferir">
+                                <select class="select-transferir ${marcado ? 'marcado' : ''}" data-field="transferir" ${disabledAttr}>
                                     <option value="">(vazio)</option>
                                     <option value="VENDA FECHADA" ${marcado ? 'selected' : ''}>VENDA FECHADA</option>
                                 </select>
@@ -300,8 +317,13 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         aplicarModoSomenteLeitura() {
-            this.tableBody.querySelectorAll('.input-transf, .select-transferir').forEach(el => {
-                el.disabled = this.somenteLeitura;
+            this.tableBody.querySelectorAll('tr[data-produto-id]').forEach(tr => {
+                // Linhas bloqueadas por filial (produto nao disponivel para a filial atual)
+                // ficam sempre desabilitadas, independente do modo visualizacao/edicao.
+                const desabilitar = this.somenteLeitura || tr.classList.contains('transf-linha-bloqueada');
+                tr.querySelectorAll('.input-transf, .select-transferir').forEach(el => {
+                    el.disabled = desabilitar;
+                });
             });
             this.btnSalvar.disabled = this.somenteLeitura;
             this.modoBanner?.classList.toggle('hidden', !this.somenteLeitura);
@@ -553,6 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
             matriz.forEach((valores, offsetLinha) => {
                 const destino = linhasVisiveis[startRowIdx + offsetLinha];
                 if (!destino) return; // lista de produtos e fixa: nao cria linhas novas
+                if (destino.classList.contains('transf-linha-bloqueada')) return; // produto travado para esta filial
                 valores.forEach((valor, offsetColuna) => {
                     const campo = CAMPOS_NAV[startIdx + offsetColuna];
                     if (!campo) return;
