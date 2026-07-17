@@ -2284,37 +2284,54 @@ async function salvarVinculosSupabase(vinculos, filial){
 let _trocarColabRow = null;
 let _trocarColabTimer = null;
 
-async function openTrocarColaboradorModal(row){
+function openTrocarColaboradorModal(row){
   const overlay = document.getElementById('modal-trocar-colaborador-overlay');
-  const filialSel = document.getElementById('trocar-colab-filial');
   const busca = document.getElementById('trocar-colab-busca');
   const lista = document.getElementById('trocar-colab-lista');
   const sub = document.getElementById('trocar-colab-sub');
-  if(!overlay || !row) return;
+  if(!overlay){
+    alert('Não encontrei o modal de troca de colaborador na página.\n\nIsso costuma acontecer quando o navegador está com uma versão antiga da página em cache.\n\nAtualize com Ctrl+F5 (ou Ctrl+Shift+R) e tente novamente.');
+    return;
+  }
+  if(!row) return;
 
   _trocarColabRow = row;
   if(sub) sub.textContent = `Colaborador atual: ${row.nome || '—'}${row.role ? ' · ' + row.role : ''}${row.placa ? ' · Placa ' + row.placa : ''}`;
   if(busca) busca.value = '';
   if(lista) lista.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">Selecione a filial para listar os colaboradores.</div>';
 
-  if(filialSel && !filialSel.dataset.loaded){
+  // Abre o modal JA — antes de qualquer chamada de rede — para a tela nunca
+  // ficar travada em cinza se a busca de filiais demorar ou falhar.
+  overlay.classList.add('open');
+
+  carregarFiliaisTrocaColaborador();
+}
+
+async function carregarFiliaisTrocaColaborador(){
+  const filialSel = document.getElementById('trocar-colab-filial');
+  if(!filialSel) return;
+
+  if(!filialSel.dataset.loaded){
     try{
-      const resp = await sbFetch('/rest/v1/filiais?select=nome,sigla&order=nome.asc');
-      const filiais = resp.ok ? await resp.json() : [];
+      const resp = await Promise.race([
+        sbFetch('/rest/v1/filiais?select=nome,sigla&order=nome.asc'),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout ao buscar filiais')), 8000))
+      ]);
+      const filiais = resp?.ok ? await resp.json() : [];
       filialSel.innerHTML = '<option value="">Selecione</option>'
         + filiais.map(f => `<option value="${esc(f.sigla || f.nome)}">${esc(f.sigla ? `${f.nome} (${f.sigla})` : f.nome)}</option>`).join('');
       filialSel.dataset.loaded = '1';
-    }catch(e){ console.warn('[openTrocarColaboradorModal] filiais', e); }
+    }catch(e){
+      console.warn('[carregarFiliaisTrocaColaborador]', e);
+    }
   }
 
   const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
   const filialSugerida = window._s3EscalaFilial || usuarioLogado?.filial || '';
-  if(filialSel && filialSugerida && Array.from(filialSel.options).some(o => o.value === filialSugerida)){
+  if(filialSugerida && !filialSel.value && Array.from(filialSel.options).some(o => o.value === filialSugerida)){
     filialSel.value = filialSugerida;
+    buscarColaboradoresParaTroca();
   }
-
-  overlay.classList.add('open');
-  if(filialSel?.value) buscarColaboradoresParaTroca();
 }
 
 function closeTrocarColaboradorModal(){
@@ -2345,8 +2362,11 @@ async function buscarColaboradoresParaTroca(){
       const t = encodeURIComponent(termo.replace(/[,*()]/g,' '));
       path += `&or=(nome.ilike.*${t}*,nome_completo.ilike.*${t}*)`;
     }
-    const resp = await sbFetch(path);
-    if(!resp.ok){ lista.innerHTML = '<div style="padding:14px;text-align:center;color:var(--red)">Erro ao buscar colaboradores.</div>'; return; }
+    const resp = await Promise.race([
+      sbFetch(path),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout ao buscar colaboradores')), 10000))
+    ]);
+    if(!resp?.ok){ lista.innerHTML = '<div style="padding:14px;text-align:center;color:var(--red)">Erro ao buscar colaboradores.</div>'; return; }
     const data = await resp.json();
 
     if(!data.length){
@@ -3563,7 +3583,15 @@ async function renderS4Table(){
   });
   tbody.querySelectorAll('.btn-trocar-colab').forEach(btn=>{
     const idx = parseInt(btn.getAttribute('data-row-idx'));
-    if(!isNaN(idx) && rows[idx]) btn.onclick=(ev)=>{ev.stopPropagation();openTrocarColaboradorModal(rows[idx].row);};
+    if(!isNaN(idx) && rows[idx]) btn.onclick=(ev)=>{
+      ev.stopPropagation();
+      try{
+        openTrocarColaboradorModal(rows[idx].row);
+      }catch(err){
+        console.error('[btn-trocar-colab]', err);
+        alert('Erro ao abrir o modal de troca de colaborador:\n' + (err?.message || err));
+      }
+    };
   });
   tbody.querySelectorAll('.manual-edit-btn').forEach(btn=>{
     const idx = parseInt(btn.getAttribute('data-row-idx'));
