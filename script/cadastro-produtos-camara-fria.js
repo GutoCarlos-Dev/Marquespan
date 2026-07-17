@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.formCadastroTipo = document.getElementById('formCadastroTipo');
             this.cadTipoIdInput = document.getElementById('cadTipoId');
             this.cadTipoNomeInput = document.getElementById('cadTipoNome');
+            this.cadTipoOrdemInput = document.getElementById('cadTipoOrdem');
             this.btnCloseCadastroTipo = document.getElementById('btnCloseCadastroTipo');
             this.btnCancelarCadastroTipo = document.getElementById('btnCancelarCadastroTipo');
             this.btnSalvarCadastroTipo = document.getElementById('btnSalvarCadastroTipo');
@@ -125,8 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const { data, error } = await supabaseClient
                     .from('tipos_produto_camara_fria')
-                    .select('id, nome')
+                    .select('id, nome, ordem')
                     .eq('ativo', true)
+                    .order('ordem', { ascending: true, nullsFirst: false })
                     .order('nome');
 
                 if (error) throw error;
@@ -415,6 +417,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         openCadastroTipoModal() {
             this.modalTipo.classList.remove('hidden');
+            if (!this.cadTipoIdInput.value && !this.cadTipoOrdemInput.value) {
+                this.cadTipoOrdemInput.value = this.sugerirProximaOrdemTipo();
+            }
+        },
+
+        sugerirProximaOrdemTipo() {
+            const maiorOrdem = (this.tiposCache || []).reduce((max, tipo) => {
+                const valor = Number(tipo.ordem);
+                return Number.isFinite(valor) && valor > max ? valor : max;
+            }, 0);
+            return maiorOrdem + 1;
         },
 
         closeCadastroTipoModal() {
@@ -431,8 +444,10 @@ document.addEventListener('DOMContentLoaded', () => {
         async handleCadastroTipoSubmit(e) {
             e.preventDefault();
 
+            const ordemInformada = parseInt(this.cadTipoOrdemInput.value, 10);
             const payload = {
                 nome: this.cadTipoNomeInput.value.trim(),
+                ordem: Number.isFinite(ordemInformada) ? ordemInformada : this.sugerirProximaOrdemTipo(),
                 ativo: true
             };
             if (this.cadTipoIdInput.value) payload.id = this.cadTipoIdInput.value;
@@ -459,6 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tbodyTipos.innerHTML = tipos.length
                 ? tipos.map(tipo => `
                     <tr>
+                        <td style="text-align: center;">${tipo.ordem ?? '-'}</td>
                         <td>${this.escapeHtml(tipo.nome)}</td>
                         <td class="actions-cell">
                             <button class="btn-icon edit" data-id="${tipo.id}" title="Editar"><i class="fas fa-pen"></i></button>
@@ -466,7 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </td>
                     </tr>
                 `).join('')
-                : '<tr><td colspan="2" style="text-align:center;">Nenhum tipo cadastrado.</td></tr>';
+                : '<tr><td colspan="3" style="text-align:center;">Nenhum tipo cadastrado.</td></tr>';
         },
 
         handleTiposGridClick(e) {
@@ -480,6 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (button.classList.contains('edit')) {
                 this.cadTipoIdInput.value = tipo.id;
                 this.cadTipoNomeInput.value = tipo.nome;
+                this.cadTipoOrdemInput.value = tipo.ordem ?? '';
                 this.btnSalvarCadastroTipo.innerHTML = '<i class="fas fa-save"></i> Atualizar Tipo';
             } else if (button.classList.contains('delete')) {
                 this.deleteTipo(tipo);

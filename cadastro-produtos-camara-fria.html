@@ -162,10 +162,17 @@
       <div class="modal-body">
         <form id="formCadastroTipo">
           <input type="hidden" id="cadTipoId">
-          <div class="form-group full-width">
-            <label for="cadTipoNome">Nome do Tipo</label>
-            <input type="text" id="cadTipoNome" required class="glass-input" placeholder="Ex: Congelado">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="cadTipoNome">Nome do Tipo</label>
+              <input type="text" id="cadTipoNome" required class="glass-input" placeholder="Ex: Congelado">
+            </div>
+            <div class="form-group">
+              <label for="cadTipoOrdem">Ordem</label>
+              <input type="number" id="cadTipoOrdem" min="1" step="1" class="glass-input" placeholder="Ex: 1">
+            </div>
           </div>
+          <p style="font-size: 0.82rem; color: #777; margin: -6px 0 15px;">A Ordem define a sequencia dos Tipos ao montar listas agrupadas (ex: Transferencias CDS). Menor numero aparece primeiro.</p>
           <div class="form-actions">
             <button type="button" id="btnCancelarCadastroTipo" class="btn-glass btn-red">Cancelar</button>
             <button type="submit" id="btnSalvarCadastroTipo" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Tipo</button>
@@ -177,6 +184,7 @@
             <table class="glass-table table-compact">
               <thead>
                 <tr>
+                  <th style="width: 70px; text-align: center;">Ordem</th>
                   <th>Nome</th>
                   <th style="width: 70px; text-align: center;">Ações</th>
                 </tr>
@@ -192,6 +200,6 @@
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/cadastro-produtos-camara-fria.js?v=20260707-busca-grid" defer></script>
+  <script type="module" src="script/cadastro-produtos-camara-fria.js?v=20260717-ordem-tipo" defer></script>
 </body>
 </html>

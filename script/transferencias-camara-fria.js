@@ -1,7 +1,6 @@
 import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
-const TIPO_ORDER = ['TRADICIONAL', 'EXTRA', 'PREMIUM', 'KITS', 'SALGADOS', 'RECHEIOS', 'CONFEITARIA', 'BOLO BISNAGA'];
 const DIAS_SEMANA = [
     { field: 'segunda', label: 'Segunda' },
     { field: 'terca', label: 'Terca' },
@@ -19,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         acessoGlobal: true,
         produtosCache: [],
         existentesCache: new Map(),
+        tiposOrdemCache: new Map(),
         sortField: null,
         sortDir: 'asc',
 
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const semana = this.semanaInput.value;
                 const dataContagem = this.dataContagemInput.value;
 
-                const [produtosResult, existentesResult] = await Promise.all([
+                const [produtosResult, existentesResult, tiposResult] = await Promise.all([
                     supabaseClient
                         .from('produtos_camara_fria')
                         .select('id, codigo, nome, tipo, filial')
@@ -159,14 +159,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         .select('id, produto_id, estoque, segunda, terca, quarta, quinta, sexta, transferir')
                         .eq('filial', filial)
                         .eq('semana', semana)
-                        .eq('data_contagem', dataContagem)
+                        .eq('data_contagem', dataContagem),
+                    supabaseClient
+                        .from('tipos_produto_camara_fria')
+                        .select('nome, ordem')
+                        .eq('ativo', true)
                 ]);
 
                 if (produtosResult.error) throw produtosResult.error;
                 if (existentesResult.error) throw existentesResult.error;
+                if (tiposResult.error) throw tiposResult.error;
 
                 this.produtosCache = produtosResult.data || [];
                 this.existentesCache = new Map((existentesResult.data || []).map(item => [String(item.produto_id), item]));
+                // Busca a Ordem configurada de cada Tipo sempre que a lista e gerada, para
+                // refletir na hora qualquer Tipo novo ou reordenado no Cadastro de Produtos.
+                this.tiposOrdemCache = new Map((tiposResult.data || []).map(item => [this.normalizarTipo(item.nome), Number(item.ordem)]));
                 this.renderTabela();
             } catch (error) {
                 console.error('Erro ao gerar lista de transferencias:', error);
@@ -186,17 +194,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 grupos.get(tipo).push(produto);
             });
 
-            const ordenados = [];
-            TIPO_ORDER.forEach(tipo => {
-                if (grupos.has(tipo)) {
-                    ordenados.push([tipo, grupos.get(tipo)]);
-                    grupos.delete(tipo);
-                }
+            // A sequencia dos Tipos vem da coluna "Ordem" configurada no Cadastro de
+            // Produtos (tipos_produto_camara_fria.ordem). Tipos sem ordem configurada
+            // (ou que ainda nao existam la) caem no final, em ordem alfabetica.
+            const comOrdem = [];
+            const semOrdem = [];
+            Array.from(grupos.keys()).forEach(tipo => {
+                const ordem = this.tiposOrdemCache?.get(tipo);
+                if (Number.isFinite(ordem)) comOrdem.push({ tipo, ordem });
+                else semOrdem.push(tipo);
             });
-            Array.from(grupos.keys()).sort((a, b) => a.localeCompare(b, 'pt-BR')).forEach(tipo => {
-                ordenados.push([tipo, grupos.get(tipo)]);
-            });
-            return ordenados;
+
+            comOrdem.sort((a, b) => a.ordem - b.ordem || a.tipo.localeCompare(b.tipo, 'pt-BR'));
+            semOrdem.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+            return [...comOrdem.map(item => item.tipo), ...semOrdem]
+                .map(tipo => [tipo, grupos.get(tipo)]);
         },
 
         renderTabela() {
