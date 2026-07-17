@@ -3042,7 +3042,11 @@ function loadS4Sheet(){
   let sheetDate=extractDate(sn)||'';  // Tenta extrair de nomes como "RESUMO 13.05.26"
   
   // Se não conseguir (RESUMO SEGUNDA, etc), tenta usar input ou deduzir da primeira linha com data
-  if(!sheetDate && sn.startsWith('RESUMO ')){
+  // Roda sempre que o nome da aba não trouxer a data — não só quando começa com "RESUMO ",
+  // pois abas com outros nomes (ex.: "RESUMO", "CONTROLE", nomes customizados) ficavam
+  // sem nenhuma tentativa de fallback e toda a análise ficava sem data (_date vazio em
+  // todas as linhas), quebrando o "Salvar Dia" com "Não foi possível detectar a data".
+  if(!sheetDate){
     const dateInput=document.getElementById('s4-base-date');
     if(dateInput?.value){
       // Input type=date retorna YYYY-MM-DD → converte para DD/MM/AAAA
