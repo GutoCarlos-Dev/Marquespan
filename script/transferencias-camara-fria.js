@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tiposOrdemCache: new Map(),
         sortField: null,
         sortDir: 'asc',
+        somenteLeitura: false,
 
         init() {
             this.cache();
@@ -30,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.definirDataContagemAtual();
             this.loadFiliais();
             this.renderTabelaInicial();
+            this.carregarHistorico();
         },
 
         cache() {
@@ -47,6 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
             this.kpiTotal = document.getElementById('kpiTransfTotal');
             this.kpiSaldo = document.getElementById('kpiTransfSaldo');
             this.kpiMarcados = document.getElementById('kpiTransfMarcados');
+            this.modoBanner = document.getElementById('transfModoLeituraBanner');
+            this.btnEditarAtual = document.getElementById('btnTransfEditarAtual');
+            this.historicoBody = document.getElementById('tbodyTransfHistorico');
+            this.historicoCount = document.getElementById('transfHistoricoCount');
         },
 
         bind() {
@@ -69,6 +75,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             [this.filialSelect, this.semanaInput, this.dataContagemInput].forEach(el => {
                 el.addEventListener('change', () => this.renderTabelaInicial());
+            });
+            this.btnEditarAtual?.addEventListener('click', () => {
+                this.somenteLeitura = false;
+                this.aplicarModoSomenteLeitura();
+            });
+            this.historicoBody?.addEventListener('click', (event) => {
+                const btn = event.target.closest('button[data-acao]');
+                if (!btn) return;
+                const item = {
+                    filial: btn.dataset.filial,
+                    semana: btn.dataset.semana,
+                    dataContagem: btn.dataset.dataContagem
+                };
+                if (btn.dataset.acao === 'visualizar') this.abrirListaDoHistorico(item, true);
+                else if (btn.dataset.acao === 'editar') this.abrirListaDoHistorico(item, false);
+                else if (btn.dataset.acao === 'excluir') this.excluirLista(item);
             });
         },
 
@@ -260,6 +282,15 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtrarBusca();
             if (this.sortField) this.aplicarOrdenacaoGrupos();
             this.atualizarIconesOrdenacao();
+            this.aplicarModoSomenteLeitura();
+        },
+
+        aplicarModoSomenteLeitura() {
+            this.tableBody.querySelectorAll('.input-transf, .select-transferir').forEach(el => {
+                el.disabled = this.somenteLeitura;
+            });
+            this.btnSalvar.disabled = this.somenteLeitura;
+            this.modoBanner?.classList.toggle('hidden', !this.somenteLeitura);
         },
 
         atualizarLinha(tr) {
@@ -528,6 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         async salvar() {
+            if (this.somenteLeitura) return alert('Esta lista esta em modo visualizacao. Clique em "Editar esta lista" para alterar.');
             if (!this.formularioValido()) return;
             const linhas = this.getLinhasProduto();
             if (linhas.length === 0) return alert('Gere a lista antes de salvar.');
@@ -590,6 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 registrarAuditoria('ALTERAR', 'Câmara Fria', `Transferencias CDS salvas - Filial: ${filial}, Semana: ${semana}, Data: ${dataContagem}`);
                 await this.gerarLista();
+                await this.carregarHistorico();
                 alert('Lista de transferencias salva com sucesso!');
             } catch (error) {
                 console.error('Erro ao salvar transferencias:', error);
@@ -598,6 +631,126 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.btnSalvar.disabled = false;
                 this.btnSalvar.innerHTML = '<i class="fas fa-save"></i> Salvar';
             }
+        },
+
+        // ── Historico de Listas (agrupa por Filial + Semana + Data da Contagem) ──
+        async carregarHistorico() {
+            if (!this.historicoBody) return;
+            this.historicoBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando historico...</td></tr>';
+            try {
+                let query = supabaseClient
+                    .from('transferencias_camara_fria')
+                    .select('filial, semana, data_contagem, transferir, usuario, updated_at')
+                    .order('updated_at', { ascending: false })
+                    .limit(3000);
+                if (this.filialRestrita) query = query.eq('filial', this.filialRestrita);
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                const grupos = new Map();
+                (data || []).forEach(item => {
+                    const chave = `${item.filial}::${item.semana}::${item.data_contagem}`;
+                    if (!grupos.has(chave)) {
+                        grupos.set(chave, {
+                            filial: item.filial,
+                            semana: item.semana,
+                            dataContagem: item.data_contagem,
+                            produtos: 0,
+                            marcados: 0,
+                            usuario: item.usuario || '',
+                            updatedAt: item.updated_at
+                        });
+                    }
+                    const grupo = grupos.get(chave);
+                    grupo.produtos += 1;
+                    if (item.transferir === 'VENDA FECHADA') grupo.marcados += 1;
+                    if (item.updated_at > grupo.updatedAt) {
+                        grupo.updatedAt = item.updated_at;
+                        grupo.usuario = item.usuario || grupo.usuario;
+                    }
+                });
+
+                const listas = Array.from(grupos.values()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+                this.renderHistoricoTabela(listas);
+            } catch (error) {
+                console.error('Erro ao carregar historico de transferencias:', error);
+                this.historicoBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar historico.</td></tr>';
+            }
+        },
+
+        renderHistoricoTabela(listas) {
+            if (this.historicoCount) this.historicoCount.textContent = `${listas.length} lista${listas.length === 1 ? '' : 's'}`;
+
+            if (listas.length === 0) {
+                this.historicoBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhuma lista salva ainda.</td></tr>';
+                return;
+            }
+
+            this.historicoBody.innerHTML = listas.map(item => `
+                <tr>
+                    <td>${this.escapeHtml(item.filial)}</td>
+                    <td>${this.escapeHtml(this.formatSemanaDisplay(item.semana))}</td>
+                    <td>${this.escapeHtml(this.formatDateBR(item.dataContagem))}</td>
+                    <td style="text-align:center">${item.produtos}</td>
+                    <td style="text-align:center">${item.marcados}</td>
+                    <td>${this.formatDateTime(item.updatedAt)}</td>
+                    <td>${this.escapeHtml(item.usuario || '-')}</td>
+                    <td class="actions-cell">
+                        <button class="btn-icon view" data-acao="visualizar" data-filial="${this.escapeHtml(item.filial)}" data-semana="${this.escapeHtml(item.semana)}" data-data-contagem="${item.dataContagem}" title="Visualizar"><i class="fas fa-eye"></i></button>
+                        <button class="btn-icon edit" data-acao="editar" data-filial="${this.escapeHtml(item.filial)}" data-semana="${this.escapeHtml(item.semana)}" data-data-contagem="${item.dataContagem}" title="Editar"><i class="fas fa-pen"></i></button>
+                        <button class="btn-icon delete" data-acao="excluir" data-filial="${this.escapeHtml(item.filial)}" data-semana="${this.escapeHtml(item.semana)}" data-data-contagem="${item.dataContagem}" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        },
+
+        async abrirListaDoHistorico(item, somenteLeitura) {
+            if (this.filialSelect.disabled && this.filialSelect.value !== item.filial) {
+                alert('Esta lista pertence a outra filial, fora do seu acesso.');
+                return;
+            }
+            this.filialSelect.value = item.filial;
+            this.semanaInput.value = item.semana;
+            this.dataContagemInput.value = item.dataContagem;
+            this.somenteLeitura = somenteLeitura;
+            await this.gerarLista();
+            document.querySelector('.transf-table-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+
+        async excluirLista(item) {
+            const confirmar = confirm(
+                `Excluir a lista de Transferencias CDS?\n\nFilial: ${item.filial}\nSemana: ${this.formatSemanaDisplay(item.semana)}\nData da Contagem: ${this.formatDateBR(item.dataContagem)}\n\nTodos os produtos desta lista serao removidos.`
+            );
+            if (!confirmar) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('transferencias_camara_fria')
+                    .delete()
+                    .eq('filial', item.filial)
+                    .eq('semana', item.semana)
+                    .eq('data_contagem', item.dataContagem);
+                if (error) throw error;
+
+                registrarAuditoria('EXCLUIR', 'Câmara Fria', `Transferencias CDS excluida - Filial: ${item.filial}, Semana: ${item.semana}, Data: ${item.dataContagem}`);
+
+                if (this.filialSelect.value === item.filial && this.semanaInput.value === item.semana && this.dataContagemInput.value === item.dataContagem) {
+                    this.somenteLeitura = false;
+                    this.renderTabelaInicial();
+                }
+
+                await this.carregarHistorico();
+                alert('Lista excluida com sucesso.');
+            } catch (error) {
+                console.error('Erro ao excluir lista de transferencias:', error);
+                alert('Erro ao excluir: ' + error.message);
+            }
+        },
+
+        formatDateTime(value) {
+            if (!value) return '-';
+            return new Date(value).toLocaleString('pt-BR');
         },
 
         getLinhasExportacao() {
