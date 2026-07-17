@@ -10,12 +10,17 @@ const DIAS_SEMANA = [
     { field: 'sexta', label: 'Sexta' }
 ];
 
+// Ordem das celulas editaveis de cada linha, usada na navegacao por setas e na colagem em bloco
+const CAMPOS_NAV = ['estoque', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'transferir'];
+
 document.addEventListener('DOMContentLoaded', () => {
     const TransferenciasCamaraFriaUI = {
         filialRestrita: '',
         acessoGlobal: true,
         produtosCache: [],
         existentesCache: new Map(),
+        sortField: null,
+        sortDir: 'asc',
 
         init() {
             this.cache();
@@ -55,6 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             this.tableBody.addEventListener('change', (event) => {
                 if (event.target.matches('.select-transferir')) this.atualizarSelectTransferir(event.target);
+            });
+            this.tableBody.addEventListener('keydown', (event) => this.handleArrowNav(event));
+            this.tableBody.addEventListener('paste', (event) => this.handlePasteGrid(event));
+            document.querySelector('.transf-table thead')?.addEventListener('click', (event) => {
+                const btn = event.target.closest('.estoque-sort-btn');
+                if (btn) this.ordenarPorColuna(btn.dataset.sort);
             });
             [this.filialSelect, this.semanaInput, this.dataContagemInput].forEach(el => {
                 el.addEventListener('change', () => this.renderTabelaInicial());
@@ -234,6 +245,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tableBody.innerHTML = html;
             this.tableBody.querySelectorAll('tr[data-produto-id]').forEach(tr => this.atualizarLinha(tr));
             this.filtrarBusca();
+            if (this.sortField) this.aplicarOrdenacaoGrupos();
+            this.atualizarIconesOrdenacao();
         },
 
         atualizarLinha(tr) {
@@ -308,6 +321,197 @@ document.addEventListener('DOMContentLoaded', () => {
             cabecalhos.forEach(tr => {
                 tr.hidden = termo ? !visivelPorTipo.get(tr.dataset.tipoHeader) : false;
             });
+        },
+
+        // ── Ordenacao por coluna (dentro de cada grupo de Tipo) ─────────────────
+        ordenarPorColuna(campo) {
+            if (!campo) return;
+            if (this.sortField === campo) {
+                this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortField = campo;
+                this.sortDir = 'asc';
+            }
+            this.aplicarOrdenacaoGrupos();
+            this.atualizarIconesOrdenacao();
+        },
+
+        aplicarOrdenacaoGrupos() {
+            const grupos = this.getGruposDom();
+            grupos.forEach(({ headerRow, rows }) => {
+                const ordenadas = rows.slice().sort((a, b) => {
+                    const va = this.getValorOrdenacao(a, this.sortField);
+                    const vb = this.getValorOrdenacao(b, this.sortField);
+                    const cmp = (typeof va === 'number' && typeof vb === 'number')
+                        ? va - vb
+                        : String(va).localeCompare(String(vb), 'pt-BR');
+                    return this.sortDir === 'asc' ? cmp : -cmp;
+                });
+                let anchor = headerRow;
+                ordenadas.forEach(tr => {
+                    anchor.after(tr);
+                    anchor = tr;
+                });
+            });
+        },
+
+        getGruposDom() {
+            const grupos = [];
+            let atual = null;
+            Array.from(this.tableBody.children).forEach(tr => {
+                if (tr.dataset.tipoHeader !== undefined) {
+                    atual = { headerRow: tr, rows: [] };
+                    grupos.push(atual);
+                } else if (atual && tr.dataset.produtoId) {
+                    atual.rows.push(tr);
+                }
+            });
+            return grupos;
+        },
+
+        getValorOrdenacao(tr, campo) {
+            switch (campo) {
+                case 'codigo': return this.normalizarTexto(tr.querySelector('td:nth-child(1)')?.textContent || '');
+                case 'produto': return this.normalizarTexto(tr.querySelector('td:nth-child(2)')?.textContent || '');
+                case 'total': return parseInt(tr.querySelector('[data-total]')?.textContent, 10) || 0;
+                case 'saldo': return parseInt(tr.querySelector('[data-saldo]')?.textContent, 10) || 0;
+                case 'transferir': return tr.querySelector('.select-transferir')?.value || '';
+                default: return this.getValorInt(tr, campo);
+            }
+        },
+
+        atualizarIconesOrdenacao() {
+            document.querySelectorAll('.transf-table .estoque-sort-btn').forEach(btn => {
+                const icon = btn.querySelector('i');
+                const ativo = btn.dataset.sort === this.sortField;
+                btn.classList.toggle('active', ativo);
+                if (!icon) return;
+                icon.className = ativo ? `fas fa-sort-${this.sortDir === 'asc' ? 'up' : 'down'}` : 'fas fa-sort';
+            });
+        },
+
+        // ── Navegacao por setas (estilo planilha) ───────────────────────────────
+        handleArrowNav(event) {
+            const target = event.target;
+            if (!target.matches('.input-transf, .select-transferir')) return;
+            const key = event.key;
+            if (!key.startsWith('Arrow') && key !== 'Enter') return;
+            if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+            const isSelect = target.tagName === 'SELECT';
+            const isTextLike = target.tagName === 'INPUT';
+
+            if (key === 'Enter') {
+                event.preventDefault();
+                this.navRow(target, 1);
+                return;
+            }
+
+            if (key === 'ArrowUp' || key === 'ArrowDown') {
+                if (isSelect) return;
+                event.preventDefault();
+                this.navRow(target, key === 'ArrowDown' ? 1 : -1);
+                return;
+            }
+
+            if (key === 'ArrowLeft' || key === 'ArrowRight') {
+                if (isTextLike) {
+                    const pos = target.selectionStart ?? 0;
+                    const len = target.value.length;
+                    if (key === 'ArrowLeft' && pos > 0) return;
+                    if (key === 'ArrowRight' && pos < len) return;
+                }
+                event.preventDefault();
+                this.navCell(target, key === 'ArrowRight' ? 1 : -1);
+            }
+        },
+
+        navRow(el, direcao) {
+            const field = el.dataset.field;
+            const linhas = this.getLinhasVisiveis();
+            const idx = linhas.indexOf(el.closest('tr'));
+            if (idx === -1) return;
+            const proxima = linhas[idx + direcao];
+            if (!proxima) return;
+            const proximoCampo = proxima.querySelector(`[data-field="${field}"]`);
+            if (proximoCampo) this.focarCelula(proximoCampo);
+        },
+
+        navCell(el, direcao) {
+            const tr = el.closest('tr');
+            if (!tr) return;
+            const idx = CAMPOS_NAV.indexOf(el.dataset.field);
+            if (idx === -1) return;
+            const proximoCampoNome = CAMPOS_NAV[idx + direcao];
+            if (!proximoCampoNome) return;
+            const proximoCampo = tr.querySelector(`[data-field="${proximoCampoNome}"]`);
+            if (proximoCampo) this.focarCelula(proximoCampo);
+        },
+
+        focarCelula(el) {
+            el.focus();
+            if (el.tagName === 'INPUT') el.select();
+        },
+
+        getLinhasVisiveis() {
+            return Array.from(this.tableBody.querySelectorAll('tr[data-produto-id]')).filter(tr => !tr.hidden);
+        },
+
+        // ── Colar em bloco (copiado do Excel), igual ao grid de Rotas/Peso de Carga ──
+        handlePasteGrid(event) {
+            const target = event.target;
+            const field = target?.dataset?.field;
+            if (!field) return;
+            const startIdx = CAMPOS_NAV.indexOf(field);
+            if (startIdx === -1) return;
+
+            const clipboard = event.clipboardData || window.clipboardData;
+            const texto = clipboard?.getData('text/plain') || clipboard?.getData('text') || '';
+            if (!texto) return;
+
+            const matriz = this.parseMatrizColagem(texto);
+            if (matriz.length === 0) return;
+            if (matriz.length === 1 && matriz[0].length === 1) return; // colagem simples: deixa o navegador colar direto
+
+            event.preventDefault();
+
+            const linhasVisiveis = this.getLinhasVisiveis();
+            const startRowIdx = linhasVisiveis.indexOf(target.closest('tr'));
+            if (startRowIdx === -1) return;
+
+            matriz.forEach((valores, offsetLinha) => {
+                const destino = linhasVisiveis[startRowIdx + offsetLinha];
+                if (!destino) return; // lista de produtos e fixa: nao cria linhas novas
+                valores.forEach((valor, offsetColuna) => {
+                    const campo = CAMPOS_NAV[startIdx + offsetColuna];
+                    if (!campo) return;
+                    this.aplicarValorCelula(destino, campo, valor);
+                });
+            });
+
+            this.atualizarKpis();
+        },
+
+        aplicarValorCelula(tr, campo, valorTexto) {
+            const valor = String(valorTexto ?? '').trim();
+            if (campo === 'transferir') {
+                const select = tr.querySelector('.select-transferir');
+                if (!select) return;
+                select.value = this.normalizarTexto(valor).includes('venda fechada') ? 'VENDA FECHADA' : '';
+                this.atualizarSelectTransferir(select);
+                return;
+            }
+            const input = tr.querySelector(`[data-field="${campo}"]`);
+            if (!input) return;
+            const numero = parseInt(valor.replace(/[^\d-]/g, ''), 10);
+            input.value = Number.isFinite(numero) && numero >= 0 ? String(numero) : '';
+            this.atualizarLinha(tr);
+        },
+
+        parseMatrizColagem(texto) {
+            const normalizado = String(texto || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            const linhas = normalizado.split('\n').filter(linha => linha.trim() !== '');
+            return linhas.map(linha => linha.split('\t').map(valor => valor.trim()));
         },
 
         async salvar() {

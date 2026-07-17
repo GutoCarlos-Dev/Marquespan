@@ -20,7 +20,6 @@
 }
 
 .transf-table td:nth-child(2) {
-    text-align: left;
     white-space: normal;
     min-width: 220px;
 }
