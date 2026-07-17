@@ -46,6 +46,7 @@ const NOMES_PAGINA = {
     'usuarios.html': 'Usuários',
     'auditoria.html': 'Auditoria',
     'veiculos.html': 'Veículos',
+    'controle-de-jornada.html': 'Controle de Jornada',
     'escala.html': 'Escala',
     'diaria.html': 'Diária',
     'portaria-controle-acesso.html': 'Portaria',
