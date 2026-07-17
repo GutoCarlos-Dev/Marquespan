@@ -157,7 +157,8 @@ async function buscarDados() {
         // 1. Cálculo da quantidade de meses no período para a mensalidade
         const dIni = new Date(dataIni + 'T00:00:00');
         const dFim = new Date(dataFim + 'T23:59:59');
-        const diffMeses = (dFim.getFullYear() - dIni.getFullYear()) * 12 + (dFim.getMonth() - dIni.getMonth()) + 1;
+        let diffMeses = (dFim.getFullYear() - dIni.getFullYear()) * 12 + (dFim.getMonth() - dIni.getMonth()) + 1;
+        if (!Number.isFinite(diffMeses) || diffMeses < 1) diffMeses = 1;
 
         // 2. Tipos de veículos permitidos para mensalidade
         const tiposPermitidos = ['TRUCK', 'CAMINHÃO 3/4', 'CAMINHÂO 3/4', 'BITRUCK', 'BITREM', 'HR/VAN', 'LS', 'MUNCK'];
@@ -166,7 +167,7 @@ async function buscarDados() {
         const montarQueryPassagens = () => {
             let query = supabaseClient
                 .from('pedagios_lancamentos')
-                .select('*, veiculos!inner(filial, eixos), pedagios_empresas(nome, mensalidade)')
+                .select('*, veiculos!inner(filial, eixos, marca), pedagios_empresas(nome, mensalidade)')
                 .order('data_hora_passagem', { ascending: false });
             if (dataIni) query = query.gte('data_hora_passagem', dataLocalToISOString(dataIni, '00:00:00'));
             if (dataFim) query = query.lte('data_hora_passagem', dataLocalToISOString(dataFim, '23:59:59'));
@@ -203,10 +204,11 @@ async function buscarDados() {
         if (resPassagens.error) throw resPassagens.error;
 
         lastFleetCount = resFrota.count || 0;
-        const valorMensalidadeUnitario = resEmpresa.data?.mensalidade || 0;
-        
+        const valorMensalidadeUnitario = Number(resEmpresa.data?.mensalidade) || 0;
+
         // Cálculo final: Qtd Veículos da Filial/Tipo * Valor Mensalidade * Qtd Meses no Filtro
         fleetMonthlyTotal = lastFleetCount * valorMensalidadeUnitario * diffMeses;
+        if (!Number.isFinite(fleetMonthlyTotal)) fleetMonthlyTotal = 0;
 
         const { data, error } = resPassagens;
         if (error) throw error;
@@ -231,7 +233,8 @@ function getDadosGrid() {
         (d.motorista || '').toUpperCase().includes(search) ||
         (d.rota || '').toUpperCase().includes(search) ||
         (d.rodovia || '').toUpperCase().includes(search) ||
-        (d.praca || '').toUpperCase().includes(search)
+        (d.praca || '').toUpperCase().includes(search) ||
+        (d.marca_veiculo || d.veiculos?.marca || '').toUpperCase().includes(search)
     );
 
     if (filtrarPorDivergencia) {
@@ -267,6 +270,7 @@ function renderizarTabela() {
         const eixosCadastrados = parseInt(d.veiculos?.eixos) || 0;
         const taxaAmbiental = [90, 94].includes(eixosCobrados);
         const temDivergencia = !taxaAmbiental && eixosCadastrados > 0 && eixosCobrados > eixosCadastrados;
+        const marcaVeiculo = (d.marca_veiculo || d.veiculos?.marca || '').toString().trim() || '-';
         
         const alertStyle = taxaAmbiental ? 'style="color: #856404; font-weight: bold; background-color: #fff3cd;"' : (temDivergencia ? 'style="color: #dc3545; font-weight: bold;"' : '');
         const rowBg = taxaAmbiental ? 'style="background-color: rgba(255, 193, 7, 0.10);"' : (temDivergencia ? 'style="background-color: rgba(220, 53, 69, 0.05);"' : '');
@@ -277,7 +281,7 @@ function renderizarTabela() {
             <td><strong>${d.placa}</strong></td>
             <td>${d.motorista || '-'}</td>
             <td>${d.rota || '-'}</td>
-            <td>${d.marca_veiculo || '-'}</td>
+            <td>${marcaVeiculo}</td>
             <td ${alertStyle}>${d.categoria_eixos || '-'} ${taxaAmbiental ? '<i class="fas fa-exclamation-triangle" title="Taxa Ambiental"></i> Taxa Ambiental' : (temDivergencia ? '<i class="fas fa-exclamation-triangle" title="Eixo cobrado maior que o cadastro"></i>' : '')}</td>
             <td style="text-align: center; color: #666;">${d.veiculos?.eixos || '-'}</td>
             <td>${d.rodovia || '-'}</td>
