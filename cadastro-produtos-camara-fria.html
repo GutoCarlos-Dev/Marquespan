@@ -147,6 +147,17 @@
               <input type="number" min="1" step="1" id="produtoCaixasPalete" class="glass-input" required placeholder="Ex: 42">
             </div>
           </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="produtoUnidadeFabricacao">Unidade de Fabricação</label>
+              <div class="tipo-input-row">
+                <select id="produtoUnidadeFabricacao" class="glass-input">
+                  <option value="">Selecione a Unidade</option>
+                </select>
+                <button type="button" id="btnAbrirCadastroUnidade" class="btn-add-inline" title="Cadastrar unidade de fabricação" aria-label="Cadastrar unidade de fabricação"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+          </div>
           <div class="form-actions">
             <button type="button" id="btnCancelarProduto" class="btn-glass btn-red">Cancelar</button>
             <button type="submit" id="btnSalvarProduto" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Produto</button>
@@ -201,9 +212,46 @@
     </div>
   </div>
 
+  <!-- Modal Cadastro de Unidade de Fabricacao -->
+  <div id="modalCadastroUnidade" class="modal-backdrop hidden">
+    <div class="glass-modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-industry"></i> Cadastro de Unidade de Fabricação</h3>
+        <button type="button" id="btnCloseCadastroUnidade" class="close-button" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="formCadastroUnidade">
+          <input type="hidden" id="cadUnidadeId">
+          <div class="form-group full-width">
+            <label for="cadUnidadeNome">Nome da Unidade</label>
+            <input type="text" id="cadUnidadeNome" required class="glass-input" placeholder="Ex: Unidade Itu">
+          </div>
+          <div class="form-actions">
+            <button type="button" id="btnCancelarCadastroUnidade" class="btn-glass btn-red">Cancelar</button>
+            <button type="submit" id="btnSalvarCadastroUnidade" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar Unidade</button>
+          </div>
+        </form>
+        <div class="tipo-grid-section">
+          <h4><i class="fas fa-list"></i> Unidades Cadastradas</h4>
+          <div class="table-responsive">
+            <table class="glass-table table-compact">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th style="width: 70px; text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyUnidadesCadastradas"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/cadastro-produtos-camara-fria.js?v=20260717-multifilial" defer></script>
+  <script type="module" src="script/cadastro-produtos-camara-fria.js?v=20260717-unidade" defer></script>
 </body>
 </html>

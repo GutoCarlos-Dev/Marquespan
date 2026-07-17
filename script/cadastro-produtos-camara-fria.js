@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.configurarFiltroFilialProduto();
             this.loadFiliais();
             this.loadTipos();
+            this.loadUnidades();
             this.renderTable();
         },
 
@@ -53,6 +54,18 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnCancelarCadastroTipo = document.getElementById('btnCancelarCadastroTipo');
             this.btnSalvarCadastroTipo = document.getElementById('btnSalvarCadastroTipo');
             this.tbodyTipos = document.getElementById('tbodyTiposCadastrados');
+
+            this.unidadeSelect = document.getElementById('produtoUnidadeFabricacao');
+            this.btnAbrirCadastroUnidade = document.getElementById('btnAbrirCadastroUnidade');
+
+            this.modalUnidade = document.getElementById('modalCadastroUnidade');
+            this.formCadastroUnidade = document.getElementById('formCadastroUnidade');
+            this.cadUnidadeIdInput = document.getElementById('cadUnidadeId');
+            this.cadUnidadeNomeInput = document.getElementById('cadUnidadeNome');
+            this.btnCloseCadastroUnidade = document.getElementById('btnCloseCadastroUnidade');
+            this.btnCancelarCadastroUnidade = document.getElementById('btnCancelarCadastroUnidade');
+            this.btnSalvarCadastroUnidade = document.getElementById('btnSalvarCadastroUnidade');
+            this.tbodyUnidades = document.getElementById('tbodyUnidadesCadastradas');
         },
 
         bind() {
@@ -82,6 +95,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             this.formCadastroTipo.addEventListener('submit', this.handleCadastroTipoSubmit.bind(this));
             this.tbodyTipos.addEventListener('click', this.handleTiposGridClick.bind(this));
+
+            this.btnAbrirCadastroUnidade.addEventListener('click', this.openCadastroUnidadeModal.bind(this));
+            this.btnCloseCadastroUnidade.addEventListener('click', this.closeCadastroUnidadeModal.bind(this));
+            this.btnCancelarCadastroUnidade.addEventListener('click', this.closeCadastroUnidadeModal.bind(this));
+            this.modalUnidade.addEventListener('click', (e) => {
+                if (e.target === this.modalUnidade) this.closeCadastroUnidadeModal();
+            });
+            this.formCadastroUnidade.addEventListener('submit', this.handleCadastroUnidadeSubmit.bind(this));
+            this.tbodyUnidades.addEventListener('click', this.handleUnidadesGridClick.bind(this));
 
             this.sortableHeaders.forEach(th => {
                 th.addEventListener('click', () => this.ordenarPor(th.dataset.sort));
@@ -269,6 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tipo: this.tipoSelect.value,
                 peso_caixa: pesoCaixa,
                 caixas_por_palete: caixasPorPalete,
+                unidade_fabricacao: this.unidadeSelect.value || null,
                 filiais: filiaisSelecionadas.length ? filiaisSelecionadas : null,
                 // Compatibilidade com as demais telas do modulo (Contagem, Estoque, Carregamento),
                 // que ainda leem só a filial unica: espelha quando ha exatamente 1 filial marcada;
@@ -445,6 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tipoSelect.value = produto.tipo || '';
             this.pesoCaixaInput.value = produto.peso_caixa != null ? this.formatPeso(produto.peso_caixa) : '';
             this.caixasPaleteInput.value = produto.caixas_por_palete || '';
+            this.unidadeSelect.value = produto.unidade_fabricacao || '';
             const filiaisProduto = Array.isArray(produto.filiais) && produto.filiais.length
                 ? produto.filiais
                 : (produto.filial ? [produto.filial] : []);
@@ -589,6 +613,131 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Erro ao excluir tipo:', error);
                 alert('Erro ao excluir tipo: ' + error.message);
+            }
+        },
+
+        // --- Cadastro de Unidade de Fabricacao (catalogo auxiliar, so Nome) ---
+
+        async loadUnidades() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('unidades_fabricacao_camara_fria')
+                    .select('id, nome')
+                    .eq('ativo', true)
+                    .order('nome');
+
+                if (error) throw error;
+
+                const opcoesUnidade = (data || []).map(u => `<option value="${this.escapeHtml(u.nome)}">${this.escapeHtml(u.nome)}</option>`).join('');
+
+                const valorAtual = this.unidadeSelect.value;
+                this.unidadeSelect.innerHTML = '<option value="">Selecione a Unidade</option>' + opcoesUnidade;
+                if (valorAtual) this.unidadeSelect.value = valorAtual;
+
+                this.unidadesCache = data || [];
+                this.renderUnidadesGrid();
+            } catch (err) {
+                console.error('Erro ao carregar unidades de fabricacao:', err);
+            }
+        },
+
+        openCadastroUnidadeModal() {
+            this.modalUnidade.classList.remove('hidden');
+        },
+
+        closeCadastroUnidadeModal() {
+            this.modalUnidade.classList.add('hidden');
+            this.clearCadastroUnidadeForm();
+        },
+
+        clearCadastroUnidadeForm() {
+            this.formCadastroUnidade.reset();
+            this.cadUnidadeIdInput.value = '';
+            this.btnSalvarCadastroUnidade.innerHTML = '<i class="fas fa-save"></i> Salvar Unidade';
+        },
+
+        async handleCadastroUnidadeSubmit(e) {
+            e.preventDefault();
+
+            const payload = {
+                nome: this.cadUnidadeNomeInput.value.trim(),
+                ativo: true
+            };
+            if (this.cadUnidadeIdInput.value) payload.id = this.cadUnidadeIdInput.value;
+
+            try {
+                const { error } = await supabaseClient.from('unidades_fabricacao_camara_fria').upsert(payload);
+                if (error) throw error;
+
+                registrarAuditoria(
+                    payload.id ? 'ALTERAR' : 'INCLUIR',
+                    'Câmara Fria',
+                    `${payload.id ? 'Atualização' : 'Cadastro'} de unidade de fabricação: ${payload.nome}`
+                );
+                this.clearCadastroUnidadeForm();
+                await this.loadUnidades();
+            } catch (error) {
+                console.error('Erro ao salvar unidade de fabricacao:', error);
+                alert('Erro ao salvar unidade: ' + error.message);
+            }
+        },
+
+        renderUnidadesGrid() {
+            const unidades = this.unidadesCache || [];
+            this.tbodyUnidades.innerHTML = unidades.length
+                ? unidades.map(unidade => `
+                    <tr>
+                        <td>${this.escapeHtml(unidade.nome)}</td>
+                        <td class="actions-cell">
+                            <button class="btn-icon edit" data-id="${unidade.id}" title="Editar"><i class="fas fa-pen"></i></button>
+                            <button class="btn-icon delete" data-id="${unidade.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="2" style="text-align:center;">Nenhuma unidade cadastrada.</td></tr>';
+        },
+
+        handleUnidadesGridClick(e) {
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            const id = button.dataset.id;
+            const unidade = (this.unidadesCache || []).find(item => String(item.id) === String(id));
+            if (!unidade) return;
+
+            if (button.classList.contains('edit')) {
+                this.cadUnidadeIdInput.value = unidade.id;
+                this.cadUnidadeNomeInput.value = unidade.nome;
+                this.btnSalvarCadastroUnidade.innerHTML = '<i class="fas fa-save"></i> Atualizar Unidade';
+            } else if (button.classList.contains('delete')) {
+                this.deleteUnidade(unidade);
+            }
+        },
+
+        async deleteUnidade(unidade) {
+            try {
+                const { data: emUso, error: erroConsulta } = await supabaseClient
+                    .from('produtos_camara_fria')
+                    .select('id')
+                    .eq('unidade_fabricacao', unidade.nome)
+                    .limit(1);
+                if (erroConsulta) throw erroConsulta;
+
+                if (emUso && emUso.length > 0) {
+                    alert('Esta unidade esta em uso por um ou mais produtos e nao pode ser excluida.');
+                    return;
+                }
+
+                if (!confirm(`Excluir a unidade "${unidade.nome}"?`)) return;
+
+                const { error } = await supabaseClient.from('unidades_fabricacao_camara_fria').delete().eq('id', unidade.id);
+                if (error) throw error;
+
+                registrarAuditoria('EXCLUIR', 'Câmara Fria', `Exclusão de unidade de fabricação: ${unidade.nome}`);
+                await this.loadUnidades();
+            } catch (error) {
+                console.error('Erro ao excluir unidade de fabricacao:', error);
+                alert('Erro ao excluir unidade: ' + error.message);
             }
         }
     };
