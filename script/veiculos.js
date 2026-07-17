@@ -67,9 +67,6 @@ function aplicarModoAcessoVeiculos() {
             btn.style.display = 'none';
         }
     });
-
-    const painelAcoes = document.querySelector('.acoes-panel');
-    if (painelAcoes) painelAcoes.style.display = 'none';
 }
 
 async function verificarPermissaoPagina() {
