@@ -631,7 +631,7 @@ const norm=v=>v?String(v).trim().toUpperCase():'';
 // ── MATCHING ENGINE ─────────────────────────────────────────
 // Finds the full nome (from ponto) given an abbreviated nome (from escala)
 // Uses cadastro data as the bridge
-function resolveNome(nomeEscala){
+function resolveNome(nomeEscala, tipoFuncEsperado){
   // Returns {nome_ponto, funcao, telefone, placa?, rota?} or null
   const key = norm(nomeEscala);
   if(!key) return null;
@@ -639,23 +639,26 @@ function resolveNome(nomeEscala){
   // 🔒 Helper: ignora funcionários inativos (desligados) — não puxa para escalas novas
   const isActive = rec => !rec || rec.ativo!==false; // default true se não tem flag
 
-  // Search in motoristas (apenas ATIVOS)
-  for(const rec of Object.values(cadData.motoristas||{})){
-    if(!isActive(rec)) continue;
-    if(norm(rec.nome_escala)===key || norm(rec.nome_ponto)===key)
-      return {...rec, tipo_func:'MOTORISTA'};
-  }
-  // Search in auxiliares (apenas ATIVOS)
-  for(const rec of Object.values(cadData.auxiliares||{})){
-    if(!isActive(rec)) continue;
-    if(norm(rec.nome_escala)===key || norm(rec.nome_ponto)===key)
-      return {...rec, tipo_func:'AUXILIAR'};
+  // Prioriza o cadastro do PAPEL esperado (motorista/auxiliar): evita que um
+  // motorista homônimo "roube" o nome de um auxiliar (e vice-versa) quando os
+  // dois têm o mesmo Nome Curto mas são pessoas diferentes (ex.: filiais distintas).
+  const storesOrdenados = tipoFuncEsperado === 'AUXILIAR'
+    ? ['auxiliares', 'motoristas']
+    : ['motoristas', 'auxiliares'];
+
+  // Busca exata (apenas ATIVOS), respeitando a prioridade de papel
+  for(const store of storesOrdenados){
+    for(const rec of Object.values(cadData[store]||{})){
+      if(!isActive(rec)) continue;
+      if(norm(rec.nome_escala)===key || norm(rec.nome_ponto)===key)
+        return {...rec, tipo_func: store==='motoristas'?'MOTORISTA':'AUXILIAR'};
+    }
   }
 
-  // Fuzzy: try partial word matching (também apenas ativos)
+  // Fuzzy: try partial word matching (também apenas ativos), mesma prioridade de papel
   const words = key.split(/\s+/).filter(w=>w.length>2);
   let bestMatch = null; let bestScore = 0;
-  for(const store of ['motoristas','auxiliares']){
+  for(const store of storesOrdenados){
     for(const rec of Object.values(cadData[store]||{})){
       if(!isActive(rec)) continue;
       const escNorm = norm(rec.nome_escala||'');
@@ -3081,7 +3084,7 @@ function loadS4Sheet(){
     const aux=safeIdx(r,map.auxiliar)||'',sA=safeIdx(r,map.saida_a),eA=safeIdx(r,map.entrada_a),ijA=safeIdx(r,map.interj_a),obA=safeIdx(r,map.obs_a);
     const base={placa,cidade,rota,stat,_date:sheetDate};
     if(mot.trim()){
-      const cadMot=resolveNome(mot);
+      const cadMot=resolveNome(mot, 'MOTORISTA');
       // nomePonto: prefer cadastro lookup, then the name as-is in RESUMO (already translated by mapaM)
       const nomePontoM=cadMot?.nome_ponto||mot;
       const telM=safeIdx(r,map.tel_m)||cadMot?.telefone||getTelFromCad(nomePontoM)||getTelFromCad(mot)||null;
@@ -3091,7 +3094,7 @@ function loadS4Sheet(){
         saida:sM,entrada:eM,interj:ijM,obs:obM});
     }
     if(aux.trim()){
-      const cadAux=resolveNome(aux);
+      const cadAux=resolveNome(aux, 'AUXILIAR');
       const nomePontoA=cadAux?.nome_ponto||aux;
       const telA=safeIdx(r,map.tel_a)||cadAux?.telefone||getTelFromCad(nomePontoA)||getTelFromCad(aux)||null;
       s4Rows.push({...base,role:'AUXILIAR',nome:aux,
