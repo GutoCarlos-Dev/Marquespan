@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transferencias CDS - Camara Fria - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/menu.css" />
+  <link rel="stylesheet" href="css/cadastro-produtos-camara-fria.css" />
+  <link rel="stylesheet" href="css/estoque-camara-fria.css" />
+  <link rel="stylesheet" href="css/transferencias-camara-fria.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div id="menu-container"></div>
+
+    <div class="main-content">
+      <header class="header glass-header">
+        <h1><i class="fas fa-truck-ramp-box"></i> Transferencias CDS - Camara Fria</h1>
+      </header>
+
+      <div class="produtos-top-grid estoque-top-grid">
+        <section class="glass-panel">
+          <h3><i class="fas fa-clipboard-list"></i> Filtros da Lista</h3>
+          <div class="filtros-container transf-filtros">
+            <div class="form-group-filter">
+              <label for="transfFilial">Filial</label>
+              <select id="transfFilial" class="glass-input" required>
+                <option value="">Selecione</option>
+              </select>
+            </div>
+            <div class="form-group-filter">
+              <label for="transfSemana">Semana</label>
+              <input type="week" id="transfSemana" class="glass-input" required>
+            </div>
+            <div class="form-group-filter">
+              <label for="transfDataContagem">Data da Contagem do Estoque</label>
+              <input type="date" id="transfDataContagem" class="glass-input" required>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass-panel acoes-panel">
+          <h3><i class="fas fa-cogs"></i> Acoes</h3>
+          <div class="acoes-grid transf-acoes-grid">
+            <button type="button" id="btnGerarListaTransf" class="btn-glass btn-blue"><i class="fas fa-list"></i> Gerar Lista</button>
+            <button type="button" id="btnSalvarTransf" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" id="btnTransfPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
+            <button type="button" id="btnTransfXLSX" class="btn-glass btn-purple"><i class="fas fa-file-excel"></i> Excel</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="kpi-grid-camara">
+        <div class="kpi-mini-card">
+          <span>Produtos na Lista</span>
+          <strong id="kpiTransfProdutos">0</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Total Geral (Seg a Sex)</span>
+          <strong id="kpiTransfTotal">0</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Saldo Geral</span>
+          <strong id="kpiTransfSaldo">0</strong>
+        </div>
+        <div class="kpi-mini-card">
+          <span>Marcados p/ Transferir</span>
+          <strong id="kpiTransfMarcados">0</strong>
+        </div>
+      </div>
+
+      <div class="glass-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-boxes-stacked"></i> Lista de Transferencias</h3>
+          <div class="estoque-grid-tools">
+            <div class="input-icon-wrapper estoque-search">
+              <i class="fas fa-search"></i>
+              <input type="search" id="transfBusca" class="glass-input" placeholder="Buscar codigo, produto ou tipo">
+            </div>
+            <span id="transfRecordsCount" class="produtos-count-badge"></span>
+          </div>
+        </div>
+        <div class="table-responsive produtos-table-container transf-table-container">
+          <table class="glass-table transf-table">
+            <thead class="produtos-table-head">
+              <tr>
+                <th>Codigo</th>
+                <th>Produto</th>
+                <th>Estoque</th>
+                <th>Segunda</th>
+                <th>Terca</th>
+                <th>Quarta</th>
+                <th>Quinta</th>
+                <th>Sexta</th>
+                <th>Total</th>
+                <th>Saldo</th>
+                <th>Transferir</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyTransfCamara">
+              <tr><td colspan="11" style="text-align:center;">Selecione Filial, Semana e Data da Contagem e clique em Gerar Lista.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="script/transferencias-camara-fria.js?v=20260717-1" defer></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+.transf-filtros {
+    grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(200px, 1fr);
+}
+
+.transf-acoes-grid {
+    grid-template-columns: 1fr 1fr;
+}
+
+.btn-purple { background: linear-gradient(135deg, #6f42c1, #5936a2); }
+
+.transf-table-container {
+    max-height: 620px;
+}
+
+.transf-table th,
+.transf-table td {
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.transf-table td:nth-child(2) {
+    text-align: left;
+    white-space: normal;
+    min-width: 220px;
+}
+
+.transf-tipo-row td {
+    background: rgba(0, 105, 55, 0.92) !important;
+    color: #ffffff;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left !important;
+    padding: 8px 15px !important;
+    position: sticky;
+    left: 0;
+}
+
+.transf-table tbody tr:not(.transf-tipo-row):nth-child(even) {
+    background: #f7fbf8;
+}
+
+.transf-table tbody tr:not(.transf-tipo-row):hover {
+    background: #eaf6ee;
+}
+
+.input-transf {
+    width: 84px;
+    height: 34px;
+    padding: 6px 8px;
+    border: 1px solid #d8dce0;
+    border-radius: 8px;
+    text-align: right;
+}
+
+.transf-total-cell {
+    font-weight: 800;
+    color: var(--primary-color);
+}
+
+.transf-saldo-cell {
+    font-weight: 800;
+}
+
+.transf-saldo-cell.negativo {
+    color: #dc3545;
+}
+
+.transf-saldo-cell.positivo {
+    color: #1e7e34;
+}
+
+.select-transferir {
+    height: 34px;
+    padding: 4px 8px;
+    border: 1px solid #d8dce0;
+    border-radius: 8px;
+    background: #fff;
+    font-weight: 700;
+    min-width: 150px;
+}
+
+.select-transferir.marcado {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #7a5b00;
+}
+
+@media (max-width: 1024px) {
+    .transf-filtros {
+        grid-template-columns: 1fr;
+    }
+
+    .transf-acoes-grid {
+        grid-template-columns: 1fr;
+    }
+}
