@@ -496,6 +496,10 @@
     transform: scale(1.2);
 }
 
+.btn-icon.view {
+    color: #6c757d;
+}
+
 .btn-icon.edit {
     color: #007bff;
 }

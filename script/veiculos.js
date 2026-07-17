@@ -247,6 +247,7 @@ function setupEventListeners() {
 }
 
 function handleTableClick(e) {
+    const btnView = e.target.closest('.btn-view');
     const btnEdit = e.target.closest('.btn-edit');
     const btnDelete = e.target.closest('.btn-delete');
 
@@ -255,6 +256,7 @@ function handleTableClick(e) {
         return;
     }
 
+    if (btnView) visualizarVeiculo(btnView.dataset.id);
     if (btnEdit) editarVeiculo(btnEdit.dataset.id);
     if (btnDelete) excluirVeiculo(btnDelete.dataset.id);
 }
@@ -449,12 +451,20 @@ function renderizarTabela(veiculos) {
 
         const tdAcoes = document.createElement('td');
 
+        const btnView = document.createElement('button');
+        btnView.className = 'btn-icon view btn-view';
+        btnView.title = 'Visualizar';
+        btnView.dataset.id = v.id;
+        btnView.innerHTML = '<i class="fas fa-eye"></i>';
+        tdAcoes.appendChild(btnView);
+
         if (usuarioTemAcessoTotalVeiculos()) {
             const btnEdit = document.createElement('button');
             btnEdit.className = 'btn-icon edit btn-edit';
             btnEdit.title = 'Editar';
             btnEdit.dataset.id = v.id;
             btnEdit.innerHTML = '<i class="fas fa-edit"></i>';
+            btnEdit.style.marginLeft = '5px';
 
             const btnDelete = document.createElement('button');
             btnDelete.className = 'btn-icon delete btn-delete';
@@ -464,8 +474,6 @@ function renderizarTabela(veiculos) {
             btnDelete.style.marginLeft = '5px';
 
             tdAcoes.append(btnEdit, btnDelete);
-        } else {
-            tdAcoes.textContent = '-';
         }
 
         tr.append(tdFilial, tdPlaca, tdModelo, tdRenavan, tdTipo, tdSituacao, tdQr, tdAcoes);
@@ -561,8 +569,8 @@ function atualizarPbtPorTaraECapacidade() {
     pbt.value = (tara + capacidadeCarga).toFixed(2);
 }
 
-function abrirModalVeiculo(veiculo = null) {
-    if (usuarioSomenteVisualizaVeiculos()) {
+function abrirModalVeiculo(veiculo = null, somenteLeitura = false) {
+    if (!somenteLeitura && usuarioSomenteVisualizaVeiculos()) {
         alert('Seu nivel de acesso permite somente visualizar os veiculos.');
         return;
     }
@@ -638,10 +646,29 @@ function abrirModalVeiculo(veiculo = null) {
         setSelectBoolean('veiculoPedagioAutomatico', false);
     }
 
+    if (somenteLeitura) title.textContent = 'Visualizar Veículo';
+    aplicarModoSomenteLeituraFormVeiculo(somenteLeitura);
+
     atualizarCapacidadeTotalCombustivel();
     atualizarPbtPorTaraECapacidade();
     modal.classList.remove('hidden');
 }
+
+function aplicarModoSomenteLeituraFormVeiculo(somenteLeitura) {
+    const form = document.getElementById('formVeiculo');
+    if (!form) return;
+
+    form.querySelectorAll('input, select, textarea').forEach(el => {
+        el.disabled = somenteLeitura;
+    });
+
+    const btnSalvar = form.querySelector('button[type="submit"]');
+    if (btnSalvar) btnSalvar.classList.toggle('hidden', somenteLeitura);
+
+    const btnCancelar = form.querySelector('.form-actions .btn-red');
+    if (btnCancelar) btnCancelar.textContent = somenteLeitura ? 'Fechar' : 'Cancelar';
+}
+
 function fecharModalVeiculo() {
     const modal = document.getElementById('modalVeiculo');
     if (modal) modal.classList.add('hidden');
@@ -662,6 +689,22 @@ async function editarVeiculo(id) {
 
         if (error) throw error;
         abrirModalVeiculo(data);
+    } catch (err) {
+        console.error('Erro ao carregar veículo:', err);
+        alert('Erro ao carregar dados do veículo.');
+    }
+}
+
+async function visualizarVeiculo(id) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('veiculos')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        abrirModalVeiculo(data, true);
     } catch (err) {
         console.error('Erro ao carregar veículo:', err);
         alert('Erro ao carregar dados do veículo.');
