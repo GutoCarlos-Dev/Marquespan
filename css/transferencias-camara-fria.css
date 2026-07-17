@@ -36,12 +36,29 @@
     left: 0;
 }
 
-.transf-table tbody tr:not(.transf-tipo-row):nth-child(even) {
+.transf-table tbody tr:not(.transf-tipo-row):not(.transf-subheader-row):nth-child(even) {
     background: #f7fbf8;
 }
 
-.transf-table tbody tr:not(.transf-tipo-row):hover {
+.transf-table tbody tr:not(.transf-tipo-row):not(.transf-subheader-row):hover {
     background: #eaf6ee;
+}
+
+.transf-subheader-row td {
+    background: #e3efe6 !important;
+    padding: 3px 4px !important;
+    border-bottom: 1px solid rgba(0, 105, 55, 0.2);
+}
+
+.transf-subheader-row .estoque-sort-btn {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--primary-color, #006937);
+    padding: 2px;
+}
+
+.transf-subheader-row .estoque-sort-btn i {
+    font-size: 0.68rem;
 }
 
 .input-transf {

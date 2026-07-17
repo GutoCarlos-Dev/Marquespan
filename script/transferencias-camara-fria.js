@@ -12,6 +12,13 @@ const DIAS_SEMANA = [
 // Ordem das celulas editaveis de cada linha, usada na navegacao por setas e na colagem em bloco
 const CAMPOS_NAV = ['estoque', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'transferir'];
 
+// Colunas do subcabecalho ordenavel que se repete dentro de cada grupo de Tipo
+const COLUNAS_ORDENAVEIS = [
+    ['codigo', 'Codigo'], ['produto', 'Produto'], ['estoque', 'Estoque'],
+    ['segunda', 'Segunda'], ['terca', 'Terca'], ['quarta', 'Quarta'], ['quinta', 'Quinta'], ['sexta', 'Sexta'],
+    ['total', 'Total'], ['saldo', 'Saldo'], ['transferir', 'Transferir']
+];
+
 document.addEventListener('DOMContentLoaded', () => {
     const TransferenciasCamaraFriaUI = {
         filialRestrita: '',
@@ -19,8 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         produtosCache: [],
         existentesCache: new Map(),
         tiposOrdemCache: new Map(),
-        sortField: null,
-        sortDir: 'asc',
+        sortPorTipo: new Map(),
         somenteLeitura: false,
 
         init() {
@@ -69,9 +75,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             this.tableBody.addEventListener('keydown', (event) => this.handleArrowNav(event));
             this.tableBody.addEventListener('paste', (event) => this.handlePasteGrid(event));
-            document.querySelector('.transf-table thead')?.addEventListener('click', (event) => {
+            this.tableBody.addEventListener('click', (event) => {
                 const btn = event.target.closest('.estoque-sort-btn');
-                if (btn) this.ordenarPorColuna(btn.dataset.sort);
+                if (btn) this.ordenarPorColuna(btn.dataset.tipo, btn.dataset.sort);
             });
             [this.filialSelect, this.semanaInput, this.dataContagemInput].forEach(el => {
                 el.addEventListener('change', () => this.renderTabelaInicial());
@@ -250,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             grupos.forEach(([tipo, produtos]) => {
                 html += `<tr class="transf-tipo-row" data-tipo-header="${this.escapeHtml(tipo)}"><td colspan="11">${this.escapeHtml(tipo)}</td></tr>`;
+                html += `<tr class="transf-subheader-row" data-tipo-subheader="${this.escapeHtml(tipo)}">${this.montarSubheaderColunas(tipo)}</tr>`;
                 produtos.forEach(produto => {
                     const existente = this.existentesCache.get(String(produto.id));
                     const nomeBusca = this.normalizarTexto(`${produto.codigo || ''} ${produto.nome} ${tipo}`);
@@ -280,9 +287,16 @@ document.addEventListener('DOMContentLoaded', () => {
             this.tableBody.innerHTML = html;
             this.tableBody.querySelectorAll('tr[data-produto-id]').forEach(tr => this.atualizarLinha(tr));
             this.filtrarBusca();
-            if (this.sortField) this.aplicarOrdenacaoGrupos();
+            this.aplicarOrdenacaoGrupos();
             this.atualizarIconesOrdenacao();
             this.aplicarModoSomenteLeitura();
+        },
+
+        montarSubheaderColunas(tipo) {
+            const tipoAttr = this.escapeHtml(tipo);
+            return COLUNAS_ORDENAVEIS.map(([campo, label]) => `
+                <td><button type="button" class="estoque-sort-btn" data-tipo="${tipoAttr}" data-sort="${campo}">${label} <i class="fas fa-sort"></i></button></td>
+            `).join('');
         },
 
         aplicarModoSomenteLeitura() {
@@ -353,6 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const termo = this.normalizarTexto(this.buscaInput?.value || '');
             const linhasProduto = Array.from(this.tableBody.querySelectorAll('tr[data-produto-id]'));
             const cabecalhos = Array.from(this.tableBody.querySelectorAll('tr[data-tipo-header]'));
+            const subcabecalhos = Array.from(this.tableBody.querySelectorAll('tr[data-tipo-subheader]'));
             const visivelPorTipo = new Map();
 
             linhasProduto.forEach(tr => {
@@ -365,33 +380,40 @@ document.addEventListener('DOMContentLoaded', () => {
             cabecalhos.forEach(tr => {
                 tr.hidden = termo ? !visivelPorTipo.get(tr.dataset.tipoHeader) : false;
             });
+            subcabecalhos.forEach(tr => {
+                tr.hidden = termo ? !visivelPorTipo.get(tr.dataset.tipoSubheader) : false;
+            });
         },
 
-        // ── Ordenacao por coluna (dentro de cada grupo de Tipo) ─────────────────
-        ordenarPorColuna(campo) {
-            if (!campo) return;
-            if (this.sortField === campo) {
-                this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+        // ── Ordenacao por coluna (independente para cada grupo de Tipo) ─────────
+        ordenarPorColuna(tipo, campo) {
+            if (!tipo || !campo) return;
+            const atual = this.sortPorTipo.get(tipo) || { field: null, dir: 'asc' };
+            if (atual.field === campo) {
+                atual.dir = atual.dir === 'asc' ? 'desc' : 'asc';
             } else {
-                this.sortField = campo;
-                this.sortDir = 'asc';
+                atual.field = campo;
+                atual.dir = 'asc';
             }
+            this.sortPorTipo.set(tipo, atual);
             this.aplicarOrdenacaoGrupos();
             this.atualizarIconesOrdenacao();
         },
 
         aplicarOrdenacaoGrupos() {
             const grupos = this.getGruposDom();
-            grupos.forEach(({ headerRow, rows }) => {
+            grupos.forEach(({ subheaderRow, tipo, rows }) => {
+                const estado = this.sortPorTipo.get(tipo);
+                if (!estado?.field || !subheaderRow) return;
                 const ordenadas = rows.slice().sort((a, b) => {
-                    const va = this.getValorOrdenacao(a, this.sortField);
-                    const vb = this.getValorOrdenacao(b, this.sortField);
+                    const va = this.getValorOrdenacao(a, estado.field);
+                    const vb = this.getValorOrdenacao(b, estado.field);
                     const cmp = (typeof va === 'number' && typeof vb === 'number')
                         ? va - vb
                         : String(va).localeCompare(String(vb), 'pt-BR');
-                    return this.sortDir === 'asc' ? cmp : -cmp;
+                    return estado.dir === 'asc' ? cmp : -cmp;
                 });
-                let anchor = headerRow;
+                let anchor = subheaderRow;
                 ordenadas.forEach(tr => {
                     anchor.after(tr);
                     anchor = tr;
@@ -404,8 +426,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let atual = null;
             Array.from(this.tableBody.children).forEach(tr => {
                 if (tr.dataset.tipoHeader !== undefined) {
-                    atual = { headerRow: tr, rows: [] };
+                    atual = { headerRow: tr, subheaderRow: null, tipo: tr.dataset.tipoHeader, rows: [] };
                     grupos.push(atual);
+                } else if (atual && tr.dataset.tipoSubheader !== undefined) {
+                    atual.subheaderRow = tr;
                 } else if (atual && tr.dataset.produtoId) {
                     atual.rows.push(tr);
                 }
@@ -425,12 +449,15 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         atualizarIconesOrdenacao() {
-            document.querySelectorAll('.transf-table .estoque-sort-btn').forEach(btn => {
-                const icon = btn.querySelector('i');
-                const ativo = btn.dataset.sort === this.sortField;
-                btn.classList.toggle('active', ativo);
-                if (!icon) return;
-                icon.className = ativo ? `fas fa-sort-${this.sortDir === 'asc' ? 'up' : 'down'}` : 'fas fa-sort';
+            this.tableBody.querySelectorAll('tr.transf-subheader-row').forEach(row => {
+                const estado = this.sortPorTipo.get(row.dataset.tipoSubheader);
+                row.querySelectorAll('.estoque-sort-btn').forEach(btn => {
+                    const icon = btn.querySelector('i');
+                    const ativo = Boolean(estado?.field) && btn.dataset.sort === estado.field;
+                    btn.classList.toggle('active', ativo);
+                    if (!icon) return;
+                    icon.className = ativo ? `fas fa-sort-${estado.dir === 'asc' ? 'up' : 'down'}` : 'fas fa-sort';
+                });
             });
         },
 
