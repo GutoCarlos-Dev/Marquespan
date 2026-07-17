@@ -2287,7 +2287,7 @@ let _trocarColabTimer = null;
 function openTrocarColaboradorModal(row){
   const overlay = document.getElementById('modal-trocar-colaborador-overlay');
   const busca = document.getElementById('trocar-colab-busca');
-  const lista = document.getElementById('trocar-colab-lista');
+  const select = document.getElementById('trocar-colab-select');
   const sub = document.getElementById('trocar-colab-sub');
   if(!overlay){
     alert('Não encontrei o modal de troca de colaborador na página.\n\nIsso costuma acontecer quando o navegador está com uma versão antiga da página em cache.\n\nAtualize com Ctrl+F5 (ou Ctrl+Shift+R) e tente novamente.');
@@ -2296,9 +2296,10 @@ function openTrocarColaboradorModal(row){
   if(!row) return;
 
   _trocarColabRow = row;
+  _trocarColabOpcoes = [];
   if(sub) sub.textContent = `Colaborador atual: ${row.nome || '—'}${row.role ? ' · ' + row.role : ''}${row.placa ? ' · Placa ' + row.placa : ''}`;
   if(busca) busca.value = '';
-  if(lista) lista.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">Selecione a filial para listar os colaboradores.</div>';
+  if(select) select.innerHTML = '<option value="">Selecione a filial acima</option>';
 
   // Abre o modal JA — antes de qualquer chamada de rede — para a tela nunca
   // ficar travada em cinza se a busca de filiais demorar ou falhar.
@@ -2344,18 +2345,22 @@ function agendarBuscaTrocaColaborador(){
   _trocarColabTimer = setTimeout(buscarColaboradoresParaTroca, 250);
 }
 
+let _trocarColabOpcoes = [];
+
 async function buscarColaboradoresParaTroca(){
   const filial = document.getElementById('trocar-colab-filial')?.value || '';
   const termo = (document.getElementById('trocar-colab-busca')?.value || '').trim();
-  const lista = document.getElementById('trocar-colab-lista');
-  if(!lista) return;
+  const select = document.getElementById('trocar-colab-select');
+  if(!select) return;
+
+  _trocarColabOpcoes = [];
 
   if(!filial){
-    lista.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">Selecione a filial para listar os colaboradores.</div>';
+    select.innerHTML = '<option value="">Selecione a filial acima</option>';
     return;
   }
 
-  lista.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">Buscando...</div>';
+  select.innerHTML = '<option value="">Buscando...</option>';
   try{
     let path = `/rest/v1/funcionario?select=id,rh,nome,nome_completo,filial,funcao,nascimento,cnh,status&filial=eq.${encodeURIComponent(filial)}&status=not.eq.Desligado&order=nome.asc&limit=200`;
     if(termo){
@@ -2366,36 +2371,35 @@ async function buscarColaboradoresParaTroca(){
       sbFetch(path),
       new Promise((_, reject) => setTimeout(() => reject(new Error('timeout ao buscar colaboradores')), 10000))
     ]);
-    if(!resp?.ok){ lista.innerHTML = '<div style="padding:14px;text-align:center;color:var(--red)">Erro ao buscar colaboradores.</div>'; return; }
+    if(!resp?.ok){ select.innerHTML = '<option value="">Erro ao buscar colaboradores</option>'; return; }
     const data = await resp.json();
 
     if(!data.length){
-      lista.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">Nenhum colaborador encontrado para esta filial.</div>';
+      select.innerHTML = '<option value="">Nenhum colaborador encontrado para esta filial</option>';
       return;
     }
 
-    lista.innerHTML = data.map(f => `
-      <div class="trocar-colab-item" data-id="${esc(f.id)}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer">
-        <div>
-          <div style="font-weight:700;font-size:13px;color:var(--text)">${esc(f.nome_completo || f.nome)}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:1px">${esc(f.funcao || '—')}${f.rh ? ' · RH ' + esc(f.rh) : ''}</div>
-        </div>
-        <div style="font-size:11px;color:var(--text3)">${esc(f.filial || '')}</div>
-      </div>
-    `).join('');
-
-    lista.querySelectorAll('.trocar-colab-item').forEach(el => {
-      el.addEventListener('mouseenter', () => { el.style.background = 'var(--bg3)'; });
-      el.addEventListener('mouseleave', () => { el.style.background = ''; });
-      el.addEventListener('click', () => {
-        const funcionario = data.find(x => String(x.id) === el.dataset.id);
-        if(funcionario) confirmarTrocaColaborador(funcionario, filial);
-      });
-    });
+    _trocarColabOpcoes = data;
+    select.innerHTML = data.map(f => {
+      const label = `${f.nome_completo || f.nome}${f.funcao ? ' — ' + f.funcao : ''}${f.rh ? ' (RH ' + f.rh + ')' : ''}`;
+      return `<option value="${esc(f.id)}">${esc(label)}</option>`;
+    }).join('');
   }catch(e){
     console.warn('[buscarColaboradoresParaTroca]', e);
-    lista.innerHTML = '<div style="padding:14px;text-align:center;color:var(--red)">Erro ao buscar colaboradores.</div>';
+    select.innerHTML = '<option value="">Erro ao buscar colaboradores</option>';
   }
+}
+
+function confirmarTrocaColaboradorSelecionado(){
+  const select = document.getElementById('trocar-colab-select');
+  const filial = document.getElementById('trocar-colab-filial')?.value || '';
+  const id = select?.value;
+  if(!id) return alert('Selecione um colaborador na lista.');
+
+  const funcionario = _trocarColabOpcoes.find(f => String(f.id) === String(id));
+  if(!funcionario) return alert('Selecione um colaborador na lista.');
+
+  confirmarTrocaColaborador(funcionario, filial);
 }
 
 async function confirmarTrocaColaborador(funcionario, filial){
