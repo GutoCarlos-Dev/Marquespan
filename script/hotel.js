@@ -80,6 +80,7 @@ class HotelManager {
         this.searchHotelInput = document.getElementById('searchHotelInput');
         this.btnVisualizarHoteisMapa = document.getElementById('btnVisualizarHoteisMapa');
         this.hoteisRenderizados = [];
+        this.hotelSort = { field: 'nome', ascending: true };
         // Elementos de importação
         this.btnImportarLista = document.getElementById('btnImportarLista');
         this.importFileInput = document.getElementById('importFile');
@@ -101,6 +102,9 @@ class HotelManager {
         this.hotelTableBody.addEventListener('click', (e) => this.handleHotelTableClick(e));
         this.searchHotelInput.addEventListener('input', () => this.renderHotels());
         this.btnVisualizarHoteisMapa?.addEventListener('click', () => this.abrirHoteisNoMapa());
+        document.querySelectorAll('.hotel-table-container thead th[data-field]').forEach(th => {
+            th.addEventListener('click', () => this.toggleHotelSort(th.dataset.field));
+        });
 
         // Eventos do painel de quartos
         document.getElementById('btnCloseModalQuartos').addEventListener('click', () => this.closeQuartosPanel());
@@ -119,9 +123,32 @@ class HotelManager {
 
     // --- Lógica para Hotéis ---
 
+    toggleHotelSort(field) {
+        if (this.hotelSort.field === field) {
+            this.hotelSort.ascending = !this.hotelSort.ascending;
+        } else {
+            this.hotelSort.field = field;
+            this.hotelSort.ascending = true;
+        }
+        this.renderHotels();
+    }
+
+    updateHotelSortIcons() {
+        document.querySelectorAll('.hotel-table-container thead th[data-field]').forEach(th => {
+            const icon = th.querySelector('i');
+            const ativo = th.dataset.field === this.hotelSort.field;
+            th.classList.toggle('sorted', ativo);
+            if (!icon) return;
+            icon.className = ativo
+                ? `fas fa-sort-${this.hotelSort.ascending ? 'up' : 'down'}`
+                : 'fas fa-sort';
+        });
+    }
+
     async renderHotels() {
         const searchTerm = this.searchHotelInput.value.trim();
-        let query = supabaseClient.from('hoteis').select('*').order('nome', { ascending: true });
+        let query = supabaseClient.from('hoteis').select('*')
+            .order(this.hotelSort.field, { ascending: this.hotelSort.ascending });
 
         if (searchTerm) {
             query = query.or(`razao_social.ilike.%${searchTerm}%,nome.ilike.%${searchTerm}%,cnpj.ilike.%${searchTerm}%,responsavel.ilike.%${searchTerm}%`);
@@ -161,6 +188,8 @@ class HotelManager {
             `;
             this.hotelTableBody.appendChild(tr);
         });
+
+        this.updateHotelSortIcons();
     }
 
     abrirHoteisNoMapa() {

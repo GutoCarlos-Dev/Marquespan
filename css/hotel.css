@@ -184,6 +184,23 @@
     z-index: 10;
 }
 
+.glass-table th[data-field] {
+    cursor: pointer;
+    user-select: none;
+}
+
+.glass-table th[data-field] i {
+    margin-left: 6px;
+    font-size: 0.85em;
+    opacity: 0.55;
+}
+
+.glass-table th[data-field]:hover i,
+.glass-table th[data-field].sorted i {
+    opacity: 1;
+    color: var(--primary-color);
+}
+
 .glass-table td {
     padding: 12px 15px;
     border-bottom: 1px solid rgba(0,0,0,0.05);
