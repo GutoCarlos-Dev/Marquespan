@@ -86,18 +86,18 @@
         <table class="data-grid">
           <thead>
             <tr>
-              <th>Data/Hora</th>
-              <th>Filial</th>
-              <th>Empresa</th>
-              <th>Documento</th>
-              <th>Pessoa</th>
-              <th>Placa/Cavalo</th>
-              <th>Carreta/Ca&ccedil;amba</th>
-              <th>Setor</th>
-              <th>Produto/Servico</th>
-              <th>Entrada</th>
-              <th>Saida</th>
-              <th>Status</th>
+              <th class="sortable" data-sort="created_at">Data/Hora <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="filial">Filial <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="empresa_nome">Empresa <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="empresa_documento">Documento <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="pessoa_nome">Pessoa <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="placa_veiculo">Placa/Cavalo <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="carreta_cacamba">Carreta/Ca&ccedil;amba <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="setor_nome">Setor <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="produto_servico">Produto/Servico <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="entrada_em">Entrada <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="saida_em">Saida <i class="fas fa-sort"></i></th>
+              <th class="sortable" data-sort="status">Status <i class="fas fa-sort"></i></th>
               <th>Acoes</th>
             </tr>
           </thead>
@@ -398,6 +398,6 @@
   <script type="module" src="./script/menu.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-  <script type="module" src="./script/portaria-controle-acesso.js" defer></script>
+  <script type="module" src="./script/portaria-controle-acesso.js?v=20260718-sort" defer></script>
 </body>
 </html>

@@ -29,13 +29,16 @@ const DIARIA_NIVEIS_PERMITIDOS = new Set([
     'gerencia',
     'lider_balanca'
 ]);
-const ESCALA_NIVEIS_RESTRITOS_FALTAS_RESERVAS = new Set([
-    'adm_colisao',
-    'adm_pedido'
+// Gerar Boleta (Seleção de Escala) e Cálculo de Peso (Ações Rápidas) ficam liberados só para estes níveis.
+const BOLETA_CALCULO_PESO_NIVEIS_PERMITIDOS = new Set([
+    'administrador',
+    'gerencia',
+    'balanca',
+    'lider_balanca',
+    'adm_logistica'
 ]);
 // Adicionar/Remover e Excluir em FALTAS/FÉRIAS/AFASTADOS/DESCONTOS DA SEMANA e a Troca de
-// Funcionário em RESERVAS DA SEMANA ficam liberados só para estes níveis (lista de permissão,
-// mais restrita que ESCALA_NIVEIS_RESTRITOS_FALTAS_RESERVAS que só bloqueia adm_colisao/adm_pedido).
+// Funcionário em RESERVAS DA SEMANA ficam liberados só para estes níveis (lista de permissão).
 const FALTAS_RESERVAS_SEMANA_NIVEIS_PERMITIDOS = new Set([
     'administrador',
     'gerencia',
@@ -61,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const podeGerenciarEscala = ESCALA_NIVEIS_GERENCIAMENTO.has(nivelUsuarioEscala);
     const podeAcessarDiaria = DIARIA_NIVEIS_PERMITIDOS.has(nivelUsuarioEscala);
     const isAdmPedidoEscala = nivelUsuarioEscala === 'adm_pedido';
-    const restringeFaltasReservasPlanejamento = ESCALA_NIVEIS_RESTRITOS_FALTAS_RESERVAS.has(nivelUsuarioEscala);
+    const podeVerBoletaCalculoPeso = BOLETA_CALCULO_PESO_NIVEIS_PERMITIDOS.has(nivelUsuarioEscala);
     const restringeFaltasReservasSemana = !FALTAS_RESERVAS_SEMANA_NIVEIS_PERMITIDOS.has(nivelUsuarioEscala);
 
     const acessoPermitido = await verificarPermissaoPaginaEscala();
@@ -176,13 +179,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnDiaria.disabled = !podeAcessarDiaria;
         }
 
-        if (restringeFaltasReservasPlanejamento) {
-            ['btnCalculoPeso'].forEach(id => {
+        if (!podeVerBoletaCalculoPeso) {
+            ['btnGerarBoleta', 'btnCalculoPeso'].forEach(id => {
                 const element = document.getElementById(id);
                 if (!element) return;
                 element.disabled = true;
                 element.classList.add('hidden');
-                element.title = 'Disponivel apenas para niveis autorizados.';
+                element.title = 'Disponivel apenas para administrador, gerencia, balanca, lider_balanca ou adm_logistica.';
             });
         }
 
@@ -2074,7 +2077,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
 
                 // Opção específica para preencher Peso de Rota ao clicar na coluna ROTA
-                if (key === 'rota' && input.value.trim() !== '' && !restringeFaltasReservasPlanejamento) {
+                if (key === 'rota' && input.value.trim() !== '' && podeVerBoletaCalculoPeso) {
                     const rota = input.value.trim();
                     const placa = tr.querySelector('input[data-key="placa"]')?.value || '';
                     const modelo = tr.querySelector('input[data-key="modelo"]')?.value || '';
@@ -9244,6 +9247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnGerarBoleta) {
         btnGerarBoleta.addEventListener('click', () => {
+            if (!podeVerBoletaCalculoPeso) return;
             if (modalBoleta) {
                 modalBoleta.classList.remove('hidden');
                 modalBoleta.style.display = 'flex';
@@ -11319,7 +11323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnCalculoPeso) {
         btnCalculoPeso.addEventListener('click', () => {
-            if (restringeFaltasReservasPlanejamento) return;
+            if (!podeVerBoletaCalculoPeso) return;
             modalCalculoPeso.classList.remove('hidden');
             modalCalculoPeso.style.display = 'flex';
             if (calculoPesoAnularTransferencia) {
@@ -11335,7 +11339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function abrirModalPesoRotaComDados(rota, placa, modelo, motorista, auxiliar) {
         if (!modalCalculoPeso) return;
-        if (restringeFaltasReservasPlanejamento) return;
+        if (!podeVerBoletaCalculoPeso) return;
 
         modalCalculoPeso.classList.remove('hidden');
         modalCalculoPeso.style.display = 'flex';

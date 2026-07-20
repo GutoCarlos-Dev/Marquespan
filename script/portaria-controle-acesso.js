@@ -15,6 +15,8 @@ let pessoaEditandoId = null;
 let setorEditandoId = null;
 let modalRetornoCadastro = null;
 const niveisComExclusao = ['administrador', 'gerencia'];
+const ordenacaoAcessos = { campo: null, ascendente: true };
+const CAMPOS_DATA_ACESSOS = new Set(['created_at', 'entrada_em', 'saida_em']);
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date();
@@ -77,6 +79,9 @@ function bindEvents() {
   document.getElementById('gridPessoasCadastro').addEventListener('click', handleGridCadastroClick);
   document.getElementById('gridSetoresCadastro').addEventListener('click', handleGridCadastroClick);
   document.getElementById('tbodyAcessos').addEventListener('click', handleTabelaClick);
+  document.querySelectorAll('table.data-grid thead th.sortable').forEach(th => {
+    th.addEventListener('click', () => ordenarAcessosPor(th.dataset.sort));
+  });
 
   document.querySelectorAll('[data-close-modal]').forEach(btn => {
     btn.addEventListener('click', () => fecharModalCadastro(btn.dataset.closeModal));
@@ -832,9 +837,52 @@ async function buscarAcessos() {
   renderizarTabela();
 }
 
+function ordenarAcessosPor(campo) {
+  if (!campo) return;
+  if (ordenacaoAcessos.campo === campo) {
+    ordenacaoAcessos.ascendente = !ordenacaoAcessos.ascendente;
+  } else {
+    ordenacaoAcessos.campo = campo;
+    ordenacaoAcessos.ascendente = true;
+  }
+  renderizarTabela();
+}
+
+function ordenarAcessos(lista) {
+  const { campo, ascendente } = ordenacaoAcessos;
+  if (!campo) return lista;
+
+  return [...lista].sort((a, b) => {
+    let va = a[campo];
+    let vb = b[campo];
+
+    if (CAMPOS_DATA_ACESSOS.has(campo)) {
+      va = va ? new Date(va).getTime() : 0;
+      vb = vb ? new Date(vb).getTime() : 0;
+    } else {
+      va = normalizarBusca(va);
+      vb = normalizarBusca(vb);
+    }
+
+    if (va < vb) return ascendente ? -1 : 1;
+    if (va > vb) return ascendente ? 1 : -1;
+    return 0;
+  });
+}
+
+function atualizarIconesOrdenacaoAcessos() {
+  document.querySelectorAll('table.data-grid thead th.sortable').forEach(th => {
+    const icone = th.querySelector('i');
+    if (!icone) return;
+    const ativo = th.dataset.sort === ordenacaoAcessos.campo;
+    icone.className = ativo ? `fas fa-sort-${ordenacaoAcessos.ascendente ? 'up' : 'down'}` : 'fas fa-sort';
+  });
+}
+
 function renderizarTabela() {
   const tbody = document.getElementById('tbodyAcessos');
-  const dados = obterAcessosFiltrados();
+  const dados = ordenarAcessos(obterAcessosFiltrados());
+  atualizarIconesOrdenacaoAcessos();
 
   document.getElementById('totalRegistros').textContent = dados.length;
   if (!dados.length) {
