@@ -168,6 +168,12 @@
       <h3><i class="fas fa-list"></i> Histórico de Despesas</h3>
       <div class="form-grid" style="margin-bottom: 15px;">
           <div class="form-group">
+              <label for="searchDespesaFilial">Filial</label>
+              <select id="searchDespesaFilial" class="glass-input">
+                  <option value="">Todas as Filiais</option>
+              </select>
+          </div>
+          <div class="form-group">
               <label for="searchDespesaRota">Rota</label>
               <input type="text" id="searchDespesaRota" placeholder="🔍 Buscar por rota..." class="glass-input">
           </div>
@@ -185,6 +191,7 @@
           <table class="glass-table data-grid">
               <thead>
               <tr>
+                  <th data-key="filial">FILIAL <i class="fas fa-sort"></i></th>
                   <th data-key="created_at">USUÁRIO / LANÇAMENTO <i class="fas fa-sort"></i></th>
                   <th data-key="numero_rota">ROTA <i class="fas fa-sort"></i></th>
                   <th data-key="hotel.nome">HOTEL <i class="fas fa-sort"></i></th>
@@ -248,6 +255,6 @@
   
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js"></script>
-  <script type="module" src="script/despesas.js?v=20260710-1"></script>
+  <script type="module" src="script/despesas.js?v=20260718-filial2"></script>
 </body>
 </html>

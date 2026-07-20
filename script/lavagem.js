@@ -305,6 +305,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Exportar XLSX dos veiculos pendentes com localizacao
     document.getElementById('spanPendentesExportar')?.addEventListener('click', exportarPendentesComLocalizacaoXlsx);
 
+    // Exportar XLSX dos veiculos agendados com localizacao
+    document.getElementById('spanAgendadosExportar')?.addEventListener('click', exportarAgendadosComLocalizacaoXlsx);
+
     // --- NOVOS LISTENERS PARA ADICIONAR VEÍCULO MANUALMENTE ---
     document.getElementById('btnAdicionarVeiculoDetalhes')?.addEventListener('click', abrirModalAdicionarVeiculo);
     document.getElementById('btnCloseModalAdicionarVeiculo')?.addEventListener('click', () => document.getElementById('modalAdicionarVeiculo').classList.add('hidden'));
@@ -1268,6 +1271,82 @@ async function exportarPendentesComLocalizacaoXlsx() {
         exportandoPendentesLocalizacao = false;
         if (spanPendentes) spanPendentes.classList.remove('exportando');
         if (contadorPendentes) contadorPendentes.textContent = textoContadorOriginal;
+    }
+}
+
+let exportandoAgendadosLocalizacao = false;
+
+/**
+ * Exporta um XLSX com Placa, Modelo, Marca, Status e a localização atual
+ * (rastreador) de todos os veículos AGENDADOS da lista atualmente aberta.
+ * Espelha exportarPendentesComLocalizacaoXlsx, trocando apenas o filtro de status.
+ */
+async function exportarAgendadosComLocalizacaoXlsx() {
+    if (exportandoAgendadosLocalizacao) return;
+
+    if (typeof XLSX === 'undefined') {
+        return alert('A biblioteca de exportação (XLSX) não foi carregada.');
+    }
+    if (!currentListId || currentListItems.length === 0) {
+        return alert('Não há itens na lista para exportar.');
+    }
+
+    const agendados = currentListItems.filter(item => (item.status || '').toString().toUpperCase().trim() === 'AGENDADO');
+
+    if (agendados.length === 0) {
+        return alert('Não há veículos agendados nesta lista.');
+    }
+
+    if (!confirm(`Buscar a localização de ${agendados.length} veículo(s) agendado(s) e gerar o XLSX? Isso pode levar alguns instantes.`)) {
+        return;
+    }
+
+    exportandoAgendadosLocalizacao = true;
+    const spanAgendados = document.getElementById('spanAgendadosExportar');
+    const contadorAgendados = document.getElementById('countAgendados');
+    const textoContadorOriginal = contadorAgendados ? contadorAgendados.textContent : '';
+    if (spanAgendados) spanAgendados.classList.add('exportando');
+
+    try {
+        const dadosExportacao = [];
+
+        for (let indice = 0; indice < agendados.length; indice += 1) {
+            const item = agendados[indice];
+            if (contadorAgendados) contadorAgendados.textContent = `${textoContadorOriginal} (localizando ${indice + 1}/${agendados.length}...)`;
+
+            let localizacao = 'Não localizado';
+            try {
+                const placa = String(item.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (placa.length === 7) {
+                    const { data, error } = await supabaseClient.functions.invoke('localizacao-veiculo', {
+                        body: { placa }
+                    });
+                    if (!error && data?.success && data?.data?.endereco) {
+                        localizacao = data.data.endereco;
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao localizar veículo:', item.placa, error);
+            }
+
+            dadosExportacao.push({
+                'Placa': item.placa,
+                'Modelo': item.tipo_veiculo || '-',
+                'Marca': item.marca || '-',
+                'Status': getDisplayStatus(item.status) || 'AGENDADO',
+                'Localização': localizacao
+            });
+        }
+
+        const nomeLista = document.getElementById('tituloDetalhesLista')?.textContent || 'lista_lavagem';
+        const ws = XLSX.utils.json_to_sheet(dadosExportacao);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'AGENDADOS');
+        XLSX.writeFile(wb, `Agendados_Localizacao_${nomeLista.replace(/[^a-z0-9]/gi, '_')}.xlsx`);
+    } finally {
+        exportandoAgendadosLocalizacao = false;
+        if (spanAgendados) spanAgendados.classList.remove('exportando');
+        if (contadorAgendados) contadorAgendados.textContent = textoContadorOriginal;
     }
 }
 

@@ -54,6 +54,7 @@ const DespesasUI = {
 
         // Tabela e busca
         this.tableBody = document.getElementById('despesaTableBody');
+        this.searchFilialInput = document.getElementById('searchDespesaFilial');
         this.searchRotaInput = document.getElementById('searchDespesaRota');
         this.searchHotelInput = document.getElementById('searchDespesaHotel');
         this.searchFuncionarioInput = document.getElementById('searchDespesaFuncionario');
@@ -102,6 +103,7 @@ const DespesasUI = {
         this.btnCancelarCamposFixos?.addEventListener('click', () => this.fecharModalCamposFixos());
         this.btnSalvarCamposFixos?.addEventListener('click', () => this.salvarCamposFixos());
         this.tableBody.addEventListener('click', (e) => this.handleTableClick(e));
+        this.searchFilialInput?.addEventListener('change', () => this.renderGrid());
         this.searchRotaInput?.addEventListener('input', () => this.renderGrid());
         this.searchHotelInput?.addEventListener('input', () => this.renderGrid());
         this.searchFuncionarioInput?.addEventListener('input', () => this.renderGrid());
@@ -726,13 +728,24 @@ const DespesasUI = {
 
     async renderGrid() {
         try {
+            const termoFilial = this.searchFilialInput?.value.trim() || '';
             const termoRota = this.searchRotaInput?.value.trim() || '';
             const termoHotel = this.searchHotelInput?.value.trim() || '';
             const termoFuncionario = this.searchFuncionarioInput?.value.trim() || '';
             let query;
 
-            if (termoRota || termoHotel || termoFuncionario) {
+            if (termoFilial || termoRota || termoHotel || termoFuncionario) {
                 const buscas = [];
+
+                if (termoFilial) {
+                    buscas.push(
+                        supabaseClient.from('despesas').select('id').eq('filial', termoFilial)
+                            .then(({ data, error }) => {
+                                if (error) throw error;
+                                return new Set((data || []).map(d => d.id));
+                            })
+                    );
+                }
 
                 if (termoRota) {
                     buscas.push(
@@ -777,19 +790,19 @@ const DespesasUI = {
                 ), null) || new Set();
 
                 if (matchingIds.size === 0) {
-                    this.tableBody.innerHTML = `<tr><td colspan="8">Nenhum resultado encontrado para os filtros informados.</td></tr>`;
+                    this.tableBody.innerHTML = `<tr><td colspan="9">Nenhum resultado encontrado para os filtros informados.</td></tr>`;
                     return;
                 }
 
                 query = supabaseClient
                     .from('despesas')
-                    .select('id, usuario, created_at, numero_rota, tipo_quarto, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
+                    .select('id, filial, usuario, created_at, numero_rota, tipo_quarto, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
                     .in('id', Array.from(matchingIds));
 
             } else {
                 query = supabaseClient
                     .from('despesas')
-                    .select('id, usuario, created_at, numero_rota, tipo_quarto, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
+                    .select('id, filial, usuario, created_at, numero_rota, tipo_quarto, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
             }
 
             if (this.sortField === 'hotel.nome') {
@@ -809,6 +822,7 @@ const DespesasUI = {
             const podeExcluir = this.usuarioPodeExcluir();
             this.tableBody.innerHTML = despesas.map(d => `
                 <tr>
+                    <td>${d.filial || '-'}</td>
                     <td>
                         ${d.usuario || '-'}
                         <br><small>${this.formatDateTime(d.created_at)}</small>
@@ -830,7 +844,7 @@ const DespesasUI = {
             `).join('');
         } catch (err) {
             console.error('Erro ao renderizar grid de despesas:', err);
-            this.tableBody.innerHTML = `<tr><td colspan="8">Erro ao carregar dados.</td></tr>`;
+            this.tableBody.innerHTML = `<tr><td colspan="9">Erro ao carregar dados.</td></tr>`;
         }
     },
 
@@ -848,10 +862,12 @@ const DespesasUI = {
         try {
             const { data, error } = await supabaseClient.from('filiais').select('sigla, nome').order('nome');
             if (error) throw error;
-            if (this.filialSelect && data) {
+            if (data) {
                 data.forEach(f => {
                     const value = f.sigla || f.nome;
-                    this.filialSelect.add(new Option(f.sigla ? `${f.nome} (${f.sigla})` : f.nome, value));
+                    const label = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+                    this.filialSelect?.add(new Option(label, value));
+                    this.searchFilialInput?.add(new Option(label, value));
                 });
             }
         } catch (err) {

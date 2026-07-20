@@ -91,6 +91,15 @@
     opacity: 0.65;
 }
 
+#spanAgendadosExportar:hover {
+    text-decoration: underline;
+}
+
+#spanAgendadosExportar.exportando {
+    cursor: wait;
+    opacity: 0.65;
+}
+
 .acoes-lavagem-linha {
     display: flex;
     align-items: center;

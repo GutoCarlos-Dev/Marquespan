@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de Lavagem - Marquespan</title>
     <link rel="stylesheet" href="css/index.css">
-    <link rel="stylesheet" href="css/lavagem.css">
+    <link rel="stylesheet" href="css/lavagem.css?v=20260718-agendados">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
@@ -311,7 +311,7 @@
                     <span style="color: #28a745;">Realizados: <span id="countRealizados">0</span></span>
                     <span id="spanPendentesExportar" style="color: #dc3545; cursor: pointer;" title="Clique para exportar XLSX com a localização dos veiculos pendentes"><i class="fas fa-file-excel"></i> Pendentes: <span id="countPendentes">0</span></span>
                     <span style="color: #007bff;">Internados: <span id="countInternados">0</span></span>
-                    <span style="color: #ffc107;">Agendados: <span id="countAgendados">0</span></span>
+                    <span id="spanAgendadosExportar" style="color: #ffc107; cursor: pointer;" title="Clique para exportar XLSX com a localização dos veiculos agendados"><i class="fas fa-file-excel"></i> Agendados: <span id="countAgendados">0</span></span>
                     <span style="color: #6c757d;">Dispensados: <span id="countPulados">0</span></span>
                 </div>
             </div>
@@ -410,6 +410,6 @@
     <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
     <script type="module" src="./script/auth-guard.js"></script>
     <script type="module" src="script/menu.js"></script>
-    <script type="module" src="script/lavagem.js?v=20260706-valores"></script>
+    <script type="module" src="script/lavagem.js?v=20260718-agendados"></script>
 </body>
 </html>
