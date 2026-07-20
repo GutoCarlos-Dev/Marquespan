@@ -846,7 +846,7 @@ async function carregarDados({ incluirRotasBase = false } = {}) {
 
         let rotasQuery = supabaseClient
             .from('rotas')
-            .select('numero, semana, supervisor, dias, filial')
+            .select('numero, semana, supervisor, dias, filial, status')
             .order('numero', { ascending: true });
 
         if (filial) {
@@ -856,13 +856,20 @@ async function carregarDados({ incluirRotasBase = false } = {}) {
         const rotasResult = await rotasQuery;
         if (rotasResult.error) throw rotasResult.error;
 
-        const rotasReferencia = rotasResult.data || [];
+        const todasRotas = rotasResult.data || [];
+        const rotasInativasChaves = new Set(
+            todasRotas
+                .filter(rota => normalizarUpper(rota.status) === 'INATIVA')
+                .map(rota => getChavePesoRota(rota.numero, rota.filial, rota.semana))
+        );
+        const rotasReferencia = todasRotas.filter(rota => normalizarUpper(rota.status) !== 'INATIVA');
         rotasBase = incluirRotasBase ? rotasReferencia : [];
 
         const pesosDaSemana = (pesosResult.data || []).filter(item =>
             getSemanaAnoOperacional(item) === semanaAno
         );
-        gridData = mesclarRotasComPesos(rotasBase, pesosDaSemana, semanaAno, true, rotasReferencia);
+        gridData = mesclarRotasComPesos(rotasBase, pesosDaSemana, semanaAno, true, rotasReferencia)
+            .filter(linha => !rotasInativasChaves.has(getChavePesoRota(linha.rota, linha.filial, linha.semana)));
 
         await preencherVeiculosDasLinhas();
         atualizarFiltroSupervisores();
