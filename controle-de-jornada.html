@@ -1289,34 +1289,6 @@
   </div>
 </div>
 
-<!-- MODAL TROCAR COLABORADOR -->
-<div class="overlay" id="modal-trocar-colaborador-overlay" onclick="if(event.target===this)closeTrocarColaboradorModal()">
-  <div class="modal" style="max-width:560px">
-    <div class="modal-title">🔄 Trocar Colaborador</div>
-    <div id="trocar-colab-sub" style="font-size:12px;color:var(--text3);margin-top:2px;margin-bottom:16px">Selecione o colaborador correto para esta linha</div>
-    <div class="form-group">
-      <label class="form-label" style="font-weight:700">Filial</label>
-      <select class="form-control" id="trocar-colab-filial" onchange="buscarColaboradoresParaTroca()">
-        <option value="">Selecione</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Buscar por nome (opcional)</label>
-      <input type="text" class="form-control" id="trocar-colab-busca" placeholder="Digite para filtrar a lista..." oninput="agendarBuscaTrocaColaborador()">
-    </div>
-    <div class="form-group">
-      <label class="form-label" style="font-weight:700">Colaborador</label>
-      <select class="form-control" id="trocar-colab-select" size="8" style="height:auto">
-        <option value="">Selecione a filial acima</option>
-      </select>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeTrocarColaboradorModal()">Cancelar</button>
-      <button class="btn btn-green" onclick="confirmarTrocaColaboradorSelecionado()">Confirmar Troca</button>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL AÇÃO -->
 <div class="overlay" id="modal-overlay">
   <div class="modal modal-action-pro">
@@ -1398,7 +1370,7 @@
 <!-- Bibliotecas Externas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
-<script src="./script/controle-de-jornada.js?v=20260717-12"></script>
+<script src="./script/controle-de-jornada.js?v=20260718-3"></script>
 <!-- Expõe o supabaseClient do sistema para os scripts regulares -->
 <script type="module">
   import { supabaseClient } from './script/supabase.js';

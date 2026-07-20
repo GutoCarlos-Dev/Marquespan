@@ -2277,155 +2277,161 @@ async function salvarVinculosSupabase(vinculos, filial){
 
 // ═══════════════════════════════════════════════════════
 // TROCAR COLABORADOR (Passo 4 · Analisar Infrações)
-// Corrige na hora o nome exibido numa linha do grid e, se o usuário indicar
-// a Filial certa, salva um vínculo (jornada_vinculos) para que o mesmo nome
-// do roteiro resolva sozinho para a pessoa certa nas próximas gerações do Resumo.
+// Campo COLABORADOR editável direto na grade: ao digitar, busca no cadastro
+// de Funcionários (mesma base de funcionario.html) e mostra sugestões com
+// Nome + Filial + Função — clicar aplica na hora e salva um vínculo
+// (jornada_vinculos) para o mesmo nome do roteiro resolver sozinho da
+// próxima vez que o Resumo for gerado.
 // ═══════════════════════════════════════════════════════
-let _trocarColabRow = null;
-let _trocarColabTimer = null;
+let _colabAutocompleteTimer = null;
 
-function openTrocarColaboradorModal(row){
-  const overlay = document.getElementById('modal-trocar-colaborador-overlay');
-  const busca = document.getElementById('trocar-colab-busca');
-  const select = document.getElementById('trocar-colab-select');
-  const sub = document.getElementById('trocar-colab-sub');
-  if(!overlay){
-    alert('Não encontrei o modal de troca de colaborador na página.\n\nIsso costuma acontecer quando o navegador está com uma versão antiga da página em cache.\n\nAtualize com Ctrl+F5 (ou Ctrl+Shift+R) e tente novamente.');
-    return;
+function getColabAutocompleteDrop(){
+  let drop = document.getElementById('colab-autocomplete-drop');
+  if(!drop){
+    drop = document.createElement('div');
+    drop.id = 'colab-autocomplete-drop';
+    drop.style.cssText = 'position:fixed;z-index:5000;background:#fff;border:1.5px solid var(--brand,#006937);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);max-height:240px;overflow-y:auto;display:none;min-width:260px';
+    // mousedown (não click) para disparar ANTES do blur do input esconder o dropdown
+    drop.addEventListener('mousedown', (e) => {
+      const item = e.target.closest('.colab-suggest-item');
+      if(!item) return;
+      e.preventDefault();
+      const funcionario = (drop._dados || []).find(f => String(f.id) === item.dataset.id);
+      if(funcionario && drop._inputAtivo) aplicarColaboradorSelecionado(drop._inputAtivo, funcionario);
+      drop.style.display = 'none';
+    });
+    document.body.appendChild(drop);
   }
-  if(!row) return;
-
-  _trocarColabRow = row;
-  _trocarColabOpcoes = [];
-  if(sub) sub.textContent = `Colaborador atual: ${row.nome || '—'}${row.role ? ' · ' + row.role : ''}${row.placa ? ' · Placa ' + row.placa : ''}`;
-  if(busca) busca.value = '';
-  if(select) select.innerHTML = '<option value="">Selecione a filial acima</option>';
-
-  // Abre o modal JA — antes de qualquer chamada de rede — para a tela nunca
-  // ficar travada em cinza se a busca de filiais demorar ou falhar.
-  overlay.classList.add('open');
-
-  carregarFiliaisTrocaColaborador();
+  return drop;
 }
 
-async function carregarFiliaisTrocaColaborador(){
-  const filialSel = document.getElementById('trocar-colab-filial');
-  if(!filialSel) return;
+function posicionarColabDrop(drop, input){
+  const rect = input.getBoundingClientRect();
+  drop.style.left = Math.round(rect.left) + 'px';
+  drop.style.top = Math.round(rect.bottom + 2) + 'px';
+  drop.style.width = Math.max(rect.width, 260) + 'px';
+}
 
-  if(!filialSel.dataset.loaded){
-    try{
-      const resp = await Promise.race([
-        sbFetch('/rest/v1/filiais?select=nome,sigla&order=nome.asc'),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout ao buscar filiais')), 8000))
-      ]);
-      const filiais = resp?.ok ? await resp.json() : [];
-      filialSel.innerHTML = '<option value="">Selecione</option>'
-        + filiais.map(f => `<option value="${esc(f.sigla || f.nome)}">${esc(f.sigla ? `${f.nome} (${f.sigla})` : f.nome)}</option>`).join('');
-      filialSel.dataset.loaded = '1';
-    }catch(e){
-      console.warn('[carregarFiliaisTrocaColaborador]', e);
+function handleColaboradorInput(e){
+  if(!e.target.matches?.('.colaborador-edit-input')) return;
+  clearTimeout(_colabAutocompleteTimer);
+  const input = e.target;
+  _colabAutocompleteTimer = setTimeout(() => buscarColaboradorAutocomplete(input), 250);
+}
+
+function handleColaboradorFocus(e){
+  if(!e.target.matches?.('.colaborador-edit-input')) return;
+  if(e.target.value.trim().length >= 2) buscarColaboradorAutocomplete(e.target);
+}
+
+function handleColaboradorBlur(e){
+  const input = e.target;
+  if(!input.matches?.('.colaborador-edit-input')) return;
+  setTimeout(() => {
+    const drop = document.getElementById('colab-autocomplete-drop');
+    if(drop && drop._inputAtivo === input) drop.style.display = 'none';
+
+    // Permite digitar um nome livre (sem escolher sugestão) e aplicar ao sair do campo
+    const rIdx = parseInt(input.dataset.rowIdx, 10);
+    const row = window._s4RenderedRows?.[rIdx]?.row;
+    if(!row) return;
+    const novoNome = input.value.trim();
+    if(novoNome && novoNome !== String(row.nome || '').trim()){
+      row.nome = novoNome;
+      row.nomePonto = novoNome;
+      if(typeof renderS4Table === 'function') renderS4Table();
     }
-  }
-
-  const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
-  const filialSugerida = window._s3EscalaFilial || usuarioLogado?.filial || '';
-  if(filialSugerida && !filialSel.value && Array.from(filialSel.options).some(o => o.value === filialSugerida)){
-    filialSel.value = filialSugerida;
-    buscarColaboradoresParaTroca();
-  }
+  }, 220);
 }
 
-function closeTrocarColaboradorModal(){
-  document.getElementById('modal-trocar-colaborador-overlay')?.classList.remove('open');
-  _trocarColabRow = null;
-}
+async function buscarColaboradorAutocomplete(input){
+  const termo = input.value.trim();
+  const drop = getColabAutocompleteDrop();
+  drop._inputAtivo = input;
 
-function agendarBuscaTrocaColaborador(){
-  clearTimeout(_trocarColabTimer);
-  _trocarColabTimer = setTimeout(buscarColaboradoresParaTroca, 250);
-}
-
-let _trocarColabOpcoes = [];
-
-async function buscarColaboradoresParaTroca(){
-  const filial = document.getElementById('trocar-colab-filial')?.value || '';
-  const termo = (document.getElementById('trocar-colab-busca')?.value || '').trim();
-  const select = document.getElementById('trocar-colab-select');
-  if(!select) return;
-
-  _trocarColabOpcoes = [];
-
-  if(!filial){
-    select.innerHTML = '<option value="">Selecione a filial acima</option>';
+  if(termo.length < 2){
+    drop.style.display = 'none';
     return;
   }
 
-  select.innerHTML = '<option value="">Buscando...</option>';
   try{
-    let path = `/rest/v1/funcionario?select=id,rh,nome,nome_completo,filial,funcao,nascimento,cnh,status&filial=eq.${encodeURIComponent(filial)}&status=not.eq.Desligado&order=nome.asc&limit=200`;
-    if(termo){
-      const t = encodeURIComponent(termo.replace(/[,*()]/g,' '));
-      path += `&or=(nome.ilike.*${t}*,nome_completo.ilike.*${t}*)`;
-    }
+    const t = encodeURIComponent(termo.replace(/[,*()]/g,' '));
     const resp = await Promise.race([
-      sbFetch(path),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout ao buscar colaboradores')), 10000))
+      sbFetch(`/rest/v1/funcionario?select=id,rh_registro,nome,nome_completo,filial,funcao,status&status=not.eq.Desligado&or=(nome.ilike.*${t}*,nome_completo.ilike.*${t}*)&order=nome.asc&limit=30`),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout ao buscar colaboradores')), 8000))
     ]);
-    if(!resp?.ok){ select.innerHTML = '<option value="">Erro ao buscar colaboradores</option>'; return; }
+    if(!resp?.ok){
+      const detalhe = resp ? await resp.text().catch(() => resp.statusText) : 'sem resposta';
+      console.error('[buscarColaboradorAutocomplete] HTTP', resp?.status, detalhe);
+      drop._dados = [];
+      drop.innerHTML = `<div style="padding:10px 12px;color:#dc3545;font-size:12px">Erro ao buscar (HTTP ${resp?.status || '?'}). Veja o console (F12).</div>`;
+      posicionarColabDrop(drop, input);
+      drop.style.display = 'block';
+      return;
+    }
     const data = await resp.json();
 
     if(!data.length){
-      select.innerHTML = '<option value="">Nenhum colaborador encontrado para esta filial</option>';
-      return;
+      drop._dados = [];
+      drop.innerHTML = '<div style="padding:10px 12px;color:#6c757d;font-size:12px">Nenhum colaborador encontrado.</div>';
+    }else{
+      drop._dados = data;
+      drop.innerHTML = data.map(f => `
+        <div class="colab-suggest-item" data-id="${esc(f.id)}" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f1f3f5">
+          <div style="font-weight:700;font-size:13px;color:#1a2332">${esc(f.nome_completo || f.nome)}</div>
+          <div style="font-size:11px;color:#6c757d;margin-top:1px">${esc(f.filial || '—')}${f.funcao ? ' · ' + esc(f.funcao) : ''}${f.rh_registro ? ' · RH ' + esc(f.rh_registro) : ''}</div>
+        </div>
+      `).join('');
     }
-
-    _trocarColabOpcoes = data;
-    select.innerHTML = data.map(f => {
-      const label = `${f.nome_completo || f.nome}${f.funcao ? ' — ' + f.funcao : ''}${f.rh ? ' (RH ' + f.rh + ')' : ''}`;
-      return `<option value="${esc(f.id)}">${esc(label)}</option>`;
-    }).join('');
+    posicionarColabDrop(drop, input);
+    drop.style.display = 'block';
   }catch(e){
-    console.warn('[buscarColaboradoresParaTroca]', e);
-    select.innerHTML = '<option value="">Erro ao buscar colaboradores</option>';
+    console.error('[buscarColaboradorAutocomplete]', e);
+    drop._dados = [];
+    drop.innerHTML = `<div style="padding:10px 12px;color:#dc3545;font-size:12px">Erro ao buscar: ${esc(e?.message || String(e))}</div>`;
+    posicionarColabDrop(drop, input);
+    drop.style.display = 'block';
   }
 }
 
-function confirmarTrocaColaboradorSelecionado(){
-  const select = document.getElementById('trocar-colab-select');
-  const filial = document.getElementById('trocar-colab-filial')?.value || '';
-  const id = select?.value;
-  if(!id) return alert('Selecione um colaborador na lista.');
-
-  const funcionario = _trocarColabOpcoes.find(f => String(f.id) === String(id));
-  if(!funcionario) return alert('Selecione um colaborador na lista.');
-
-  confirmarTrocaColaborador(funcionario, filial);
+// Deduz MOTORISTA/AUXILIAR a partir do texto livre da Função do cadastro
+// (ex.: "Auxiliar de Transporte" → AUXILIAR), para manter o mesmo padrão
+// usado no resto do sistema (role da linha, tipo do vínculo).
+function inferirRoleFuncao(funcaoTexto){
+  const norm = String(funcaoTexto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+  if(norm.includes('MOTORISTA')) return 'MOTORISTA';
+  if(norm.includes('AUXILIAR')) return 'AUXILIAR';
+  return null;
 }
 
-async function confirmarTrocaColaborador(funcionario, filial){
-  const row = _trocarColabRow;
+async function aplicarColaboradorSelecionado(input, funcionario){
+  const rIdx = parseInt(input.dataset.rowIdx, 10);
+  const row = window._s4RenderedRows?.[rIdx]?.row;
   if(!row) return;
 
   const nomeCorrigido = (funcionario.nome_completo || funcionario.nome || '').trim();
   if(!nomeCorrigido) return;
   const nomeOriginal = String(row.nome || '').trim();
+  const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+  const filial = funcionario.filial || window._s3EscalaFilial || usuarioLogado?.filial || '';
+  const roleCorrigido = inferirRoleFuncao(funcionario.funcao) || row.role || 'MOTORISTA';
 
-  if(!confirm(`Trocar o colaborador desta linha para "${nomeCorrigido}"?\n\nIsso também vai lembrar essa troca para a filial ${filial}, para não errar de novo ao reprocessar o Resumo.`)) return;
-
+  input.value = nomeCorrigido;
   row.nome = nomeCorrigido;
   row.nomePonto = nomeCorrigido;
+  row.role = roleCorrigido;
+  row.funcao = funcionario.funcao || row.funcao;
 
-  try{
-    if(nomeOriginal){
+  if(nomeOriginal && nomeOriginal.toUpperCase() !== nomeCorrigido.toUpperCase() && filial){
+    try{
       await salvarVinculosSupabase([{
         nome_roteiro: nomeOriginal,
         nome_ponto: nomeCorrigido,
-        tipo: row.role || 'MOTORISTA'
+        tipo: roleCorrigido
       }], filial);
-    }
-  }catch(e){ console.warn('[confirmarTrocaColaborador] vinculo', e); }
+    }catch(e){ console.warn('[aplicarColaboradorSelecionado] vinculo', e); }
+  }
 
-  closeTrocarColaboradorModal();
   if(typeof renderS4Table === 'function') renderS4Table();
 }
 
@@ -3545,9 +3551,11 @@ async function renderS4Table(){
       <td>${statBadge(row.stat ?? row.tipo)}</td>
       <td>
         <div class="colaborador-cell">
-          <div class="colaborador-nome">${esc(row.nome||'—')}
-            <button class="btn-trocar-colab" data-row-idx="${rIdx}" title="Trocar colaborador (caso esteja errado)" style="margin-left:4px;padding:1px 5px;border-radius:4px;border:1px dashed var(--border2);background:var(--bg3);color:var(--text3);font-size:10px;cursor:pointer;vertical-align:middle">⇄</button>
-          </div>
+          <input type="text" class="colaborador-edit-input" data-row-idx="${rIdx}" value="${esc(row.nome||'')}" autocomplete="off" spellcheck="false"
+            title="Digite para buscar e trocar o colaborador, caso esteja errado"
+            style="width:100%;min-width:150px;padding:3px 6px;border:1px solid transparent;border-radius:5px;background:transparent;font-size:12px;font-weight:700;color:var(--text);font-family:inherit"
+            onfocus="this.style.borderColor='var(--border2)';this.style.background='var(--bg2)'"
+            onblur="this.style.borderColor='transparent';this.style.background='transparent'">
           ${row.role ? `<div class="colaborador-funcao">${esc(row.role)}</div>` : ''}
         </div>
       </td>
@@ -3585,18 +3593,12 @@ async function renderS4Table(){
     const idx = parseInt(btn.getAttribute('data-row-idx'));
     if(!isNaN(idx) && rows[idx]) btn.onclick=()=>openBoletaRow(rows[idx].row);
   });
-  tbody.querySelectorAll('.btn-trocar-colab').forEach(btn=>{
-    const idx = parseInt(btn.getAttribute('data-row-idx'));
-    if(!isNaN(idx) && rows[idx]) btn.onclick=(ev)=>{
-      ev.stopPropagation();
-      try{
-        openTrocarColaboradorModal(rows[idx].row);
-      }catch(err){
-        console.error('[btn-trocar-colab]', err);
-        alert('Erro ao abrir o modal de troca de colaborador:\n' + (err?.message || err));
-      }
-    };
-  });
+  if(!tbody.dataset.colabAutocompleteBound){
+    tbody.dataset.colabAutocompleteBound = '1';
+    tbody.addEventListener('input', handleColaboradorInput);
+    tbody.addEventListener('focus', handleColaboradorFocus, true);
+    tbody.addEventListener('blur', handleColaboradorBlur, true);
+  }
   tbody.querySelectorAll('.manual-edit-btn').forEach(btn=>{
     const idx = parseInt(btn.getAttribute('data-row-idx'));
     const field = btn.getAttribute('data-field');
