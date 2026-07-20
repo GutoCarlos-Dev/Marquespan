@@ -2646,13 +2646,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const { error } = await supabaseClient.from('postos').delete().eq('id', id);
-                if(error) alert('Erro ao excluir: ' + error.message);
-                else {
+                if(error) {
+                    if (error.code === '23503') {
+                        await this.avisarPostoComLancamentos(id);
+                    } else {
+                        alert('Erro ao excluir: ' + error.message);
+                    }
+                } else {
                     registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de posto ID ${id}`);
                     this.renderPostosTable();
                     this.loadPostosOptions();
                 }
             }
+        },
+
+        async avisarPostoComLancamentos(postoId) {
+            const { data: vinculados, count, error } = await supabaseClient
+                .from('abastecimento_externo')
+                .select('id, data_hora, filial, veiculo_placa, motorista', { count: 'exact' })
+                .eq('posto_id', postoId)
+                .order('data_hora', { ascending: false })
+                .limit(5);
+
+            if (error || !vinculados) {
+                alert('Este posto nao pode ser excluido pois possui lancamentos de Abastecimento Externo vinculados. Verifique na aba "Abastecimento Externo".');
+                return;
+            }
+
+            let mensagem = `Este posto nao pode ser excluido: ha ${count ?? vinculados.length} lancamento(s) de Abastecimento Externo vinculado(s) a ele.`;
+            if (vinculados.length) {
+                mensagem += '\n\nUltimos lancamentos:\n' + vinculados.map(v => {
+                    const data = v.data_hora ? new Date(v.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+                    return `- ${data} | Filial ${v.filial || '-'} | Placa ${v.veiculo_placa || '-'} | Motorista ${v.motorista || '-'}`;
+                }).join('\n');
+            }
+            mensagem += '\n\nPara excluir o posto, va na aba "Abastecimento Externo", limpe o filtro de datas e busque pelo nome do posto para localizar e excluir/editar esses lancamentos primeiro.';
+            alert(mensagem);
         },
 
         baixarModeloImportacaoSaida() {
