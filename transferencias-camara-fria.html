@@ -108,6 +108,15 @@
                 <th>Saldo</th>
                 <th>Transferir</th>
               </tr>
+              <tr class="transf-placa-row" id="transfPlacaRow">
+                <th colspan="3">Placa da Transferencia</th>
+                <th><input type="text" class="glass-input input-placa-dia" data-dia="segunda" placeholder="Sem Placa" maxlength="8"></th>
+                <th><input type="text" class="glass-input input-placa-dia" data-dia="terca" placeholder="Sem Placa" maxlength="8"></th>
+                <th><input type="text" class="glass-input input-placa-dia" data-dia="quarta" placeholder="Sem Placa" maxlength="8"></th>
+                <th><input type="text" class="glass-input input-placa-dia" data-dia="quinta" placeholder="Sem Placa" maxlength="8"></th>
+                <th><input type="text" class="glass-input input-placa-dia" data-dia="sexta" placeholder="Sem Placa" maxlength="8"></th>
+                <th colspan="3"></th>
+              </tr>
             </thead>
             <tbody id="tableBodyTransfCamara">
               <tr><td colspan="11" style="text-align:center;">Selecione Filial, Semana e Data da Contagem e clique em Gerar Lista.</td></tr>
@@ -148,6 +157,6 @@
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/transferencias-camara-fria.js?v=20260717-6" defer></script>
+  <script type="module" src="script/transferencias-camara-fria.js?v=20260721-placa-dia" defer></script>
 </body>
 </html>

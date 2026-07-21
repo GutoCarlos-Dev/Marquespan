@@ -12,6 +12,13 @@ const DIAS_SEMANA = [
 // Ordem das celulas editaveis de cada linha, usada na navegacao por setas e na colagem em bloco
 const CAMPOS_NAV = ['estoque', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'transferir'];
 
+// Mascara de placa (AAA-0A00, cobre padrao antigo e Mercosul) reutilizada do padrao ja usado
+// na portaria — deixa em branco = "Sem Placa" definida ainda para aquele dia.
+function formatarPlacaMascaraTransf(valor) {
+    const limpo = String(valor || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+    return limpo.length > 3 ? `${limpo.slice(0, 3)}-${limpo.slice(3)}` : limpo;
+}
+
 // Colunas do subcabecalho ordenavel que se repete dentro de cada grupo de Tipo
 const COLUNAS_ORDENAVEIS = [
     ['codigo', 'Codigo'], ['produto', 'Produto'], ['estoque', 'Estoque'],
@@ -59,6 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnEditarAtual = document.getElementById('btnTransfEditarAtual');
             this.historicoBody = document.getElementById('tbodyTransfHistorico');
             this.historicoCount = document.getElementById('transfHistoricoCount');
+            this.placaInputs = new Map(
+                Array.from(document.querySelectorAll('.input-placa-dia')).map(input => [input.dataset.dia, input])
+            );
         },
 
         bind() {
@@ -81,6 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             [this.filialSelect, this.semanaInput, this.dataContagemInput].forEach(el => {
                 el.addEventListener('change', () => this.renderTabelaInicial());
+            });
+            this.placaInputs.forEach(input => {
+                input.addEventListener('input', () => { input.value = formatarPlacaMascaraTransf(input.value); });
             });
             this.btnEditarAtual?.addEventListener('click', () => {
                 this.somenteLeitura = false;
@@ -160,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.existentesCache = new Map();
             this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Selecione Filial, Semana e Data da Contagem e clique em Gerar Lista.</td></tr>';
             if (this.recordsCount) this.recordsCount.textContent = '';
+            this.placaInputs.forEach(input => { input.value = ''; });
             this.atualizarKpis();
         },
 
@@ -175,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const semana = this.semanaInput.value;
                 const dataContagem = this.dataContagemInput.value;
 
-                const [produtosResult, existentesResult, tiposResult] = await Promise.all([
+                const [produtosResult, existentesResult, tiposResult, placasResult] = await Promise.all([
                     // Busca TODOS os produtos ativos (nao filtra por filial aqui): produtos de
                     // outras filiais continuam aparecendo na lista, so ficam travados/zerados
                     // (ver produtoBloqueadoParaFilial), para dar visibilidade do catalogo completo.
@@ -193,12 +207,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     supabaseClient
                         .from('tipos_produto_camara_fria')
                         .select('nome, ordem')
-                        .eq('ativo', true)
+                        .eq('ativo', true),
+                    supabaseClient
+                        .from('transferencias_camara_fria_placas')
+                        .select('dia, placa')
+                        .eq('filial', filial)
+                        .eq('semana', semana)
+                        .eq('data_contagem', dataContagem)
                 ]);
 
                 if (produtosResult.error) throw produtosResult.error;
                 if (existentesResult.error) throw existentesResult.error;
                 if (tiposResult.error) throw tiposResult.error;
+                if (placasResult.error) throw placasResult.error;
 
                 this.produtosCache = produtosResult.data || [];
                 this.existentesCache = new Map((existentesResult.data || []).map(item => [String(item.produto_id), item]));
@@ -206,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // refletir na hora qualquer Tipo novo ou reordenado no Cadastro de Produtos.
                 this.tiposOrdemCache = new Map((tiposResult.data || []).map(item => [this.normalizarTipo(item.nome), Number(item.ordem)]));
                 this.renderTabela();
+                this.renderPlacasDias(placasResult.data || []);
             } catch (error) {
                 console.error('Erro ao gerar lista de transferencias:', error);
                 alert('Erro ao gerar lista: ' + error.message);
@@ -316,6 +338,16 @@ document.addEventListener('DOMContentLoaded', () => {
             `).join('');
         },
 
+        // Preenche a placa de cada dia (Segunda a Sexta) salva para esta Filial+Semana+Data da
+        // Contagem. Dia sem registro salvo (ainda nao definido) ou com placa nula ("Sem Placa")
+        // fica em branco no campo.
+        renderPlacasDias(placas) {
+            const porDia = new Map((placas || []).map(item => [item.dia, item.placa || '']));
+            this.placaInputs.forEach((input, dia) => {
+                input.value = porDia.get(dia) || '';
+            });
+        },
+
         aplicarModoSomenteLeitura() {
             this.tableBody.querySelectorAll('tr[data-produto-id]').forEach(tr => {
                 // Linhas bloqueadas por filial (produto nao disponivel para a filial atual)
@@ -325,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.disabled = desabilitar;
                 });
             });
+            this.placaInputs.forEach(input => { input.disabled = this.somenteLeitura; });
             this.btnSalvar.disabled = this.somenteLeitura;
             this.modoBanner?.classList.toggle('hidden', !this.somenteLeitura);
         },
@@ -669,6 +702,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         .in('id', deletarIds);
                     if (error) throw error;
                 }
+
+                // Placa de cada dia (Segunda a Sexta) — em branco salva como null ("Sem Placa").
+                const upsertsPlacas = Array.from(this.placaInputs.entries()).map(([dia, input]) => ({
+                    filial,
+                    semana,
+                    data_contagem: dataContagem,
+                    dia,
+                    placa: formatarPlacaMascaraTransf(input.value) || null,
+                    usuario,
+                    updated_at: agora
+                }));
+                const { error: erroPlacas } = await supabaseClient
+                    .from('transferencias_camara_fria_placas')
+                    .upsert(upsertsPlacas, { onConflict: 'filial,semana,data_contagem,dia' });
+                if (erroPlacas) throw erroPlacas;
 
                 registrarAuditoria('ALTERAR', 'Câmara Fria', `Transferencias CDS salvas - Filial: ${filial}, Semana: ${semana}, Data: ${dataContagem}`);
                 await this.gerarLista();

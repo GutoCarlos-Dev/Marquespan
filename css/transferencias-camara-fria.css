@@ -150,6 +150,39 @@
     font-size: 0.78rem;
 }
 
+.transf-placa-row th {
+    background: #fff8e6 !important;
+    border-bottom: 2px solid rgba(0, 105, 55, 0.25);
+    padding: 6px !important;
+}
+
+.transf-placa-row th:first-child {
+    text-align: right !important;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #7a5b00;
+    white-space: nowrap;
+}
+
+.input-placa-dia {
+    width: 100%;
+    min-width: 90px;
+    height: 32px;
+    padding: 4px 6px;
+    border: 1px solid #e0c67a;
+    border-radius: 8px;
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: 700;
+    background: #fff;
+}
+
+.input-placa-dia:disabled {
+    background: rgba(0, 0, 0, 0.05);
+    color: #666;
+    cursor: not-allowed;
+}
+
 @media (max-width: 1024px) {
     .transf-filtros {
         grid-template-columns: 1fr;
