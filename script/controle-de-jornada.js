@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ═══════════════════════════════════════════════════════
 //  CONSTANTS
 // ═══════════════════════════════════════════════════════
-const ACTION_ORDER = ['LIGAÇÃO','1ª ADVERTENCIA VERBAL','2ª ADVERTENCIA VERBAL','3ª ADVERTENCIA VERBAL','1ª ADVERTENCIA ESCRITA','2ª ADVERTENCIA ESCRITA','3ª ADVERTENCIA ESCRITA','SUSPENSÃO','A/C GERENCIA','OK'];
+const ACTION_ORDER = ['ENVIO DE MENSAGEM','LIGAÇÃO','1ª ADVERTENCIA VERBAL','2ª ADVERTENCIA VERBAL','3ª ADVERTENCIA VERBAL','1ª ADVERTENCIA ESCRITA','2ª ADVERTENCIA ESCRITA','3ª ADVERTENCIA ESCRITA','SUSPENSÃO','A/C GERENCIA','OK'];
 const DIAS = ['SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SABADO'];
 const DIAS_EN = {0:'SEGUNDA',1:'TERÇA',2:'QUARTA',3:'QUINTA',4:'SEXTA',5:'SABADO'};
 const SPECIALS = new Set(['FOLGA','FÉRIAS','FERIAS','FERIADO','FERIADO NACIONAL','FALTA','FALTOU','NAN','INSS','ATEST.','ABONADO','CARCERE','ATESTADO','LICENÇA','SEM REGISTRO']);
@@ -4324,6 +4324,7 @@ function buildLinhaHash(r, i){
 }
 function actionToTratativaDb(actionText){
   const s = cdjNorm(actionText);
+  if(s.includes('ENVIO') && s.includes('MENSAGEM')) return {tipo:'ENVIO_MENSAGEM', nivel:null};
   if(s.includes('LIGAC')) return {tipo:'LIGACAO', nivel:null};
   if(s.includes('ADVERTENCIA') && s.includes('VERBAL')){
     const nivel = s.includes('3') ? 3 : (s.includes('2') ? 2 : 1);
@@ -4585,6 +4586,56 @@ async function saveAction(){
   if(nuvemOk) alert('✓ Ação salva localmente e no banco de dados (visível para todos os usuários).');
   else alert('✓ Ação salva localmente.\n' + (nuvemMsg ? '⚠ Nuvem: ' + nuvemMsg + '\n' : '') + 'Clique em "Salvar Dia" e a ação subirá no próximo sincronismo.');
 }
+
+// Registra automaticamente a ação "ENVIO DE MENSAGEM" quando um WhatsApp do envio em massa
+// é disparado com sucesso — preenche a Observação/justificativa com a própria mensagem
+// enviada (com a data de hoje), deixando o campo pronto pra o usuário complementar depois
+// com a resposta do colaborador, sem precisar abrir o modal manualmente pra cada um.
+async function registrarAcaoEnvioMensagem(row, mensagemEnviada){
+  if(!row) return;
+  try{
+    const now = new Date();
+    const actionObj = {
+      ts: now.toISOString(),
+      timestamp: now.toLocaleString('pt-BR'),
+      placa: row.placa || '',
+      rota: row.rota || '',
+      stat: row.stat || '',
+      nome: row.nome || '',
+      role: row.role || '',
+      acao: 'ENVIO DE MENSAGEM',
+      observacao: `Mensagem enviada via WhatsApp (envio em massa) em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}. Aguardando resposta do colaborador — complete esta observação quando ele responder.\n\nMensagem enviada:\n${mensagemEnviada || ''}`,
+      data_infracao: row._date || '',
+      data_acao: now.toLocaleDateString('pt-BR'),
+      hora_acao: now.toLocaleTimeString('pt-BR')
+    };
+    actionObj.client_uid = buildActionOrigemLocalId(actionObj, row);
+
+    await dedupeLocalActionsExact();
+    const existingActs = await dbGetAll('actions');
+    const sameKey = sameInfractionNaturalKey(actionObj);
+    const existing = existingActs.find(a => (a.client_uid === actionObj.client_uid) || sameInfractionNaturalKey(a) === sameKey);
+    if(existing && existing.id !== undefined){
+      actionObj.id = existing.id;
+      await dbPut('actions', actionObj);
+    }else{
+      await dbAdd('actions', actionObj);
+    }
+
+    try{
+      if(typeof saveActionSupabase === 'function') await saveActionSupabase(actionObj, row);
+    }catch(e){
+      console.warn('[registrarAcaoEnvioMensagem][Supabase]', e);
+    }
+
+    updateActionsBadge();
+    renderS4Table();
+    refreshDashboard();
+  }catch(e){
+    console.warn('[registrarAcaoEnvioMensagem]', e);
+  }
+}
+
 async function modalRemoveLast(){
   if(!modalRow)return;
   const acts=await dbGetAll('actions');
@@ -4817,12 +4868,20 @@ async function resolverTelefoneParaEnvio(row){
   return {semNumero: true};
 }
 
+// Dispara o WhatsApp e, se der certo, já registra a ação "ENVIO DE MENSAGEM" no histórico
+// da infração (Observação preenchida com a mensagem enviada). Vale tanto pro botão manual
+// (ícone verde na linha) quanto pro envio em massa — os dois passam por aqui.
 async function handleWaClick(row,existingWin){
   const variants = waNameVariants(row);
   const nomeDisplay = variants[0] || row.nome || '';
 
   const resultado = await resolverTelefoneParaEnvio(row);
-  if(resultado.tel) return openWhatsApp(nomeDisplay, resultado.tel, row, existingWin);
+  if(resultado.tel){
+    const mensagem = buildWhatsAppMessage(nomeDisplay, row);
+    const enviado = openWhatsApp(nomeDisplay, resultado.tel, row, existingWin);
+    if(enviado) await registrarAcaoEnvioMensagem(row, mensagem);
+    return enviado;
+  }
   if(resultado.semContatoCadastrado){
     if(confirm(
       `${resultado.funcionarioNome || nomeDisplay} nao possui WhatsApp (Corporativo ou Pessoal) preenchido no cadastro.\n\n` +
@@ -5058,7 +5117,7 @@ function openWhatsApp(nome,tel,row,existingWin){
   if(provider === 'copy'){
     copyWhatsAppText(digits, msg);
     registrarEnvioWhatsApp(nome, digits, row, 'copiado para area de transferencia');
-    return null;
+    return true;
   }
   const url = provider === 'wame'
     ? `https://wa.me/${digits}?text=${encoded}`
@@ -5077,6 +5136,7 @@ function openWhatsApp(nome,tel,row,existingWin){
     if(confirm('Não foi possível abrir o WhatsApp.\n\nDeseja COPIAR o telefone e a mensagem para colar manualmente no WhatsApp?')){
       copyWhatsAppText(digits, msg);
       registrarEnvioWhatsApp(nome, digits, row, 'copiado apos bloqueio de pop-up');
+      return true;
     }
     return win;
   }
@@ -5857,6 +5917,7 @@ async function pullTratativasFromSupabase(analiseId, linhas){
 
 function tratTipoToLabel(tipo, nivel){
   const t = String(tipo||'').toUpperCase();
+  if(t === 'ENVIO_MENSAGEM') return 'ENVIO DE MENSAGEM';
   if(t === 'LIGACAO') return 'LIGAÇÃO';
   if(t === 'ADVERTENCIA_VERBAL') return `${nivel||1}ª ADVERTENCIA VERBAL`;
   if(t === 'ADVERTENCIA_ESCRITA') return `${nivel||1}ª ADVERTENCIA ESCRITA`;
@@ -7116,6 +7177,7 @@ async function exportRelatorioTratativas(){
     let color = '#888', label = 'Sem tratativa';
     if(aTxt.indexOf('SUSP') >= 0) { color = '#7c3aed'; label = 'Suspensao'; }
     else if(aTxt.indexOf('ADVERT') >= 0) { color = '#c5160a'; label = 'Advertencia'; }
+    else if(aTxt.indexOf('MENSAGEM') >= 0) { color = '#0a7ea4'; label = 'Mensagem Enviada'; }
     else if(aTxt.indexOf('LIGA') >= 0 || aTxt.indexOf('CONTAT') >= 0) { color = '#d97706'; label = 'Ligacao'; }
     else if(aTxt === 'OK') { color = '#0B6E46'; label = 'OK - Justificada'; }
     else if(lastObj) { label = lastObj.acao; }
