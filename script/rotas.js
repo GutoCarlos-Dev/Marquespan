@@ -71,7 +71,7 @@ const RotasUI = {
 
     usuarioTemAcessoTotal() {
         const nivel = this.normalizarNivel(this.getCurrentUser()?.nivel);
-        return nivel === 'administrador' || nivel === 'gerencia';
+        return nivel === 'administrador' || nivel === 'gerencia' || nivel === 'gerencia_tmg';
     },
 
     usuarioSomenteVisualiza() {
@@ -80,6 +80,15 @@ const RotasUI = {
 
     getFilialUsuario() {
         return String(this.getCurrentUser()?.filial || '').trim().toUpperCase();
+    },
+
+    // gerencia_tmg tem acesso total (igual gerencia) mas so enxerga a propria Filial —
+    // diferente de administrador/gerencia, que enxergam todas. Restricao de filial e
+    // independente do acesso de edicao.
+    usuarioRestritoPorFilial() {
+        const nivel = this.normalizarNivel(this.getCurrentUser()?.nivel);
+        if (nivel === 'administrador' || nivel === 'gerencia') return false;
+        return Boolean(this.getFilialUsuario());
     },
 
     aplicarModoAcesso() {
@@ -354,7 +363,7 @@ const RotasUI = {
 
     async carregarFiliais() {
         const filialUsuario = this.getFilialUsuario();
-        const restringirFilial = this.usuarioSomenteVisualiza() && filialUsuario;
+        const restringirFilial = this.usuarioRestritoPorFilial();
 
         try {
             const { data, error } = await supabaseClient
@@ -708,7 +717,7 @@ const RotasUI = {
         try {
             const searchTerm = this.searchInput?.value.trim();
             const filialUsuario = this.getFilialUsuario();
-            const restringirFilial = this.usuarioSomenteVisualiza() && filialUsuario;
+            const restringirFilial = this.usuarioRestritoPorFilial();
             const filialFiltro = restringirFilial ? filialUsuario : (this.filtroGridFilial?.value || '');
             const semanaFiltro = this.filtroGridSemana?.value || '';
             const supervisorFiltro = this.filtroGridSupervisor?.value || '';

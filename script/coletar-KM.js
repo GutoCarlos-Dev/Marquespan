@@ -826,6 +826,10 @@ async function carregarFiliaisFiltroHistorico() {
     const select = document.getElementById('filtroHistoricoFilial');
     if (!select) return;
 
+    // Usuario com filial propria (qualquer nivel) fica travado nela no Historico — igual ao
+    // padrao ja usado nas demais paginas. "Todas" so aparece pra quem nao tem filial fixa.
+    const filialUsuario = String(getFilialAtualColetaKm() || '').trim().toUpperCase();
+
     try {
         const { data, error } = await supabaseClient
             .from('filiais')
@@ -833,12 +837,24 @@ async function carregarFiliaisFiltroHistorico() {
             .order('nome', { ascending: true });
         if (error) throw error;
 
+        if (filialUsuario) {
+            const filial = (data || []).find(f => String(f.sigla || f.nome || '').trim().toUpperCase() === filialUsuario);
+            const valor = filial?.sigla || filial?.nome || filialUsuario;
+            const label = filial ? (filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome) : filialUsuario;
+            select.innerHTML = '';
+            select.add(new Option(label, valor));
+            select.value = valor;
+            select.disabled = true;
+            return;
+        }
+
         select.innerHTML = '<option value="">Todas</option>';
         (data || []).forEach(f => {
             const value = f.sigla || f.nome;
             if (!value) return;
             select.add(new Option(f.sigla ? `${f.nome} (${f.sigla})` : f.nome, value));
         });
+        select.disabled = false;
     } catch (error) {
         console.warn('Nao foi possivel carregar filiais para o filtro de historico:', error);
     }
@@ -872,8 +888,10 @@ async function carregarHistorico(dataIni = null, dataFim = null) {
             query = query.lte('data_coleta', `${dataFim}T23:59:59`);
         }
 
-        // Aplica filtro de filial (desktop), se selecionado
-        const filialFiltro = document.getElementById('filtroHistoricoFilial')?.value || '';
+        // Aplica filtro de filial (desktop): usuario com filial propria fica sempre restrito a
+        // ela (nao depende de selecionar manualmente); sem filial propria, usa o que foi
+        // escolhido no seletor (ou nenhum filtro = Todas).
+        const filialFiltro = getFilialAtualColetaKm() || document.getElementById('filtroHistoricoFilial')?.value || '';
         if (filialFiltro) {
             query = query.eq('filial', filialFiltro);
         }

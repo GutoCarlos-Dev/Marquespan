@@ -121,6 +121,7 @@ function canManageGrid() {
     const nivel = getUserLevel();
     return nivel === 'administrador'
         || nivel === 'gerencia'
+        || nivel === 'gerencia_tmg'
         || nivel === 'adm_logistica'
         || isEncarregadoRetorno();
 }

@@ -18,6 +18,7 @@ const ESCALA_PAGE_ID = 'escala.html';
 const ESCALA_NIVEIS_GERENCIAMENTO = new Set([
     'administrador',
     'gerencia',
+    'gerencia_tmg',
     'balanca',
     'equipe_noturno',
     'adm_logistica',
@@ -27,12 +28,14 @@ const ESCALA_NIVEIS_GERENCIAMENTO = new Set([
 const DIARIA_NIVEIS_PERMITIDOS = new Set([
     'administrador',
     'gerencia',
+    'gerencia_tmg',
     'lider_balanca'
 ]);
 // Gerar Boleta (Seleção de Escala) e Cálculo de Peso (Ações Rápidas) ficam liberados só para estes níveis.
 const BOLETA_CALCULO_PESO_NIVEIS_PERMITIDOS = new Set([
     'administrador',
     'gerencia',
+    'gerencia_tmg',
     'balanca',
     'lider_balanca',
     'adm_logistica'
@@ -42,6 +45,7 @@ const BOLETA_CALCULO_PESO_NIVEIS_PERMITIDOS = new Set([
 const FALTAS_RESERVAS_SEMANA_NIVEIS_PERMITIDOS = new Set([
     'administrador',
     'gerencia',
+    'gerencia_tmg',
     'balanca',
     'lider_balanca'
 ]);

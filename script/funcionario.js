@@ -246,7 +246,7 @@ const FuncionarioUI = {
     },
 
     usuarioTemAcessoTotal() {
-        return this.isAdministrador || this.isGerencia || this.isLiderBalanca;
+        return this.isAdministrador || this.isGerencia || this.isGerenciaTmg || this.isLiderBalanca;
     },
 
     aplicarPermissoesAcesso() {
@@ -483,6 +483,7 @@ const FuncionarioUI = {
         const nivel = this.usuarioAtual?.nivel?.toLowerCase();
         this.isAdministrador = nivel === 'administrador';
         this.isGerencia = nivel === 'gerencia';
+        this.isGerenciaTmg = nivel === 'gerencia_tmg';
         this.isLiderBalanca = nivel === 'lider_balanca';
         this.acessoTotal = this.usuarioTemAcessoTotal();
 

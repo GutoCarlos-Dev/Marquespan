@@ -49,11 +49,20 @@ function getFilialUsuarioVeiculos() {
 
 function usuarioTemAcessoTotalVeiculos() {
     const nivel = normalizarNivelVeiculos(getCurrentUser()?.nivel);
-    return nivel === 'administrador' || nivel === 'gerencia';
+    return nivel === 'administrador' || nivel === 'gerencia' || nivel === 'gerencia_tmg';
 }
 
 function usuarioSomenteVisualizaVeiculos() {
     return !usuarioTemAcessoTotalVeiculos();
+}
+
+// gerencia_tmg tem o MESMO acesso total (cadastrar/editar/excluir/importar/exportar) da
+// gerencia, mas so pode enxergar/mexer na propria Filial — diferente de administrador/gerencia,
+// que enxergam todas. Por isso a restricao de filial e independente do acesso de edicao.
+function usuarioRestritoPorFilialVeiculos() {
+    const nivel = normalizarNivelVeiculos(getCurrentUser()?.nivel);
+    if (nivel === 'administrador' || nivel === 'gerencia') return false;
+    return Boolean(getFilialUsuarioVeiculos());
 }
 
 // Exceção pontual: adm_logistica continua só-visualização (mesma restrição de filial, sem
@@ -275,7 +284,7 @@ async function carregarFiliais() {
     const selectImport = document.getElementById('importFilial');
     const selectModal = document.getElementById('veiculoFilial');
     const filialUsuario = getFilialUsuarioVeiculos();
-    const restringirFilial = usuarioSomenteVisualizaVeiculos() && filialUsuario;
+    const restringirFilial = usuarioRestritoPorFilialVeiculos();
 
     try {
         const { data, error } = await supabaseClient
@@ -331,7 +340,7 @@ async function carregarFabricantes() {
             .not('fabricante', 'is', null)
             .neq('fabricante', '');
 
-        if (usuarioSomenteVisualizaVeiculos() && getFilialUsuarioVeiculos()) {
+        if (usuarioRestritoPorFilialVeiculos()) {
             query = query.eq('filial', getFilialUsuarioVeiculos());
         }
 
@@ -384,7 +393,7 @@ async function carregarVeiculos() {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
 
     const filialUsuario = getFilialUsuarioVeiculos();
-    const filial = usuarioSomenteVisualizaVeiculos() && filialUsuario
+    const filial = usuarioRestritoPorFilialVeiculos()
         ? filialUsuario
         : document.getElementById('campo-filial').value;
     const placa = document.getElementById('campo-placa').value.trim();

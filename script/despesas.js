@@ -300,6 +300,10 @@ const DespesasUI = {
         return String(this.getCurrentUser().nivel || '').toLowerCase();
     },
 
+    getFilialUsuarioDespesa() {
+        return String(this.getCurrentUser()?.filial || '').trim().toUpperCase();
+    },
+
     async verificarPermissaoPagina() {
         const nivelUsuario = this.getCurrentUserLevel();
 
@@ -345,7 +349,7 @@ const DespesasUI = {
     },
 
     usuarioPodeExcluir() {
-        return ['administrador', 'gerencia', 'adm_logistica'].includes(this.getCurrentUserLevel());
+        return ['administrador', 'gerencia', 'gerencia_tmg', 'adm_logistica'].includes(this.getCurrentUserLevel());
     },
 
     formatDateTime(value) {
@@ -859,9 +863,34 @@ const DespesasUI = {
     },
 
     async loadFiliais() {
+        // Usuario com filial propria (qualquer nivel) fica travado nela: no formulario (Nova
+        // Despesa) e na busca do Historico — igual ao padrao ja usado nas demais paginas.
+        const filialUsuario = this.getFilialUsuarioDespesa();
+
         try {
             const { data, error } = await supabaseClient.from('filiais').select('sigla, nome').order('nome');
             if (error) throw error;
+
+            if (filialUsuario) {
+                const filial = (data || []).find(f => String(f.sigla || f.nome || '').trim().toUpperCase() === filialUsuario);
+                const value = filial?.sigla || filial?.nome || filialUsuario;
+                const label = filial ? (filial.sigla ? `${filial.nome} (${filial.sigla})` : filial.nome) : filialUsuario;
+
+                if (this.filialSelect) {
+                    this.filialSelect.innerHTML = '<option value="">Selecione a Filial</option>';
+                    this.filialSelect.add(new Option(label, value));
+                    this.filialSelect.value = value;
+                    this.filialSelect.disabled = true;
+                }
+                if (this.searchFilialInput) {
+                    this.searchFilialInput.innerHTML = '<option value="">Todas as Filiais</option>';
+                    this.searchFilialInput.add(new Option(label, value));
+                    this.searchFilialInput.value = value;
+                    this.searchFilialInput.disabled = true;
+                }
+                return;
+            }
+
             if (data) {
                 data.forEach(f => {
                     const value = f.sigla || f.nome;
