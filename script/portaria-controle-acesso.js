@@ -66,6 +66,8 @@ function bindEvents() {
   document.getElementById('acessoEmpresa').addEventListener('change', preencherDadosEmpresa);
   document.getElementById('acessoPessoa').addEventListener('change', preencherDadosPessoa);
   document.getElementById('acessoDocumentoPessoa').addEventListener('input', preencherDadosPessoaPorDocumento);
+  configurarMascaraPlaca(document.getElementById('acessoPlacaVeiculo'));
+  configurarMascaraPlaca(document.getElementById('acessoCarretaCacamba'));
   document.getElementById('buscaEmpresaCadastro').addEventListener('input', renderBuscaEmpresaCadastro);
   document.getElementById('buscaPessoaCadastro').addEventListener('input', renderBuscaPessoaCadastro);
   document.getElementById('buscaSetorCadastro').addEventListener('input', renderBuscaSetorCadastro);
@@ -149,6 +151,19 @@ function configurarCamposMaiusculos() {
 
 function textoMaiusculo(valor) {
   return String(valor || '').trim().toLocaleUpperCase('pt-BR');
+}
+
+const PLACA_REGEX = /^[A-Z]{3}-[0-9][A-Z0-9][0-9]{2}$/;
+
+function formatarPlacaMascara(valor) {
+  const limpo = String(valor || '').toLocaleUpperCase('pt-BR').replace(/[^A-Z0-9]/g, '').slice(0, 7);
+  return limpo.length > 3 ? `${limpo.slice(0, 3)}-${limpo.slice(3)}` : limpo;
+}
+
+function configurarMascaraPlaca(input) {
+  input.addEventListener('input', () => {
+    input.value = formatarPlacaMascara(input.value);
+  });
 }
 
 function toggleMenuLateral() {
@@ -606,6 +621,25 @@ function preencherFormularioSetor(setor) {
 
 async function salvarAcesso(event) {
   event.preventDefault();
+
+  const placaInput = document.getElementById('acessoPlacaVeiculo');
+  const carretaInput = document.getElementById('acessoCarretaCacamba');
+  const placaValor = formatarPlacaMascara(placaInput.value);
+  const carretaValor = formatarPlacaMascara(carretaInput.value);
+  placaInput.value = placaValor;
+  carretaInput.value = carretaValor;
+
+  if (!PLACA_REGEX.test(placaValor)) {
+    alert('Informe a Placa/Cavalo no formato AAA-0A00.');
+    placaInput.focus();
+    return;
+  }
+  if (carretaValor && !PLACA_REGEX.test(carretaValor)) {
+    alert('Informe a Carreta/Caçamba no formato AAA-0A00 ou deixe o campo em branco.');
+    carretaInput.focus();
+    return;
+  }
+
   const btn = document.getElementById('btnSalvarAcesso');
   btn.disabled = true;
   btn.textContent = 'Salvando...';
