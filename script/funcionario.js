@@ -254,6 +254,14 @@ const FuncionarioUI = {
         document.body.classList.toggle('funcionario-acesso-total', this.acessoTotal);
         document.body.classList.toggle('funcionario-somente-leitura', !this.acessoTotal);
 
+        // Exceção pontual: gerencia_tmg tem acesso total, mas Baixar Modelo e Importar XLSX
+        // ficam ocultos mesmo assim.
+        if (this.isGerenciaTmg) {
+            [this.btnDownloadModeloImportacao, this.btnImportXLSX].forEach(el => {
+                if (el) el.style.display = 'none';
+            });
+        }
+
         if (this.acessoTotal) return;
 
         [
@@ -381,17 +389,17 @@ const FuncionarioUI = {
         }
         if (this.btnDownloadModeloImportacao) {
             this.btnDownloadModeloImportacao.addEventListener('click', () => {
-                if (!this.acessoTotal) return;
+                if (!this.acessoTotal || this.isGerenciaTmg) return;
                 this.downloadModeloImportacao();
             });
         }
         if (this.btnImportXLSX && this.fileImportFuncionarioXLSX) {
             this.btnImportXLSX.addEventListener('click', () => {
-                if (!this.acessoTotal) return;
+                if (!this.acessoTotal || this.isGerenciaTmg) return;
                 this.fileImportFuncionarioXLSX.click();
             });
             this.fileImportFuncionarioXLSX.addEventListener('change', event => {
-                if (!this.acessoTotal) return;
+                if (!this.acessoTotal || this.isGerenciaTmg) return;
                 this.importFromXLSX(event);
             });
         }
