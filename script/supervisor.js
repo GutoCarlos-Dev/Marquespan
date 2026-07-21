@@ -2,6 +2,21 @@ import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
 const SUPERVISOR_PAGE_ID = 'supervisor.html';
+// gerencia_tmg só pode visualizar supervisores — sem cadastrar/editar/excluir/importar.
+const SUPERVISOR_NIVEIS_SOMENTE_VISUALIZACAO = new Set(['gerencia_tmg']);
+
+function nivelUsuarioSupervisor() {
+    try {
+        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
+        return String(usuario?.nivel || '').trim().toLowerCase();
+    } catch {
+        return '';
+    }
+}
+
+function usuarioSomenteVisualizaSupervisor() {
+    return SUPERVISOR_NIVEIS_SOMENTE_VISUALIZACAO.has(nivelUsuarioSupervisor());
+}
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -23,8 +38,21 @@ const SupervisorUI = {
         this.cacheDOM();
         const acessoPermitido = await this.verificarPermissaoPagina();
         if (!acessoPermitido) return;
+        this.aplicarModoSomenteVisualizacao();
         this.bindEvents();
         this.carregarSupervisores();
+    },
+
+    aplicarModoSomenteVisualizacao() {
+        if (!usuarioSomenteVisualizaSupervisor()) return;
+
+        if (this.formCadastrarSupervisor) {
+            this.formCadastrarSupervisor.style.display = 'none';
+            const aviso = document.createElement('p');
+            aviso.textContent = 'Seu nível de acesso permite somente visualizar os supervisores.';
+            aviso.style.cssText = 'font-weight:600;color:#7a5b00;background:#fff8e6;border:1px solid #e0c67a;border-radius:8px;padding:8px 12px;margin-bottom:12px;';
+            this.formCadastrarSupervisor.parentElement?.insertBefore(aviso, this.formCadastrarSupervisor);
+        }
     },
 
     cacheDOM() {
@@ -134,6 +162,7 @@ const SupervisorUI = {
             return 0;
         });
 
+        const somenteVisualizacao = usuarioSomenteVisualizaSupervisor();
         this.supervisorTableBody.innerHTML = this.filteredData.map(item => `
             <tr>
                 <td>${escapeHtml(item.nome)}</td>
@@ -143,8 +172,10 @@ const SupervisorUI = {
                     <span class="badge ${item.status === 'ATIVO' ? 'status-em-dia' : 'status-dispensado'}">${escapeHtml(item.status)}</span>
                 </td>
                 <td style="text-align:center;">
+                    ${somenteVisualizacao ? '-' : `
                     <button class="btn-icon edit btn-edit" data-id="${escapeHtml(item.id)}" title="Editar"><i class="fas fa-edit"></i></button>
                     <button class="btn-icon delete btn-delete" data-id="${escapeHtml(item.id)}" title="Excluir"><i class="fas fa-trash"></i></button>
+                    `}
                 </td>
             </tr>
         `).join('');
@@ -181,6 +212,10 @@ const SupervisorUI = {
 
     async handleFormSubmit(e) {
         e.preventDefault();
+        if (usuarioSomenteVisualizaSupervisor()) {
+            alert('Seu nível de acesso permite somente visualizar os supervisores.');
+            return;
+        }
         const id = this.supervisorIdHidden.value;
         const payload = {
             nome: this.supervisorNome.value.trim().toUpperCase(),
@@ -211,6 +246,7 @@ const SupervisorUI = {
     },
 
     editarSupervisor(id) {
+        if (usuarioSomenteVisualizaSupervisor()) return;
         const supervisor = this.data.find(s => s.id === id);
         if (!supervisor) return;
 
@@ -226,6 +262,10 @@ const SupervisorUI = {
     },
 
     async excluirSupervisor(id) {
+        if (usuarioSomenteVisualizaSupervisor()) {
+            alert('Seu nível de acesso permite somente visualizar os supervisores.');
+            return;
+        }
         if (!confirm('Deseja realmente excluir este supervisor?')) return;
 
         try {
@@ -248,6 +288,10 @@ const SupervisorUI = {
     },
 
     async handleImport(e) {
+        if (usuarioSomenteVisualizaSupervisor()) {
+            alert('Seu nível de acesso permite somente visualizar os supervisores.');
+            return;
+        }
         const file = e.target.files[0];
         if (!file) return;
 
