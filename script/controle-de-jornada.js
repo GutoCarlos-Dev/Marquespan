@@ -4676,18 +4676,39 @@ async function updateFuncionarioWhatsApp(funcId, field, tel){
   return false;
 }
 
-function chooseWhatsAppContact(func){
+// Escolha de numero via modal (nao usa confirm() nativo): um confirm() disparado durante o
+// envio em massa pode abrir "escondido" atras da aba do WhatsApp Web (que rouba o foco ao ser
+// aberta), travando o JS da pagina ate alguem clicar numa aba que ninguem esta olhando.
+let waChoiceResolver = null;
+
+function chooseWhatsAppContactAsync(func){
   const choices = waContactChoices(func);
-  if(!choices.length) return null;
-  if(choices.length === 1) return choices[0];
-  const corp = choices.find(c => c.field === 'contato_corp');
-  const pessoal = choices.find(c => c.field === 'contato_pessoal');
-  const usarCorp = confirm(
-    `Foram encontrados dois contatos para ${func.nome_completo || func.nome}.\n\n` +
-    `OK = Corporativo: ${corp?.tel || '-'}\n` +
-    `Cancelar = Pessoal: ${pessoal?.tel || '-'}`
-  );
-  return usarCorp ? corp : pessoal;
+  if(!choices.length) return Promise.resolve(null);
+  if(choices.length === 1) return Promise.resolve(choices[0]);
+
+  return new Promise(resolve => {
+    waChoiceResolver = resolve;
+    const nomeDisplay = func.nome_completo || func.nome || '';
+    document.getElementById('wa-choice-modal-sub').textContent = nomeDisplay;
+    const wrap = document.getElementById('wa-choice-modal-options');
+    wrap.innerHTML = '';
+    choices.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-brand';
+      btn.style.cssText = 'justify-content:flex-start;gap:8px;padding:12px 14px;font-size:14px;text-align:left';
+      btn.innerHTML = `<strong>${esc(choice.label)}</strong> &nbsp;·&nbsp; ${esc(choice.tel)}`;
+      btn.onclick = () => resolveWaChoice(choice);
+      wrap.appendChild(btn);
+    });
+    document.getElementById('wa-choice-modal-overlay').classList.add('open');
+  });
+}
+
+function resolveWaChoice(choice){
+  document.getElementById('wa-choice-modal-overlay').classList.remove('open');
+  const resolve = waChoiceResolver;
+  waChoiceResolver = null;
+  if(resolve) resolve(choice);
 }
 
 function closePhoneModal(){
@@ -4755,39 +4776,64 @@ async function savePhone(){
   openWhatsApp(nomeDisplay,tel,rowForWhatsApp);
 }
 
+// Resolve (e cacheia em row._wa_resolved_tel) qual numero usar para o envio, perguntando
+// Corporativo/Pessoal quando necessario. Usada tanto pelo clique manual quanto pelo envio em
+// massa — no envio em massa ela e chamada ANTES de abrir a aba do WhatsApp, pra nenhuma
+// pergunta ficar pendente depois que o foco for pro WhatsApp Web.
+async function resolverTelefoneParaEnvio(row){
+  if(row._wa_resolved_tel) return {tel: row._wa_resolved_tel};
+
+  const variants = waNameVariants(row);
+  const nomeDisplay = variants[0] || row.nome || '';
+
+  const func = row._wa_funcionario || await findFuncionarioForWhatsApp(row);
+  if(func){
+    row._wa_funcionario = func;
+    const choices = waContactChoices(func);
+    if(choices.length){
+      const chosen = await chooseWhatsAppContactAsync(func);
+      if(chosen?.tel){
+        row.telefone = chosen.tel;
+        row._wa_resolved_tel = chosen.tel;
+        await dbSavePhone(nomeDisplay, chosen.tel, `Funcionario: ${chosen.label}`).catch(()=>{});
+        return {tel: chosen.tel};
+      }
+      return {cancelado: true};
+    }
+    // Funcionario esta cadastrado, mas nao tem Contato Corporativo nem Pessoal preenchido:
+    // nao envia e nao abre o modal de numero avulso — o numero precisa vir do cadastro.
+    return {semContatoCadastrado: true, funcionarioNome: func.nome_completo || func.nome};
+  }
+
+  if(row.telefone){ row._wa_resolved_tel = row.telefone; return {tel: row.telefone}; }
+  for(const v of variants){
+    const t=getTelFromCad(v);
+    if(t){ row._wa_resolved_tel = t; return {tel: t}; }
+  }
+  for(const v of variants){
+    const rec=await dbGetPhone(v);
+    if(rec&&rec.tel){ row._wa_resolved_tel = rec.tel; return {tel: rec.tel}; }
+  }
+  return {semNumero: true};
+}
+
 async function handleWaClick(row,existingWin){
   const variants = waNameVariants(row);
   const nomeDisplay = variants[0] || row.nome || '';
 
-  const func = await findFuncionarioForWhatsApp(row);
-  if(func){
-    row._wa_funcionario = func;
-    const chosen = chooseWhatsAppContact(func);
-    if(chosen?.tel){
-      row.telefone = chosen.tel;
-      await dbSavePhone(nomeDisplay, chosen.tel, `Funcionario: ${chosen.label}`).catch(()=>{});
-      return openWhatsApp(nomeDisplay, chosen.tel, row, existingWin);
+  const resultado = await resolverTelefoneParaEnvio(row);
+  if(resultado.tel) return openWhatsApp(nomeDisplay, resultado.tel, row, existingWin);
+  if(resultado.semContatoCadastrado){
+    if(confirm(
+      `${resultado.funcionarioNome || nomeDisplay} nao possui WhatsApp (Corporativo ou Pessoal) preenchido no cadastro.\n\n` +
+      `Nao e possivel enviar mensagem sem um numero cadastrado.\n\n` +
+      `Deseja abrir o Cadastro de Funcionarios para preencher agora?`
+    )){
+      window.open('funcionario.html', '_blank');
     }
-    row._wa_phone_field = confirm(
-      `${func.nome_completo || func.nome} nao possui contato corporativo nem pessoal preenchido.\n\n` +
-      `Deseja cadastrar agora como Contato Corporativo?\n\nOK = Corporativo\nCancelar = Pessoal`
-    ) ? 'contato_corp' : 'contato_pessoal';
-    openPhoneModal(row);
     return null;
   }
-
-  if(row.telefone){
-    return openWhatsApp(nomeDisplay,row.telefone,row,existingWin);
-  }
-  for(const v of variants){
-    const t=getTelFromCad(v);
-    if(t){return openWhatsApp(nomeDisplay,t,row,existingWin);}
-  }
-  for(const v of variants){
-    const rec=await dbGetPhone(v);
-    if(rec&&rec.tel){return openWhatsApp(nomeDisplay,rec.tel,row,existingWin);}
-  }
-  openPhoneModal(row);
+  if(resultado.semNumero) openPhoneModal(row);
   return null;
 }
 
@@ -4815,14 +4861,38 @@ function toggleEnvioEmMassa(){
   iniciarEnvioEmMassa();
 }
 
-function iniciarEnvioEmMassa(){
+async function iniciarEnvioEmMassa(){
   const selected = getS4SelectedRows();
   if(!selected.length){
     alert('Selecione ao menos um registro na tabela (checkbox) para enviar mensagens em massa.');
     return;
   }
+
+  // Resolve o numero (perguntando Corporativo/Pessoal quando necessario) de TODOS os
+  // selecionados ANTES de abrir a aba do WhatsApp Web. A aba do WhatsApp rouba o foco ao
+  // abrir; se a pergunta aparecesse depois, ela ficaria escondida numa aba que ninguem esta
+  // olhando e o envio em massa parecia travado.
+  const prontos = [];
+  const pulados = [];
+  for(const row of selected){
+    const resultado = await resolverTelefoneParaEnvio(row);
+    if(resultado.tel) prontos.push(row);
+    else pulados.push({row, resultado});
+  }
+
+  if(!prontos.length){
+    alert('Nenhum colaborador selecionado tem WhatsApp disponivel para envio.\n\nVerifique se ha Contato Corporativo ou Pessoal preenchido no Cadastro de Funcionarios.');
+    return;
+  }
+  if(pulados.length){
+    const nomes = pulados.map(p => (waNameVariants(p.row)[0] || p.row.nome || '?') +
+      (p.resultado.semContatoCadastrado ? ' (sem WhatsApp no cadastro)' : ' (numero nao definido)')
+    ).join('\n');
+    if(!confirm(`${pulados.length} colaborador(es) serao pulados por falta de WhatsApp cadastrado:\n\n${nomes}\n\nContinuar o envio para os outros ${prontos.length}?`)) return;
+  }
+
   const intervaloStr = prompt(
-    `Enviar WhatsApp para ${selected.length} colaborador(es) selecionado(s), um de cada vez.\n\n`+
+    `Enviar WhatsApp para ${prontos.length} colaborador(es) selecionado(s), um de cada vez.\n\n`+
     `Cada mensagem vai reaproveitar a MESMA aba do WhatsApp Web (para o navegador não bloquear como pop-up). `+
     `Clique em Enviar em cada uma antes do intervalo acabar, senão ela é substituída pela próxima.\n\n`+
     `Intervalo entre cada envio (em segundos):`,
@@ -4841,7 +4911,7 @@ function iniciarEnvioEmMassa(){
     return;
   }
 
-  waAutoQueue = selected.slice();
+  waAutoQueue = prontos.slice();
   waAutoTotal = waAutoQueue.length;
   waAutoRunning = true;
   atualizarBotaoEnvioMassa();
@@ -4950,6 +5020,33 @@ function buildWhatsAppMessage(nome, row){
   return msg;
 }
 
+// Registra o envio na auditoria do sistema (mesma tabela usada pelas demais paginas), pra
+// depois ser possivel consultar quem/quando/pra quem foi disparada cada mensagem. Como o
+// WhatsApp nao expoe confirmacao de entrega pro navegador, "enviado" aqui significa que a
+// aba/composicao do WhatsApp foi aberta (ou o texto copiado) com sucesso — nao confirma leitura.
+function registrarEnvioWhatsApp(nome, digits, row, meio){
+  try{
+    const usuario = JSON.parse(localStorage.getItem('usuarioLogado')) || {};
+    const descricao = `WhatsApp (${meio}) para ${nome || '-'} · +${digits}` +
+      (row?.role ? ` · ${row.role}` : '') + (row?.rota ? ` · Rota ${row.rota}` : '') +
+      (row?.placa ? ` · ${row.placa}` : '');
+    sbFetch('/rest/v1/auditoria_sistema', {
+      method: 'POST',
+      headers: {'Prefer': 'return=minimal'},
+      body: JSON.stringify({
+        usuario_nome: usuario.nome || usuario.nomecompleto || usuario.nome_completo || usuario.usuario_login || 'Sistema',
+        usuario_id: usuario.auth_user_id || usuario.id || null,
+        filial: usuario.filial || row?.filial || null,
+        acao: 'ENVIAR',
+        modulo: 'Controle de Jornada - WhatsApp',
+        descricao
+      })
+    }).catch(e => console.warn('[auditoria whatsapp]', e));
+  }catch(e){
+    console.warn('[registrarEnvioWhatsApp]', e);
+  }
+}
+
 function openWhatsApp(nome,tel,row,existingWin){
   const digits=formatPhone(tel);
   if(!digits){alert('Número inválido: '+tel);return null;}
@@ -4960,6 +5057,7 @@ function openWhatsApp(nome,tel,row,existingWin){
   const provider = lsGet('wa_provider', 'web'); // 'web' | 'wame' | 'copy'
   if(provider === 'copy'){
     copyWhatsAppText(digits, msg);
+    registrarEnvioWhatsApp(nome, digits, row, 'copiado para area de transferencia');
     return null;
   }
   const url = provider === 'wame'
@@ -4978,8 +5076,11 @@ function openWhatsApp(nome,tel,row,existingWin){
   if(!win){
     if(confirm('Não foi possível abrir o WhatsApp.\n\nDeseja COPIAR o telefone e a mensagem para colar manualmente no WhatsApp?')){
       copyWhatsAppText(digits, msg);
+      registrarEnvioWhatsApp(nome, digits, row, 'copiado apos bloqueio de pop-up');
     }
+    return win;
   }
+  registrarEnvioWhatsApp(nome, digits, row, 'aba do WhatsApp aberta');
   return win;
 }
 

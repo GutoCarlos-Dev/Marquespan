@@ -1289,6 +1289,18 @@
   </div>
 </div>
 
+<!-- MODAL ESCOLHA DE NUMERO WHATSAPP (Corporativo/Pessoal) -->
+<div class="overlay" id="wa-choice-modal-overlay">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">📱 Qual número enviar?</div>
+    <div id="wa-choice-modal-sub" style="font-size:12px;color:var(--text3);margin-top:2px;margin-bottom:16px">Colaborador</div>
+    <div id="wa-choice-modal-options" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="resolveWaChoice(null)">Não enviar para este colaborador</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL AÇÃO -->
 <div class="overlay" id="modal-overlay">
   <div class="modal modal-action-pro">
@@ -1370,7 +1382,7 @@
 <!-- Bibliotecas Externas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
-<script src="./script/controle-de-jornada.js?v=20260718-3"></script>
+<script src="./script/controle-de-jornada.js?v=20260721-wa-bloqueio-log"></script>
 <!-- Expõe o supabaseClient do sistema para os scripts regulares -->
 <script type="module">
   import { supabaseClient } from './script/supabase.js';
