@@ -52,6 +52,7 @@
           <div class="acoes-grid transf-acoes-grid">
             <button type="button" id="btnGerarListaTransf" class="btn-glass btn-blue"><i class="fas fa-list"></i> Gerar Lista</button>
             <button type="button" id="btnSalvarTransf" class="btn-glass btn-green"><i class="fas fa-save"></i> Salvar</button>
+            <button type="button" id="btnCancelarTransf" class="btn-glass btn-gray"><i class="fas fa-ban"></i> Cancelar</button>
             <button type="button" id="btnTransfPDF" class="btn-glass btn-red"><i class="fas fa-file-pdf"></i> PDF</button>
             <button type="button" id="btnTransfXLSX" class="btn-glass btn-purple"><i class="fas fa-file-excel"></i> Excel</button>
           </div>
@@ -99,27 +100,31 @@
                 <th>Codigo</th>
                 <th>Produto</th>
                 <th>Estoque</th>
+                <th>Domingo</th>
                 <th>Segunda</th>
                 <th>Terca</th>
                 <th>Quarta</th>
                 <th>Quinta</th>
                 <th>Sexta</th>
+                <th>Sabado</th>
                 <th>Total</th>
                 <th>Saldo</th>
                 <th>Transferir</th>
               </tr>
               <tr class="transf-placa-row" id="transfPlacaRow">
                 <th colspan="3">Placa da Transferencia</th>
+                <th><input type="text" class="glass-input input-placa-dia" data-dia="domingo" placeholder="Sem Placa" maxlength="8"></th>
                 <th><input type="text" class="glass-input input-placa-dia" data-dia="segunda" placeholder="Sem Placa" maxlength="8"></th>
                 <th><input type="text" class="glass-input input-placa-dia" data-dia="terca" placeholder="Sem Placa" maxlength="8"></th>
                 <th><input type="text" class="glass-input input-placa-dia" data-dia="quarta" placeholder="Sem Placa" maxlength="8"></th>
                 <th><input type="text" class="glass-input input-placa-dia" data-dia="quinta" placeholder="Sem Placa" maxlength="8"></th>
                 <th><input type="text" class="glass-input input-placa-dia" data-dia="sexta" placeholder="Sem Placa" maxlength="8"></th>
+                <th><input type="text" class="glass-input input-placa-dia" data-dia="sabado" placeholder="Sem Placa" maxlength="8"></th>
                 <th colspan="3"></th>
               </tr>
             </thead>
             <tbody id="tableBodyTransfCamara">
-              <tr><td colspan="11" style="text-align:center;">Selecione Filial, Semana e Data da Contagem e clique em Gerar Lista.</td></tr>
+              <tr><td colspan="13" style="text-align:center;">Selecione Filial, Semana e Data da Contagem e clique em Gerar Lista.</td></tr>
             </tbody>
           </table>
         </div>
@@ -157,6 +162,6 @@
   <footer class="footer">&copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.</footer>
   <script type="module" src="./script/auth-guard.js"></script>
   <script type="module" src="./script/menu.js" defer></script>
-  <script type="module" src="script/transferencias-camara-fria.js?v=20260721-placa-dia" defer></script>
+  <script type="module" src="script/transferencias-camara-fria.js?v=20260721-cancelar" defer></script>
 </body>
 </html>

@@ -2,15 +2,17 @@ import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
 const DIAS_SEMANA = [
+    { field: 'domingo', label: 'Domingo' },
     { field: 'segunda', label: 'Segunda' },
     { field: 'terca', label: 'Terca' },
     { field: 'quarta', label: 'Quarta' },
     { field: 'quinta', label: 'Quinta' },
-    { field: 'sexta', label: 'Sexta' }
+    { field: 'sexta', label: 'Sexta' },
+    { field: 'sabado', label: 'Sabado' }
 ];
 
 // Ordem das celulas editaveis de cada linha, usada na navegacao por setas e na colagem em bloco
-const CAMPOS_NAV = ['estoque', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'transferir'];
+const CAMPOS_NAV = ['estoque', 'domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'transferir'];
 
 // Mascara de placa (AAA-0A00, cobre padrao antigo e Mercosul) reutilizada do padrao ja usado
 // na portaria — deixa em branco = "Sem Placa" definida ainda para aquele dia.
@@ -22,7 +24,7 @@ function formatarPlacaMascaraTransf(valor) {
 // Colunas do subcabecalho ordenavel que se repete dentro de cada grupo de Tipo
 const COLUNAS_ORDENAVEIS = [
     ['codigo', 'Codigo'], ['produto', 'Produto'], ['estoque', 'Estoque'],
-    ['segunda', 'Segunda'], ['terca', 'Terca'], ['quarta', 'Quarta'], ['quinta', 'Quinta'], ['sexta', 'Sexta'],
+    ['domingo', 'Domingo'], ['segunda', 'Segunda'], ['terca', 'Terca'], ['quarta', 'Quarta'], ['quinta', 'Quinta'], ['sexta', 'Sexta'], ['sabado', 'Sabado'],
     ['total', 'Total'], ['saldo', 'Saldo'], ['transferir', 'Transferir']
 ];
 
@@ -54,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.buscaInput = document.getElementById('transfBusca');
             this.btnGerar = document.getElementById('btnGerarListaTransf');
             this.btnSalvar = document.getElementById('btnSalvarTransf');
+            this.btnCancelar = document.getElementById('btnCancelarTransf');
             this.btnPDF = document.getElementById('btnTransfPDF');
             this.btnXLSX = document.getElementById('btnTransfXLSX');
             this.tableBody = document.getElementById('tableBodyTransfCamara');
@@ -74,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bind() {
             this.btnGerar.addEventListener('click', () => this.gerarLista());
             this.btnSalvar.addEventListener('click', () => this.salvar());
+            this.btnCancelar?.addEventListener('click', () => this.cancelarEdicao());
             this.btnPDF.addEventListener('click', () => this.exportarPDF());
             this.btnXLSX.addEventListener('click', () => this.exportarXLSX());
             this.buscaInput.addEventListener('input', () => this.filtrarBusca());
@@ -171,10 +175,21 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTabelaInicial() {
             this.produtosCache = [];
             this.existentesCache = new Map();
-            this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Selecione Filial, Semana e Data da Contagem e clique em Gerar Lista.</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;">Selecione Filial, Semana e Data da Contagem e clique em Gerar Lista.</td></tr>';
             if (this.recordsCount) this.recordsCount.textContent = '';
             this.placaInputs.forEach(input => { input.value = ''; });
             this.atualizarKpis();
+        },
+
+        // Fecha a lista aberta (gerada ou trazida do Historico p/ edicao) sem salvar nada —
+        // descarta qualquer alteracao ainda nao salva e volta pra tela inicial de selecao.
+        cancelarEdicao() {
+            const temListaAberta = this.produtosCache.length > 0;
+            if (temListaAberta && !confirm('Sair sem salvar as alteracoes desta lista?')) return;
+
+            this.somenteLeitura = false;
+            this.modoBanner?.classList.add('hidden');
+            this.renderTabelaInicial();
         },
 
         async gerarLista() {
@@ -182,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.btnGerar.disabled = true;
             this.btnGerar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
-            this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Carregando produtos...</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;">Carregando produtos...</td></tr>';
 
             try {
                 const filial = this.filialSelect.value;
@@ -200,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         .order('nome'),
                     supabaseClient
                         .from('transferencias_camara_fria')
-                        .select('id, produto_id, estoque, segunda, terca, quarta, quinta, sexta, transferir')
+                        .select('id, produto_id, estoque, domingo, segunda, terca, quarta, quinta, sexta, sabado, transferir')
                         .eq('filial', filial)
                         .eq('semana', semana)
                         .eq('data_contagem', dataContagem),
@@ -231,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Erro ao gerar lista de transferencias:', error);
                 alert('Erro ao gerar lista: ' + error.message);
-                this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="13" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
             } finally {
                 this.btnGerar.disabled = false;
                 this.btnGerar.innerHTML = '<i class="fas fa-list"></i> Gerar Lista';
@@ -280,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (this.produtosCache.length === 0) {
-                this.tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Nenhum produto cadastrado.</td></tr>';
+                this.tableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;">Nenhum produto cadastrado.</td></tr>';
                 this.atualizarKpis();
                 return;
             }
@@ -289,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let html = '';
 
             grupos.forEach(([tipo, produtos]) => {
-                html += `<tr class="transf-tipo-row" data-tipo-header="${this.escapeHtml(tipo)}"><td colspan="11">${this.escapeHtml(tipo)}</td></tr>`;
+                html += `<tr class="transf-tipo-row" data-tipo-header="${this.escapeHtml(tipo)}"><td colspan="13">${this.escapeHtml(tipo)}</td></tr>`;
                 html += `<tr class="transf-subheader-row" data-tipo-subheader="${this.escapeHtml(tipo)}">${this.montarSubheaderColunas(tipo)}</tr>`;
                 produtos.forEach(produto => {
                     const bloqueado = this.produtoBloqueadoParaFilial(produto, this.filialSelect.value);
@@ -857,11 +872,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 codigo: tr.querySelector('td:nth-child(1)')?.textContent || '-',
                 produto: tr.querySelector('td:nth-child(2)')?.textContent || '-',
                 estoque: this.getValorInt(tr, 'estoque'),
+                domingo: this.getValorInt(tr, 'domingo'),
                 segunda: this.getValorInt(tr, 'segunda'),
                 terca: this.getValorInt(tr, 'terca'),
                 quarta: this.getValorInt(tr, 'quarta'),
                 quinta: this.getValorInt(tr, 'quinta'),
                 sexta: this.getValorInt(tr, 'sexta'),
+                sabado: this.getValorInt(tr, 'sabado'),
                 total: parseInt(tr.querySelector('[data-total]')?.textContent, 10) || 0,
                 saldo: parseInt(tr.querySelector('[data-saldo]')?.textContent, 10) || 0,
                 transferir: tr.querySelector('.select-transferir')?.value || ''
@@ -895,10 +912,10 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.text(`Filial: ${contexto.filial} | Semana: ${contexto.semana} | Data da Contagem: ${contexto.data}`, 60, 22);
 
             doc.autoTable({
-                head: [['Tipo', 'Codigo', 'Produto', 'Estoque', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Total', 'Saldo', 'Transferir']],
+                head: [['Tipo', 'Codigo', 'Produto', 'Estoque', 'Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Total', 'Saldo', 'Transferir']],
                 body: linhas.map(item => [
                     item.tipo, item.codigo, item.produto,
-                    String(item.estoque), String(item.segunda), String(item.terca), String(item.quarta), String(item.quinta), String(item.sexta),
+                    String(item.estoque), String(item.domingo), String(item.segunda), String(item.terca), String(item.quarta), String(item.quinta), String(item.sexta), String(item.sabado),
                     String(item.total), String(item.saldo), item.transferir || '-'
                 ]),
                 startY: 30,
@@ -923,10 +940,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 ['TRANSFERENCIAS CDS - CAMARA FRIA'],
                 [`Filial: ${contexto.filial}`, `Semana: ${contexto.semana}`, `Data da Contagem: ${contexto.data}`],
                 [],
-                ['Tipo', 'Codigo', 'Produto', 'Estoque', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Total', 'Saldo', 'Transferir'],
+                ['Tipo', 'Codigo', 'Produto', 'Estoque', 'Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Total', 'Saldo', 'Transferir'],
                 ...linhas.map(item => [
                     item.tipo, item.codigo, item.produto,
-                    item.estoque, item.segunda, item.terca, item.quarta, item.quinta, item.sexta,
+                    item.estoque, item.domingo, item.segunda, item.terca, item.quarta, item.quinta, item.sexta, item.sabado,
                     item.total, item.saldo, item.transferir || ''
                 ])
             ];
@@ -934,7 +951,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const ws = window.XLSX.utils.aoa_to_sheet(dados);
             ws['!cols'] = [
                 { wch: 16 }, { wch: 12 }, { wch: 36 }, { wch: 10 },
-                { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+                { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
                 { wch: 10 }, { wch: 10 }, { wch: 16 }
             ];
             const wb = window.XLSX.utils.book_new();

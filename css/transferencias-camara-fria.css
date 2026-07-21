@@ -7,6 +7,7 @@
 }
 
 .btn-purple { background: linear-gradient(135deg, #6f42c1, #5936a2); }
+.btn-gray { background: linear-gradient(135deg, #6c757d, #565e64); }
 
 .transf-table-container {
     max-height: 620px;
