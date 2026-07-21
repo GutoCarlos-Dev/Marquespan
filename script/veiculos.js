@@ -56,13 +56,20 @@ function usuarioSomenteVisualizaVeiculos() {
     return !usuarioTemAcessoTotalVeiculos();
 }
 
-// gerencia_tmg tem o MESMO acesso total (cadastrar/editar/excluir/importar/exportar) da
-// gerencia, mas so pode enxergar/mexer na propria Filial — diferente de administrador/gerencia,
-// que enxergam todas. Por isso a restricao de filial e independente do acesso de edicao.
+// gerencia_tmg tem o MESMO acesso total (cadastrar/editar/importar/exportar) da gerencia, mas
+// so pode enxergar/mexer na propria Filial — diferente de administrador/gerencia, que enxergam
+// todas. Por isso a restricao de filial e independente do acesso de edicao.
 function usuarioRestritoPorFilialVeiculos() {
     const nivel = normalizarNivelVeiculos(getCurrentUser()?.nivel);
     if (nivel === 'administrador' || nivel === 'gerencia') return false;
     return Boolean(getFilialUsuarioVeiculos());
+}
+
+// Exceção pontual: gerencia_tmg tem acesso total (igual gerencia), MENOS excluir veiculo.
+function usuarioPodeExcluirVeiculos() {
+    if (!usuarioTemAcessoTotalVeiculos()) return false;
+    const nivel = normalizarNivelVeiculos(getCurrentUser()?.nivel);
+    return nivel !== 'gerencia_tmg';
 }
 
 // Exceção pontual: adm_logistica continua só-visualização (mesma restrição de filial, sem
@@ -271,6 +278,11 @@ function handleTableClick(e) {
 
     if (usuarioSomenteVisualizaVeiculos() && (btnEdit || btnDelete)) {
         alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+        return;
+    }
+
+    if (btnDelete && !usuarioPodeExcluirVeiculos()) {
+        alert('Seu nivel de acesso nao permite excluir veiculos.');
         return;
     }
 
@@ -483,15 +495,17 @@ function renderizarTabela(veiculos) {
             btnEdit.dataset.id = v.id;
             btnEdit.innerHTML = '<i class="fas fa-edit"></i>';
             btnEdit.style.marginLeft = '5px';
+            tdAcoes.append(btnEdit);
 
-            const btnDelete = document.createElement('button');
-            btnDelete.className = 'btn-icon delete btn-delete';
-            btnDelete.title = 'Excluir';
-            btnDelete.dataset.id = v.id;
-            btnDelete.innerHTML = '<i class="fas fa-trash"></i>';
-            btnDelete.style.marginLeft = '5px';
-
-            tdAcoes.append(btnEdit, btnDelete);
+            if (usuarioPodeExcluirVeiculos()) {
+                const btnDelete = document.createElement('button');
+                btnDelete.className = 'btn-icon delete btn-delete';
+                btnDelete.title = 'Excluir';
+                btnDelete.dataset.id = v.id;
+                btnDelete.innerHTML = '<i class="fas fa-trash"></i>';
+                btnDelete.style.marginLeft = '5px';
+                tdAcoes.append(btnDelete);
+            }
         }
 
         tr.append(tdFilial, tdPlaca, tdModelo, tdRenavan, tdTipo, tdSituacao, tdQr, tdAcoes);
@@ -1009,8 +1023,8 @@ function normalizarNomeArquivo(nome) {
 }
 
 async function excluirVeiculo(id) {
-    if (usuarioSomenteVisualizaVeiculos()) {
-        alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+    if (!usuarioPodeExcluirVeiculos()) {
+        alert('Seu nivel de acesso nao permite excluir veiculos.');
         return;
     }
 
