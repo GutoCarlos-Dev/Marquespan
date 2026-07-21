@@ -80,21 +80,29 @@ function usuarioPodeExportarExcelVeiculos() {
     return nivel === 'adm_logistica';
 }
 
+function ocultarBotaoVeiculos(id) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.classList.add('hidden');
+    btn.disabled = true;
+    btn.style.display = 'none';
+}
+
 function aplicarModoAcessoVeiculos() {
+    // Exceção pontual: gerencia_tmg pode editar veiculos existentes e exportar Excel, mas
+    // Novo, Importar em Massa e Gerar QR Code ficam ocultos mesmo assim.
+    const nivel = normalizarNivelVeiculos(getCurrentUser()?.nivel);
+    if (nivel === 'gerencia_tmg') {
+        ['btn-novo-veiculo', 'btn-importar-massa', 'btn-gerar-qrcode'].forEach(ocultarBotaoVeiculos);
+    }
+
     if (!usuarioSomenteVisualizaVeiculos()) return;
 
     const idsParaOcultar = usuarioPodeExportarExcelVeiculos()
         ? ['btn-novo-veiculo', 'btn-importar-massa', 'btn-gerar-qrcode']
         : ['btn-novo-veiculo', 'btn-importar-massa', 'btn-exportar-xls', 'btn-gerar-qrcode'];
 
-    idsParaOcultar.forEach(id => {
-        const btn = document.getElementById(id);
-        if (btn) {
-            btn.classList.add('hidden');
-            btn.disabled = true;
-            btn.style.display = 'none';
-        }
-    });
+    idsParaOcultar.forEach(ocultarBotaoVeiculos);
 }
 
 async function verificarPermissaoPagina() {
@@ -607,6 +615,11 @@ function abrirModalVeiculo(veiculo = null, somenteLeitura = false) {
         return;
     }
 
+    if (!veiculo && normalizarNivelVeiculos(getCurrentUser()?.nivel) === 'gerencia_tmg') {
+        alert('Seu nivel de acesso nao permite cadastrar novos veiculos.');
+        return;
+    }
+
     const modal = document.getElementById('modalVeiculo');
     const form = document.getElementById('formVeiculo');
     const title = document.getElementById('modalTitle');
@@ -751,6 +764,12 @@ async function salvarVeiculo(e) {
     }
 
     const id = document.getElementById('veiculoId').value;
+
+    if (!id && normalizarNivelVeiculos(getCurrentUser()?.nivel) === 'gerencia_tmg') {
+        alert('Seu nivel de acesso nao permite cadastrar novos veiculos.');
+        return;
+    }
+
     const placaOriginal = normalizarPlacaVeiculo(document.getElementById('veiculoPlacaOriginal')?.value);
     const getVal = (id) => {
         const el = document.getElementById(id);
@@ -1130,8 +1149,9 @@ function aplicarTotaisTanqueImportacao(target, base = {}) {
 
 async function handleImportacao(e) {
     e.preventDefault();
-    if (usuarioSomenteVisualizaVeiculos()) {
-        alert('Seu nivel de acesso permite somente visualizar os veiculos.');
+    const nivelImportacao = normalizarNivelVeiculos(getCurrentUser()?.nivel);
+    if (usuarioSomenteVisualizaVeiculos() || nivelImportacao === 'gerencia_tmg') {
+        alert('Seu nivel de acesso nao permite importar veiculos em massa.');
         return;
     }
 
