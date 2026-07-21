@@ -56,10 +56,22 @@ function usuarioSomenteVisualizaVeiculos() {
     return !usuarioTemAcessoTotalVeiculos();
 }
 
+// Exceção pontual: adm_logistica continua só-visualização (mesma restrição de filial, sem
+// cadastrar/editar/excluir/importar/gerar QR), mas pode exportar Excel do que já enxerga na tela.
+function usuarioPodeExportarExcelVeiculos() {
+    if (usuarioTemAcessoTotalVeiculos()) return true;
+    const nivel = normalizarNivelVeiculos(getCurrentUser()?.nivel);
+    return nivel === 'adm_logistica';
+}
+
 function aplicarModoAcessoVeiculos() {
     if (!usuarioSomenteVisualizaVeiculos()) return;
 
-    ['btn-novo-veiculo', 'btn-importar-massa', 'btn-exportar-xls', 'btn-gerar-qrcode'].forEach(id => {
+    const idsParaOcultar = usuarioPodeExportarExcelVeiculos()
+        ? ['btn-novo-veiculo', 'btn-importar-massa', 'btn-gerar-qrcode']
+        : ['btn-novo-veiculo', 'btn-importar-massa', 'btn-exportar-xls', 'btn-gerar-qrcode'];
+
+    idsParaOcultar.forEach(id => {
         const btn = document.getElementById(id);
         if (btn) {
             btn.classList.add('hidden');
@@ -1006,7 +1018,7 @@ async function excluirVeiculo(id) {
 }
 
 function exportarExcel() {
-    if (usuarioSomenteVisualizaVeiculos()) {
+    if (!usuarioPodeExportarExcelVeiculos()) {
         alert('Seu nivel de acesso permite somente visualizar os veiculos.');
         return;
     }
