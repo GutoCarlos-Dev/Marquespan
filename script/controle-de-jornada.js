@@ -4195,12 +4195,38 @@ function renderActionHistory(acts){
     box.innerHTML = '<div class="action-history-empty">Nenhuma tratativa registrada para este colaborador/placa.</div>';
     return;
   }
-  box.innerHTML = acts.slice().reverse().map(a => `
-    <div class="action-history-card">
-      <div class="h1">${esc(a.acao||'')} — ${esc(a.data_acao||a.timestamp||'')}</div>
-      <div class="h2">${a.data_infracao?`Infração ref.: ${esc(a.data_infracao)}<br>`:''}${esc(a.observacao||'Sem observação')}</div>
-    </div>
-  `).join('');
+
+  // Agrupa por data da infração (ou data da ação, se a infração não tiver data) e ordena da
+  // mais recente pra mais antiga — assim as tratativas de dias diferentes não ficam todas
+  // misturadas num bloco só.
+  const grupos = new Map();
+  acts.forEach(a => {
+    const dataChave = a.data_infracao || a.data_acao || '';
+    if(!grupos.has(dataChave)) grupos.set(dataChave, []);
+    grupos.get(dataChave).push(a);
+  });
+
+  const datasOrdenadas = [...grupos.keys()].sort((d1, d2) =>
+    (cdjToISODateBR(d2) || '').localeCompare(cdjToISODateBR(d1) || '')
+  );
+
+  box.innerHTML = datasOrdenadas.map(data => {
+    const itens = grupos.get(data);
+    const temInfracao = itens.some(a => a.data_infracao);
+    const label = !data ? 'Data não informada' : (temInfracao ? `Infração de ${esc(data)}` : `Tratativa de ${esc(data)}`);
+    const cards = itens.slice().reverse().map(a => `
+      <div class="action-history-card">
+        <div class="h1">${esc(a.acao||'')} — ${esc(a.data_acao||a.timestamp||'')}</div>
+        <div class="h2">${esc(a.observacao||'Sem observação')}</div>
+      </div>
+    `).join('');
+    return `
+      <div class="action-history-group">
+        <div class="action-history-date">📅 ${label}</div>
+        ${cards}
+      </div>
+    `;
+  }).join('');
 }
 
 function renderActionQuickChips(selValue){
