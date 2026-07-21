@@ -36,6 +36,10 @@ let s3Bin = null;
 let s4Rows = [], s4IssueFilter = 'all', s4StatFilter = 'all', s4IrrFilter = 'all', s4Search = '';
 let s4WorkBook = null;
 let modalRow = null;
+// id local da tratativa sendo editada (via lápis no Histórico recente); null = nova tratativa.
+// Cada tratativa agora é um evento de histórico independente — não sobrescreve as outras da
+// mesma infração a não ser que o usuário abra explicitamente pra editar essa mesma.
+let editingActionId = null;
 
 // ═══════════════════════════════════════════════════════
 //  INDEXEDDB
@@ -4216,7 +4220,13 @@ function renderActionHistory(acts){
     const label = !data ? 'Data não informada' : (temInfracao ? `Infração de ${esc(data)}` : `Tratativa de ${esc(data)}`);
     const cards = itens.slice().reverse().map(a => `
       <div class="action-history-card">
-        <div class="h1">${esc(a.acao||'')} — ${esc(a.data_acao||a.timestamp||'')}</div>
+        <div class="action-history-card-head">
+          <div class="h1">${esc(a.acao||'')} — ${esc(a.data_acao||a.timestamp||'')}</div>
+          <div class="action-history-card-btns">
+            <button type="button" class="action-history-btn" title="Editar esta tratativa" onclick="editarTratativa(${JSON.stringify(a.id)})"><i class="fas fa-pen"></i></button>
+            <button type="button" class="action-history-btn danger" title="Excluir esta tratativa" onclick="excluirTratativa(${JSON.stringify(a.id)})"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
         <div class="h2">${esc(a.observacao||'Sem observação')}</div>
       </div>
     `).join('');
@@ -4227,6 +4237,73 @@ function renderActionHistory(acts){
       </div>
     `;
   }).join('');
+}
+
+// Carrega uma tratativa já registrada de volta no formulário do modal pra correção — o
+// usuário ajusta e clica em "Salvar ação" normalmente (o saveAction já faz upsert pela
+// chave natural data_infração+placa+nome, então isso atualiza o mesmo registro).
+async function editarTratativa(id){
+  if(!modalRow) return;
+  const acts = await dbGetAll('actions');
+  const alvo = acts.find(a => a.id === id);
+  if(!alvo){ alert('Tratativa não encontrada (pode já ter sido removida). Feche e reabra o modal.'); return; }
+
+  editingActionId = id;
+
+  const sel = document.getElementById('modal-action-sel');
+  if(alvo.acao && !ACTION_ORDER.includes(alvo.acao)){
+    const custom = document.createElement('option');
+    custom.value = alvo.acao; custom.textContent = alvo.acao;
+    sel.appendChild(custom);
+  }
+  sel.value = alvo.acao || '';
+  renderActionQuickChips(sel.value);
+  document.getElementById('modal-obs').value = alvo.observacao || '';
+  document.getElementById('modal-date-inf').value = alvo.data_infracao || '';
+  document.getElementById('modal-obs').focus();
+
+  const rec = document.getElementById('modal-rec');
+  if(rec) rec.textContent = `✏️ Editando tratativa de ${esc(alvo.data_infracao || alvo.data_acao || '')} — ajuste e clique em "Salvar ação"`;
+}
+
+// Exclui a nuvem (tabela tratativas) usando a mesma chave composta usada no upsert do save
+// (analise_linha_id + origem_local_id), pra não deixar a linha "orfã" no banco compartilhado
+// depois de excluir só localmente.
+async function excluirTratativaCloud(actionObj, row){
+  try{
+    if(!supabaseAvailable()) return;
+    const rowComData = { ...row, _date: actionObj.data_infracao || row?._date };
+    const linhaId = await findSupabaseLinhaIdForRow(rowComData);
+    if(!linhaId) return;
+    const origemId = actionObj.client_uid || actionObj.origem_local_id || buildActionOrigemLocalId(actionObj, rowComData);
+    const resp = await sbFetch(`/rest/v1/tratativas?analise_linha_id=eq.${encodeURIComponent(linhaId)}&origem_local_id=eq.${encodeURIComponent(origemId)}`, {
+      method: 'DELETE'
+    });
+    if(!resp.ok) console.warn('[excluirTratativaCloud]', await resp.text());
+  }catch(e){
+    console.warn('[excluirTratativaCloud]', e);
+  }
+}
+
+// Exclui UMA tratativa específica (por id local) — local + nuvem. Substitui o antigo
+// "Remover última", que apagava pela ordem de inserção no banco local e podia remover um
+// registro diferente do que o usuário via na tela quando havia tratativas de várias datas.
+async function excluirTratativa(id){
+  if(!modalRow) return;
+  const acts = await dbGetAll('actions');
+  const alvo = acts.find(a => a.id === id);
+  if(!alvo){ alert('Tratativa não encontrada (pode já ter sido removida).'); return; }
+  if(!confirm(`Excluir esta tratativa?\n\n${alvo.acao || ''} — ${alvo.data_infracao || alvo.data_acao || alvo.timestamp || ''}\n\n${alvo.observacao || ''}`)) return;
+
+  await dbDelete('actions', id);
+  await excluirTratativaCloud(alvo, modalRow);
+
+  const acts2 = await dbGetAll('actions');
+  const myActs = acts2.filter(a => a.nome === modalRow.nome && a.placa === modalRow.placa);
+  renderActionHistory(myActs);
+  updateActionsBadge();
+  renderS4Table();
+  refreshDashboard();
 }
 
 function renderActionQuickChips(selValue){
@@ -4272,6 +4349,7 @@ window.addEventListener('scroll',hideTooltip);
 // Modal
 function openModal(row){
   modalRow=row;
+  editingActionId=null;
   document.getElementById('modal-info').innerHTML=`<strong>${esc(row.nome||'')}</strong> · ${esc(row.role||'')} · ${esc(row.placa||'')} · Rota ${esc(row.rota||'')}`;
   const flags = inferIssueFlags(row);
   const badges=[];
@@ -4299,7 +4377,7 @@ function openModal(row){
   document.getElementById('modal-obs').value='';
   document.getElementById('modal-overlay').classList.add('open');
 }
-function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');editingActionId=null;}
 
 // ═══════════════════════════════════════════════════════
 //  SUPABASE — TRATATIVAS / AÇÕES
@@ -4330,16 +4408,23 @@ function cdjSimpleHash(value){
   }
   return ('00000000' + (h>>>0).toString(16)).slice(-8);
 }
+// Fallback apenas pra tratativas antigas/importadas que não têm client_uid salvo — gera uma
+// chave determinística por infração (data+placa+nome, sem o tipo da ação). NÃO é mais usada
+// pra tratativas novas: cada tratativa nova ganha um client_uid único (novoClientUid), porque
+// agora várias tratativas podem coexistir pra mesma infração (histórico completo, sem
+// sobrescrever a anterior).
 function buildActionOrigemLocalId(actionObj, row){
-  // ID determinístico da tratativa por infração.
-  // Regra de produção: no mesmo dia + placa + colaborador, a ação nova SUBSTITUI a anterior.
-  // Não usamos o tipo da ação no ID; assim LIGAÇÃO -> OK atualiza a mesma tratativa em vez de duplicar.
   const base = [
     cdjToISODateBR(actionObj?.data_infracao || row?._date || row?.data_ref || ''),
     cdjNorm(actionObj?.placa || row?.placa || ''),
     cdjNorm(actionObj?.nome || row?.nome || row?.colaborador || '')
   ].join('|');
   return 'acao_' + cdjSimpleHash(base) + '_' + cdjSimpleHash(base.split('').reverse().join(''));
+}
+// Gera um id único por evento de tratativa (usado em toda tratativa NOVA, pra não colidir
+// com outras da mesma infração no upsert da nuvem, que é por analise_linha_id+origem_local_id).
+function novoClientUid(){
+  return 'acao_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
 }
 function buildLinhaHash(r, i){
   return 'linha_' + cdjSimpleHash([
@@ -4518,14 +4603,6 @@ async function syncLocalActionsForAnalise(item, savedAnalise){
 }
 
 
-function sameActionNaturalKey(a){
-  return [
-    cdjToISODateBR(a?.data_infracao || ''),
-    cdjNorm(a?.placa || ''),
-    cdjNorm(a?.nome || ''),
-    cdjNorm(a?.acao || a?.tipo || '')
-  ].join('|');
-}
 function sameInfractionNaturalKey(a){
   return [
     cdjToISODateBR(a?.data_infracao || ''),
@@ -4578,20 +4655,25 @@ async function saveAction(){
     data_acao:now.toLocaleDateString('pt-BR'),
     hora_acao:now.toLocaleTimeString('pt-BR')
   };
-  actionObj.client_uid = buildActionOrigemLocalId(actionObj, modalRow);
+  // Cada tratativa é um evento de histórico independente — uma ação nova NÃO sobrescreve as
+  // outras já registradas pra mesma infração (ex.: LIGAÇÃO e depois ENVIO DE MENSAGEM ficam as
+  // duas, cada uma com sua observação). Só atualiza uma tratativa existente no lugar quando o
+  // usuário abriu explicitamente pelo lápis no Histórico recente (editarTratativa).
+  let existing = null;
+  if(editingActionId != null){
+    const existingActs = await dbGetAll('actions');
+    existing = existingActs.find(a => a.id === editingActionId);
+  }
 
-  // Evita duplicidade local: mesma data + placa + colaborador atualiza a tratativa existente.
-  // Ex.: se registrou LIGAÇÃO e depois OK na mesma infração, fica apenas OK como ação atual.
-  await dedupeLocalActionsExact();
-  const existingActs = await dbGetAll('actions');
-  const sameKey = sameInfractionNaturalKey(actionObj);
-  const existing = existingActs.find(a => (a.client_uid === actionObj.client_uid) || sameInfractionNaturalKey(a) === sameKey);
-  if(existing && existing.id !== undefined){
+  if(existing){
     actionObj.id = existing.id;
+    actionObj.client_uid = existing.client_uid || existing.origem_local_id || buildActionOrigemLocalId(existing, modalRow);
     await dbPut('actions', actionObj);
   }else{
+    actionObj.client_uid = novoClientUid();
     await dbAdd('actions', actionObj);
   }
+  editingActionId = null;
 
   let nuvemOk=false, nuvemMsg='';
   try{
@@ -4635,18 +4717,10 @@ async function registrarAcaoEnvioMensagem(row, mensagemEnviada){
       data_acao: now.toLocaleDateString('pt-BR'),
       hora_acao: now.toLocaleTimeString('pt-BR')
     };
-    actionObj.client_uid = buildActionOrigemLocalId(actionObj, row);
-
-    await dedupeLocalActionsExact();
-    const existingActs = await dbGetAll('actions');
-    const sameKey = sameInfractionNaturalKey(actionObj);
-    const existing = existingActs.find(a => (a.client_uid === actionObj.client_uid) || sameInfractionNaturalKey(a) === sameKey);
-    if(existing && existing.id !== undefined){
-      actionObj.id = existing.id;
-      await dbPut('actions', actionObj);
-    }else{
-      await dbAdd('actions', actionObj);
-    }
+    // Cada envio vira uma tratativa nova e independente (histórico completo) — não substitui
+    // uma tratativa já existente pra mesma infração, então nada se perde.
+    actionObj.client_uid = novoClientUid();
+    await dbAdd('actions', actionObj);
 
     try{
       if(typeof saveActionSupabase === 'function') await saveActionSupabase(actionObj, row);
@@ -4660,17 +4734,6 @@ async function registrarAcaoEnvioMensagem(row, mensagemEnviada){
   }catch(e){
     console.warn('[registrarAcaoEnvioMensagem]', e);
   }
-}
-
-async function modalRemoveLast(){
-  if(!modalRow)return;
-  const acts=await dbGetAll('actions');
-  const mine=acts.filter(a=>a.placa===modalRow.placa&&a.nome===modalRow.nome);
-  if(!mine.length){alert('Nenhuma ação para remover.');return;}
-  const last=mine.slice().reverse()[0];
-  if(!confirm(`Remover: ${last.acao} — ${last.timestamp}?`))return;
-  await dbDelete('actions',last.id);
-  closeModal();renderS4Table();updateActionsBadge();
 }
 
 function toggleSelAll(){const c=document.getElementById('selAll').checked;document.querySelectorAll('.rowSel').forEach(cb=>cb.checked=c);}

@@ -1016,6 +1016,36 @@ textarea.form-control { resize: vertical; min-height: 90px; line-height: 1.6; }
 }
 .action-history-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.07); }
 
+.action-history-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.action-history-card-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.action-history-btn {
+  border: 1px solid #dee2e6;
+  background: #fff;
+  color: var(--jor-text2);
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.action-history-btn:hover { background: var(--jor-primary); border-color: var(--jor-primary); color: #fff; }
+.action-history-btn.danger:hover { background: var(--jor-red, #dc3545); border-color: var(--jor-red, #dc3545); }
+
 .action-history-card .h1 {
   font-size: 12.5px;
   font-weight: 700;
