@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clientes no Mapa - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/clientes-mapa.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <main class="clientes-mapa-page">
+    <aside class="clientes-mapa-sidebar">
+      <header class="clientes-mapa-header">
+        <h1><i class="fas fa-map-location-dot"></i> Clientes no Mapa</h1>
+        <p id="clientesMapaStatus">Carregando clientes...</p>
+      </header>
+
+      <section class="clientes-mapa-card">
+        <h2>Resumo</h2>
+        <div class="clientes-mapa-kpis">
+          <div><span id="mapaTotalClientes">0</span><small>clientes</small></div>
+          <div><span id="mapaTotalLocalizados">0</span><small>localizados</small></div>
+          <div><span id="mapaTotalRotas">0</span><small>rotas</small></div>
+        </div>
+      </section>
+
+      <section class="clientes-mapa-card">
+        <h2>Rotas</h2>
+        <p class="clientes-mapa-dica">Clique para destacar. Segure Ctrl (ou Cmd) e clique para selecionar varias rotas.</p>
+        <div id="clientesMapaLegenda" class="clientes-mapa-legenda"></div>
+      </section>
+
+      <section class="clientes-mapa-card">
+        <div class="clientes-mapa-card-header">
+          <h2>Nao localizados</h2>
+          <button type="button" id="btnExportarPendentes" class="clientes-mapa-btn-exportar" hidden>
+            <i class="fas fa-file-excel"></i> Exportar XLSX
+          </button>
+        </div>
+        <div id="clientesMapaPendentes" class="clientes-mapa-pendentes">Nenhum.</div>
+      </section>
+    </aside>
+
+    <section class="clientes-mapa-content">
+      <div id="clientesMapa"></div>
+    </section>
+  </main>
+
+  <script type="module" src="script/clientes-mapa.js?v=20260721-google-maps"></script>
+  <!--
+    Google Maps JavaScript API — como habilitar:
+    1. Crie/abra um projeto em https://console.cloud.google.com/
+    2. Ative a "Maps JavaScript API" (APIs e servicos > Biblioteca)
+    3. Ative o faturamento do projeto (obrigatorio mesmo usando so a cota gratuita mensal)
+    4. Em "Credenciais", crie uma chave de API e restrinja por dominio (HTTP referrer) para
+       o(s) dominio(s) onde este sistema roda
+    5. Cole a chave abaixo no lugar de SUA_CHAVE_AQUI TESTE --> AIzaSyBZ6VZLQi1hLtvzHAByhc_GXCypWLtO9v0
+  -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBZ6VZLQi1hLtvzHAByhc_GXCypWLtO9v0&callback=iniciarClientesMapa&loading=async" async defer></script>
+</body>
+</html>
