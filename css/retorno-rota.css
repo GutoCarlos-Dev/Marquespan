@@ -259,6 +259,21 @@ tr.saved-success input, tr.saved-error input, tr.saving input {
     color: #a71d2a;
 }
 
+.btn-icon.btn-limpar-linha {
+    color: #fd7e14;
+}
+
+.btn-icon.btn-limpar-linha:hover {
+    color: #d35400;
+}
+
+.actions-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
 /* === ESTILOS DOS MODAIS (Materiais e Devoluções) === */
 
 /* Overlay fixo: Garante que o modal apareça no centro da tela atual, independente do scroll */

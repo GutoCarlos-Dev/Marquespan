@@ -810,7 +810,7 @@ async function handleTableClick(e) {
     const target = e.target.closest('button');
     if (!target) return;
 
-    if (!canManageGrid() && (target.classList.contains('btn-devolucoes') || target.classList.contains('btn-materiais'))) {
+    if (!canManageGrid() && (target.classList.contains('btn-devolucoes') || target.classList.contains('btn-materiais') || target.classList.contains('btn-limpar-linha'))) {
         return;
     }
     if (!canDelete() && target.classList.contains('btn-delete-row')) {
@@ -823,6 +823,8 @@ async function handleTableClick(e) {
         openDevolucoesModal(rowIndex);
     } else if (target.classList.contains('btn-materiais')) {
         openMateriaisModal(rowIndex);
+    } else if (target.classList.contains('btn-limpar-linha')) {
+        await limparLancamentoLinha(rowIndex);
     } else if (target.classList.contains('btn-delete-row')) {
         if (confirm('Tem certeza que deseja excluir esta linha?')) {
             await deleteRow(rowIndex);
@@ -1170,7 +1172,15 @@ function renderGrid() {
         tr.dataset.rowIndex = index;
 
         const selectCell = userCanEdit ? `<td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="row-selector" data-index="${index}"></td>` : '<td style="display:none"></td>';
-        const deleteCell = userCanDelete ? `<td class="actions-cell"><button class="btn-icon delete btn-delete-row" title="Excluir Linha"><i class="fas fa-trash-alt"></i></button></td>` : '<td style="display:none"></td>';
+        const limparIcon = userCanManageRows
+            ? `<button class="btn-icon btn-limpar-linha" title="Limpar Materiais, Produtos e Horários deste lançamento"><i class="fas fa-broom"></i></button>`
+            : '';
+        const deleteIcon = userCanDelete
+            ? `<button class="btn-icon delete btn-delete-row" title="Excluir Linha"><i class="fas fa-trash-alt"></i></button>`
+            : '';
+        const deleteCell = (limparIcon || deleteIcon)
+            ? `<td class="actions-cell">${limparIcon}${deleteIcon}</td>`
+            : '<td style="display:none"></td>';
         const readOnlyAttr = userCanEdit ? '' : ' readonly';
         const disabledAttr = userCanManageRows ? '' : ' disabled';
 
@@ -1558,6 +1568,58 @@ async function saveRow(index) {
         }
         alert('Erro ao salvar linha: ' + (error.message || JSON.stringify(error)));
     }
+}
+
+/**
+ * Zera os dados de Materiais, Produtos (Devoluções) e os campos de horário (Hora Motorista,
+ * Hora Aux., Hora Terceiro) de uma linha — útil quando o usuário lançou informação errada
+ * numa placa e quer recomeçar essa parte sem excluir a linha (placa, rota e nomes da equipe
+ * não são alterados). Salva imediatamente, igual ao restante da grade (auto-save por linha).
+ * @param {number} index - O índice da linha em `gridData`.
+ */
+async function limparLancamentoLinha(index) {
+    if (!canManageGrid()) return;
+
+    const rowData = gridData[index];
+    if (!rowData) return;
+
+    if (!confirm('Limpar os dados de Materiais, Produtos e os horários (Motorista/Aux./Terceiro) desta linha?\n\nPlaca, Rota e nomes da equipe não serão alterados.')) {
+        return;
+    }
+
+    // Horários (campos de recebimento) — zera também o operador, já que ele é preenchido
+    // automaticamente a partir desses horários.
+    rowData.hora_mot = null;
+    rowData.hora_aux = null;
+    rowData.hora_terceiro = null;
+    rowData.operador_recebimento = null;
+
+    // Materiais
+    rowData.carrinhos = null;
+    rowData.obs_carrinhos = null;
+    rowData.paletes = null;
+    rowData.madeira_qtd = null;
+    rowData.plastico_qtd = null;
+    rowData.caixa_branca_qtd = null;
+    rowData.retorno_pecas = null;
+    rowData.pecas_desc = null;
+
+    // Produtos (Devoluções) — supervisor + Clientes 1-4 + extras
+    rowData.supervisor_ciente = null;
+    rowData.nome_supervisor = null;
+    rowData.devolucoes_extras = null;
+    for (let i = 1; i <= 4; i++) {
+        rowData[`cliente${i}`] = null;
+        rowData[`nf_dev${i}`] = null;
+        rowData[`frances_diurno${i}`] = null;
+        rowData[`frances_noturno${i}`] = null;
+        rowData[`variedades${i}`] = null;
+        rowData[`motivo${i}`] = null;
+        rowData[`obs_nf_dev${i}`] = null;
+    }
+
+    await saveRow(index);
+    renderGrid();
 }
 
 /**
