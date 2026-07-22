@@ -319,11 +319,12 @@ function criarHtmlClienteExtra(index, data = {}) {
                     <option value="DEVOLUÇÃO (DIVERGENCIA NA NF)" ${data.motivo === 'DEVOLUÇÃO (DIVERGENCIA NA NF)' ? 'selected' : ''}>DEVOLUÇÃO (DIVERGENCIA NA NF)</option>
                     <option value="TROCA" ${data.motivo === 'TROCA' ? 'selected' : ''}>TROCA</option>
                     <option value="FALTOU TEMPO HÁBIL" ${data.motivo === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
+                    <option value="OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)" ${data.motivo === 'OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)' ? 'selected' : ''}>OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)</option>
                 </select>
             </div>
             <div class="form-group form-group-full">
-                <label>Obs. NF Devolvida</label>
-                <input type="text" class="glass-input input-uppercase" data-extra-field="obs_nf_dev" value="${data.obs_nf_dev || ''}">
+                <label>OBS:</label>
+                <input type="text" class="glass-input input-uppercase" data-extra-field="obs_nf_dev" data-obs-motivo value="${data.obs_nf_dev || ''}">
             </div>
         </div>
         <button type="button" class="btn-remover-cliente-extra">Remover cliente</button>
@@ -346,6 +347,30 @@ function setupUppercaseInputs(modal) {
             input.value = input.value.toUpperCase();
         };
     });
+}
+
+// O campo OBS só aparece quando o Motivo do mesmo cliente for "OUTROS MOTIVOS (...)" —
+// nos demais motivos ele fica oculto (e limpo, pra não sobrar texto de um motivo antigo).
+function setupMotivoObsToggle(modal) {
+    modal.querySelectorAll('[data-obs-motivo]').forEach(obsInput => {
+        const obsGroup = obsInput.closest('.form-group');
+        const container = obsInput.closest('.form-grid-2-cols');
+        const motivoSelect = container?.querySelector('select[data-field^="motivo"], select[data-extra-field="motivo"]');
+        if (!motivoSelect) return;
+
+        const atualizar = () => {
+            const habilitado = motivoSelect.value === 'OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)';
+            if (obsGroup) obsGroup.style.display = habilitado ? '' : 'none';
+            obsInput.disabled = !habilitado;
+            if (!habilitado) obsInput.value = '';
+        };
+        motivoSelect.onchange = atualizar;
+        atualizar();
+    });
+}
+
+function hasSobraCaixas(item) {
+    return Boolean(item?.sobra_frances_diurno || item?.sobra_frances_noturno || item?.sobra_variedades || item?.sobra_obs);
 }
 
 function renumerarClientesExtrasModal(modal) {
@@ -407,6 +432,7 @@ function adicionarClienteExtraModal(modal, data = {}) {
 
     setupDevolucoesTabHandlers(modal);
     setupUppercaseInputs(modal);
+    setupMotivoObsToggle(modal);
     tabButton.click();
 }
 
@@ -1131,7 +1157,7 @@ function renderGrid() {
         const index = gridData.indexOf(rowData);
         
         // Verifica se há retorno de pão para mostrar o ícone verde
-        const hasBreadReturn = !!(rowData.cliente1 || rowData.nf_dev1 || rowData.frances_diurno1 || rowData.frances_noturno1 || rowData.variedades1 || rowData.motivo1 || rowData.obs_nf_dev1 || getDevolucoesExtras(rowData));
+        const hasBreadReturn = !!(rowData.cliente1 || rowData.nf_dev1 || rowData.frances_diurno1 || rowData.frances_noturno1 || rowData.variedades1 || rowData.motivo1 || rowData.obs_nf_dev1 || getDevolucoesExtras(rowData) || hasSobraCaixas(rowData));
         const whatsappBreadIcon = hasBreadReturn ? 
             `<i class="fab fa-whatsapp whatsapp-btn green" onclick="event.stopPropagation(); shareBreadReturnOnWhatsApp(${index})" title="Compartilhar Devolução de Pão"></i>` : '';
         
@@ -1149,6 +1175,11 @@ function renderGrid() {
 
         // Construção do resumo para o tooltip de Devoluções
         let devolucoesTooltip = '';
+        if (hasSobraCaixas(rowData)) {
+            const paesSobra = `${rowData.sobra_frances_diurno || 0}D/${rowData.sobra_frances_noturno || 0}N`;
+            const variedadesSobra = rowData.sobra_variedades ? `\n  ↳ Variedades: ${rowData.sobra_variedades}` : '';
+            devolucoesTooltip += `• SOBRA (sem cliente)\n  └─ Sobra de Carga (${paesSobra})${variedadesSobra}\n\n`;
+        }
         for (let i = 1; i <= 4; i++) {
             const cliVal = rowData[`cliente${i}`];
             const nfVal = rowData[`nf_dev${i}`];
@@ -1295,6 +1326,36 @@ function openDevolucoesModal(index) {
     nomeSupervisorSelect.value = rowData.nome_supervisor || '';
     // --- END ---
 
+    // --- Aba Sobra (caixas sem cliente) — Motivo é sempre fixo "Sobra de Carga" ---
+    const tabSobra = document.getElementById('tab-sobra');
+    if (tabSobra) {
+        tabSobra.innerHTML = `
+            <h4>Sobra de Carga (sem cliente)</h4>
+            <div class="form-grid-2-cols">
+                <div class="form-group">
+                    <label>Francês Diurno</label>
+                    <input type="number" class="glass-input" data-field="sobra_frances_diurno" value="${rowData.sobra_frances_diurno || ''}">
+                </div>
+                <div class="form-group">
+                    <label>Francês Noturno</label>
+                    <input type="number" class="glass-input" data-field="sobra_frances_noturno" value="${rowData.sobra_frances_noturno || ''}">
+                </div>
+                <div class="form-group form-group-full">
+                    <label>Variedades</label>
+                    <input type="text" class="glass-input input-uppercase" data-field="sobra_variedades" value="${rowData.sobra_variedades || ''}" placeholder="Texto livre...">
+                </div>
+                <div class="form-group">
+                    <label>Motivo</label>
+                    <input type="text" class="glass-input" value="Sobra de Carga" disabled>
+                </div>
+                <div class="form-group form-group-full">
+                    <label>Observação</label>
+                    <input type="text" class="glass-input input-uppercase" data-field="sobra_obs" value="${rowData.sobra_obs || ''}">
+                </div>
+            </div>
+        `;
+    }
+
     for (let i = 1; i <= 4; i++) {
         const tabContent = document.getElementById(`tab-cliente-${i}`);
         tabContent.innerHTML = `
@@ -1329,12 +1390,13 @@ function openDevolucoesModal(index) {
                         <option value="DEVOLUÇÃO (DIVERGENCIA NA NF)" ${rowData[`motivo${i}`] === 'DEVOLUÇÃO (DIVERGENCIA NA NF)' ? 'selected' : ''}>DEVOLUÇÃO (DIVERGENCIA NA NF)</option>
                         <option value="TROCA" ${rowData[`motivo${i}`] === 'TROCA' ? 'selected' : ''}>TROCA</option>
                         <option value="FALTOU TEMPO HÁBIL" ${rowData[`motivo${i}`] === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
+                        <option value="OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)" ${rowData[`motivo${i}`] === 'OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)' ? 'selected' : ''}>OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)</option>
                     </select>
                 </div>
 
                  <div class="form-group form-group-full">
-                    <label>Obs. NF Devolvida</label>
-                    <input type="text" class="glass-input input-uppercase" data-field="obs_nf_dev${i}" value="${rowData[`obs_nf_dev${i}`] || ''}">
+                    <label>OBS:</label>
+                    <input type="text" class="glass-input input-uppercase" data-field="obs_nf_dev${i}" data-obs-motivo value="${rowData[`obs_nf_dev${i}`] || ''}">
                 </div>
             </div>
         `;
@@ -1344,6 +1406,7 @@ function openDevolucoesModal(index) {
     renderClientesExtrasModal(modal, rowData);
     setupDevolucoesTabHandlers(modal);
     setupUppercaseInputs(modal);
+    setupMotivoObsToggle(modal);
     // Ativa a primeira aba por padrão
     modal.querySelector('.tab-link').click();
 
@@ -1495,7 +1558,12 @@ function mapRowToPayload(rowData, dataRetorno) {
         supervisor_ciente: rowData.supervisor_ciente === undefined ? null : parseNum(rowData.supervisor_ciente),
         nome_supervisor: rowData.nome_supervisor,
         obs: getObsGeral(rowData) || null,
-        devolucoes_extras: getDevolucoesExtrasPayload(rowData)
+        devolucoes_extras: getDevolucoesExtrasPayload(rowData),
+
+        sobra_frances_diurno: parseNum(rowData.sobra_frances_diurno),
+        sobra_frances_noturno: parseNum(rowData.sobra_frances_noturno),
+        sobra_variedades: rowData.sobra_variedades || null,
+        sobra_obs: rowData.sobra_obs || null
     };
     
     // Removido o envio do ID no payload para evitar erros de restrição nula em salvamentos em massa (batch upsert).
@@ -1617,6 +1685,10 @@ async function limparLancamentoLinha(index) {
         rowData[`motivo${i}`] = null;
         rowData[`obs_nf_dev${i}`] = null;
     }
+    rowData.sobra_frances_diurno = null;
+    rowData.sobra_frances_noturno = null;
+    rowData.sobra_variedades = null;
+    rowData.sobra_obs = null;
 
     await saveRow(index);
     renderGrid();
@@ -1864,6 +1936,15 @@ window.shareBreadReturnOnWhatsApp = function(index) {
     message += `*Rota:* ${item.rota || 'N/A'}\n`;
     message += `*Placa:* ${item.placa || 'N/A'}\n`;
     message += `*SUPERVISOR:* ${item.nome_supervisor || 'N/A'}\n`;
+
+    if (hasSobraCaixas(item)) {
+        message += `\n*SOBRA DE CARGA (sem cliente):*\n`;
+        message += `  *Francês Diurno:* ${item.sobra_frances_diurno || '0'}\n`;
+        message += `  *Francês Noturno:* ${item.sobra_frances_noturno || '0'}\n`;
+        message += `  *Variedades:* ${item.sobra_variedades || 'N/A'}\n`;
+        message += `  *Motivo:* Sobra de Carga\n`;
+        message += `  *Obs:* ${item.sobra_obs || 'N/A'}\n`;
+    }
 
     for (let i = 1; i <= 4; i++) {
         if (item[`cliente${i}`]) {
