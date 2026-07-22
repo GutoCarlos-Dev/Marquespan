@@ -743,7 +743,10 @@ const DespesasUI = {
 
                 if (termoFilial) {
                     buscas.push(
-                        supabaseClient.from('despesas').select('id').eq('filial', termoFilial)
+                        // ilike (não eq) porque alguns lançamentos antigos têm o valor de "filial"
+                        // gravado com variação de espaço/caixa — eq exato excluia esses registros
+                        // mesmo exibindo o mesmo texto na coluna da tabela.
+                        supabaseClient.from('despesas').select('id').ilike('filial', `%${termoFilial}%`)
                             .then(({ data, error }) => {
                                 if (error) throw error;
                                 return new Set((data || []).map(d => d.id));
