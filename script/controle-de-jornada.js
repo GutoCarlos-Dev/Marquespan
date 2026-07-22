@@ -3576,7 +3576,7 @@ async function renderS4Table(){
       <td style="white-space:nowrap">
         <div style="display:flex;gap:5px;align-items:center">
           <button class="btn btn-brand btn-sm action-btn" style="padding:6px 10px">Ação</button>
-          <button class="btn wa-btn btn-sm" title="WhatsApp" style="padding:6px 8px;background:#25D366;border-color:#25D366;color:#fff;flex-shrink:0">
+          <button class="btn wa-btn btn-sm" title="Copiar mensagem para WhatsApp" style="padding:6px 8px;background:#25D366;border-color:#25D366;color:#fff;flex-shrink:0">
             <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff;stroke:none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
           </button>
           ${hasSem ? `<button class="btn boleta-btn btn-sm" data-row-idx="${rIdx}" title="Gerar Boleta — registrar horários e assinar" style="padding:6px 8px;background:#c5160a;border-color:#c5160a;color:#fff;flex-shrink:0">
@@ -3591,7 +3591,7 @@ async function renderS4Table(){
     btn.onclick=()=>openModal(rows[i].row);
   });
   tbody.querySelectorAll('.wa-btn').forEach((btn,i)=>{
-    btn.onclick=()=>handleWaClick(rows[i].row);
+    btn.onclick=()=>handleWaCopyMessageClick(rows[i].row);
   });
   tbody.querySelectorAll('.boleta-btn').forEach(btn=>{
     const idx = parseInt(btn.getAttribute('data-row-idx'));
@@ -4699,7 +4699,7 @@ async function saveAction(){
 // é disparado com sucesso — preenche a Observação/justificativa com a própria mensagem
 // enviada (com a data de hoje), deixando o campo pronto pra o usuário complementar depois
 // com a resposta do colaborador, sem precisar abrir o modal manualmente pra cada um.
-async function registrarAcaoEnvioMensagem(row, mensagemEnviada){
+async function registrarAcaoEnvioMensagem(row, mensagemEnviada, viaCopia = false){
   if(!row) return;
   try{
     const now = new Date();
@@ -4712,7 +4712,9 @@ async function registrarAcaoEnvioMensagem(row, mensagemEnviada){
       nome: row.nome || '',
       role: row.role || '',
       acao: 'ENVIO DE MENSAGEM',
-      observacao: `Mensagem enviada via WhatsApp (envio em massa) em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}. Aguardando resposta do colaborador — complete esta observação quando ele responder.\n\nMensagem enviada:\n${mensagemEnviada || ''}`,
+      observacao: viaCopia
+        ? `Mensagem copiada para envio manual via WhatsApp em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}. Aguardando resposta do colaborador — complete esta observação quando ele responder.\n\nMensagem copiada:\n${mensagemEnviada || ''}`
+        : `Mensagem enviada via WhatsApp (envio em massa) em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}. Aguardando resposta do colaborador — complete esta observação quando ele responder.\n\nMensagem enviada:\n${mensagemEnviada || ''}`,
       data_infracao: row._date || '',
       data_acao: now.toLocaleDateString('pt-BR'),
       hora_acao: now.toLocaleTimeString('pt-BR')
@@ -4958,8 +4960,8 @@ async function resolverTelefoneParaEnvio(row){
 }
 
 // Dispara o WhatsApp e, se der certo, já registra a ação "ENVIO DE MENSAGEM" no histórico
-// da infração (Observação preenchida com a mensagem enviada). Vale tanto pro botão manual
-// (ícone verde na linha) quanto pro envio em massa — os dois passam por aqui.
+// da infração (Observação preenchida com a mensagem enviada). Usada só pelo envio em massa —
+// o botão individual da coluna AÇÃO usa handleWaCopyMessageClick (só copia a mensagem).
 async function handleWaClick(row,existingWin){
   const variants = waNameVariants(row);
   const nomeDisplay = variants[0] || row.nome || '';
@@ -4983,6 +4985,27 @@ async function handleWaClick(row,existingWin){
   }
   if(resultado.semNumero) openPhoneModal(row);
   return null;
+}
+
+// Botão de WhatsApp da coluna AÇÃO (por linha): só copia a mensagem pronta pra área de
+// transferência — não tenta achar o colaborador no cadastro, não pergunta qual número usar
+// e não tenta abrir o WhatsApp Web sozinho. O usuário abre o WhatsApp e cola no contato certo.
+async function handleWaCopyMessageClick(row){
+  const variants = waNameVariants(row);
+  const nomeDisplay = variants[0] || row.nome || '';
+  const mensagem = buildWhatsAppMessage(nomeDisplay, row);
+  copyMessageToClipboard(mensagem);
+  await registrarAcaoEnvioMensagem(row, mensagem, true);
+}
+
+function copyMessageToClipboard(msg){
+  const onCopied = () => alert('✓ Mensagem copiada!\n\nAbra o WhatsApp e cole no contato do colaborador.');
+  navigator.clipboard.writeText(msg).then(onCopied).catch(()=>{
+    const ta = document.createElement('textarea');
+    ta.value = msg; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove();
+    onCopied();
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -5125,10 +5148,16 @@ function detectOcorrencias(obs){
   if(isAbsence){
     return { semRegSaida:false, semRegEntrada:false, semRegistro:false, interjornada:false, absence:true };
   }
+  // Checagem por frase exata ("SEM REGISTRO SAIDA"/"SEM REGISTRO ENTRADA"), não por palavras
+  // soltas — testar "SEM REGISTRO" e "SAIDA"/"ENTRADA" separados dava falso positivo quando a
+  // obs tinha os dois em trechos diferentes (ex: "SAÍDA APÓS 19:20 | SEM REGISTRO ENTRADA" batia
+  // como se a saída também estivesse sem registro).
+  const semRegSaida = o.includes('SEM REGISTRO SAIDA');
+  const semRegEntrada = o.includes('SEM REGISTRO ENTRADA');
   return {
-    semRegSaida:    o.includes('SEM REGISTRO SAIDA') || (o.includes('SEM REGISTRO') && o.includes('SAIDA')),
-    semRegEntrada:  o.includes('SEM REGISTRO ENTRADA') || (o.includes('SEM REGISTRO') && o.includes('ENTRADA')),
-    semRegistro:    o.includes('SEM REGISTRO') && !o.includes('SAIDA') && !o.includes('ENTRADA'),
+    semRegSaida,
+    semRegEntrada,
+    semRegistro:    o.includes('SEM REGISTRO') && !semRegSaida && !semRegEntrada,
     interjornada:   o.includes('INTERJORNADA') || o.includes('< 11') || o.includes('<11'),
     absence: false
   };
@@ -5148,7 +5177,7 @@ function buildWhatsAppMessage(nome, row){
       const y = m[3].length===2 ? 2000+parseInt(m[3]) : parseInt(m[3]);
       const d = new Date(y, parseInt(m[2])-1, parseInt(m[1]));
       d.setDate(d.getDate()+1);
-      dataEntrada = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
+      dataEntrada = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
     }
   }
   let msg = `Olá ${primeiroNome || 'colaborador(a)'}, tudo bem? `;
@@ -5157,7 +5186,7 @@ function buildWhatsAppMessage(nome, row){
   } else if(oc.semRegSaida){
     msg += `Notamos que não houve registro de ponto nos horários de saída dia ${dataAbrev}. Poderia nos contar o que aconteceu?`;
   } else if(oc.semRegEntrada){
-    msg += `Notamos que não houve registro de ponto nos horários de entrada dia ${dataAbrev}. Poderia nos contar o que aconteceu?`;
+    msg += `Notamos que não houve registro de ponto nos horários de entrada dia ${dataEntrada}. Poderia nos contar o que aconteceu?`;
   } else if(oc.semRegistro){
     msg += `Notamos que não houve registro de ponto no dia ${dataAbrev}. Poderia nos contar o que aconteceu?`;
   } else if(oc.interjornada){
