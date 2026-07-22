@@ -4988,14 +4988,13 @@ async function handleWaClick(row,existingWin){
 }
 
 // Botão de WhatsApp da coluna AÇÃO (por linha): só copia a mensagem pronta pra área de
-// transferência — não tenta achar o colaborador no cadastro, não pergunta qual número usar
-// e não tenta abrir o WhatsApp Web sozinho. O usuário abre o WhatsApp e cola no contato certo.
+// transferência — não tenta achar o colaborador no cadastro, não pergunta qual número usar,
+// não abre o WhatsApp Web sozinho e não registra nada no histórico da infração.
 async function handleWaCopyMessageClick(row){
   const variants = waNameVariants(row);
   const nomeDisplay = variants[0] || row.nome || '';
   const mensagem = buildWhatsAppMessage(nomeDisplay, row);
   copyMessageToClipboard(mensagem);
-  await registrarAcaoEnvioMensagem(row, mensagem, true);
 }
 
 function copyMessageToClipboard(msg){
