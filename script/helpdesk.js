@@ -17,46 +17,65 @@ const PRIORIDADE_BADGE = { baixa: 'hd-badge-cinza', media: 'hd-badge-azul', alta
 const STATUS_LABEL = { aberto: 'Aberto', em_andamento: 'Em andamento', concluido: 'Concluído' };
 const STATUS_BADGE = { aberto: 'hd-badge-laranja', em_andamento: 'hd-badge-azul', concluido: 'hd-badge-verde' };
 
-// Lista de páginas do sistema, usada só como sugestão (datalist) no cadastro de vídeos —
-// o admin também pode digitar qualquer outro nome de página livremente.
-const PAGINAS_SISTEMA = [
-  ['dashboard.html', 'Dashboard'], ['usuarios.html', 'Usuários'], ['permissoes.html', 'Permissões'],
-  ['filiais.html', 'Filiais'], ['auditoria.html', 'Auditoria do Sistema'], ['acesso-remoto.html', 'Acesso Remoto'],
-  ['abastecimento.html', 'Registrar Abastecimento'], ['cadastro-tanque.html', 'Cadastrar Tanque'],
-  ['cadastro-bombas-bicos.html', 'Cadastrar Bombas/Bicos'], ['leituras-bomba.html', 'Leituras da Bomba'],
-  ['relatorio-abastecimento.html', 'Relatório de Abastecimentos'], ['estoque-abastecimento.html', 'Estoque de Combustível'],
-  ['veiculos.html', 'Cadastro de Veículos'], ['rotas.html', 'Cadastro de Rotas'], ['clientes.html', 'Cadastro de Clientes'],
-  ['funcionario.html', 'Cadastro de Funcionário'], ['supervisor.html', 'Cadastro de Supervisor'],
-  ['oficina.html', 'Cadastro de Oficina'], ['thermoking.html', 'Cadastro de Thermoking'],
-  ['coletar-manutencao.html', 'Coletar Manutenção'], ['coletar-KM.html', 'Coletar KM'], ['engraxe.html', 'Controle de Engraxe'],
-  ['lavagem.html', 'Controle de Lavagem'], ['revisao.html', 'Revisão'], ['incluir-manutencao.html', 'Incluir Manutenção'],
-  ['buscar-manutencao.html', 'Relatório de Manutenção'], ['tacografo.html', 'Tacógrafo'],
-  ['monitoramento.html', 'Manutenção - Real Time'], ['monitoramento-servicos.html', 'Serviços - Real Time'],
-  ['monitoramento-retorno-rota.html', 'Retorno de Rota - Real Time'],
-  ['monitoramento-abastecimento-interno.html', 'Abastecimento Interno - Real Time'],
-  ['monitoramento-frota.html', 'Localização da Frota Real-Time'], ['pneu.html', 'Entrada de Pneu'],
-  ['consumo-pneu.html', 'Consumo de Pneus'], ['saidas-pneus.html', 'Saida de Pneus'], ['estoque-pneus.html', 'Estoque de Pneus'],
-  ['cadastro-carregamento.html', 'Requisição'], ['iniciar-carregamento.html', 'Iniciar Carregamento'],
-  ['buscar-carregamento.html', 'Buscar Carregamento'], ['escala.html', 'Escala'], ['diaria.html', 'Diaria/Janta/PerNoite'],
-  ['controle-cadeado.html', 'Controle de Cadeado'], ['controle-kit-higienizacao.html', 'Controle de Kit - Higienização'],
-  ['controle-de-jornada.html', 'Controle de Jornada'], ['peso-rota.html', 'Peso de Rota'],
-  ['relatorio-peso-rota.html', 'Relatorio de Peso de Rota'], ['retorno-rota.html', 'Retorno de Rota'],
-  ['estoque_geral.html', 'Estoque Peças'], ['compras.html', 'Cotações e Cadastros'], ['hotel.html', 'Cadastro de Hotel'],
-  ['despesas.html', 'Lançamento de Despesas'], ['relatorio-despesas.html', 'Relatório de Despesas'],
-  ['pedagio.html', 'Gestão de Pedágios'], ['relatorio-pedagio.html', 'Relatório de Pedágios'],
-  ['fiscalizacao-acompanhamento.html', 'Acompanhamento'], ['localizacao-veiculo.html', 'Localização de Veículos'],
-  ['relatorio-localizacao.html', 'Relatório de Localização'], ['fiscalizacao-ocorrencia.html', 'Ocorrências'],
-  ['portaria-controle-acesso.html', 'Controle de Acesso'], ['relatorio-acesso-portaria.html', 'Relatorio de Acessos'],
-  ['monitoramento-portaria.html', 'Monitoramento Real-Time (Portaria)'], ['ordem-requisicao.html', 'Ordem de Requisição'],
-  ['mapa.html', 'Mapa de Rotas'], ['roteirizar-rota.html', 'Roterizar Rota'], ['reserva_comodato.html', 'Reservar Comodato'],
-  ['estoque_comodato.html', 'Estoque Comodato'], ['buscar_comodato.html', 'Buscar Comodato'],
-  ['cadastro_comodato.html', 'Cadastro Comodato'], ['relatorio-estatistica.html', 'Estatística'],
-  ['cadastro-produtos-camara-fria.html', 'Cadastro de Produtos (Camara Fria)'],
-  ['estoque-camara-fria.html', 'Estoque Semanal (Camara Fria)'], ['contagem-camara-fria.html', 'Contagem (Camara Fria)'],
-  ['carregamento-camara-fria.html', 'Carregamento (Camara Fria)'],
-  ['relatorio-contagem-camara-fria.html', 'Relatorio de Contagem (Camara Fria)'],
-  ['transferencias-camara-fria.html', 'Transferencias CDS']
-];
+// Lista de módulos (páginas) do sistema, carregada dinamicamente do menu.html — mesma técnica
+// usada em permissoes.js, pra ficar sempre em sincronia com o menu real em vez de uma lista
+// fixa que fica desatualizada conforme páginas são criadas/renomeadas.
+let PAGINAS_MENU = [];
+
+async function carregarPaginasDoMenu() {
+  try {
+    const resp = await fetch('menu.html');
+    const menuHtml = await resp.text();
+    const doc = new DOMParser().parseFromString(menuHtml, 'text/html');
+    const links = doc.querySelectorAll('nav a');
+    const unicas = new Map();
+
+    links.forEach(link => {
+      const href = String(link.getAttribute('href') || '').trim();
+      if (!/^[a-z0-9._/-]+\.html$/i.test(href) || href === 'index.html') return;
+      const nome = link.querySelector('span')?.textContent.trim() || link.textContent.trim();
+      if (nome && !unicas.has(href)) unicas.set(href, { id: href, nome });
+    });
+
+    PAGINAS_MENU = Array.from(unicas.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  } catch (e) {
+    console.error('[helpdesk][carregarPaginasDoMenu]', e);
+  }
+}
+
+// Módulos que o usuário logado pode ver como opção de Categoria — administrador vê todos,
+// os demais níveis só os módulos liberados em Permissões (nivel_permissoes.paginas_permitidas).
+async function obterModulosPermitidos() {
+  if (ehAdministrador()) return PAGINAS_MENU;
+
+  const nivel = nivelAtual();
+  if (!nivel) return [];
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('nivel_permissoes')
+      .select('paginas_permitidas')
+      .eq('nivel', nivel)
+      .maybeSingle();
+    if (error) throw error;
+
+    const permitidas = new Set(data?.paginas_permitidas || []);
+    return PAGINAS_MENU.filter(p => permitidas.has(p.id));
+  } catch (e) {
+    console.error('[helpdesk][obterModulosPermitidos]', e);
+    return [];
+  }
+}
+
+async function preencherCategoriaChamado() {
+  const select = document.getElementById('hd-categoria');
+  if (!select) return;
+
+  const modulos = await obterModulosPermitidos();
+  select.innerHTML = '<option value="">Selecione o módulo relacionado</option>'
+    + modulos.map(m => `<option value="${esc(m.nome)}">${esc(m.nome)}</option>`).join('')
+    + '<option value="Outro">Outro (não relacionado a um módulo específico)</option>';
+}
 
 function esc(s) {
   return s ? String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])) : '';
@@ -166,7 +185,7 @@ async function enviarChamado(event) {
 
     document.getElementById('hd-form-chamado').reset();
     document.getElementById('hd-prioridade').value = 'media';
-    document.getElementById('hd-categoria').value = 'Sistema Marquespan';
+    document.getElementById('hd-categoria').value = '';
     alert('✓ Chamado aberto com sucesso! O Setor de Tecnologia vai analisar em breve.');
     carregarMeusChamados();
     if (ehStaff()) carregarGestaoChamados();
@@ -401,7 +420,7 @@ async function carregarVideos() {
 function preencherDatalistPaginas() {
   const datalist = document.getElementById('hd-paginas-list');
   if (!datalist) return;
-  datalist.innerHTML = PAGINAS_SISTEMA.map(([arquivo, label]) => `<option value="${esc(arquivo)}">${esc(label)}</option>`).join('');
+  datalist.innerHTML = PAGINAS_MENU.map(p => `<option value="${esc(p.id)}">${esc(p.nome)}</option>`).join('');
 }
 
 function limparFormVideo() {
@@ -515,10 +534,13 @@ window.hdEditarVideoPorId = (id) => { const v = hdVideosAdminCache[id]; if (v) h
 window.hdExcluirVideoPorId = (id) => hdExcluirVideo(id);
 
 // ── Inicialização ────────────────────────────────────────────────────────
-function init() {
+async function init() {
   document.getElementById('hd-form-chamado')?.addEventListener('submit', enviarChamado);
   carregarMeusChamados();
   carregarVideos();
+
+  await carregarPaginasDoMenu();
+  await preencherCategoriaChamado();
 
   if (ehStaff()) {
     document.querySelectorAll('.hd-staff-only').forEach(el => { el.style.display = ''; });
