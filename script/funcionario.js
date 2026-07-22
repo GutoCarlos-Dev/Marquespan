@@ -86,6 +86,38 @@ function cleanImportText(value) {
     return String(value).replace(/\s+/g, ' ').trim();
 }
 
+function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function limparTextoContatoCorporativo(value) {
+    const texto = String(value ?? '').trim();
+    if (!texto) return '';
+
+    const frasesParaLimpar = ['NÃO RETIROU', 'NAO RETIROU', 'NOVATO', 'RECUSOU CHIP'];
+    const textoNormalizado = texto
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase();
+
+    const temFraseBloqueada = frasesParaLimpar.some(frase => {
+        const fraseNormalizada = frase
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase();
+        return textoNormalizado.includes(fraseNormalizada);
+    });
+
+    if (!temFraseBloqueada) return texto;
+
+    let textoLimpo = texto;
+    frasesParaLimpar.forEach(frase => {
+        textoLimpo = textoLimpo.replace(new RegExp(escapeRegExp(frase), 'gi'), '');
+    });
+
+    return textoLimpo.replace(/[\s\-_:;,.]+/g, ' ').trim();
+}
+
 function normalizeImportRow(row) {
     const normalized = {};
     Object.entries(row || {}).forEach(([key, value]) => {
@@ -245,6 +277,10 @@ const FuncionarioUI = {
         this.filterCount = document.getElementById('funcFilterCount');
     },
 
+    limparTextoContatoCorporativo(valor) {
+        return limparTextoContatoCorporativo(valor);
+    },
+
     usuarioTemAcessoTotal() {
         return this.isAdministrador || this.isGerencia || this.isGerenciaTmg || this.isLiderBalanca;
     },
@@ -282,6 +318,15 @@ const FuncionarioUI = {
     bind() {
         if (this.form) {
             this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        }
+        const contatoCorpInput = document.getElementById('funcContatoCorp');
+        if (contatoCorpInput) {
+            contatoCorpInput.addEventListener('input', () => {
+                const valorLimpo = this.limparTextoContatoCorporativo(contatoCorpInput.value);
+                if (valorLimpo !== contatoCorpInput.value) {
+                    contatoCorpInput.value = valorLimpo;
+                }
+            });
         }
         if (this.btnOpenFuncionarioModal) {
             this.btnOpenFuncionarioModal.addEventListener('click', () => {
@@ -1177,6 +1222,10 @@ const FuncionarioUI = {
         const cnhVencimento = document.getElementById('funcCNHVencimento').value;
         const temDadosCNH = Boolean(cnhNumero || cnhCategoria || cnhVencimento);
 
+        const contatoCorpInput = document.getElementById('funcContatoCorp');
+        const contatoCorpLimpo = this.limparTextoContatoCorporativo(contatoCorpInput?.value || '');
+        if (contatoCorpInput) contatoCorpInput.value = contatoCorpLimpo;
+
         const payload = {
             rh_registro: rh,
             nome: document.getElementById('funcNome').value,
@@ -1191,7 +1240,7 @@ const FuncionarioUI = {
             funcao: novaFuncao,
             tipo_escala: document.getElementById('funcTipoEscala')?.value || 'Normal',
             equipe_escala: document.getElementById('funcEquipeEscala')?.value || null,
-            contato_corp: document.getElementById('funcContatoCorp').value,
+            contato_corp: contatoCorpLimpo,
             contato_pessoal: document.getElementById('funcContatoPessoal').value,
             status: document.getElementById('funcStatus').value,
             recebe_diaria: document.getElementById('funcDiaria').value !== 'false',
@@ -1692,7 +1741,7 @@ const FuncionarioUI = {
         document.getElementById('funcFuncao').value = f.funcao;
         document.getElementById('funcTipoEscala').value = f.tipo_escala || 'Normal';
         document.getElementById('funcEquipeEscala').value = f.equipe_escala || '';
-        document.getElementById('funcContatoCorp').value = f.contato_corp || '';
+        document.getElementById('funcContatoCorp').value = this.limparTextoContatoCorporativo(f.contato_corp || '');
         document.getElementById('funcContatoPessoal').value = f.contato_pessoal || '';
         document.getElementById('funcStatus').value = f.status;
         document.getElementById('funcDiaria').value = f.recebe_diaria !== false ? 'true' : 'false';
