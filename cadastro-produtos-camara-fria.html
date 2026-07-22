@@ -13,6 +13,8 @@
   <!-- Estilo Específico -->
   <link rel="stylesheet" href="css/cadastro-produtos-camara-fria.css?v=20260707-busca-grid" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- SheetJS para exportação Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -72,6 +74,7 @@
               <input type="search" id="buscaGridProduto" class="glass-input" placeholder="Buscar por nome ou codigo">
             </div>
             <span id="produtosRecordsCount" class="produtos-count-badge"></span>
+            <button type="button" id="btnExportarProdutosExcel" class="btn-glass btn-green"><i class="fas fa-file-excel"></i> Exportar Excel</button>
           </div>
         </div>
         <div class="table-responsive produtos-table-container">

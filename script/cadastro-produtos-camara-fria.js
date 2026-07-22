@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.sortableHeaders = document.querySelectorAll('th.sortable');
             this.buscaGridProdutoInput = document.getElementById('buscaGridProduto');
             this.countBadge = document.getElementById('produtosRecordsCount');
+            this.btnExportarExcel = document.getElementById('btnExportarProdutosExcel');
             this.tableBody = document.getElementById('tableBodyProdutos');
             this.btnSalvar = document.getElementById('btnSalvarProduto');
             this.btnCloseModalProduto = document.getElementById('btnCloseModalProduto');
@@ -78,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             this.buscaGridProdutoInput?.addEventListener('input', () => this.renderRows());
             this.btnIncluirProduto.addEventListener('click', () => this.openModalProduto());
+            this.btnExportarExcel?.addEventListener('click', () => this.exportarExcel());
 
             this.form.addEventListener('submit', this.handleFormSubmit.bind(this));
             this.tableBody.addEventListener('click', this.handleTableClick.bind(this));
@@ -355,7 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return String(produto[key] || '');
         },
 
-        renderRows() {
+        // Aplica a busca do grid (nome/codigo) e a ordenação atual — usado tanto pra desenhar
+        // a tabela quanto pra exportar exatamente o que o usuário está vendo na tela.
+        getProdutosFiltradosOrdenados() {
             const termoBusca = String(this.buscaGridProdutoInput?.value || '').trim().toLowerCase();
             const produtos = [...(this.produtosCache || [])].filter(produto => {
                 if (!termoBusca) return true;
@@ -377,6 +381,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+            return produtos;
+        },
+
+        renderRows() {
+            const produtos = this.getProdutosFiltradosOrdenados();
+            const { key, direction } = this.sortState;
+
             this.sortableHeaders.forEach(th => {
                 const icon = th.querySelector('i');
                 if (!icon) return;
@@ -397,6 +408,34 @@ document.addEventListener('DOMContentLoaded', () => {
             produtos.forEach(produto => {
                 this.tableBody.appendChild(this.criarLinhaProduto(produto));
             });
+        },
+
+        exportarExcel() {
+            if (typeof XLSX === 'undefined') {
+                alert('Biblioteca de exportação não carregada.');
+                return;
+            }
+
+            const produtos = this.getProdutosFiltradosOrdenados();
+            if (!produtos.length) {
+                alert('Nenhum produto para exportar.');
+                return;
+            }
+
+            const dadosExportacao = produtos.map(produto => ({
+                'Código': produto.codigo || '',
+                'Nome': produto.nome || '',
+                'Tipo': produto.tipo || '',
+                'Peso da Caixa (KG)': produto.peso_caixa != null ? Number(produto.peso_caixa) : '',
+                'Caixas/Palete': produto.caixas_por_palete ?? '',
+                'Unidade de Fabricação': produto.unidade_fabricacao || '',
+                'Filial': this.formatFiliaisProduto(produto)
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dadosExportacao);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
+            XLSX.writeFile(wb, `Produtos_Camara_Fria_${new Date().toISOString().slice(0, 10)}.xlsx`);
         },
 
         criarLinhaProduto(produto) {
