@@ -310,6 +310,10 @@ textarea {
     padding-top: 15px;
     margin-top: 20px;
     text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .loading-placeholder {
@@ -343,6 +347,10 @@ textarea {
 
 .modal-footer .btn-blue {
     background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.modal-footer .btn-red {
+    background: linear-gradient(135deg, #dc3545, #a71d2a);
 }
 
 .botoes-acao-modal .btn-orange {

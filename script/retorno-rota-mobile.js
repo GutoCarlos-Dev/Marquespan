@@ -626,6 +626,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target === modalRetorno) tentarFecharModalRetorno();
     });
     document.getElementById('btnSalvarRetorno').addEventListener('click', saveRetorno);
+    document.getElementById('btnLimparLancamento').addEventListener('click', limparLancamento);
     document.getElementById('btnAbrirModalMateriais').addEventListener('click', openMateriaisModal);
 
     // Modal de Materiais
@@ -916,6 +917,55 @@ function openNewModal() {
 function openMateriaisModal() {
     // Apenas abre o modal de materiais. Os dados já foram preenchidos em openEditModal.
     document.getElementById('modalMateriais').classList.remove('hidden');
+}
+
+// Zera os dados de Materiais e Produtos (Devoluções) do lançamento atual — útil quando o
+// usuário percebe que lançou informação errada numa placa e quer recomeçar essa parte sem
+// perder Placa/Rota/Motorista. Não salva sozinho: o usuário ainda precisa clicar em "Salvar".
+function limparLancamento() {
+    if (!currentItem) return;
+    if (!confirm('Limpar todos os dados de Materiais e Produtos deste lançamento?\n\nPlaca, Rota e Motorista não serão alterados. Isso não salva automaticamente — clique em "Salvar" depois.')) {
+        return;
+    }
+
+    // Horário de Retorno do Motorista
+    document.getElementById('modalHoraMotorista').value = '';
+
+    // Materiais — campos vivem direto no DOM (não em currentItem), zera na fonte
+    document.getElementById('matCarrinhos').value = '';
+    document.getElementById('matObsCarrinhos').value = '';
+    const temPaletesSelect = document.getElementById('matTemPaletes');
+    temPaletesSelect.value = 'false';
+    temPaletesSelect.dispatchEvent(new Event('change'));
+    document.getElementById('matMadeira').value = '';
+    document.getElementById('matPlastico').value = '';
+    document.getElementById('matCaixaBranca').value = '';
+    const temPecasSelect = document.getElementById('matRetornoPecas');
+    temPecasSelect.value = '0';
+    temPecasSelect.dispatchEvent(new Event('change'));
+    document.getElementById('matSupervisorPecas').value = '';
+    document.getElementById('matDescPecas').value = '';
+
+    // Produtos (Devoluções) — vive em currentItem; openDevolucoesModal remonta os campos a
+    // partir daqui na próxima vez que a aba for aberta.
+    currentItem.supervisor_ciente = null;
+    currentItem.nome_supervisor = null;
+    currentItem.devolucoes_extras = null;
+    for (let i = 1; i <= 4; i++) {
+        currentItem[`cliente${i}`] = '';
+        currentItem[`nf_dev${i}`] = '';
+        currentItem[`frances_diurno${i}`] = '';
+        currentItem[`frances_noturno${i}`] = '';
+        currentItem[`variedades${i}`] = '';
+        currentItem[`motivo${i}`] = '';
+        currentItem[`obs_nf_dev${i}`] = '';
+    }
+    currentItem.sobra_frances_diurno = '';
+    currentItem.sobra_frances_noturno = '';
+    currentItem.sobra_variedades = '';
+    currentItem.sobra_obs = '';
+
+    alert('Materiais e Produtos foram limpos. Clique em "Salvar" para gravar essa alteração.');
 }
 
 function openDevolucoesModal() {
