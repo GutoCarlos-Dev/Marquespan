@@ -739,25 +739,22 @@ const DespesasUI = {
             const termoFuncionario = this.searchFuncionarioInput?.value.trim() || '';
             let query;
 
+            // Consultas que só buscam "id" pra depois intersectar (usadas pelos filtros que
+            // precisam de junção com outra tabela: rota/hotel/funcionário). Sem limit(), o
+            // Supabase corta silenciosamente em ~1000 linhas — inofensivo pra filtros que batem
+            // com poucos registros, mas quebrava a Filial (que agora bate com quase TODA a
+            // tabela, ~11 mil linhas): a busca de ids ficava truncada e excluía lançamentos
+            // recentes da interseção, fazendo "SP" trazer menos resultados que "Todas".
+            // Por isso Filial NÃO passa mais por aqui — é coluna própria de despesas, aplicada
+            // direto na query final abaixo, sem precisar de um pré-fetch de ids limitado.
+            const LIMITE_BUSCA_IDS = 20000;
+
             if (termoFilial || termoRota || termoHotel || termoFuncionario) {
                 const buscas = [];
 
-                if (termoFilial) {
-                    buscas.push(
-                        // ilike (não eq) porque alguns lançamentos antigos têm o valor de "filial"
-                        // gravado com variação de espaço/caixa — eq exato excluia esses registros
-                        // mesmo exibindo o mesmo texto na coluna da tabela.
-                        supabaseClient.from('despesas').select('id').ilike('filial', `%${termoFilial}%`)
-                            .then(({ data, error }) => {
-                                if (error) throw error;
-                                return new Set((data || []).map(d => d.id));
-                            })
-                    );
-                }
-
                 if (termoRota) {
                     buscas.push(
-                        supabaseClient.from('despesas').select('id').ilike('numero_rota', `%${termoRota}%`)
+                        supabaseClient.from('despesas').select('id').ilike('numero_rota', `%${termoRota}%`).limit(LIMITE_BUSCA_IDS)
                             .then(({ data, error }) => {
                                 if (error) throw error;
                                 return new Set((data || []).map(d => d.id));
@@ -767,7 +764,7 @@ const DespesasUI = {
 
                 if (termoHotel) {
                     buscas.push(
-                        supabaseClient.from('despesas').select('id, hoteis!inner(id)').ilike('hoteis.nome', `%${termoHotel}%`)
+                        supabaseClient.from('despesas').select('id, hoteis!inner(id)').ilike('hoteis.nome', `%${termoHotel}%`).limit(LIMITE_BUSCA_IDS)
                             .then(({ data, error }) => {
                                 if (error) throw error;
                                 return new Set((data || []).map(d => d.id));
@@ -778,8 +775,8 @@ const DespesasUI = {
                 if (termoFuncionario) {
                     buscas.push(
                         Promise.all([
-                            supabaseClient.from('despesas').select('id, funcionario1:id_funcionario1!inner(id)').ilike('funcionario1.nome_completo', `%${termoFuncionario}%`),
-                            supabaseClient.from('despesas').select('id, funcionario2:id_funcionario2!inner(id)').ilike('funcionario2.nome_completo', `%${termoFuncionario}%`)
+                            supabaseClient.from('despesas').select('id, funcionario1:id_funcionario1!inner(id)').ilike('funcionario1.nome_completo', `%${termoFuncionario}%`).limit(LIMITE_BUSCA_IDS),
+                            supabaseClient.from('despesas').select('id, funcionario2:id_funcionario2!inner(id)').ilike('funcionario2.nome_completo', `%${termoFuncionario}%`).limit(LIMITE_BUSCA_IDS)
                         ]).then(([res1, res2]) => {
                             if (res1.error) throw res1.error;
                             if (res2.error) throw res2.error;
@@ -793,11 +790,14 @@ const DespesasUI = {
 
                 const conjuntos = await Promise.all(buscas);
                 // Interseccao: cada filtro preenchido precisa bater (AND entre campos).
-                const matchingIds = conjuntos.reduce((acumulado, conjunto) => (
-                    acumulado === null ? conjunto : new Set([...acumulado].filter(id => conjunto.has(id)))
-                ), null) || new Set();
+                // null (não [] vazio) quando não há nenhuma busca por id — significa "não restringe por id".
+                const matchingIds = conjuntos.length
+                    ? conjuntos.reduce((acumulado, conjunto) => (
+                        acumulado === null ? conjunto : new Set([...acumulado].filter(id => conjunto.has(id)))
+                    ), null)
+                    : null;
 
-                if (matchingIds.size === 0) {
+                if (matchingIds && matchingIds.size === 0) {
                     this.tableBody.innerHTML = `<tr><td colspan="9">Nenhum resultado encontrado para os filtros informados.</td></tr>`;
                     this.atualizarContadorHistorico(0);
                     return;
@@ -805,8 +805,12 @@ const DespesasUI = {
 
                 query = supabaseClient
                     .from('despesas')
-                    .select('id, filial, usuario, created_at, numero_rota, tipo_quarto, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)')
-                    .in('id', Array.from(matchingIds));
+                    .select('id, filial, usuario, created_at, numero_rota, tipo_quarto, valor_total, data_checkin, hoteis(nome), funcionario1:id_funcionario1(nome_completo), funcionario2:id_funcionario2(nome_completo)');
+
+                // ilike (não eq) porque lançamentos antigos podiam ter "filial" com variação de
+                // espaço/caixa — aplicado direto na query, sem passar pelo pré-fetch de ids acima.
+                if (termoFilial) query = query.ilike('filial', `%${termoFilial}%`);
+                if (matchingIds) query = query.in('id', Array.from(matchingIds));
 
             } else {
                 query = supabaseClient
@@ -827,6 +831,10 @@ const DespesasUI = {
             // (varre a tabela toda) e pra "com filtro" (WHERE id IN (...)), e sem uma coluna extra
             // de desempate a ordem entre iguais fica a critério desse plano, não do usuário.
             query = query.order('id', { ascending: true });
+            // Mesmo limite generoso da busca de ids acima — sem isso, a listagem sem nenhum
+            // filtro (que hoje já passa de 11 mil lançamentos) também ficaria truncada em ~1000
+            // pelo padrão do Supabase, escondendo o restante silenciosamente.
+            query = query.limit(LIMITE_BUSCA_IDS);
 
             const { data: despesas, error } = await query;
 
