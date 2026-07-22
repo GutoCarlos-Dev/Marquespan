@@ -54,6 +54,7 @@ const DespesasUI = {
 
         // Tabela e busca
         this.tableBody = document.getElementById('despesaTableBody');
+        this.historicoCount = document.getElementById('historicoDespesasCount');
         this.searchFilialInput = document.getElementById('searchDespesaFilial');
         this.searchRotaInput = document.getElementById('searchDespesaRota');
         this.searchHotelInput = document.getElementById('searchDespesaHotel');
@@ -798,6 +799,7 @@ const DespesasUI = {
 
                 if (matchingIds.size === 0) {
                     this.tableBody.innerHTML = `<tr><td colspan="9">Nenhum resultado encontrado para os filtros informados.</td></tr>`;
+                    this.atualizarContadorHistorico(0);
                     return;
                 }
 
@@ -819,12 +821,20 @@ const DespesasUI = {
             } else {
                 query = query.order(this.sortField, { ascending: this.sortAsc });
             }
+            // Desempate estável: sem isso, registros com o mesmo valor no campo ordenado (ex:
+            // mesma data de check-in, muito comum aqui) podem sair em ordem diferente conforme o
+            // filtro aplicado — o Postgres escolhe um plano de execução diferente pra "sem filtro"
+            // (varre a tabela toda) e pra "com filtro" (WHERE id IN (...)), e sem uma coluna extra
+            // de desempate a ordem entre iguais fica a critério desse plano, não do usuário.
+            query = query.order('id', { ascending: true });
 
             const { data: despesas, error } = await query;
-            
+
             this.updateSortIcons();
 
             if (error) throw error;
+
+            this.atualizarContadorHistorico(despesas.length);
 
             const podeExcluir = this.usuarioPodeExcluir();
             this.tableBody.innerHTML = despesas.map(d => `
@@ -852,7 +862,13 @@ const DespesasUI = {
         } catch (err) {
             console.error('Erro ao renderizar grid de despesas:', err);
             this.tableBody.innerHTML = `<tr><td colspan="9">Erro ao carregar dados.</td></tr>`;
+            this.atualizarContadorHistorico(0);
         }
+    },
+
+    atualizarContadorHistorico(total) {
+        if (!this.historicoCount) return;
+        this.historicoCount.textContent = `${total} lançamento${total === 1 ? '' : 's'}`;
     },
 
     updateSortIcons() {

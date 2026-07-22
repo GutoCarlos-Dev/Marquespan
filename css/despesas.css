@@ -61,6 +61,16 @@ label.campo-obrigatorio::after {
     padding-bottom: 10px;
 }
 
+.historico-count-badge {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: rgba(0, 105, 55, 0.08);
+    padding: 4px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
 /* Layout Interno do Formulário */
 .despesa-layout {
     display: grid;
