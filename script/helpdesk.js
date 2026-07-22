@@ -223,6 +223,7 @@ function renderChamadoCard(c, { comAcoes = false } = {}) {
   const acoes = comAcoes
     ? `<div class="hd-card-actions">
          <button type="button" class="btn-primary" onclick="hdAbrirRespostaModal('${c.id}')"><i class="fas fa-reply"></i> Responder</button>
+         ${ehAdministrador() ? `<button type="button" class="btn-danger" onclick="hdExcluirChamado('${c.id}')"><i class="fas fa-trash"></i> Excluir</button>` : ''}
        </div>`
     : '';
 
@@ -354,6 +355,29 @@ async function hdSalvarRespostaChamado() {
   }
 }
 window.hdSalvarRespostaChamado = hdSalvarRespostaChamado;
+
+// Excluir chamado — só administrador (a policy de delete no banco também restringe a isso,
+// esta checagem é só pra nem mostrar o botão pra quem não pode usar).
+async function hdExcluirChamado(id) {
+  if (!ehAdministrador()) return;
+  if (!confirm('Excluir este chamado definitivamente? Essa ação não pode ser desfeita.')) return;
+
+  try {
+    const chamado = hdChamadosCache[id];
+    if (chamado?.anexo_path) {
+      await supabaseClient.storage.from(HELPDESK_BUCKET).remove([chamado.anexo_path]).catch(() => {});
+    }
+
+    const { error } = await supabaseClient.from('helpdesk_chamados').delete().eq('id', id);
+    if (error) throw error;
+
+    carregarGestaoChamados();
+  } catch (e) {
+    console.error('[helpdesk][hdExcluirChamado]', e);
+    alert('Não foi possível excluir o chamado.');
+  }
+}
+window.hdExcluirChamado = hdExcluirChamado;
 
 // ── Vídeos de ajuda ──────────────────────────────────────────────────────
 function paraEmbedUrl(url) {
