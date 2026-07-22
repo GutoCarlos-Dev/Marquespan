@@ -4695,49 +4695,6 @@ async function saveAction(){
   else alert('✓ Ação salva localmente.\n' + (nuvemMsg ? '⚠ Nuvem: ' + nuvemMsg + '\n' : '') + 'Clique em "Salvar Dia" e a ação subirá no próximo sincronismo.');
 }
 
-// Registra automaticamente a ação "ENVIO DE MENSAGEM" quando um WhatsApp do envio em massa
-// é disparado com sucesso — preenche a Observação/justificativa com a própria mensagem
-// enviada (com a data de hoje), deixando o campo pronto pra o usuário complementar depois
-// com a resposta do colaborador, sem precisar abrir o modal manualmente pra cada um.
-async function registrarAcaoEnvioMensagem(row, mensagemEnviada, viaCopia = false){
-  if(!row) return;
-  try{
-    const now = new Date();
-    const actionObj = {
-      ts: now.toISOString(),
-      timestamp: now.toLocaleString('pt-BR'),
-      placa: row.placa || '',
-      rota: row.rota || '',
-      stat: row.stat || '',
-      nome: row.nome || '',
-      role: row.role || '',
-      acao: 'ENVIO DE MENSAGEM',
-      observacao: viaCopia
-        ? `Mensagem copiada para envio manual via WhatsApp em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}. Aguardando resposta do colaborador — complete esta observação quando ele responder.\n\nMensagem copiada:\n${mensagemEnviada || ''}`
-        : `Mensagem enviada via WhatsApp (envio em massa) em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}. Aguardando resposta do colaborador — complete esta observação quando ele responder.\n\nMensagem enviada:\n${mensagemEnviada || ''}`,
-      data_infracao: row._date || '',
-      data_acao: now.toLocaleDateString('pt-BR'),
-      hora_acao: now.toLocaleTimeString('pt-BR')
-    };
-    // Cada envio vira uma tratativa nova e independente (histórico completo) — não substitui
-    // uma tratativa já existente pra mesma infração, então nada se perde.
-    actionObj.client_uid = novoClientUid();
-    await dbAdd('actions', actionObj);
-
-    try{
-      if(typeof saveActionSupabase === 'function') await saveActionSupabase(actionObj, row);
-    }catch(e){
-      console.warn('[registrarAcaoEnvioMensagem][Supabase]', e);
-    }
-
-    updateActionsBadge();
-    renderS4Table();
-    refreshDashboard();
-  }catch(e){
-    console.warn('[registrarAcaoEnvioMensagem]', e);
-  }
-}
-
 function toggleSelAll(){const c=document.getElementById('selAll').checked;document.querySelectorAll('.rowSel').forEach(cb=>cb.checked=c);}
 
 // ── Phone / WhatsApp ───────────────────────────────────────
@@ -4959,19 +4916,15 @@ async function resolverTelefoneParaEnvio(row){
   return {semNumero: true};
 }
 
-// Dispara o WhatsApp e, se der certo, já registra a ação "ENVIO DE MENSAGEM" no histórico
-// da infração (Observação preenchida com a mensagem enviada). Usada só pelo envio em massa —
-// o botão individual da coluna AÇÃO usa handleWaCopyMessageClick (só copia a mensagem).
+// Dispara o WhatsApp pelo envio em massa — não registra nada no histórico da infração
+// (mesma regra do botão individual, que usa handleWaCopyMessageClick só pra copiar a mensagem).
 async function handleWaClick(row,existingWin){
   const variants = waNameVariants(row);
   const nomeDisplay = variants[0] || row.nome || '';
 
   const resultado = await resolverTelefoneParaEnvio(row);
   if(resultado.tel){
-    const mensagem = buildWhatsAppMessage(nomeDisplay, row);
-    const enviado = openWhatsApp(nomeDisplay, resultado.tel, row, existingWin);
-    if(enviado) await registrarAcaoEnvioMensagem(row, mensagem);
-    return enviado;
+    return openWhatsApp(nomeDisplay, resultado.tel, row, existingWin);
   }
   if(resultado.semContatoCadastrado){
     if(confirm(
@@ -5008,70 +4961,166 @@ function copyMessageToClipboard(msg){
 }
 
 // ═══════════════════════════════════════════════════════
-// ENVIO EM MASSA — dispara o WhatsApp dos selecionados, um por vez,
-// reaproveitando o mesmo fluxo do botão individual (handleWaClick)
+// ENVIO EM MASSA — modal de seleção de colaboradores/telefones, depois dispara
+// o WhatsApp dos selecionados um por vez (reaproveitando handleWaClick)
 // ═══════════════════════════════════════════════════════
-function getS4SelectedRows(){
-  const all = window._s4RenderedRows || [];
-  const checked = [];
-  document.querySelectorAll('#s4-tbody .rowSel').forEach((cb,i)=>{
-    if(cb.checked && all[i]) checked.push(all[i].row);
-  });
-  return checked;
-}
-
 let waAutoQueue = [];
 let waAutoTimer = null;
 let waAutoRunning = false;
 let waAutoTotal = 0;
 let waAutoWindow = null;
+let waMassaRows = [];
 
 function toggleEnvioEmMassa(){
   if(waAutoRunning){ pararEnvioEmMassa(true); return; }
-  iniciarEnvioEmMassa();
+  abrirModalEnvioMassa();
 }
 
-async function iniciarEnvioEmMassa(){
-  const selected = getS4SelectedRows();
-  if(!selected.length){
-    alert('Selecione ao menos um registro na tabela (checkbox) para enviar mensagens em massa.');
+// Resolve o(s) numero(s) disponiveis pra um colaborador SEM perguntar nada (sem prompt/confirm) —
+// usado só pra popular a lista do modal. Quando ha mais de uma opcao (Corporativo/Pessoal), quem
+// escolhe qual usar e o proprio usuario, no seletor da linha.
+async function resolverContatosParaModal(row){
+  const variants = waNameVariants(row);
+  const nomeDisplay = variants[0] || row.nome || '';
+  const info = { row, nomeDisplay, opcoes:[], telSelecionado:'', semNumero:false, selecionado:false };
+
+  if(row._wa_resolved_tel){
+    info.opcoes = [{label:'Contato', tel: row._wa_resolved_tel}];
+    info.telSelecionado = row._wa_resolved_tel;
+    return info;
+  }
+
+  const func = row._wa_funcionario || await findFuncionarioForWhatsApp(row);
+  if(func){
+    row._wa_funcionario = func;
+    const choices = waContactChoices(func);
+    if(choices.length){
+      info.opcoes = choices.map(c=>({label:c.label, tel:c.tel}));
+      info.telSelecionado = choices[0].tel;
+      return info;
+    }
+    // Funcionario cadastrado mas sem Contato Corporativo nem Pessoal: o numero precisa vir
+    // do cadastro, entao nao cai pros fallbacks abaixo (mesma regra de resolverTelefoneParaEnvio).
+    info.semNumero = true;
+    return info;
+  }
+
+  if(row.telefone){ info.opcoes=[{label:'Cadastro', tel:row.telefone}]; info.telSelecionado=row.telefone; return info; }
+  for(const v of variants){
+    const t = getTelFromCad(v);
+    if(t){ info.opcoes=[{label:'Cadastro', tel:t}]; info.telSelecionado=t; return info; }
+  }
+  for(const v of variants){
+    const rec = await dbGetPhone(v);
+    if(rec && rec.tel){ info.opcoes=[{label:'Salvo', tel:rec.tel}]; info.telSelecionado=rec.tel; return info; }
+  }
+  info.semNumero = true;
+  return info;
+}
+
+async function abrirModalEnvioMassa(){
+  const rendered = window._s4RenderedRows || [];
+  if(!rendered.length){
+    alert('Não há colaboradores na tabela para envio em massa.');
     return;
   }
 
-  // Resolve o numero (perguntando Corporativo/Pessoal quando necessario) de TODOS os
-  // selecionados ANTES de abrir a aba do WhatsApp Web. A aba do WhatsApp rouba o foco ao
-  // abrir; se a pergunta aparecesse depois, ela ficaria escondida numa aba que ninguem esta
-  // olhando e o envio em massa parecia travado.
-  const prontos = [];
-  const pulados = [];
-  for(const row of selected){
-    const resultado = await resolverTelefoneParaEnvio(row);
-    if(resultado.tel) prontos.push(row);
-    else pulados.push({row, resultado});
-  }
+  document.getElementById('wa-massa-modal-overlay').classList.add('open');
+  document.getElementById('wa-massa-count').textContent = '';
+  document.getElementById('wa-massa-list').innerHTML =
+    '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">Carregando colaboradores e telefones…</div>';
 
-  if(!prontos.length){
-    alert('Nenhum colaborador selecionado tem WhatsApp disponivel para envio.\n\nVerifique se ha Contato Corporativo ou Pessoal preenchido no Cadastro de Funcionarios.');
+  // Pre-seleciona quem ja estava marcado na tabela (checkbox da coluna), como conveniencia.
+  const checkboxes = document.querySelectorAll('#s4-tbody .rowSel');
+  const infos = [];
+  for(let i=0;i<rendered.length;i++){
+    const row = rendered[i].row;
+    const info = await resolverContatosParaModal(row);
+    info.selecionado = !info.semNumero && !!(checkboxes[i] && checkboxes[i].checked);
+    infos.push(info);
+  }
+  waMassaRows = infos;
+  renderWaMassaList();
+}
+
+function renderWaMassaList(){
+  const listEl = document.getElementById('wa-massa-list');
+  if(!waMassaRows.length){
+    listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">Nenhum colaborador encontrado.</div>';
     return;
   }
-  if(pulados.length){
-    const nomes = pulados.map(p => (waNameVariants(p.row)[0] || p.row.nome || '?') +
-      (p.resultado.semContatoCadastrado ? ' (sem WhatsApp no cadastro)' : ' (numero nao definido)')
-    ).join('\n');
-    if(!confirm(`${pulados.length} colaborador(es) serao pulados por falta de WhatsApp cadastrado:\n\n${nomes}\n\nContinuar o envio para os outros ${prontos.length}?`)) return;
+  listEl.innerHTML = waMassaRows.map((info,i)=>{
+    const row = info.row;
+    const nome = esc(info.nomeDisplay || row.nome || '—');
+    const meta = [row.role, row.placa?`Placa ${row.placa}`:'', row.rota?`Rota ${row.rota}`:'']
+      .filter(Boolean).map(esc).join(' · ');
+    let telField;
+    if(info.opcoes.length > 1){
+      telField = `<select class="form-control wa-massa-tel-sel" data-idx="${i}" style="width:170px;padding:6px 8px;font-size:12px">
+        ${info.opcoes.map(o=>`<option value="${esc(o.tel)}" ${o.tel===info.telSelecionado?'selected':''}>${esc(o.label)} · +${esc(formatPhone(o.tel)||o.tel)}</option>`).join('')}
+      </select>`;
+    }else if(info.opcoes.length === 1){
+      telField = `<div style="font-size:12px;color:var(--text2);white-space:nowrap">📞 +${esc(formatPhone(info.opcoes[0].tel)||info.opcoes[0].tel)}</div>`;
+    }else{
+      telField = `<div style="font-size:11px;color:var(--red)">Sem telefone cadastrado</div>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;${info.semNumero?'opacity:.6':''}">
+      <input type="checkbox" class="wa-massa-chk" data-idx="${i}" ${info.selecionado?'checked':''} ${info.semNumero?'disabled':''}>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px;color:var(--text)">${nome}</div>
+        <div style="font-size:11px;color:var(--text3)">${meta||'—'}</div>
+      </div>
+      ${telField}
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('.wa-massa-chk').forEach(cb=>{
+    cb.onchange = ()=>{
+      const idx = parseInt(cb.getAttribute('data-idx'));
+      waMassaRows[idx].selecionado = cb.checked;
+      atualizarWaMassaCount();
+    };
+  });
+  listEl.querySelectorAll('.wa-massa-tel-sel').forEach(sel=>{
+    sel.onchange = ()=>{
+      const idx = parseInt(sel.getAttribute('data-idx'));
+      waMassaRows[idx].telSelecionado = sel.value;
+    };
+  });
+  atualizarWaMassaCount();
+}
+
+function atualizarWaMassaCount(){
+  const el = document.getElementById('wa-massa-count');
+  if(!el) return;
+  const total = waMassaRows.length;
+  const selecionados = waMassaRows.filter(r=>r.selecionado).length;
+  el.textContent = `${selecionados} de ${total} selecionado(s)`;
+}
+
+function waMassaSelecionarTodos(sel){
+  waMassaRows.forEach(r=>{ if(!r.semNumero) r.selecionado = sel; });
+  renderWaMassaList();
+}
+
+function closeWaMassaModal(){
+  document.getElementById('wa-massa-modal-overlay').classList.remove('open');
+}
+
+function confirmarDisparoModalMassa(){
+  const selecionados = waMassaRows.filter(r=>r.selecionado && r.telSelecionado);
+  if(!selecionados.length){
+    alert('Selecione ao menos um colaborador com telefone disponível.');
+    return;
   }
 
-  const intervaloStr = prompt(
-    `Enviar WhatsApp para ${prontos.length} colaborador(es) selecionado(s), um de cada vez.\n\n`+
-    `Cada mensagem vai reaproveitar a MESMA aba do WhatsApp Web (para o navegador não bloquear como pop-up). `+
-    `Clique em Enviar em cada uma antes do intervalo acabar, senão ela é substituída pela próxima.\n\n`+
-    `Intervalo entre cada envio (em segundos):`,
-    '15'
-  );
-  if(intervaloStr === null) return;
-  let intervalo = parseInt(intervaloStr, 10);
+  let intervalo = parseInt(document.getElementById('wa-massa-intervalo').value, 10);
   if(!intervalo || intervalo < 2) intervalo = 2;
   if(intervalo > 120) intervalo = 120;
+
+  // Trava o numero escolhido no modal em cada linha (respeita Corporativo/Pessoal selecionado),
+  // pra resolverTelefoneParaEnvio (chamado dentro de handleWaClick) reaproveitar sem perguntar de novo.
+  selecionados.forEach(info => { info.row._wa_resolved_tel = info.telSelecionado; });
 
   // Abre a aba AGORA, de forma síncrona no clique, pra não ser bloqueada como pop-up.
   // As próximas mensagens só navegam essa mesma aba (isso não conta como pop-up novo).
@@ -5081,7 +5130,8 @@ async function iniciarEnvioEmMassa(){
     return;
   }
 
-  waAutoQueue = prontos.slice();
+  closeWaMassaModal();
+  waAutoQueue = selecionados.map(info=>info.row);
   waAutoTotal = waAutoQueue.length;
   waAutoRunning = true;
   atualizarBotaoEnvioMassa();
