@@ -1,0 +1,241 @@
+/* css/helpdesk.css — Página HelpDesk (chamados + vídeos de ajuda) */
+
+.hd-header-sub {
+  font-size: 13px;
+  color: #6c757d;
+  margin-top: 4px;
+}
+
+/* ── Painéis ─────────────────────────────────────────── */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.glass-panel h3 {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #343a40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hd-sub { font-size: 12.5px; color: #6c757d; margin: -8px 0 16px; }
+
+/* ── Abas ────────────────────────────────────────────── */
+.hd-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.07);
+}
+.hd-tab-btn {
+  padding: 10px 18px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6c757d;
+  border-bottom: 3px solid transparent;
+  transition: all .2s;
+  font-family: inherit;
+  margin-bottom: -2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hd-tab-btn:hover { color: #343a40; }
+.hd-tab-btn.active { color: #006937; border-bottom-color: #006937; }
+
+.hd-tab-content { display: none; }
+.hd-tab-content.active { display: block; }
+
+/* ── Formulários ─────────────────────────────────────── */
+.hd-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 13px; font-weight: 600; color: #495057; }
+.hd-checkbox-group label { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.hd-form-actions { display: flex; gap: 10px; align-items: center; }
+.hd-hint { font-size: 11.5px; color: #868e96; margin-top: -2px; }
+
+.glass-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  font-size: 14px;
+  color: #212529;
+  background: rgba(255, 255, 255, 0.7);
+  outline: none;
+  transition: all .2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.glass-input:focus {
+  background: #fff;
+  border-color: #006937;
+  box-shadow: 0 0 0 3px rgba(0, 105, 55, 0.12);
+}
+textarea.glass-input { resize: vertical; min-height: 70px; }
+
+/* ── Listas de cards (chamados) ──────────────────────── */
+.hd-lista { display: flex; flex-direction: column; gap: 12px; }
+.hd-vazio { font-size: 13px; color: #adb5bd; text-align: center; padding: 20px 0; }
+
+.hd-card {
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #fff;
+}
+.hd-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.hd-card-title { font-size: 14px; font-weight: 700; color: #212529; }
+.hd-card-meta { font-size: 11.5px; color: #868e96; margin-top: 2px; }
+.hd-card-desc { font-size: 13px; color: #495057; margin-top: 10px; white-space: pre-wrap; }
+.hd-card-anexo { margin-top: 10px; }
+.hd-card-anexo .btn-secondary { font-size: 12px; padding: 6px 12px; }
+.hd-card-resposta {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #f1f8f4;
+  border-left: 3px solid #006937;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: #1b5e20;
+  white-space: pre-wrap;
+}
+.hd-card-actions { margin-top: 10px; display: flex; gap: 8px; }
+.hd-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.hd-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+.hd-badge-cinza  { background: #e9ecef; color: #495057; }
+.hd-badge-verde  { background: #d4edda; color: #1b5e20; }
+.hd-badge-azul   { background: #d6e9ff; color: #0c4a8a; }
+.hd-badge-laranja{ background: #ffe8cc; color: #a3520a; }
+.hd-badge-vermelho{ background: #fde2e1; color: #a3221a; }
+
+/* ── Gestão de chamados ──────────────────────────────── */
+.hd-gestao-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.hd-gestao-head h3 { margin: 0; }
+.hd-gestao-head select { max-width: 220px; margin-bottom: 0; }
+
+/* ── Vídeos de ajuda ─────────────────────────────────── */
+.hd-videos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.hd-video-card {
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+.hd-video-embed {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  background: #000;
+}
+.hd-video-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+.hd-video-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 140px;
+  background: #212529;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  gap: 8px;
+}
+.hd-video-link:hover { background: #000; }
+.hd-video-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.hd-video-titulo { font-size: 14px; font-weight: 700; color: #212529; }
+.hd-video-desc { font-size: 12.5px; color: #6c757d; }
+.hd-video-tags { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+.hd-video-admin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+}
+.hd-video-admin-row .hd-video-admin-info { flex: 1; min-width: 0; }
+.hd-video-admin-row .hd-video-admin-info b { font-size: 13.5px; color: #212529; }
+.hd-video-admin-row .hd-video-admin-info div { font-size: 11.5px; color: #868e96; margin-top: 2px; }
+.hd-video-admin-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Modal de resposta ───────────────────────────────── */
+.hd-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.hd-overlay.open { display: flex; }
+.hd-modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 26px;
+  width: 520px; max-width: 94vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+.hd-modal-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #212529; }
+.hd-modal-sub { font-size: 12.5px; color: #868e96; margin-bottom: 16px; }
+.hd-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* ── Responsivo ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hd-form-grid { grid-template-columns: 1fr; }
+  .hd-videos-grid { grid-template-columns: 1fr; }
+  .hd-tabs { overflow-x: auto; flex-wrap: nowrap; }
+  .hd-tab-btn { flex-shrink: 0; }
+}

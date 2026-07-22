@@ -1,7 +1,7 @@
 import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
-const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+let currentUserFilialSelected = null; // Para armazenar a filial selecionada temporariamente
 
 function getDataHoraPartesSaoPaulo(date = new Date()) {
     return new Intl.DateTimeFormat('sv-SE', {
@@ -268,7 +268,12 @@ function getCurrentUserName() {
 
 function getCurrentUserFilial() {
     const usuario = getCurrentUser();
-    return usuario ? (usuario.filial || null) : null;
+    const filialUsuario = usuario ? (usuario.filial || null) : null;
+    // Se o usuário não tem filial, retorna a filial selecionada no selector
+    if (!filialUsuario && currentUserFilialSelected) {
+        return currentUserFilialSelected;
+    }
+    return filialUsuario;
 }
 
 function getCurrentUser() {
@@ -516,6 +521,49 @@ function preencherDatalistRotas() {
 document.addEventListener('DOMContentLoaded', async () => {
     await sincronizarUsuarioLogado();
 
+    // Configura o seletor de filial para usuários sem filial
+    const filialUsuario = getCurrentUserFilial();
+    const filialSelectorGroup = document.getElementById('filialSelectorGroup');
+    const filialSelectorMobile = document.getElementById('filialSelectorMobile');
+
+    if (!filialUsuario && filialSelectorMobile) {
+        filialSelectorGroup.style.display = 'block';
+        
+        // Carrega as filiais disponíveis
+        try {
+            const { data: filiais, error } = await supabaseClient
+                .from('filiais')
+                .select('sigla, nome')
+                .order('sigla', { ascending: true });
+            
+            if (!error && filiais) {
+                filialSelectorMobile.innerHTML = '<option value="">Selecione a Filial</option>';
+                filiais.forEach(f => {
+                    const option = document.createElement('option');
+                    option.value = f.sigla;
+                    option.textContent = `${f.sigla} - ${f.nome}`;
+                    filialSelectorMobile.appendChild(option);
+                });
+            }
+        } catch (err) {
+            console.error('Erro ao carregar filiais:', err);
+        }
+        
+        // Listener para quando o usuário seleciona uma filial
+        filialSelectorMobile.addEventListener('change', (e) => {
+            currentUserFilialSelected = e.target.value || null;
+            if (currentUserFilialSelected) {
+                loadRetornos();
+            }
+        });
+    } else if (filialUsuario && filialSelectorMobile) {
+        // Se o usuário já tem filial, preenche e desabilita o seletor
+        filialSelectorGroup.style.display = 'block';
+        filialSelectorMobile.innerHTML = `<option value="${filialUsuario}" selected>${filialUsuario}</option>`;
+        filialSelectorMobile.disabled = true;
+        filialSelectorMobile.title = 'Filial definida no seu cadastro';
+    }
+
     // Define a data de hoje e carrega os dados
     const dataInput = document.getElementById('dataRetornoMobile');
     dataInput.value = getDataSaoPaulo();
@@ -650,7 +698,7 @@ async function loadRetornos() {
             const el = document.getElementById(id);
             if (el) el.textContent = '0';
         });
-        container.innerHTML = `<div class="loading-placeholder" style="color: red;">Filial do usuario nao encontrada. Atualize o cadastro do usuario.</div>`;
+        container.innerHTML = `<div class="loading-placeholder" style="color: orange;"><i class="fas fa-info-circle"></i> Selecione a Filial para continuar.</div>`;
         return;
     }
 
@@ -669,7 +717,7 @@ async function loadRetornos() {
         console.error("Erro ao carregar retornos:", err);
         container.innerHTML = `<div class="loading-placeholder" style="color: red;">Erro ao carregar dados.</div>`;
     }
-}
+}}
 
 function renderCards() {
     const container = document.getElementById('listaRetornoMobile');

@@ -189,8 +189,8 @@ async function controlarMenuPorNivel() {
     if (error) throw error;
 
     const paginasPermitidas = data ? [...(data.paginas_permitidas || [])] : [];
-    // Adiciona dashboard e index como páginas sempre permitidas
-    paginasPermitidas.push('dashboard.html', 'index.html');
+    // Adiciona dashboard, index e helpdesk como páginas sempre permitidas
+    paginasPermitidas.push('dashboard.html', 'index.html', 'helpdesk.html');
     const diariaIndex = paginasPermitidas.indexOf('diaria.html');
     if (!DIARIA_NIVEIS_PERMITIDOS.has(nivel) && diariaIndex >= 0) {
       paginasPermitidas.splice(diariaIndex, 1);

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HelpDesk - Marquespan</title>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/helpdesk.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <!-- Container para injeção do Menu Lateral -->
+  <div id="menu-container"></div>
+
+  <main class="main-content fade-in">
+    <header class="header glass-header">
+      <h1><i class="fas fa-headset"></i> HelpDesk</h1>
+      <p class="hd-header-sub">Abra chamados para o Setor de Tecnologia e veja vídeos de como o sistema funciona</p>
+    </header>
+
+    <!-- ═══ ABAS ═══ -->
+    <div class="hd-tabs">
+      <button type="button" class="hd-tab-btn active" data-tab="abrir" onclick="hdSetTab('abrir')">
+        <i class="fas fa-ticket-alt"></i> Abrir Chamado
+      </button>
+      <button type="button" class="hd-tab-btn" data-tab="videos" onclick="hdSetTab('videos')">
+        <i class="fas fa-video"></i> Vídeos de Ajuda
+      </button>
+      <button type="button" class="hd-tab-btn hd-staff-only" data-tab="gestao" onclick="hdSetTab('gestao')" style="display:none">
+        <i class="fas fa-clipboard-list"></i> Gestão de Chamados
+      </button>
+      <button type="button" class="hd-tab-btn hd-admin-only" data-tab="videos-admin" onclick="hdSetTab('videos-admin')" style="display:none">
+        <i class="fas fa-photo-video"></i> Gerenciar Vídeos
+      </button>
+    </div>
+
+    <!-- ═══ ABRIR CHAMADO ═══ -->
+    <div class="hd-tab-content active" id="hd-tab-abrir">
+      <section class="glass-panel">
+        <h3><i class="fas fa-headset"></i> Abrir chamado para o Setor de Tecnologia</h3>
+        <form id="hd-form-chamado">
+          <div class="hd-form-grid">
+            <div class="form-group">
+              <label>Categoria</label>
+              <select id="hd-categoria" class="glass-input" required>
+                <option value="Hardware">Hardware (computador, impressora, periférico)</option>
+                <option value="Software">Software / Sistema</option>
+                <option value="Rede/Internet">Rede / Internet</option>
+                <option value="Sistema Marquespan" selected>Sistema Marquespan (este sistema)</option>
+                <option value="Acesso/Senha">Acesso / Senha</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Prioridade</label>
+              <select id="hd-prioridade" class="glass-input">
+                <option value="baixa">Baixa</option>
+                <option value="media" selected>Média</option>
+                <option value="alta">Alta</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Assunto</label>
+            <input type="text" id="hd-assunto" class="glass-input" maxlength="120" placeholder="Resuma o problema em poucas palavras" required>
+          </div>
+          <div class="form-group">
+            <label>Descrição</label>
+            <textarea id="hd-descricao" class="glass-input" rows="5" placeholder="Descreva o problema com detalhes: o que aconteceu, quando, em qual tela ou equipamento..." required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Print do erro (opcional)</label>
+            <input type="file" id="hd-anexo" class="glass-input" accept="image/*,.pdf">
+            <div class="hd-hint">Imagem (PNG/JPG) ou PDF, até 8MB. Ajuda o Suporte a entender o problema mais rápido.</div>
+          </div>
+          <button type="submit" class="btn-primary"><i class="fas fa-paper-plane"></i> Abrir Chamado</button>
+        </form>
+      </section>
+
+      <section class="glass-panel">
+        <h3><i class="fas fa-list"></i> Meus Chamados</h3>
+        <div id="hd-meus-chamados" class="hd-lista">
+          <p class="hd-vazio">Carregando...</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- ═══ VÍDEOS DE AJUDA ═══ -->
+    <div class="hd-tab-content" id="hd-tab-videos">
+      <section class="glass-panel">
+        <h3><i class="fas fa-video"></i> Vídeos de Ajuda</h3>
+        <p class="hd-sub">Tutoriais de como o sistema funciona, de acordo com as telas que você tem acesso.</p>
+        <div id="hd-videos-grid" class="hd-videos-grid">
+          <p class="hd-vazio">Carregando...</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- ═══ GESTÃO DE CHAMADOS (staff) ═══ -->
+    <div class="hd-tab-content" id="hd-tab-gestao">
+      <section class="glass-panel">
+        <div class="hd-gestao-head">
+          <h3><i class="fas fa-clipboard-list"></i> Gestão de Chamados</h3>
+          <select id="hd-gestao-filtro-status" class="glass-input">
+            <option value="">Todos os status</option>
+            <option value="aberto">Aberto</option>
+            <option value="em_andamento">Em andamento</option>
+            <option value="concluido">Concluído</option>
+          </select>
+        </div>
+        <div id="hd-gestao-lista" class="hd-lista">
+          <p class="hd-vazio">Carregando...</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- ═══ GERENCIAR VÍDEOS (administrador) ═══ -->
+    <div class="hd-tab-content" id="hd-tab-videos-admin">
+      <section class="glass-panel">
+        <h3 id="hd-video-form-title"><i class="fas fa-plus-circle"></i> Novo Vídeo de Ajuda</h3>
+        <form id="hd-form-video">
+          <input type="hidden" id="hd-video-editing-id">
+          <div class="hd-form-grid">
+            <div class="form-group">
+              <label>Título</label>
+              <input type="text" id="hd-video-titulo" class="glass-input" maxlength="150" required>
+            </div>
+            <div class="form-group">
+              <label>Categoria (opcional)</label>
+              <input type="text" id="hd-video-categoria" class="glass-input" placeholder="Ex: Jornada, Abastecimento...">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Descrição</label>
+            <textarea id="hd-video-descricao" class="glass-input" rows="3"></textarea>
+          </div>
+          <div class="hd-form-grid">
+            <div class="form-group">
+              <label>URL do vídeo (YouTube, Drive, etc.)</label>
+              <input type="url" id="hd-video-url" class="glass-input" placeholder="https://..." required>
+            </div>
+            <div class="form-group">
+              <label>Página vinculada (opcional)</label>
+              <input type="text" id="hd-video-pagina" class="glass-input" list="hd-paginas-list" placeholder="Ex: controle-de-jornada.html — vazio = visível a todos">
+              <datalist id="hd-paginas-list"></datalist>
+            </div>
+          </div>
+          <div class="form-group hd-checkbox-group">
+            <label><input type="checkbox" id="hd-video-ativo" checked> Vídeo ativo (visível para os usuários)</label>
+          </div>
+          <div class="hd-form-actions">
+            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Salvar Vídeo</button>
+            <button type="button" class="btn-secondary" id="hd-video-cancelar-edicao" style="display:none" onclick="hdCancelarEdicaoVideo()">Cancelar edição</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="glass-panel">
+        <h3><i class="fas fa-list"></i> Vídeos Cadastrados</h3>
+        <div id="hd-videos-admin-lista" class="hd-lista">
+          <p class="hd-vazio">Carregando...</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- MODAL RESPOSTA DE CHAMADO -->
+  <div class="hd-overlay" id="hd-resposta-overlay">
+    <div class="hd-modal">
+      <div class="hd-modal-title">Responder Chamado</div>
+      <div class="hd-modal-sub" id="hd-resposta-sub"></div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="hd-resposta-status" class="glass-input">
+          <option value="aberto">Aberto</option>
+          <option value="em_andamento">Em andamento</option>
+          <option value="concluido">Concluído</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Resposta / observação para o colaborador</label>
+        <textarea id="hd-resposta-texto" class="glass-input" rows="5" placeholder="Ex: Trocamos o equipamento, verifique agora..."></textarea>
+      </div>
+      <div class="hd-modal-footer">
+        <button type="button" class="btn-secondary" onclick="hdCloseRespostaModal()">Cancelar</button>
+        <button type="button" class="btn-primary" onclick="hdSalvarRespostaChamado()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./script/auth-guard.js"></script>
+  <script type="module" src="./script/menu.js"></script>
+  <script type="module" src="./script/helpdesk.js?v=20260722-1"></script>
+</body>
+</html>
