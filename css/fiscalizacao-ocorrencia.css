@@ -312,6 +312,10 @@
   background: #dc3545;
 }
 
+.boletim-toggle input[value="EM_ANALISE"]:checked + span {
+  background: #f59e0b;
+}
+
 .boletim-status-badge {
   border-radius: 999px;
   display: inline-block;
@@ -325,6 +329,11 @@
 .boletim-status-emitido {
   background: #d9f7e5;
   color: #137333;
+}
+
+.boletim-status-em_analise {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .boletim-status-nao_emitido {

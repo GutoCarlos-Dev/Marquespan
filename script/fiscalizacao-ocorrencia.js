@@ -358,12 +358,19 @@ function atualizarModoVisualizacao() {
   atualizarBotaoCompartilharModal();
 }
 
+function normalizarStatusBoletimOcorrencia(status) {
+  const valor = String(status || '').trim().toUpperCase();
+  if (valor === 'EMITIDO') return 'EMITIDO';
+  if (valor === 'EM_ANALISE') return 'EM_ANALISE';
+  return 'NAO_EMITIDO';
+}
+
 function getStatusBoletimOcorrencia() {
-  return document.querySelector('input[name="boletimOcorrenciaStatus"]:checked')?.value || 'NAO_EMITIDO';
+  return normalizarStatusBoletimOcorrencia(document.querySelector('input[name="boletimOcorrenciaStatus"]:checked')?.value);
 }
 
 function definirStatusBoletimOcorrencia(status) {
-  const normalizado = status === 'EMITIDO' ? 'EMITIDO' : 'NAO_EMITIDO';
+  const normalizado = normalizarStatusBoletimOcorrencia(status);
   const input = document.querySelector(`input[name="boletimOcorrenciaStatus"][value="${normalizado}"]`);
   if (input) input.checked = true;
 }
@@ -388,12 +395,23 @@ function atualizarCampoBoletimOcorrencia() {
 }
 
 function formatarStatusBoletimOcorrencia(status) {
-  return status === 'EMITIDO' ? 'Emitido' : 'Nao Emitido';
+  switch (normalizarStatusBoletimOcorrencia(status)) {
+    case 'EMITIDO':
+      return 'Emitido';
+    case 'EM_ANALISE':
+      return 'Em Analise';
+    default:
+      return 'Nao Emitido';
+  }
 }
 
 function badgeStatusBoletimOcorrencia(status) {
-  const normalizado = status === 'EMITIDO' ? 'EMITIDO' : 'NAO_EMITIDO';
-  const classe = normalizado === 'EMITIDO' ? 'boletim-status-emitido' : 'boletim-status-nao_emitido';
+  const normalizado = normalizarStatusBoletimOcorrencia(status);
+  const classe = normalizado === 'EMITIDO'
+    ? 'boletim-status-emitido'
+    : normalizado === 'EM_ANALISE'
+      ? 'boletim-status-em_analise'
+      : 'boletim-status-nao_emitido';
   return `<span class="boletim-status-badge ${classe}">${formatarStatusBoletimOcorrencia(normalizado)}</span>`;
 }
 
