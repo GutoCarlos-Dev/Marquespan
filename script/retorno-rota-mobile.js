@@ -1,6 +1,8 @@
 import { supabaseClient } from './supabase.js';
 import { registrarAuditoria } from './auditoria-utils.js';
 
+const TIMEZONE_SAO_PAULO = 'America/Sao_Paulo';
+
 let currentUserFilialSelected = null; // Para armazenar a filial selecionada temporariamente
 
 function getDataHoraPartesSaoPaulo(date = new Date()) {
@@ -521,6 +523,24 @@ function preencherDatalistRotas() {
 document.addEventListener('DOMContentLoaded', async () => {
     await sincronizarUsuarioLogado();
 
+    // Define a data de hoje ANTES de qualquer coisa que dependa de "await" (como a busca de
+    // filiais abaixo), pra garantir que o campo Data sempre comece preenchido com hoje,
+    // independente de quanto tempo essas chamadas assíncronas demorarem.
+    const dataInput = document.getElementById('dataRetornoMobile');
+    dataInput.value = getDataSaoPaulo();
+    let dataRetornoSelecionada = dataInput.value;
+
+    dataInput.addEventListener('change', () => {
+        if (retornoTemAlteracoesPendentes()) {
+            alert('Existem alterações não salvas. Clique em "Salvar" antes de trocar a data.');
+            dataInput.value = dataRetornoSelecionada;
+            return;
+        }
+
+        dataRetornoSelecionada = dataInput.value;
+        loadRetornos();
+    });
+
     // Configura o seletor de filial para usuários sem filial
     const filialUsuario = getCurrentUserFilial();
     const filialSelectorGroup = document.getElementById('filialSelectorGroup');
@@ -564,22 +584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         filialSelectorMobile.title = 'Filial definida no seu cadastro';
     }
 
-    // Define a data de hoje e carrega os dados
-    const dataInput = document.getElementById('dataRetornoMobile');
-    dataInput.value = getDataSaoPaulo();
-    let dataRetornoSelecionada = dataInput.value;
-
     // Listeners
-    dataInput.addEventListener('change', () => {
-        if (retornoTemAlteracoesPendentes()) {
-            alert('Existem alterações não salvas. Clique em "Salvar" antes de trocar a data.');
-            dataInput.value = dataRetornoSelecionada;
-            return;
-        }
-
-        dataRetornoSelecionada = dataInput.value;
-        loadRetornos();
-    });
     document.getElementById('buscaMobile').addEventListener('input', renderCards);
     document.getElementById('btnAdicionarRetornoMobile')?.addEventListener('click', openNewModal);
     document.querySelectorAll('[data-status-filter]').forEach(button => {
@@ -717,7 +722,7 @@ async function loadRetornos() {
         console.error("Erro ao carregar retornos:", err);
         container.innerHTML = `<div class="loading-placeholder" style="color: red;">Erro ao carregar dados.</div>`;
     }
-}}
+}
 
 function renderCards() {
     const container = document.getElementById('listaRetornoMobile');
