@@ -80,6 +80,10 @@ function getDevolucoesExtras(rowData) {
     return extras.map((item, index) => formatClienteExtra(item, index)).join('\n\n');
 }
 
+function hasSobraCaixas(item) {
+    return Boolean(item?.sobra_frances_diurno || item?.sobra_frances_noturno || item?.sobra_variedades || item?.sobra_obs);
+}
+
 function parseDevolucoesExtras(rowData) {
     if (rowData && typeof rowData === 'object' && rowData.devolucoes_extras) {
         try {
@@ -139,6 +143,7 @@ function criarHtmlClienteExtra(index, data = {}) {
                     <option value="DEVOLUÇÃO (DIVERGENCIA NA NF)" ${data.motivo === 'DEVOLUÇÃO (DIVERGENCIA NA NF)' ? 'selected' : ''}>DEVOLUÇÃO (DIVERGENCIA NA NF)</option>
                     <option value="TROCA" ${data.motivo === 'TROCA' ? 'selected' : ''}>TROCA</option>
                     <option value="FALTOU TEMPO HÁBIL" ${data.motivo === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
+                    <option value="OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)" ${data.motivo === 'OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)' ? 'selected' : ''}>OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)</option>
                 </select>
             </div>
             <div class="form-group form-group-full">
@@ -765,7 +770,7 @@ function renderCards() {
         const isOk = !!item.hora_mot; // Verifica se o horário do motorista já foi preenchido
         const statusClass = isOk ? 'status-ok' : '';
         const iconClass = isOk ? 'fa-check-circle' : 'fa-clock';
-        const hasDevolucoes = item.cliente1 || item.nf_dev1 || item.frances_diurno1 || item.frances_noturno1 || item.variedades1 || item.motivo1 || item.obs_nf_dev1 || getDevolucoesExtras(item);
+        const hasDevolucoes = item.cliente1 || item.nf_dev1 || item.frances_diurno1 || item.frances_noturno1 || item.variedades1 || item.motivo1 || item.obs_nf_dev1 || getDevolucoesExtras(item) || hasSobraCaixas(item);
         
         let lateClass = '';
         // Exemplo de lógica para definir 'lateClass' (pode ser ajustada conforme a regra de negócio)
@@ -911,6 +916,36 @@ function openDevolucoesModal() {
     nomeSupervisorSelect.value = currentItem.nome_supervisor || '';
     // --- END ---
 
+    // --- Aba Sobra (caixas sem cliente) — Motivo é sempre fixo "Sobra de Carga" ---
+    const tabSobra = document.getElementById('tab-sobra');
+    if (tabSobra) {
+        tabSobra.innerHTML = `
+            <h4>Sobra de Carga (sem cliente)</h4>
+            <div class="form-grid-2-cols">
+                <div class="form-group">
+                    <label>Francês Diurno</label>
+                    <input type="number" class="glass-input" data-field="sobra_frances_diurno" value="${currentItem.sobra_frances_diurno || ''}">
+                </div>
+                <div class="form-group">
+                    <label>Francês Noturno</label>
+                    <input type="number" class="glass-input" data-field="sobra_frances_noturno" value="${currentItem.sobra_frances_noturno || ''}">
+                </div>
+                <div class="form-group form-group-full">
+                    <label>Variedades</label>
+                    <input type="text" class="glass-input input-uppercase" data-field="sobra_variedades" value="${currentItem.sobra_variedades || ''}" placeholder="Texto livre...">
+                </div>
+                <div class="form-group">
+                    <label>Motivo</label>
+                    <input type="text" class="glass-input" value="Sobra de Carga" disabled>
+                </div>
+                <div class="form-group form-group-full">
+                    <label>Observação</label>
+                    <input type="text" class="glass-input input-uppercase" data-field="sobra_obs" value="${currentItem.sobra_obs || ''}">
+                </div>
+            </div>
+        `;
+    }
+
     for (let i = 1; i <= 4; i++) {
         const tabContent = document.getElementById(`tab-cliente-${i}`);
 
@@ -946,6 +981,7 @@ function openDevolucoesModal() {
                         <option value="DEVOLUÇÃO (DIVERGENCIA NA NF)" ${currentItem[`motivo${i}`] === 'DEVOLUÇÃO (DIVERGENCIA NA NF)' ? 'selected' : ''}>DEVOLUÇÃO (DIVERGENCIA NA NF)</option>
                         <option value="TROCA" ${currentItem[`motivo${i}`] === 'TROCA' ? 'selected' : ''}>TROCA</option>
                         <option value="FALTOU TEMPO HÁBIL" ${currentItem[`motivo${i}`] === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
+                        <option value="OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)" ${currentItem[`motivo${i}`] === 'OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)' ? 'selected' : ''}>OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)</option>
                     </select>
                 </div>
                 <div class="form-group form-group-full">
@@ -1094,6 +1130,12 @@ async function saveRetorno() {
         updateData[`obs_nf_dev${i}`] = currentItem[`obs_nf_dev${i}`] || null;
     }
 
+    // Sobra de Carga (sem cliente) — Motivo não é salvo, é sempre "Sobra de Carga" fixo
+    updateData.sobra_frances_diurno = parseNum(currentItem.sobra_frances_diurno);
+    updateData.sobra_frances_noturno = parseNum(currentItem.sobra_frances_noturno);
+    updateData.sobra_variedades = currentItem.sobra_variedades || null;
+    updateData.sobra_obs = currentItem.sobra_obs || null;
+
     try {
         let savedData = null;
         let saveError = null;
@@ -1159,6 +1201,15 @@ window.shareRetornoOnWhatsApp = function(itemId) {
     message += `*Rota:* ${item.rota || 'N/A'}\n`;
     message += `*Placa:* ${item.placa || 'N/A'}\n`;
     message += `*SUPERVISOR:* ${item.nome_supervisor || 'N/A'}\n`;
+
+    if (hasSobraCaixas(item)) {
+        message += `\n*SOBRA DE CARGA (sem cliente):*\n`;
+        message += `  *Francês Diurno:* ${item.sobra_frances_diurno || '0'}\n`;
+        message += `  *Francês Noturno:* ${item.sobra_frances_noturno || '0'}\n`;
+        message += `  *Variedades:* ${item.sobra_variedades || 'N/A'}\n`;
+        message += `  *Motivo:* Sobra de Carga\n`;
+        message += `  *Obs:* ${item.sobra_obs || 'N/A'}\n`;
+    }
 
     let hasAnyClientDevolution = false;
     for (let i = 1; i <= 4; i++) {
