@@ -295,7 +295,7 @@ function criarHtmlClienteExtra(index, data = {}) {
                 <input type="text" class="glass-input input-uppercase" data-extra-field="cliente" value="${data.cliente || ''}">
             </div>
             <div class="form-group">
-                <label>NF Devolvida</label>
+                <label>Nº NF Retornou</label>
                 <input type="text" class="glass-input" data-extra-field="nf_dev" value="${data.nf_dev || ''}">
             </div>
             <div class="form-group">
@@ -314,12 +314,11 @@ function criarHtmlClienteExtra(index, data = {}) {
                 <label>Motivo</label>
                 <select class="glass-input" data-extra-field="motivo">
                     <option value="" ${!data.motivo ? 'selected' : ''}>Selecione</option>
-                    <option value="AVARIA" ${data.motivo === 'AVARIA' ? 'selected' : ''}>AVARIA</option>
-                    <option value="DEVOLUCAO" ${data.motivo === 'DEVOLUCAO' ? 'selected' : ''}>DEVOLUCAO</option>
-                    <option value="FALTOU TEMPO HABIL" ${data.motivo === 'FALTOU TEMPO HABIL' ? 'selected' : ''}>FALTOU TEMPO HABIL</option>
-                    <option value="PRODUTO INVERTIDO" ${data.motivo === 'PRODUTO INVERTIDO' ? 'selected' : ''}>PRODUTO INVERTIDO</option>
-                    <option value="SOBROU CARGA" ${data.motivo === 'SOBROU CARGA' ? 'selected' : ''}>SOBROU CARGA</option>
+                    <option value="DEVOLUÇÃO (AVARIA)" ${data.motivo === 'DEVOLUÇÃO (AVARIA)' ? 'selected' : ''}>DEVOLUÇÃO (AVARIA)</option>
+                    <option value="DEVOLUÇÃO (PROD. INVERTIDO)" ${data.motivo === 'DEVOLUÇÃO (PROD. INVERTIDO)' ? 'selected' : ''}>DEVOLUÇÃO (PROD. INVERTIDO)</option>
+                    <option value="DEVOLUÇÃO (DIVERGENCIA NA NF)" ${data.motivo === 'DEVOLUÇÃO (DIVERGENCIA NA NF)' ? 'selected' : ''}>DEVOLUÇÃO (DIVERGENCIA NA NF)</option>
                     <option value="TROCA" ${data.motivo === 'TROCA' ? 'selected' : ''}>TROCA</option>
+                    <option value="FALTOU TEMPO HÁBIL" ${data.motivo === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
                 </select>
             </div>
             <div class="form-group form-group-full">
@@ -1196,7 +1195,7 @@ function renderGrid() {
             </td>
             <td>
                 <div class="cell-action-container">
-                    <button class="btn-modal-action btn-devolucoes" title="${devolucoesTooltip.trim()}"${disabledAttr}>Devoluções</button>
+                    <button class="btn-modal-action btn-devolucoes" title="${devolucoesTooltip.trim()}"${disabledAttr}>Produtos</button>
                     ${whatsappBreadIcon}
                 </div>
             </td>
@@ -1296,7 +1295,7 @@ function openDevolucoesModal(index) {
                     <input type="text" class="glass-input input-uppercase" data-field="cliente${i}" value="${rowData[`cliente${i}`] || ''}">
                 </div>
                 <div class="form-group">
-                    <label>NF Devolvida</label>
+                    <label>Nº NF Retornou</label>
                     <input type="text" class="glass-input" data-field="nf_dev${i}" value="${rowData[`nf_dev${i}`] || ''}">
                 </div>
                 <div class="form-group">
@@ -1315,12 +1314,11 @@ function openDevolucoesModal(index) {
                     <label>Motivo</label>
                     <select class="glass-input" data-field="motivo${i}">
                         <option value="" ${!rowData[`motivo${i}`] ? 'selected' : ''}>Selecione</option>
-                        <option value="AVARIA" ${rowData[`motivo${i}`] === 'AVARIA' ? 'selected' : ''}>AVARIA</option>
-                        <option value="DEVOLUÇÃO" ${rowData[`motivo${i}`] === 'DEVOLUÇÃO' ? 'selected' : ''}>DEVOLUÇÃO</option>
-                        <option value="FALTOU TEMPO HÁBIL" ${rowData[`motivo${i}`] === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
-                        <option value="PRODUTO INVERTIDO" ${rowData[`motivo${i}`] === 'PRODUTO INVERTIDO' ? 'selected' : ''}>PRODUTO INVERTIDO</option>
-                        <option value="SOBROU CARGA" ${rowData[`motivo${i}`] === 'SOBROU CARGA' ? 'selected' : ''}>SOBROU CARGA</option>
+                        <option value="DEVOLUÇÃO (AVARIA)" ${rowData[`motivo${i}`] === 'DEVOLUÇÃO (AVARIA)' ? 'selected' : ''}>DEVOLUÇÃO (AVARIA)</option>
+                        <option value="DEVOLUÇÃO (PROD. INVERTIDO)" ${rowData[`motivo${i}`] === 'DEVOLUÇÃO (PROD. INVERTIDO)' ? 'selected' : ''}>DEVOLUÇÃO (PROD. INVERTIDO)</option>
+                        <option value="DEVOLUÇÃO (DIVERGENCIA NA NF)" ${rowData[`motivo${i}`] === 'DEVOLUÇÃO (DIVERGENCIA NA NF)' ? 'selected' : ''}>DEVOLUÇÃO (DIVERGENCIA NA NF)</option>
                         <option value="TROCA" ${rowData[`motivo${i}`] === 'TROCA' ? 'selected' : ''}>TROCA</option>
+                        <option value="FALTOU TEMPO HÁBIL" ${rowData[`motivo${i}`] === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
                     </select>
                 </div>
 
