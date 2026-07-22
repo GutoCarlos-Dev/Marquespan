@@ -539,6 +539,19 @@ body.funcionario-somente-leitura .btn-delete-funcao {
     display: none !important;
 }
 
+/* adm_monitoramento: pode editar (só Contato Corporativo/Pessoal ficam habilitados no
+   formulário via JS), mas não inclui, exclui nem importa/exporta cadastro. */
+body.funcionario-acesso-contato #btnOpenFuncionarioModal,
+body.funcionario-acesso-contato #btnDownloadModeloImportacao,
+body.funcionario-acesso-contato #btnImportXLSX,
+body.funcionario-acesso-contato #btnAbrirCadastroFuncao,
+body.funcionario-acesso-contato #btnSalvarCadastroFuncao,
+body.funcionario-acesso-contato .btn-delete,
+body.funcionario-acesso-contato .btn-edit-funcao,
+body.funcionario-acesso-contato .btn-delete-funcao {
+    display: none !important;
+}
+
 /* Badges de Status */
 .status-badge {
     padding: 4px 8px;

@@ -208,7 +208,9 @@ const FuncionarioUI = {
     isAdministrador: false,
     isGerencia: false,
     isLiderBalanca: false,
+    isAdmMonitoramento: false,
     acessoTotal: false,
+    acessoContatoRestrito: false,
     funcoesFiltroDisponiveis: [],
     async init() {
         this.cache();
@@ -287,8 +289,12 @@ const FuncionarioUI = {
 
     aplicarPermissoesAcesso() {
         this.acessoTotal = this.usuarioTemAcessoTotal();
+        // adm_monitoramento: sem acesso total, mas pode editar Contato Corporativo/Pessoal
+        // dos colaboradores existentes - ver aplicarRestricaoCamposContato().
+        this.acessoContatoRestrito = !this.acessoTotal && this.isAdmMonitoramento;
         document.body.classList.toggle('funcionario-acesso-total', this.acessoTotal);
-        document.body.classList.toggle('funcionario-somente-leitura', !this.acessoTotal);
+        document.body.classList.toggle('funcionario-acesso-contato', this.acessoContatoRestrito);
+        document.body.classList.toggle('funcionario-somente-leitura', !this.acessoTotal && !this.acessoContatoRestrito);
 
         // Exceção pontual: gerencia_tmg tem acesso total, mas Baixar Modelo e Importar XLSX
         // ficam ocultos mesmo assim.
@@ -299,6 +305,20 @@ const FuncionarioUI = {
         }
 
         if (this.acessoTotal) return;
+
+        if (this.acessoContatoRestrito) {
+            [
+                this.btnOpenFuncionarioModal,
+                this.btnDownloadModeloImportacao,
+                this.btnImportXLSX,
+                this.btnAbrirCadastroFuncao,
+                this.btnSalvarCadastroFuncao
+            ].forEach(el => {
+                if (el) el.style.display = 'none';
+            });
+            if (this.funcDocumentosInput) this.funcDocumentosInput.disabled = true;
+            return;
+        }
 
         [
             this.btnOpenFuncionarioModal,
@@ -312,6 +332,17 @@ const FuncionarioUI = {
         });
 
         if (this.funcDocumentosInput) this.funcDocumentosInput.disabled = true;
+    },
+
+    // Trava todos os campos do formulário exceto Contato Corporativo/Pessoal - usado para o
+    // nível adm_monitoramento, que só pode atualizar esses dois campos de um colaborador existente.
+    aplicarRestricaoCamposContato() {
+        if (!this.form) return;
+        const permitidos = new Set(['funcContatoCorp', 'funcContatoPessoal', 'funcEditingId']);
+        this.form.querySelectorAll('input, select, textarea').forEach(el => {
+            el.disabled = !permitidos.has(el.id);
+        });
+        if (this.btnAbrirCadastroFuncao) this.btnAbrirCadastroFuncao.disabled = true;
     },
 
     // Adiciona o campo Data de Nascimento ao cache
@@ -510,7 +541,8 @@ const FuncionarioUI = {
                 // Visualizar funciona para qualquer usuario com acesso a pagina, mesmo em modo
                 // somente-leitura - so Editar/Excluir continuam exigindo acesso total.
                 if (viewButton?.dataset.id) this.loadForViewing(viewButton.dataset.id);
-                if (!this.acessoTotal && (editButton || deleteButton)) return;
+                if (!this.acessoTotal && !this.acessoContatoRestrito && (editButton || deleteButton)) return;
+                if (this.acessoContatoRestrito && deleteButton) return;
                 if (editButton?.dataset.id) this.loadForEditing(editButton.dataset.id);
                 if (deleteButton?.dataset.id) this.deleteFuncionario(deleteButton.dataset.id);
             });
@@ -538,6 +570,7 @@ const FuncionarioUI = {
         this.isGerencia = nivel === 'gerencia';
         this.isGerenciaTmg = nivel === 'gerencia_tmg';
         this.isLiderBalanca = nivel === 'lider_balanca';
+        this.isAdmMonitoramento = nivel === 'adm_monitoramento';
         this.acessoTotal = this.usuarioTemAcessoTotal();
 
         if (!nivel) {
@@ -607,7 +640,7 @@ const FuncionarioUI = {
 
     openFuncionarioModal(somenteLeitura = false) {
         if (!somenteLeitura) {
-            if (!this.acessoTotal) return;
+            if (!this.acessoTotal && !this.acessoContatoRestrito) return;
             if (this.bloquearSeSemFilialUsuario()) return;
         }
         if (!this.modalFuncionario) return;
@@ -1177,7 +1210,8 @@ const FuncionarioUI = {
 
     async handleFormSubmit(e) {
         e.preventDefault();
-        if (!this.acessoTotal) return;
+        if (!this.acessoTotal && !this.acessoContatoRestrito) return;
+        if (this.acessoContatoRestrito && !this.editingIdInput.value) return;
         if (this.bloquearSeSemFilialUsuario()) return;
 
         const rh = document.getElementById('funcRH').value;
@@ -1256,6 +1290,12 @@ const FuncionarioUI = {
             return;
         }
 
+        // adm_monitoramento só pode alterar Contato Corporativo/Pessoal - qualquer outro campo do
+        // payload é ignorado no salvamento, mesmo que o formulário tenha carregado o valor original.
+        const payloadParaSalvar = this.acessoContatoRestrito
+            ? { id: payload.id, contato_corp: payload.contato_corp, contato_pessoal: payload.contato_pessoal }
+            : payload;
+
         try {
             // Se temos um ID, o upsert resolve pelo ID (padrão). 
             // Se não temos, usamos o rh_registro para evitar duplicidade de matrícula.
@@ -1277,11 +1317,11 @@ const FuncionarioUI = {
                 return supabaseClient.from('funcionario').insert(insertPayload).select('id').single();
             };
 
-            let resultadoSalvamento = await salvarPayload(payload);
+            let resultadoSalvamento = await salvarPayload(payloadParaSalvar);
             let { data: funcionarioSalvo, error } = resultadoSalvamento;
             const erroCNHSchema = error && /cnh_|schema cache|column/i.test(String(error.message || error));
             if (erroCNHSchema && !temDadosCNH) {
-                const payloadSemCNH = { ...payload };
+                const payloadSemCNH = { ...payloadParaSalvar };
                 delete payloadSemCNH.cnh_numero;
                 delete payloadSemCNH.cnh_categoria;
                 delete payloadSemCNH.cnh_vencimento;
@@ -1290,7 +1330,7 @@ const FuncionarioUI = {
             }
             const erroEscalaAtivaSchema = error && /escala_ativa|schema cache|column/i.test(String(error.message || error));
             if (erroEscalaAtivaSchema) {
-                const payloadSemEscalaAtiva = { ...payload };
+                const payloadSemEscalaAtiva = { ...payloadParaSalvar };
                 delete payloadSemEscalaAtiva.escala_ativa;
                 if (erroCNHSchema && !temDadosCNH) {
                     delete payloadSemEscalaAtiva.cnh_numero;
@@ -1755,7 +1795,7 @@ const FuncionarioUI = {
     },
 
     async loadForEditing(id) {
-        if (!this.acessoTotal) return;
+        if (!this.acessoTotal && !this.acessoContatoRestrito) return;
         let query = supabaseClient.from('funcionario').select('*').eq('id', id);
         query = this.aplicarFiltroFilialRestrita(query);
         const { data: f } = await query.maybeSingle();
@@ -1766,6 +1806,7 @@ const FuncionarioUI = {
         }
         await this.preencherFormularioFuncionario(f);
         this.setFormReadOnly(false);
+        if (this.acessoContatoRestrito) this.aplicarRestricaoCamposContato();
         this.btnSubmit.textContent = 'Atualizar Registro';
         this.openFuncionarioModal();
     },
