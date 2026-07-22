@@ -147,8 +147,8 @@ function criarHtmlClienteExtra(index, data = {}) {
                 </select>
             </div>
             <div class="form-group form-group-full">
-                <label>Obs. NF Devolvida</label>
-                <input type="text" class="glass-input input-uppercase" data-extra-field="obs_nf_dev" value="${data.obs_nf_dev || ''}">
+                <label>OBS:</label>
+                <input type="text" class="glass-input input-uppercase" data-extra-field="obs_nf_dev" data-obs-motivo value="${data.obs_nf_dev || ''}">
             </div>
         </div>
         <button type="button" class="btn-remover-cliente-extra">Remover cliente</button>
@@ -170,6 +170,26 @@ function setupUppercaseInputs(modal) {
         input.oninput = () => {
             input.value = input.value.toUpperCase();
         };
+    });
+}
+
+// O campo OBS só aparece quando o Motivo do mesmo cliente for "OUTROS MOTIVOS (...)" —
+// nos demais motivos ele fica oculto (e limpo, pra não sobrar texto de um motivo antigo).
+function setupMotivoObsToggle(modal) {
+    modal.querySelectorAll('[data-obs-motivo]').forEach(obsInput => {
+        const obsGroup = obsInput.closest('.form-group');
+        const container = obsInput.closest('.form-grid-2-cols');
+        const motivoSelect = container?.querySelector('select[data-field^="motivo"], select[data-extra-field="motivo"]');
+        if (!motivoSelect) return;
+
+        const atualizar = () => {
+            const habilitado = motivoSelect.value === 'OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)';
+            if (obsGroup) obsGroup.style.display = habilitado ? '' : 'none';
+            obsInput.disabled = !habilitado;
+            if (!habilitado) obsInput.value = '';
+        };
+        motivoSelect.onchange = atualizar;
+        atualizar();
     });
 }
 
@@ -232,6 +252,7 @@ function adicionarClienteExtraModal(modal, data = {}) {
 
     setupDevolucoesTabHandlers(modal);
     setupUppercaseInputs(modal);
+    setupMotivoObsToggle(modal);
     tabButton.click();
 }
 
@@ -985,8 +1006,8 @@ function openDevolucoesModal() {
                     </select>
                 </div>
                 <div class="form-group form-group-full">
-                    <label>Obs. NF Devolvida</label>
-                    <input type="text" class="glass-input input-uppercase" data-field="obs_nf_dev${i}" value="${currentItem[`obs_nf_dev${i}`] || ''}">
+                    <label>OBS:</label>
+                    <input type="text" class="glass-input input-uppercase" data-field="obs_nf_dev${i}" data-obs-motivo value="${currentItem[`obs_nf_dev${i}`] || ''}">
                 </div>
             </div>
         `;
@@ -996,6 +1017,7 @@ function openDevolucoesModal() {
     renderClientesExtrasModal(modal, currentItem);
     setupDevolucoesTabHandlers(modal);
     setupUppercaseInputs(modal);
+    setupMotivoObsToggle(modal);
     // Ativa a primeira aba por padrão
     modal.querySelector('.tab-link').click();
 
