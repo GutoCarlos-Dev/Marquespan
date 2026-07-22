@@ -6,6 +6,8 @@ const RelatorioDespesasUI = {
         this.bindEvents();
         this.setDefaultDates();
         this.carregarFiliais();
+        // Funcionários iniciam sem filtro de filial (equivalente a "Todas")
+        this.carregarFuncionarios([]);
         // Garante que rotas sejam carregadas antes dos dados para mapear o supervisor
         this.carregarRotas().then(() => {
             this.carregarHoteis();
@@ -44,7 +46,11 @@ const RelatorioDespesasUI = {
         this.filtroHotelDisplay = document.getElementById('filtroHotelDisplay');
         this.filtroHotelOptions = document.getElementById('filtroHotelOptions');
         this.filtroHotelText = document.getElementById('filtroHotelText');
-        
+
+        this.filtroFuncionarioDisplay = document.getElementById('filtroFuncionarioDisplay');
+        this.filtroFuncionarioOptions = document.getElementById('filtroFuncionarioOptions');
+        this.filtroFuncionarioText = document.getElementById('filtroFuncionarioText');
+
         // Injeta o HTML do filtro de supervisor se não existir
         this.injectSupervisorFilterHTML();
         this.filtroSupervisorDisplay = document.getElementById('filtroSupervisorDisplay');
@@ -118,6 +124,10 @@ const RelatorioDespesasUI = {
 
             this.filtroFilialOptions.addEventListener('change', () => {
                 this.atualizarTextoFilial();
+                // A lista de Funcionários depende da(s) Filial(is) selecionada(s) — recarrega
+                // (sem nenhuma filial marcada = "Todas", busca funcionários de todas as filiais).
+                const filiaisSelecionadas = Array.from(this.filtroFilialOptions.querySelectorAll('.filial-checkbox:checked')).map(cb => cb.value);
+                this.carregarFuncionarios(filiaisSelecionadas);
             });
         }
 
@@ -154,6 +164,24 @@ const RelatorioDespesasUI = {
 
             this.filtroHotelOptions.addEventListener('change', () => {
                 this.atualizarTextoHotel();
+            });
+        }
+
+        // Eventos do Multiselect de Funcionários
+        if (this.filtroFuncionarioDisplay) {
+            this.filtroFuncionarioDisplay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.filtroFuncionarioOptions.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!this.filtroFuncionarioDisplay.contains(e.target) && !this.filtroFuncionarioOptions.contains(e.target)) {
+                    this.filtroFuncionarioOptions.classList.add('hidden');
+                }
+            });
+
+            this.filtroFuncionarioOptions.addEventListener('change', () => {
+                this.atualizarTextoFuncionario();
             });
         }
 
@@ -404,6 +432,84 @@ const RelatorioDespesasUI = {
         }
     },
 
+    // Carrega a lista de Funcionários filtrada pela(s) Filial(is) selecionada(s) no filtro de
+    // Filial. Sem nenhuma filial marcada ("Todas"), busca funcionários de todas as filiais.
+    async carregarFuncionarios(filiaisSelecionadas = []) {
+        if (!this.filtroFuncionarioOptions) return;
+
+        try {
+            let query = supabaseClient
+                .from('funcionario')
+                .select('id, nome_completo, filial')
+                .order('nome_completo', { ascending: true });
+
+            if (filiaisSelecionadas.length > 0) {
+                query = query.in('filial', filiaisSelecionadas);
+            }
+
+            const { data: funcionarios, error } = await query;
+            if (error) throw error;
+
+            this.popularFiltroFuncionario(funcionarios || []);
+        } catch (err) {
+            console.error('Erro ao carregar funcionários:', err);
+        }
+    },
+
+    popularFiltroFuncionario(funcionarios) {
+        if (!this.filtroFuncionarioOptions) return;
+
+        // Preserva quem já estava selecionado (por id), caso ainda esteja na nova lista
+        const selecionadosAnteriores = new Set(
+            Array.from(this.filtroFuncionarioOptions.querySelectorAll('.funcionario-checkbox:checked')).map(cb => cb.value)
+        );
+
+        this.filtroFuncionarioOptions.innerHTML = '';
+
+        const stickyContainer = document.createElement('div');
+        stickyContainer.style.cssText = 'position: sticky; top: 0; background: white; z-index: 20; border-bottom: 1px solid #eee;';
+
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Buscar funcionário...';
+        searchInput.style.cssText = 'width: 100%; padding: 10px; border: none; border-bottom: 1px solid #eee; outline: none; box-sizing: border-box;';
+        searchInput.onclick = (e) => e.stopPropagation();
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const options = this.filtroFuncionarioOptions.querySelectorAll('label.custom-option');
+            options.forEach(opt => {
+                const text = opt.textContent.toLowerCase();
+                opt.style.display = text.includes(term) ? 'block' : 'none';
+            });
+        });
+        stickyContainer.appendChild(searchInput);
+
+        const btnLimpar = document.createElement('div');
+        btnLimpar.className = 'custom-option';
+        btnLimpar.style.cssText = 'color: #dc3545; font-weight: bold; text-align: center; cursor: pointer;';
+        btnLimpar.textContent = 'Limpar Seleção';
+        btnLimpar.onclick = (e) => {
+            e.stopPropagation();
+            this.filtroFuncionarioOptions.querySelectorAll('.funcionario-checkbox').forEach(cb => cb.checked = false);
+            this.atualizarTextoFuncionario();
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+        };
+        stickyContainer.appendChild(btnLimpar);
+
+        this.filtroFuncionarioOptions.appendChild(stickyContainer);
+
+        funcionarios.forEach(f => {
+            const label = document.createElement('label');
+            label.className = 'custom-option';
+            const marcado = selecionadosAnteriores.has(String(f.id)) ? 'checked' : '';
+            label.innerHTML = `<input type="checkbox" class="funcionario-checkbox" value="${f.id}" style="margin-right: 8px;" ${marcado}> ${f.nome_completo}`;
+            this.filtroFuncionarioOptions.appendChild(label);
+        });
+
+        this.atualizarTextoFuncionario();
+    },
+
     popularFiltroSupervisor(supervisores) {
         if (!this.filtroSupervisorOptions) return;
         this.filtroSupervisorOptions.innerHTML = '';
@@ -491,6 +597,19 @@ const RelatorioDespesasUI = {
         }
     },
 
+    atualizarTextoFuncionario() {
+        const checkboxes = this.filtroFuncionarioOptions.querySelectorAll('.funcionario-checkbox:checked');
+        const selecionados = Array.from(checkboxes).map(cb => cb.parentElement.textContent.trim());
+
+        if (selecionados.length === 0) {
+            this.filtroFuncionarioText.textContent = 'Todos';
+        } else if (selecionados.length <= 2) {
+            this.filtroFuncionarioText.textContent = selecionados.join(', ');
+        } else {
+            this.filtroFuncionarioText.textContent = `${selecionados.length} selecionados`;
+        }
+    },
+
     atualizarTextoSupervisor() {
         const checkboxes = this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox:checked');
         const selecionados = Array.from(checkboxes).map(cb => cb.value);
@@ -509,11 +628,16 @@ const RelatorioDespesasUI = {
         this.filtroRotaOptions?.querySelectorAll('.rota-checkbox').forEach(cb => cb.checked = false);
         this.filtroSupervisorOptions?.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = false);
         this.filtroHotelOptions?.querySelectorAll('.hotel-checkbox').forEach(cb => cb.checked = false);
+        this.filtroFuncionarioOptions?.querySelectorAll('.funcionario-checkbox').forEach(cb => cb.checked = false);
 
         this.atualizarTextoFilial();
         this.atualizarTextoRota();
         this.atualizarTextoSupervisor();
         this.atualizarTextoHotel();
+        this.atualizarTextoFuncionario();
+
+        // Filial voltou a "Todas" -> recarrega a lista de Funcionários sem restrição de filial.
+        this.carregarFuncionarios([]);
     },
 
     formatDateTime(value) {
@@ -532,6 +656,7 @@ const RelatorioDespesasUI = {
             const rotasSelecionadas = Array.from(this.filtroRotaOptions.querySelectorAll('.rota-checkbox:checked')).map(cb => cb.value);
             const supervisoresSelecionados = Array.from(this.filtroSupervisorOptions.querySelectorAll('.supervisor-checkbox:checked')).map(cb => cb.value);
             const hoteisSelecionados = Array.from(this.filtroHotelOptions.querySelectorAll('.hotel-checkbox:checked')).map(cb => cb.value);
+            const funcionariosSelecionados = Array.from(this.filtroFuncionarioOptions.querySelectorAll('.funcionario-checkbox:checked')).map(cb => cb.value);
 
             if (filiaisSelecionadas.length > 0 && !this.filtroFilialDisponivel) {
                 alert('O filtro por Filial precisa da coluna filial na tabela despesas. Execute a migration supabase/2026-07-10_add_filial_despesas.sql no Supabase.');
@@ -588,6 +713,12 @@ const RelatorioDespesasUI = {
                 // Filtro de Hotéis
                 if (hoteisSelecionados.length > 0) {
                     query = query.in('id_hotel', hoteisSelecionados);
+                }
+
+                // Filtro de Funcionários (bate se aparecer como funcionario1 OU funcionario2 na despesa)
+                if (funcionariosSelecionados.length > 0) {
+                    const orFuncionario = `id_funcionario1.in.(${funcionariosSelecionados.join(',')}),id_funcionario2.in.(${funcionariosSelecionados.join(',')})`;
+                    query = query.or(orFuncionario);
                 }
 
                 const { data, error } = await query;
