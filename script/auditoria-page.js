@@ -165,6 +165,7 @@ function getFiltros() {
         dataInicio: document.getElementById('filtroDataInicio').value,
         dataFim:    document.getElementById('filtroDataFim').value,
         usuario:    document.getElementById('filtroUsuario').value.trim(),
+        filial:     document.getElementById('filtroFilial').value,
         modulo:     document.getElementById('filtroModulo').value,
         acao:       document.getElementById('filtroAcao').value,
     };
@@ -174,9 +175,26 @@ function buildQuery(base, f) {
     if (f.dataInicio) base = base.gte('timestamp', f.dataInicio + 'T00:00:00-03:00');
     if (f.dataFim)    base = base.lte('timestamp', f.dataFim   + 'T23:59:59-03:00');
     if (f.usuario)    base = base.ilike('usuario_nome', `%${f.usuario}%`);
+    if (f.filial)     base = base.eq('filial', f.filial);
     if (f.modulo)     base = base.eq('modulo', f.modulo);
     if (f.acao)       base = base.eq('acao', f.acao);
     return base;
+}
+
+async function carregarFiliaisFiltro() {
+    const select = document.getElementById('filtroFilial');
+    if (!select) return;
+    try {
+        const { data, error } = await supabaseClient.from('filiais').select('nome, sigla').order('nome');
+        if (error) throw error;
+        data?.forEach(f => {
+            const valor = f.sigla || f.nome;
+            const rotulo = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+            select.appendChild(new Option(rotulo, valor));
+        });
+    } catch (err) {
+        console.error('[Auditoria] Erro ao carregar filiais:', err);
+    }
 }
 
 function aplicarOrdenacao(base) {
@@ -346,7 +364,7 @@ window.limparFiltros = function () {
     ['filtroDataInicio', 'filtroDataFim', 'filtroUsuario'].forEach(id => {
         document.getElementById(id).value = '';
     });
-    ['filtroModulo', 'filtroAcao'].forEach(id => {
+    ['filtroFilial', 'filtroModulo', 'filtroAcao'].forEach(id => {
         document.getElementById(id).value = '';
     });
     filtrosAtivos = null;
@@ -398,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     configurarOrdenacaoGrid();
     carregarStatsHoje();
     carregarContadorTotal();
+    carregarFiliaisFiltro();
     mostrarEstadoInicial();
 
     // Enter nos campos de texto/data dispara a busca (ação explícita do usuário)
