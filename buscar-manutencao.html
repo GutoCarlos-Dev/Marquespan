@@ -12,7 +12,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  
+  <!-- Chart.js para os gráficos do modo Consolidado -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 <body>
 
@@ -56,6 +58,12 @@
                 <label for="veiculo">Veículo</label>
                 <input type="text" id="veiculo" list="listaPlacas" placeholder="Buscar...">
                 <datalist id="listaPlacas"></datalist>
+            </div>
+            <div class="form-group-filter">
+                <label for="tipoVeiculoFiltro">Tipo de Veículo</label>
+                <select id="tipoVeiculoFiltro">
+                    <option value="">Todos</option>
+                </select>
             </div>
             <div class="form-group-filter">
                 <label for="titulo">Título</label>
@@ -108,8 +116,12 @@
     <section class="glass-panel">
         <div class="resumo-header">
             <h3><i class="fas fa-list"></i> Resultados</h3>
+            <div class="modo-visualizacao-toggle" role="group" aria-label="Modo de visualização">
+                <button type="button" class="modo-btn active" data-modo="detalhado" id="btnModoDetalhado">Detalhado</button>
+                <button type="button" class="modo-btn" data-modo="consolidado" id="btnModoConsolidado">Consolidado</button>
+            </div>
             <div class="resumo-valores" style="display: flex; align-items: center; gap: 15px;">
-                <input type="text" id="searchResultadosLocal" placeholder="🔍 Filtrar placa ou descrição..." class="glass-input" style="width: 250px; margin-bottom: 0;">
+                <input type="text" id="searchResultadosLocal" placeholder="🔍 Filtrar placa, tipo, fornecedor ou descrição..." class="glass-input" style="width: 280px; margin-bottom: 0;">
                 <strong>Registros:</strong> <span id="totalRegistros">0</span> |
                 <strong>Total:</strong> R$ <span id="valorTotal">0,00</span>
             </div>
@@ -130,6 +142,35 @@
             <div class="pagination-controls">
                 <button type="button" id="btnPrevPage" class="btn-glass btn-sm"><i class="fas fa-chevron-left"></i> Anterior</button>
                 <button type="button" id="btnNextPage" class="btn-glass btn-sm">Próximo <i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Gráficos do modo Consolidado (mesmo tamanho/carrossel de monitoramento.html) -->
+        <div id="graficosConsolidadoWrapper" class="hidden" style="margin-top: 20px;">
+            <h3 style="margin-bottom: 10px;"><i class="fas fa-chart-bar"></i> Gráficos - Consolidado</h3>
+            <div class="marquee-wrapper" id="graficosMarqueeWrapper">
+                <div class="marquee-track" id="graficosMarqueeTrack">
+                    <div class="chart-container glass-panel marquee-item">
+                        <h3><i class="fas fa-truck"></i> Top 10 Veículos por Custo</h3>
+                        <div class="chart-wrapper"><canvas id="chartConsolidadoVeiculoValor"></canvas></div>
+                    </div>
+                    <div class="chart-container glass-panel marquee-item">
+                        <h3><i class="fas fa-building"></i> Top 10 Fornecedores por Custo</h3>
+                        <div class="chart-wrapper"><canvas id="chartConsolidadoFornecedorValor"></canvas></div>
+                    </div>
+                    <div class="chart-container glass-panel marquee-item">
+                        <h3><i class="fas fa-chart-pie"></i> Distribuição de Custo por Tipo de Veículo</h3>
+                        <div class="chart-wrapper"><canvas id="chartConsolidadoTipo"></canvas></div>
+                    </div>
+                    <div class="chart-container glass-panel marquee-item">
+                        <h3><i class="fas fa-list-ol"></i> Top 10 Veículos por Quantidade</h3>
+                        <div class="chart-wrapper"><canvas id="chartConsolidadoVeiculoQtd"></canvas></div>
+                    </div>
+                    <div class="chart-container glass-panel marquee-item">
+                        <h3><i class="fas fa-list-ol"></i> Top 10 Fornecedores por Quantidade</h3>
+                        <div class="chart-wrapper"><canvas id="chartConsolidadoFornecedorQtd"></canvas></div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>

@@ -494,6 +494,37 @@ td.col-acoes-fixed {
     border: 1px solid #c3e6cb;
 }
 
+.modo-visualizacao-toggle {
+    display: flex;
+    background: #eef1f0;
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+}
+
+.modo-visualizacao-toggle .modo-btn {
+    border: none;
+    background: transparent;
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.modo-visualizacao-toggle .modo-btn:hover {
+    color: #006937;
+}
+
+.modo-visualizacao-toggle .modo-btn.active {
+    background: #006937;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
 /* Estilos para o Modal de Visualização */
 .view-grid {
     display: grid;
@@ -571,4 +602,46 @@ td.col-acoes-fixed {
 .data-grid thead th.col-acoes-fixed {
     right: 0;
     z-index: 5;
+}
+
+/* Gráficos do modo Consolidado — mesmo tamanho/carrossel de monitoramento.html */
+.chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.chart-container h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 350px;
+    width: 100%;
+}
+
+.marquee-wrapper {
+    width: 100%;
+    overflow-x: hidden;
+    padding: 10px 0;
+    margin-top: 20px;
+    position: relative;
+}
+
+.marquee-track {
+    display: flex;
+    gap: 20px;
+    width: max-content;
+}
+
+.marquee-item {
+    min-width: 450px;
+    flex: 0 0 auto;
 }

@@ -5,6 +5,17 @@ import { registrarAuditoria } from './auditoria-utils.js';
 let dadosExportacao = [];
 let todosRegistros = []; // Armazena todos os registros buscados
 let currentSort = { column: 'data', direction: 'desc' };
+let modoVisualizacao = 'detalhado'; // 'detalhado' | 'consolidado'
+let currentSortConsolidado = { column: 'valorTotal', direction: 'desc' };
+const COLUNAS_CONSOLIDADO = [
+  { key: 'veiculo', label: 'Placa' },
+  { key: 'tipo', label: 'Tipo de Veículo' },
+  { key: 'fornecedor', label: 'Fornecedor' },
+  { key: 'qtd', label: 'Qtd. Manutenções' },
+  { key: 'valorTotal', label: 'Valor Total' }
+];
+let chartsConsolidado = {};
+let rolagemGraficosIniciada = false;
 let arquivosParaUpload = [];
 let arquivosExistentes = [];
 let arquivosParaDeletar = [];
@@ -212,7 +223,16 @@ function toggleMenuLateralManutencao() {
   }
 }
 
+// Mesma lista fixa usada no cadastro de veículos (script/veiculos.js).
+const TIPOS_VEICULO = ['CAMINHÃO 3/4', 'BITREM', 'BITRUCK', 'HR/VAN', 'LS', 'MUNCK', 'SEMI-REBOQUE', 'TRUCK', 'EMPILHADEIRA', 'GERADOR'];
+
 async function carregarFiltros() {
+  const selectTipoVeiculo = document.getElementById('tipoVeiculoFiltro');
+  if (selectTipoVeiculo) {
+    selectTipoVeiculo.innerHTML = '<option value="">Todos</option>'
+      + TIPOS_VEICULO.map(t => `<option value="${t}">${t}</option>`).join('');
+  }
+
   const [titulos, filiais, fornecedores] = await Promise.all([
     supabaseClient.from('titulo_manutencao').select('titulo').order('titulo'),
     supabaseClient.from('filiais').select('nome, sigla').order('nome'),
@@ -273,6 +293,7 @@ function getFiltrosBuscaAtual() {
     dataFinal: document.getElementById('dataFinal')?.value || '',
     filial: document.getElementById('filial')?.value || '',
     tipoManutencao: document.getElementById('tipoManutencao')?.value || '',
+    tipoVeiculoFiltro: document.getElementById('tipoVeiculoFiltro')?.value || '',
     veiculo: document.getElementById('veiculo')?.value || '',
     titulo: document.getElementById('titulo')?.value || '',
     fornecedor: document.getElementById('fornecedor')?.value || '',
@@ -318,6 +339,7 @@ async function restaurarBuscaAposEdicao() {
     aplicarValorCampo('dataFinal', filtros.dataFinal);
     aplicarValorCampo('filial', filtros.filial);
     aplicarValorCampo('tipoManutencao', filtros.tipoManutencao);
+    aplicarValorCampo('tipoVeiculoFiltro', filtros.tipoVeiculoFiltro);
     aplicarValorCampo('veiculo', filtros.veiculo);
     aplicarValorCampo('titulo', filtros.titulo);
     aplicarValorCampo('fornecedor', filtros.fornecedor);
@@ -352,13 +374,35 @@ async function buscarManutencao() {
     veiculo: document.getElementById('veiculo').value,
     filial: document.getElementById('filial').value,
     tipo: document.getElementById('tipoManutencao').value,
+    tipoVeiculo: document.getElementById('tipoVeiculoFiltro').value,
     fornecedor: document.getElementById('fornecedor').value,
     status: document.getElementById('status').value
   };
 
+  // Tipo do Veículo (ex: TRUCK, CAMINHÃO 3/4...) vem do cadastro de veículos, não da tabela
+  // de manutenção — por isso resolvemos aqui as placas correspondentes ANTES da busca, pra
+  // poder filtrar a query principal por elas. O mesmo mapa é reaproveitado depois pra
+  // enriquecer os registros (usado no modo Consolidado).
+  const tiposPorPlaca = await fetchTiposVeiculoPorPlaca();
+  let placasFiltroTipoVeiculo = null;
+  if (filtros.tipoVeiculo) {
+    placasFiltroTipoVeiculo = Array.from(tiposPorPlaca.entries())
+      .filter(([, tipo]) => tipo === filtros.tipoVeiculo)
+      .map(([placa]) => placa);
+
+    if (placasFiltroTipoVeiculo.length === 0) {
+      alert('Nenhum veículo cadastrado com esse Tipo de Veículo.');
+      document.getElementById('tabelaResultados').innerHTML = '';
+      document.getElementById('totalRegistros').textContent = '0';
+      document.getElementById('valorTotal').textContent = '0,00';
+      document.getElementById('paginationContainer').classList.add('hidden');
+      return;
+    }
+  }
+
   // 1. Primeiro, obter a contagem total para avisar o usuário
   let countQuery = supabaseClient.from('manutencao').select('*', { count: 'exact', head: true });
-  countQuery = aplicarFiltrosQuery(countQuery, filtros);
+  countQuery = aplicarFiltrosQuery(countQuery, filtros, placasFiltroTipoVeiculo);
 
   const { count, error: countError } = await countQuery;
   
@@ -385,7 +429,7 @@ async function buscarManutencao() {
   const step = 1000; // Limite do Supabase por requisição
   for (let i = 0; i < count; i += step) {
       let query = supabaseClient.from('manutencao').select('*');
-      query = aplicarFiltrosQuery(query, filtros);
+      query = aplicarFiltrosQuery(query, filtros, placasFiltroTipoVeiculo);
       query = query.order('data', { ascending: false });
       query = query.range(i, i + step - 1);
 
@@ -413,7 +457,7 @@ async function buscarManutencao() {
 
   // Buscar os valores dos itens para todas as manutenções encontradas
   const manutencaoIds = manutencoes.map(m => m.id);
-  
+
   // Busca itens em lotes para evitar erro de URL muito longa
   const itens = await fetchItensEmLotes(manutencaoIds);
 
@@ -432,7 +476,8 @@ async function buscarManutencao() {
     // Se não tiver valor nos itens, tenta usar o valor salvo no cabeçalho (NFE + NFSE)
     const totalCabecalho = (m.valorNfe || 0) + (m.valorNfse || 0);
     const valorFinal = totalCabecalho > 0 ? totalCabecalho : totalItens;
-    return { ...m, valor: valorFinal };
+    const tipoVeiculo = tiposPorPlaca.get(String(m.veiculo || '').trim().toUpperCase()) || 'NÃO INFORMADO';
+    return { ...m, valor: valorFinal, tipoVeiculo };
   });
 
   dadosExportacao = manutencoesComValor;
@@ -443,14 +488,22 @@ async function buscarManutencao() {
 }
 
 function filtrarERenderizarTabela() {
+    if (modoVisualizacao === 'consolidado') {
+        renderizarConsolidado();
+    } else {
+        renderizarDetalhado();
+    }
+}
+
+function renderizarDetalhado() {
     const searchTerm = document.getElementById('searchResultadosLocal')?.value.toLowerCase() || '';
-    
+
     // 1. Filtragem Local (Placa, Fornecedor, Descrição e OS)
-    let filtrados = todosRegistros.filter(m => 
+    let filtrados = todosRegistros.filter(m =>
         (m.usuario || '').toLowerCase().includes(searchTerm) ||
         (m.veiculo || '').toLowerCase().includes(searchTerm) ||
         (m.titulo || '').toLowerCase().includes(searchTerm) ||
-        (m.fornecedor || '').toLowerCase().includes(searchTerm) || 
+        (m.fornecedor || '').toLowerCase().includes(searchTerm) ||
         (m.descricao || '').toLowerCase().includes(searchTerm) ||
         (m.numeroOS || '').toLowerCase().includes(searchTerm) ||
         (m.notaFiscal || '').toLowerCase().includes(searchTerm) ||
@@ -488,7 +541,240 @@ function filtrarERenderizarTabela() {
     updateSortIcons();
 }
 
-function aplicarFiltrosQuery(query, filtros) {
+// Agrupa os registros detalhados por Veículo + Tipo de Veículo + Fornecedor, somando quantidade e valor.
+// "Tipo" aqui é o tipo do veículo (TRUCK, CAMINHÃO 3/4 etc.), não o tipo de manutenção.
+function consolidarRegistros(registros) {
+    const grupos = new Map();
+    registros.forEach(m => {
+        const veiculo = m.veiculo || '-';
+        const tipo = m.tipoVeiculo || '-';
+        const fornecedor = m.fornecedor || '-';
+        const chave = `${veiculo.toUpperCase()}|${tipo.toUpperCase()}|${fornecedor.toUpperCase()}`;
+
+        if (!grupos.has(chave)) {
+            grupos.set(chave, { veiculo, tipo, fornecedor, qtd: 0, valorTotal: 0 });
+        }
+        const g = grupos.get(chave);
+        g.qtd += 1;
+        g.valorTotal += (m.valor || 0);
+    });
+    return Array.from(grupos.values());
+}
+
+function renderizarConsolidado() {
+    const searchTerm = document.getElementById('searchResultadosLocal')?.value.toLowerCase() || '';
+
+    // Filtra os registros de origem por Placa/Tipo de Veículo/Fornecedor antes de agrupar
+    const base = todosRegistros.filter(m =>
+        (m.veiculo || '').toLowerCase().includes(searchTerm) ||
+        (m.tipoVeiculo || '').toLowerCase().includes(searchTerm) ||
+        (m.fornecedor || '').toLowerCase().includes(searchTerm)
+    );
+
+    const grupos = consolidarRegistros(base);
+
+    const { column, direction } = currentSortConsolidado;
+    const factor = direction === 'asc' ? 1 : -1;
+    grupos.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+        if (typeof valA === 'string') {
+            valA = valA.toLowerCase();
+            valB = (valB || '').toLowerCase();
+        }
+        if (valA < valB) return -1 * factor;
+        if (valA > valB) return 1 * factor;
+        return 0;
+    });
+
+    const valorTotalFiltrado = grupos.reduce((acc, g) => acc + (g.valorTotal || 0), 0);
+    document.getElementById('totalRegistros').textContent = grupos.length;
+    document.getElementById('valorTotal').textContent = formatarValor(valorTotalFiltrado);
+
+    preencherTabelaConsolidado(grupos);
+    updateSortIconsConsolidado();
+    renderizarGraficosConsolidado(grupos);
+}
+
+// 📊 Gráficos do modo Consolidado — mesmo tamanho/carrossel de monitoramento.html
+function renderizarGraficosConsolidado(grupos) {
+    const wrapper = document.getElementById('graficosConsolidadoWrapper');
+    if (!wrapper) return;
+
+    if (typeof Chart === 'undefined' || !grupos.length) {
+        wrapper.classList.add('hidden');
+        return;
+    }
+    wrapper.classList.remove('hidden');
+
+    const porVeiculo = {};
+    const porFornecedor = {};
+    const porTipo = {};
+
+    grupos.forEach(g => {
+        porVeiculo[g.veiculo] = porVeiculo[g.veiculo] || { qtd: 0, valor: 0 };
+        porVeiculo[g.veiculo].qtd += g.qtd;
+        porVeiculo[g.veiculo].valor += g.valorTotal;
+
+        porFornecedor[g.fornecedor] = porFornecedor[g.fornecedor] || { qtd: 0, valor: 0 };
+        porFornecedor[g.fornecedor].qtd += g.qtd;
+        porFornecedor[g.fornecedor].valor += g.valorTotal;
+
+        porTipo[g.tipo] = (porTipo[g.tipo] || 0) + g.valorTotal;
+    });
+
+    const top10 = (obj, campo) => Object.entries(obj)
+        .sort((a, b) => b[1][campo] - a[1][campo])
+        .slice(0, 10);
+
+    const topVeiculoValor = top10(porVeiculo, 'valor');
+    const topFornecedorValor = top10(porFornecedor, 'valor');
+    const topVeiculoQtd = top10(porVeiculo, 'qtd');
+    const topFornecedorQtd = top10(porFornecedor, 'qtd');
+
+    criarGraficoConsolidado('chartConsolidadoVeiculoValor', 'bar', topVeiculoValor.map(([k]) => k), topVeiculoValor.map(([, v]) => v.valor), 'Custo Total (R$)');
+    criarGraficoConsolidado('chartConsolidadoFornecedorValor', 'bar', topFornecedorValor.map(([k]) => k), topFornecedorValor.map(([, v]) => v.valor), 'Custo Total (R$)');
+    criarGraficoConsolidado('chartConsolidadoTipo', 'doughnut', Object.keys(porTipo), Object.values(porTipo), 'Custo por Tipo de Veículo');
+    criarGraficoConsolidado('chartConsolidadoVeiculoQtd', 'bar', topVeiculoQtd.map(([k]) => k), topVeiculoQtd.map(([, v]) => v.qtd), 'Qtd. Manutenções');
+    criarGraficoConsolidado('chartConsolidadoFornecedorQtd', 'bar', topFornecedorQtd.map(([k]) => k), topFornecedorQtd.map(([, v]) => v.qtd), 'Qtd. Manutenções');
+
+    if (!rolagemGraficosIniciada) {
+        rolagemGraficosIniciada = true;
+        requestAnimationFrame(iniciarRolagemAutomaticaGraficos);
+    }
+}
+
+function criarGraficoConsolidado(canvasId, type, labels, values, label) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    if (chartsConsolidado[canvasId]) {
+        chartsConsolidado[canvasId].destroy();
+    }
+
+    chartsConsolidado[canvasId] = new Chart(canvas.getContext('2d'), {
+        type,
+        data: {
+            labels,
+            datasets: [{
+                label,
+                data: values,
+                backgroundColor: ['#006937', '#28a745', '#007bff', '#17a2b8', '#ffc107', '#dc3545', '#6c757d', '#fd7e14', '#6610f2', '#20c997'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: type === 'doughnut' } }
+        }
+    });
+}
+
+// Rolagem automática horizontal do carrossel de gráficos (vai e volta) — mesmo padrão de monitoramento.js
+function iniciarRolagemAutomaticaGraficos() {
+    const wrapper = document.getElementById('graficosMarqueeWrapper');
+    if (!wrapper) return;
+
+    let direction = 1;
+    const speed = 1;
+
+    function step() {
+        if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1) {
+            direction = -1;
+        } else if (wrapper.scrollLeft <= 0) {
+            direction = 1;
+        }
+        wrapper.scrollLeft += speed * direction;
+        requestAnimationFrame(step);
+    }
+
+    requestAnimationFrame(step);
+
+    wrapper.addEventListener('mouseenter', () => direction = 0);
+    wrapper.addEventListener('mouseleave', () => {
+        if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 10) direction = -1;
+        else direction = 1;
+    });
+}
+
+function handleSortConsolidado(column) {
+    if (currentSortConsolidado.column === column) {
+        currentSortConsolidado.direction = currentSortConsolidado.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortConsolidado.column = column;
+        currentSortConsolidado.direction = (column === 'valorTotal' || column === 'qtd') ? 'desc' : 'asc';
+    }
+    filtrarERenderizarTabela();
+}
+
+function updateSortIconsConsolidado() {
+    document.querySelectorAll('#cabecalhoResultados th.sortable .sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort';
+        const th = icon.closest('th');
+        if (th.dataset.sort === currentSortConsolidado.column) {
+            icon.className = currentSortConsolidado.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        }
+    });
+}
+
+function renderCabecalhoConsolidado() {
+    const cabecalho = document.getElementById('cabecalhoResultados');
+    if (!cabecalho) return;
+
+    cabecalho.innerHTML = COLUNAS_CONSOLIDADO.map(col => `
+        <th class="sortable" data-sort="${col.key}">
+            <span>${col.label}</span>
+            <i class="fas fa-sort sort-icon"></i>
+        </th>
+    `).join('');
+
+    cabecalho.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => handleSortConsolidado(th.dataset.sort));
+    });
+
+    updateSortIconsConsolidado();
+}
+
+function preencherTabelaConsolidado(grupos) {
+    const tabela = document.getElementById('tabelaResultados');
+    tabela.innerHTML = '';
+
+    if (!grupos.length) {
+        tabela.innerHTML = `<tr><td colspan="${COLUNAS_CONSOLIDADO.length}" style="text-align:center; padding: 20px; color:#888;">Nenhum registro encontrado.</td></tr>`;
+        return;
+    }
+
+    grupos.forEach(g => {
+        const linha = document.createElement('tr');
+        linha.innerHTML = `
+            <td>${escapeHTML(g.veiculo)}</td>
+            <td>${escapeHTML(g.tipo)}</td>
+            <td>${escapeHTML(g.fornecedor)}</td>
+            <td style="text-align:center;">${g.qtd}</td>
+            <td class="col-valor">R$ ${formatarValor(g.valorTotal)}</td>
+        `;
+        tabela.appendChild(linha);
+    });
+}
+
+function alternarModoVisualizacao(modo) {
+    if (modoVisualizacao === modo) return;
+    modoVisualizacao = modo;
+
+    document.getElementById('btnModoDetalhado')?.classList.toggle('active', modo === 'detalhado');
+    document.getElementById('btnModoConsolidado')?.classList.toggle('active', modo === 'consolidado');
+
+    if (modo === 'consolidado') {
+        renderCabecalhoConsolidado();
+    } else {
+        renderCabecalhoResultados();
+        document.getElementById('graficosConsolidadoWrapper')?.classList.add('hidden');
+    }
+    filtrarERenderizarTabela();
+}
+
+function aplicarFiltrosQuery(query, filtros, placasFiltroTipoVeiculo) {
   const userFilial = getUserFilial();
 
   if (filtros.dataInicial) query = query.gte('data', `${filtros.dataInicial}T00:00:00-03:00`);
@@ -498,7 +784,8 @@ function aplicarFiltrosQuery(query, filtros) {
   if (filtros.nfe) query = query.ilike('notaFiscal', `%${filtros.nfe}%`);
   if (filtros.os) query = query.ilike('numeroOS', `%${filtros.os}%`);
   if (filtros.veiculo) query = query.ilike('veiculo', `%${filtros.veiculo}%`);
-  
+  if (placasFiltroTipoVeiculo) query = query.in('veiculo', placasFiltroTipoVeiculo);
+
   if (userFilial) {
     query = query.eq('filial', userFilial);
   } else if (filtros.filial) {
@@ -526,6 +813,21 @@ async function fetchItensEmLotes(ids) {
         }
     }
     return allItems;
+}
+
+// Mapa placa -> tipo de veículo (ex: TRUCK, CAMINHÃO 3/4, BITREM...), usado só no modo Consolidado.
+async function fetchTiposVeiculoPorPlaca() {
+    const mapa = new Map();
+    try {
+        const { data, error } = await supabaseClient.from('veiculos').select('placa, tipo');
+        if (error) throw error;
+        (data || []).forEach(v => {
+            if (v.placa) mapa.set(String(v.placa).trim().toUpperCase(), v.tipo || 'NÃO INFORMADO');
+        });
+    } catch (err) {
+        console.error('Erro ao carregar tipos de veículo:', err);
+    }
+    return mapa;
 }
 
 // 📋 Preencher tabela de resultados
@@ -822,6 +1124,11 @@ function exportarExcel() {
         return;
     }
 
+    if (modoVisualizacao === 'consolidado') {
+        exportarExcelConsolidado();
+        return;
+    }
+
     const dadosFormatados = dadosExportacao.map(m => ({
         'TÍTULO_DA_MANUTENÇÃO': m.titulo || '',
         'FORNECEDOR': m.fornecedor || '',
@@ -843,6 +1150,23 @@ function exportarExcel() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Manutencoes");
     XLSX.writeFile(wb, "Relatorio_Manutencao.xlsx");
+}
+
+function exportarExcelConsolidado() {
+    const grupos = consolidarRegistros(dadosExportacao).sort((a, b) => b.valorTotal - a.valorTotal);
+
+    const dadosFormatados = grupos.map(g => ({
+        'PLACA': g.veiculo,
+        'TIPO_DE_VEICULO': g.tipo,
+        'FORNECEDOR': g.fornecedor,
+        'QTD_MANUTENCOES': g.qtd,
+        'VALOR_TOTAL': g.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dadosFormatados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Consolidado");
+    XLSX.writeFile(wb, "Relatorio_Manutencao_Consolidado.xlsx");
 }
 
 async function getLogoBase64PDF() {
@@ -878,6 +1202,7 @@ function getFiltrosAtivosTexto() {
         ['filial', 'Filial'],
         ['tipoManutencao', 'Tipo'],
         ['veiculo', 'Veículo'],
+        ['tipoVeiculoFiltro', 'Tipo de Veículo'],
         ['titulo', 'Título'],
         ['fornecedor', 'Fornecedor'],
         ['nfse', 'NFS-e'],
@@ -902,6 +1227,11 @@ async function exportarPDF() {
 
     if (!window.jspdf || !window.jspdf.jsPDF) {
         alert('Biblioteca jsPDF não carregada. Verifique sua conexão.');
+        return;
+    }
+
+    if (modoVisualizacao === 'consolidado') {
+        await exportarPDFConsolidado();
         return;
     }
 
@@ -1003,6 +1333,94 @@ async function exportarPDF() {
     }
 }
 
+async function exportarPDFConsolidado() {
+    const btn = document.getElementById('btnExportarPDF');
+    const originalText = btn?.innerHTML;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const logoBase64 = await getLogoBase64PDF();
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nomeUsuario = usuarioLogado?.nome || 'Sistema';
+
+        const grupos = consolidarRegistros(dadosExportacao).sort((a, b) => b.valorTotal - a.valorTotal);
+        const totalGeral = grupos.reduce((acc, g) => acc + g.valorTotal, 0);
+
+        if (logoBase64) {
+            doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+        }
+
+        doc.setFontSize(18);
+        doc.setTextColor(0, 105, 55);
+        doc.text('Relatório de Manutenção - Consolidado', 60, 18);
+
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(`Gerado por: ${nomeUsuario}`, 14, 29);
+        doc.text(`Grupos: ${grupos.length}`, 14, 34);
+        doc.text(`Total: R$ ${formatarValor(totalGeral)}`, 55, 34);
+
+        const filtrosTexto = doc.splitTextToSize(getFiltrosAtivosTexto(), 260);
+        doc.text(filtrosTexto, 14, 40);
+
+        const startY = 40 + (filtrosTexto.length * 4) + 4;
+        const columns = ['Placa', 'Tipo de Veículo', 'Fornecedor', 'Qtd. Manutenções', 'Valor Total'];
+        const rows = grupos.map(g => [
+            g.veiculo,
+            g.tipo,
+            g.fornecedor,
+            String(g.qtd),
+            `R$ ${formatarValor(g.valorTotal)}`
+        ]);
+
+        rows.push([
+            { content: 'TOTAL GERAL', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } },
+            { content: `R$ ${formatarValor(totalGeral)}`, styles: { halign: 'right', fontStyle: 'bold' } }
+        ]);
+
+        doc.autoTable({
+            head: [columns],
+            body: rows,
+            startY,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55], textColor: 255, fontSize: 9 },
+            styles: { fontSize: 8, cellPadding: 3 },
+            alternateRowStyles: { fillColor: [245, 247, 246] },
+            columnStyles: {
+                3: { halign: 'center' },
+                4: { halign: 'right' }
+            }
+        });
+
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 10);
+            const pageText = `Página ${i} de ${pageCount}`;
+            doc.text(pageText, pageWidth - 14 - doc.getTextWidth(pageText), pageHeight - 10);
+        }
+
+        doc.save(`Relatorio_Manutencao_Consolidado_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+        console.error('Erro ao exportar PDF consolidado:', err);
+        alert('Erro ao gerar PDF: ' + (err.message || err));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+}
+
 function setupColumnResizing() {
     const headers = document.querySelectorAll('.table-responsive th:not(.col-acoes-fixed)');
     
@@ -1058,6 +1476,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btnBuscarManutencao').addEventListener('click', buscarManutencao);
   document.getElementById('btnToggleMenuLateral')?.addEventListener('click', toggleMenuLateralManutencao);
+
+  document.getElementById('btnModoDetalhado')?.addEventListener('click', () => alternarModoVisualizacao('detalhado'));
+  document.getElementById('btnModoConsolidado')?.addEventListener('click', () => alternarModoVisualizacao('consolidado'));
 
   document.getElementById('btnExportarPDF').addEventListener('click', () => {
     exportarPDF();
