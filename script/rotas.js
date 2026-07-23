@@ -856,9 +856,19 @@ const RotasUI = {
     renderSummary(rotas) {
         if (!this.rotaSummary) return;
 
+        // O Resumo por Supervisor só considera rotas ATIVAS com supervisor real atribuído —
+        // rotas INATIVAS e rotas cujo campo SUPERVISOR ainda é o placeholder "DISPONIVEL"
+        // continuam aparecendo na grade (conforme o filtro escolhido), mas não entram nessa
+        // contagem. Sem status definido, trata como ATIVA (mesma regra usada na importação).
+        const rotasAtivas = rotas.filter(rota => {
+            const status = String(rota.status || 'ATIVA').toUpperCase();
+            const supervisor = String(rota.supervisor || '').trim().toUpperCase();
+            return status !== 'INATIVA' && supervisor !== 'DISPONIVEL';
+        });
+
         const summaryData = {};
 
-        rotas.forEach(rota => {
+        rotasAtivas.forEach(rota => {
             const supervisor = rota.supervisor || 'Não Atribuído';
             if (!summaryData[supervisor]) {
                 summaryData[supervisor] = {
@@ -872,7 +882,7 @@ const RotasUI = {
 
         // --- Cálculos para o totalizador ---
         const totalSupervisores = Object.keys(summaryData).length;
-        const totalRotas = rotas.length; // Mais simples que somar, é só pegar o total de rotas
+        const totalRotas = rotasAtivas.length; // Mais simples que somar, é só pegar o total de rotas ativas
         const totalGeralDias = Object.values(summaryData).reduce((sum, data) => sum + data.totalDias, 0);
 
         let summaryHtml = `
