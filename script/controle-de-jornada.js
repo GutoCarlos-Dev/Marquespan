@@ -1825,7 +1825,8 @@ async function runStep3(){
 
   // Enrich maps with Supabase funcionario — campo "Nome Curto (Exibição)" = nome
   tlog('s3-term','info','↓ Carregando funcionários do banco de dados...');
-  const funcsDb = await loadFuncionariosSupabase();
+  const filialStep3 = getFilialSelecionadaStep3();
+  const funcsDb = await loadFuncionariosSupabase(filialStep3);
   funcsDb.forEach(f => {
     const short = norm(f.nome);
     const full  = norm(f.nome_completo || f.nome);
@@ -1989,9 +1990,11 @@ async function abrirCadastroFaltantes(){
   const arr = Object.values(unicos);
   if(!arr.length) return alert('Nenhum cadastro pendente.');
 
-  // Carrega lista de funcionários para vinculação
-  const funcs = await loadFuncionariosSupabase();
-  window._funcsVinculo  = funcs;   // lista completa disponível
+  // Carrega lista de funcionários para vinculação — restrita à Filial selecionada no Passo 3
+  // (evita o corte de ~1000 registros do Supabase e não cruza nomes com outra filial).
+  const filialStep3 = getFilialSelecionadaStep3();
+  const funcs = await loadFuncionariosSupabase(filialStep3);
+  window._funcsVinculo  = funcs;   // lista disponível (da filial do Passo 3, quando selecionada)
   window._linksVinculo  = {};      // { rowIndex: funcionarioObj }
 
   const overlay = document.createElement('div');
@@ -2007,7 +2010,8 @@ async function abrirCadastroFaltantes(){
         <p style="margin:5px 0 0;font-size:12px;color:#666;line-height:1.5">
           Para cada nome do Roteiro, <strong>vincule a um funcionário</strong> já cadastrado (busca pelo Nome Curto)
           ou preencha o Nome Completo manualmente.
-          ${funcs.length ? `<span style="color:#006937;font-weight:600">✓ ${funcs.length} funcionário(s) disponíveis para vinculação.</span>` : '<span style="color:#d97706">⚠ Sem funcionários carregados — use preenchimento manual.</span>'}
+          ${funcs.length ? `<span style="color:#006937;font-weight:600">✓ ${funcs.length} funcionário(s) disponíveis para vinculação${filialStep3 ? ` (filial ${esc(filialStep3)}, conforme selecionado no Passo 3)` : ''}.</span>` : '<span style="color:#d97706">⚠ Sem funcionários carregados — use preenchimento manual.</span>'}
+          ${!filialStep3 ? '<br><span style="color:#d97706">⚠ Nenhuma filial selecionada no Passo 3 — buscando entre todos os funcionários do sistema.</span>' : ''}
         </p>
       </div>
       <button class="modal-close" style="background:#f3f4f6;border:none;width:34px;height:34px;border-radius:10px;font-size:22px;cursor:pointer;color:#666;flex-shrink:0">×</button>
@@ -2569,11 +2573,17 @@ function buildMapFromCad(tipo){
 }
 
 // Busca funcionários no Supabase usando o campo "Nome Curto (Exibição)" como shortname
-async function loadFuncionariosSupabase(){
+// Sem filtro de filial e sem limit explicito, o PostgREST corta silenciosamente em ~1000
+// linhas (padrao do Supabase) — com a empresa passando disso, funcionarios cadastrados
+// depois desse corte (ordem alfabetica) somem tanto do cruzamento do Passo 3 quanto da busca
+// do modal "Vincular / Cadastrar". Passar a filial do Passo 3 resolve os dois problemas: reduz
+// bem o volume (evita o corte) e evita cruzar nomes com funcionarios de outra filial.
+async function loadFuncionariosSupabase(filial){
   try {
-    const resp = await sbFetch(
-      '/rest/v1/funcionario?select=nome,nome_completo,funcao,status&status=not.eq.Desligado&order=nome.asc'
-    );
+    let path = '/rest/v1/funcionario?select=nome,nome_completo,funcao,status&status=not.eq.Desligado&order=nome.asc&limit=10000';
+    if (filial) path += `&filial=eq.${encodeURIComponent(filial)}`;
+
+    const resp = await sbFetch(path);
     if (!resp.ok) {
       console.warn('[loadFuncionariosSupabase] HTTP', resp.status);
       return [];
@@ -2583,6 +2593,11 @@ async function loadFuncionariosSupabase(){
     console.warn('[loadFuncionariosSupabase]', e);
     return [];
   }
+}
+
+// Filial atualmente selecionada no Passo 3 (painel "Roteiro SP — Escala Semanal").
+function getFilialSelecionadaStep3(){
+  return document.getElementById('sel-filial-escala')?.value?.trim() || '';
 }
 
 // ── Escala SP via Supabase ──────────────────────────────────────
