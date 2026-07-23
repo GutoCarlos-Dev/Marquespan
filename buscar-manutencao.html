@@ -55,15 +55,24 @@
                 </select>
             </div>
             <div class="form-group-filter">
-                <label for="veiculo">Veículo</label>
-                <input type="text" id="veiculo" list="listaPlacas" placeholder="Buscar...">
-                <datalist id="listaPlacas"></datalist>
+                <label for="filtroVeiculoDisplay">Veículo</label>
+                <div class="custom-select-wrapper">
+                    <div class="select-display" id="filtroVeiculoDisplay" tabindex="0">
+                        <span id="filtroVeiculoText">Todos</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="custom-options hidden" id="filtroVeiculoOptions"></div>
+                </div>
             </div>
             <div class="form-group-filter">
-                <label for="tipoVeiculoFiltro">Tipo de Veículo</label>
-                <select id="tipoVeiculoFiltro">
-                    <option value="">Todos</option>
-                </select>
+                <label for="filtroTipoVeiculoDisplay">Tipo de Veículo</label>
+                <div class="custom-select-wrapper">
+                    <div class="select-display" id="filtroTipoVeiculoDisplay" tabindex="0">
+                        <span id="filtroTipoVeiculoText">Todos</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="custom-options hidden" id="filtroTipoVeiculoOptions"></div>
+                </div>
             </div>
             <div class="form-group-filter">
                 <label for="titulo">Título</label>
@@ -71,9 +80,14 @@
                 <datalist id="listaTitulos"></datalist>
             </div>
             <div class="form-group-filter">
-                <label for="fornecedor">Fornecedor</label>
-                <input type="text" id="fornecedor" list="listaFornecedores" placeholder="Nome do Fornecedor">
-                <datalist id="listaFornecedores"></datalist>
+                <label for="filtroFornecedorDisplay">Fornecedor</label>
+                <div class="custom-select-wrapper">
+                    <div class="select-display" id="filtroFornecedorDisplay" tabindex="0">
+                        <span id="filtroFornecedorText">Todos</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="custom-options hidden" id="filtroFornecedorOptions"></div>
+                </div>
             </div>
             <div class="form-group-filter">
                 <label for="nfse">NFS-e</label>
@@ -257,7 +271,7 @@
   
   <!-- 🚀 Scripts -->
   <script type="module" src="./script/auth-guard.js"></script>
-  <script type="module" src="./script/buscar-manutencao.js?v=20260605-1" defer></script>
+  <script type="module" src="./script/buscar-manutencao.js?v=20260723-multiselect" defer></script>
   <script type="module" src="./script/menu.js" defer></script>
 </body>
 </html>

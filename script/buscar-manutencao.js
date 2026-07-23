@@ -226,21 +226,150 @@ function toggleMenuLateralManutencao() {
 // Mesma lista fixa usada no cadastro de veículos (script/veiculos.js).
 const TIPOS_VEICULO = ['CAMINHÃO 3/4', 'BITREM', 'BITRUCK', 'HR/VAN', 'LS', 'MUNCK', 'SEMI-REBOQUE', 'TRUCK', 'EMPILHADEIRA', 'GERADOR'];
 
-async function carregarFiltros() {
-  const selectTipoVeiculo = document.getElementById('tipoVeiculoFiltro');
-  if (selectTipoVeiculo) {
-    selectTipoVeiculo.innerHTML = '<option value="">Todos</option>'
-      + TIPOS_VEICULO.map(t => `<option value="${t}">${t}</option>`).join('');
-  }
+// ===== Multiselect com busca (Veículo, Tipo de Veículo, Fornecedor) =====
 
-  const [titulos, filiais, fornecedores] = await Promise.all([
+function popularMultiselect(containerId, opcoes, checkboxClass) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'multiselect-search';
+  searchInput.placeholder = 'Buscar...';
+  searchInput.onclick = (e) => e.stopPropagation();
+  searchInput.addEventListener('input', (e) => {
+    const termo = e.target.value.toLowerCase();
+    container.querySelectorAll('label.custom-option').forEach(opt => {
+      opt.style.display = opt.textContent.toLowerCase().includes(termo) ? 'block' : 'none';
+    });
+  });
+  container.appendChild(searchInput);
+
+  const btnLimpar = document.createElement('div');
+  btnLimpar.className = 'custom-option';
+  btnLimpar.style.cssText = 'color: #dc3545; font-weight: bold; text-align: center;';
+  btnLimpar.textContent = 'Limpar Seleção';
+  btnLimpar.onclick = (e) => {
+    e.stopPropagation();
+    container.querySelectorAll(`.${checkboxClass}`).forEach(cb => { cb.checked = false; });
+    container.dispatchEvent(new Event('change'));
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input'));
+  };
+  container.appendChild(btnLimpar);
+
+  opcoes.forEach(({ value, label }) => {
+    const optLabel = document.createElement('label');
+    optLabel.className = 'custom-option';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = checkboxClass;
+    checkbox.value = value;
+    checkbox.style.marginRight = '8px';
+
+    optLabel.appendChild(checkbox);
+    optLabel.appendChild(document.createTextNode(label));
+    container.appendChild(optLabel);
+  });
+}
+
+function getMultiselectValues(containerId, checkboxClass) {
+  const container = document.getElementById(containerId);
+  if (!container) return [];
+  return Array.from(container.querySelectorAll(`.${checkboxClass}:checked`)).map(cb => cb.value);
+}
+
+function setMultiselectValues(containerId, checkboxClass, valores) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const lista = Array.isArray(valores) ? valores : (valores ? [valores] : []);
+  const setValores = new Set(lista.map(v => String(v)));
+  container.querySelectorAll(`.${checkboxClass}`).forEach(cb => {
+    cb.checked = setValores.has(cb.value);
+  });
+  container.dispatchEvent(new Event('change'));
+}
+
+function atualizarTextoMultiselect(containerId, checkboxClass, textId) {
+  const textEl = document.getElementById(textId);
+  if (!textEl) return;
+  const selecionados = getMultiselectValues(containerId, checkboxClass);
+  if (selecionados.length === 0) {
+    textEl.textContent = 'Todos';
+  } else if (selecionados.length <= 2) {
+    textEl.textContent = selecionados.join(', ');
+  } else {
+    textEl.textContent = `${selecionados.length} selecionados`;
+  }
+}
+
+function initMultiselectDropdown(displayId, optionsId, textId, checkboxClass) {
+  const display = document.getElementById(displayId);
+  const options = document.getElementById(optionsId);
+  if (!display || !options) return;
+
+  display.addEventListener('click', (e) => {
+    e.stopPropagation();
+    options.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!display.contains(e.target) && !options.contains(e.target)) {
+      options.classList.add('hidden');
+    }
+  });
+
+  options.addEventListener('change', () => {
+    atualizarTextoMultiselect(optionsId, checkboxClass, textId);
+  });
+}
+
+// Busca valores distintos já usados na tabela manutencao (garante que o filtro por
+// igualdade (.in) sempre encontre os registros, evitando divergências com tabelas mestres).
+async function fetchValoresDistintosManutencao(coluna) {
+  const valores = new Set();
+  const step = 1000;
+  let from = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { data, error } = await supabaseClient
+      .from('manutencao')
+      .select(coluna)
+      .not(coluna, 'is', null)
+      .range(from, from + step - 1);
+
+    if (error) {
+      console.error(`Erro ao carregar valores distintos de ${coluna}:`, error);
+      break;
+    }
+    if (!data || data.length === 0) break;
+
+    data.forEach(row => {
+      const valor = String(row[coluna] || '').trim();
+      if (valor) valores.add(valor);
+    });
+
+    if (data.length < step) break;
+    from += step;
+  }
+  return Array.from(valores).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+async function carregarFiltros() {
+  popularMultiselect('filtroTipoVeiculoOptions', TIPOS_VEICULO.map(t => ({ value: t, label: t })), 'tipoveiculo-checkbox');
+  initMultiselectDropdown('filtroTipoVeiculoDisplay', 'filtroTipoVeiculoOptions', 'filtroTipoVeiculoText', 'tipoveiculo-checkbox');
+
+  const [titulos, filiais, veiculosDistintos, fornecedoresDistintos] = await Promise.all([
     supabaseClient.from('titulo_manutencao').select('titulo').order('titulo'),
     supabaseClient.from('filiais').select('nome, sigla').order('nome'),
-    supabaseClient.from('fornecedor_manutencao').select('nome, cnpj').order('nome')
+    fetchValoresDistintosManutencao('veiculo'),
+    fetchValoresDistintosManutencao('fornecedor')
   ]);
 
   preencherDatalist('listaTitulos', titulos.data, 'titulo');
-  
+
   const selectFilial = document.getElementById('filial');
   selectFilial.innerHTML = '<option value="">Todas</option>';
   if (filiais.data) {
@@ -256,17 +385,11 @@ async function carregarFiltros() {
       selectFilial.disabled = true;
   }
 
-  // Preenche datalist de fornecedores seguindo o padrão da aba de inclusão (Nome + CNPJ)
-  const listaFornecedores = document.getElementById('listaFornecedores');
-  if (listaFornecedores) {
-    listaFornecedores.innerHTML = '';
-    fornecedores.data?.forEach(f => {
-      if (f.nome) {
-        const displayValue = f.cnpj ? `${f.nome} (CNPJ: ${f.cnpj})` : f.nome;
-        listaFornecedores.appendChild(new Option(displayValue));
-      }
-    });
-  }
+  popularMultiselect('filtroVeiculoOptions', veiculosDistintos.map(v => ({ value: v, label: v })), 'veiculo-checkbox');
+  initMultiselectDropdown('filtroVeiculoDisplay', 'filtroVeiculoOptions', 'filtroVeiculoText', 'veiculo-checkbox');
+
+  popularMultiselect('filtroFornecedorOptions', fornecedoresDistintos.map(f => ({ value: f, label: f })), 'fornecedor-checkbox');
+  initMultiselectDropdown('filtroFornecedorDisplay', 'filtroFornecedorOptions', 'filtroFornecedorText', 'fornecedor-checkbox');
 }
 
 function preencherDatalist(id, data, campo) {
@@ -293,10 +416,10 @@ function getFiltrosBuscaAtual() {
     dataFinal: document.getElementById('dataFinal')?.value || '',
     filial: document.getElementById('filial')?.value || '',
     tipoManutencao: document.getElementById('tipoManutencao')?.value || '',
-    tipoVeiculoFiltro: document.getElementById('tipoVeiculoFiltro')?.value || '',
-    veiculo: document.getElementById('veiculo')?.value || '',
+    tipoVeiculoFiltro: getMultiselectValues('filtroTipoVeiculoOptions', 'tipoveiculo-checkbox'),
+    veiculo: getMultiselectValues('filtroVeiculoOptions', 'veiculo-checkbox'),
     titulo: document.getElementById('titulo')?.value || '',
-    fornecedor: document.getElementById('fornecedor')?.value || '',
+    fornecedor: getMultiselectValues('filtroFornecedorOptions', 'fornecedor-checkbox'),
     nfse: document.getElementById('nfse')?.value || '',
     nfe: document.getElementById('nfe')?.value || '',
     os: document.getElementById('os')?.value || '',
@@ -339,10 +462,13 @@ async function restaurarBuscaAposEdicao() {
     aplicarValorCampo('dataFinal', filtros.dataFinal);
     aplicarValorCampo('filial', filtros.filial);
     aplicarValorCampo('tipoManutencao', filtros.tipoManutencao);
-    aplicarValorCampo('tipoVeiculoFiltro', filtros.tipoVeiculoFiltro);
-    aplicarValorCampo('veiculo', filtros.veiculo);
+    setMultiselectValues('filtroTipoVeiculoOptions', 'tipoveiculo-checkbox', filtros.tipoVeiculoFiltro);
+    atualizarTextoMultiselect('filtroTipoVeiculoOptions', 'tipoveiculo-checkbox', 'filtroTipoVeiculoText');
+    setMultiselectValues('filtroVeiculoOptions', 'veiculo-checkbox', filtros.veiculo);
+    atualizarTextoMultiselect('filtroVeiculoOptions', 'veiculo-checkbox', 'filtroVeiculoText');
     aplicarValorCampo('titulo', filtros.titulo);
-    aplicarValorCampo('fornecedor', filtros.fornecedor);
+    setMultiselectValues('filtroFornecedorOptions', 'fornecedor-checkbox', filtros.fornecedor);
+    atualizarTextoMultiselect('filtroFornecedorOptions', 'fornecedor-checkbox', 'filtroFornecedorText');
     aplicarValorCampo('nfse', filtros.nfse);
     aplicarValorCampo('nfe', filtros.nfe);
     aplicarValorCampo('os', filtros.os);
@@ -371,11 +497,11 @@ async function buscarManutencao() {
     nfse: document.getElementById('nfse').value,
     nfe: document.getElementById('nfe').value,
     os: document.getElementById('os').value,
-    veiculo: document.getElementById('veiculo').value,
+    veiculo: getMultiselectValues('filtroVeiculoOptions', 'veiculo-checkbox'),
     filial: document.getElementById('filial').value,
     tipo: document.getElementById('tipoManutencao').value,
-    tipoVeiculo: document.getElementById('tipoVeiculoFiltro').value,
-    fornecedor: document.getElementById('fornecedor').value,
+    tipoVeiculo: getMultiselectValues('filtroTipoVeiculoOptions', 'tipoveiculo-checkbox'),
+    fornecedor: getMultiselectValues('filtroFornecedorOptions', 'fornecedor-checkbox'),
     status: document.getElementById('status').value
   };
 
@@ -385,9 +511,9 @@ async function buscarManutencao() {
   // enriquecer os registros (usado no modo Consolidado).
   const tiposPorPlaca = await fetchTiposVeiculoPorPlaca();
   let placasFiltroTipoVeiculo = null;
-  if (filtros.tipoVeiculo) {
+  if (filtros.tipoVeiculo.length > 0) {
     placasFiltroTipoVeiculo = Array.from(tiposPorPlaca.entries())
-      .filter(([, tipo]) => tipo === filtros.tipoVeiculo)
+      .filter(([, tipo]) => filtros.tipoVeiculo.includes(tipo))
       .map(([placa]) => placa);
 
     if (placasFiltroTipoVeiculo.length === 0) {
@@ -783,7 +909,7 @@ function aplicarFiltrosQuery(query, filtros, placasFiltroTipoVeiculo) {
   if (filtros.nfse) query = query.ilike('notaServico', `%${filtros.nfse}%`);
   if (filtros.nfe) query = query.ilike('notaFiscal', `%${filtros.nfe}%`);
   if (filtros.os) query = query.ilike('numeroOS', `%${filtros.os}%`);
-  if (filtros.veiculo) query = query.ilike('veiculo', `%${filtros.veiculo}%`);
+  if (filtros.veiculo?.length) query = query.in('veiculo', filtros.veiculo);
   if (placasFiltroTipoVeiculo) query = query.in('veiculo', placasFiltroTipoVeiculo);
 
   if (userFilial) {
@@ -793,7 +919,7 @@ function aplicarFiltrosQuery(query, filtros, placasFiltroTipoVeiculo) {
   }
 
   if (filtros.tipo) query = query.eq('tipo', filtros.tipo);
-  if (filtros.fornecedor) query = query.ilike('fornecedor', `%${filtros.fornecedor}%`);
+  if (filtros.fornecedor?.length) query = query.in('fornecedor', filtros.fornecedor);
   if (filtros.status) query = query.eq('status', filtros.status);
   return query;
 }
@@ -1201,10 +1327,7 @@ function getFiltrosAtivosTexto() {
     const campos = [
         ['filial', 'Filial'],
         ['tipoManutencao', 'Tipo'],
-        ['veiculo', 'Veículo'],
-        ['tipoVeiculoFiltro', 'Tipo de Veículo'],
         ['titulo', 'Título'],
-        ['fornecedor', 'Fornecedor'],
         ['nfse', 'NFS-e'],
         ['nfe', 'NF-e'],
         ['os', 'OS'],
@@ -1214,6 +1337,17 @@ function getFiltrosAtivosTexto() {
     campos.forEach(([id, label]) => {
         const value = getValue(id);
         if (value) filtros.push(`${label}: ${value}`);
+    });
+
+    const multiselects = [
+        ['filtroVeiculoOptions', 'veiculo-checkbox', 'Veículo'],
+        ['filtroTipoVeiculoOptions', 'tipoveiculo-checkbox', 'Tipo de Veículo'],
+        ['filtroFornecedorOptions', 'fornecedor-checkbox', 'Fornecedor']
+    ];
+
+    multiselects.forEach(([containerId, checkboxClass, label]) => {
+        const selecionados = getMultiselectValues(containerId, checkboxClass);
+        if (selecionados.length) filtros.push(`${label}: ${selecionados.join(', ')}`);
     });
 
     return filtros.length ? filtros.join(' | ') : 'Sem filtros aplicados';
