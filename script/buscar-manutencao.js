@@ -5,7 +5,7 @@ import { registrarAuditoria } from './auditoria-utils.js';
 let dadosExportacao = [];
 let todosRegistros = []; // Armazena todos os registros buscados
 let currentSort = { column: 'data', direction: 'desc' };
-let modoVisualizacao = 'detalhado'; // 'detalhado' | 'consolidado'
+let modoVisualizacao = 'detalhado'; // 'detalhado' | 'consolidado' | 'resumoPlaca'
 let currentSortConsolidado = { column: 'valorTotal', direction: 'desc' };
 const COLUNAS_CONSOLIDADO = [
   { key: 'veiculo', label: 'Placa' },
@@ -14,8 +14,16 @@ const COLUNAS_CONSOLIDADO = [
   { key: 'qtd', label: 'Qtd. Manutenções' },
   { key: 'valorTotal', label: 'Valor Total' }
 ];
+let currentSortResumoPlaca = { column: 'valorTotal', direction: 'desc' };
+const COLUNAS_RESUMO_PLACA = [
+  { key: 'veiculo', label: 'Placa' },
+  { key: 'qtdFornecedores', label: 'Qtd. Fornecedores' },
+  { key: 'qtdManutencoes', label: 'Qtd. Manutenções' },
+  { key: 'valorTotal', label: 'Valor Total' }
+];
 let chartsConsolidado = {};
 let rolagemGraficosIniciada = false;
+let rolagemGraficosResumoPlacaIniciada = false;
 let arquivosParaUpload = [];
 let arquivosExistentes = [];
 let arquivosParaDeletar = [];
@@ -616,6 +624,8 @@ async function buscarManutencao() {
 function filtrarERenderizarTabela() {
     if (modoVisualizacao === 'consolidado') {
         renderizarConsolidado();
+    } else if (modoVisualizacao === 'resumoPlaca') {
+        renderizarResumoPlaca();
     } else {
         renderizarDetalhado();
     }
@@ -685,6 +695,30 @@ function consolidarRegistros(registros) {
         g.valorTotal += (m.valor || 0);
     });
     return Array.from(grupos.values());
+}
+
+// Agrupa os registros detalhados só por Placa, somando quantidade de manutenções, valor
+// e contando quantos Fornecedores distintos atenderam aquele veículo.
+function consolidarPorPlaca(registros) {
+    const grupos = new Map();
+    registros.forEach(m => {
+        const veiculo = m.veiculo || '-';
+        const chave = veiculo.toUpperCase();
+
+        if (!grupos.has(chave)) {
+            grupos.set(chave, { veiculo, fornecedores: new Set(), qtdManutencoes: 0, valorTotal: 0 });
+        }
+        const g = grupos.get(chave);
+        g.fornecedores.add((m.fornecedor || '-').trim().toUpperCase());
+        g.qtdManutencoes += 1;
+        g.valorTotal += (m.valor || 0);
+    });
+    return Array.from(grupos.values()).map(g => ({
+        veiculo: g.veiculo,
+        qtdFornecedores: g.fornecedores.size,
+        qtdManutencoes: g.qtdManutencoes,
+        valorTotal: g.valorTotal
+    }));
 }
 
 function renderizarConsolidado() {
@@ -798,8 +832,8 @@ function criarGraficoConsolidado(canvasId, type, labels, values, label) {
 }
 
 // Rolagem automática horizontal do carrossel de gráficos (vai e volta) — mesmo padrão de monitoramento.js
-function iniciarRolagemAutomaticaGraficos() {
-    const wrapper = document.getElementById('graficosMarqueeWrapper');
+function iniciarRolagemAutomaticaGraficos(wrapperId = 'graficosMarqueeWrapper') {
+    const wrapper = document.getElementById(wrapperId);
     if (!wrapper) return;
 
     let direction = 1;
@@ -884,18 +918,152 @@ function preencherTabelaConsolidado(grupos) {
     });
 }
 
+// === Modo "Resumo Consolidado" (agrupado só por Placa) ===
+
+function renderizarResumoPlaca() {
+    const searchTerm = document.getElementById('searchResultadosLocal')?.value.toLowerCase() || '';
+
+    const base = todosRegistros.filter(m => (m.veiculo || '').toLowerCase().includes(searchTerm));
+    const grupos = consolidarPorPlaca(base);
+
+    const { column, direction } = currentSortResumoPlaca;
+    const factor = direction === 'asc' ? 1 : -1;
+    grupos.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+        if (typeof valA === 'string') {
+            valA = valA.toLowerCase();
+            valB = (valB || '').toLowerCase();
+        }
+        if (valA < valB) return -1 * factor;
+        if (valA > valB) return 1 * factor;
+        return 0;
+    });
+
+    const valorTotalFiltrado = grupos.reduce((acc, g) => acc + (g.valorTotal || 0), 0);
+    document.getElementById('totalRegistros').textContent = grupos.length;
+    document.getElementById('valorTotal').textContent = formatarValor(valorTotalFiltrado);
+
+    preencherTabelaResumoPlaca(grupos);
+    updateSortIconsResumoPlaca();
+    renderizarGraficosResumoPlaca(grupos, base);
+}
+
+// 📊 Gráficos do modo Resumo Consolidado — Top 10 Veículos por Custo, Qtd. de Manutenções, Qtd. de Fornecedores
+// e Top 10 Títulos de Manutenção por Custo (este último agrupado a partir dos registros detalhados, não da placa)
+function renderizarGraficosResumoPlaca(grupos, registrosDetalhados = []) {
+    const wrapper = document.getElementById('graficosResumoPlacaWrapper');
+    if (!wrapper) return;
+
+    if (typeof Chart === 'undefined' || !grupos.length) {
+        wrapper.classList.add('hidden');
+        return;
+    }
+    wrapper.classList.remove('hidden');
+
+    const top10 = (campo) => [...grupos]
+        .sort((a, b) => b[campo] - a[campo])
+        .slice(0, 10);
+
+    const topValor = top10('valorTotal');
+    const topQtdManutencoes = top10('qtdManutencoes');
+    const topQtdFornecedores = top10('qtdFornecedores');
+
+    criarGraficoConsolidado('chartResumoPlacaValor', 'bar', topValor.map(g => g.veiculo), topValor.map(g => g.valorTotal), 'Custo Total (R$)');
+    criarGraficoConsolidado('chartResumoPlacaQtdManutencoes', 'bar', topQtdManutencoes.map(g => g.veiculo), topQtdManutencoes.map(g => g.qtdManutencoes), 'Qtd. Manutenções');
+    criarGraficoConsolidado('chartResumoPlacaQtdFornecedores', 'bar', topQtdFornecedores.map(g => g.veiculo), topQtdFornecedores.map(g => g.qtdFornecedores), 'Qtd. Fornecedores');
+
+    const porTitulo = {};
+    registrosDetalhados.forEach(m => {
+        const titulo = m.titulo || 'NÃO INFORMADO';
+        porTitulo[titulo] = (porTitulo[titulo] || 0) + (m.valor || 0);
+    });
+    const topTitulo = Object.entries(porTitulo).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    criarGraficoConsolidado('chartResumoPlacaTitulo', 'bar', topTitulo.map(([k]) => k), topTitulo.map(([, v]) => v), 'Custo Total (R$)');
+
+    if (!rolagemGraficosResumoPlacaIniciada) {
+        rolagemGraficosResumoPlacaIniciada = true;
+        requestAnimationFrame(() => iniciarRolagemAutomaticaGraficos('graficosResumoPlacaMarqueeWrapper'));
+    }
+}
+
+function handleSortResumoPlaca(column) {
+    if (currentSortResumoPlaca.column === column) {
+        currentSortResumoPlaca.direction = currentSortResumoPlaca.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortResumoPlaca.column = column;
+        currentSortResumoPlaca.direction = (column === 'veiculo') ? 'asc' : 'desc';
+    }
+    filtrarERenderizarTabela();
+}
+
+function updateSortIconsResumoPlaca() {
+    document.querySelectorAll('#cabecalhoResultados th.sortable .sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort';
+        const th = icon.closest('th');
+        if (th.dataset.sort === currentSortResumoPlaca.column) {
+            icon.className = currentSortResumoPlaca.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        }
+    });
+}
+
+function renderCabecalhoResumoPlaca() {
+    const cabecalho = document.getElementById('cabecalhoResultados');
+    if (!cabecalho) return;
+
+    cabecalho.innerHTML = COLUNAS_RESUMO_PLACA.map(col => `
+        <th class="sortable" data-sort="${col.key}">
+            <span>${col.label}</span>
+            <i class="fas fa-sort sort-icon"></i>
+        </th>
+    `).join('');
+
+    cabecalho.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => handleSortResumoPlaca(th.dataset.sort));
+    });
+
+    updateSortIconsResumoPlaca();
+}
+
+function preencherTabelaResumoPlaca(grupos) {
+    const tabela = document.getElementById('tabelaResultados');
+    tabela.innerHTML = '';
+
+    if (!grupos.length) {
+        tabela.innerHTML = `<tr><td colspan="${COLUNAS_RESUMO_PLACA.length}" style="text-align:center; padding: 20px; color:#888;">Nenhum registro encontrado.</td></tr>`;
+        return;
+    }
+
+    grupos.forEach(g => {
+        const linha = document.createElement('tr');
+        linha.innerHTML = `
+            <td>${escapeHTML(g.veiculo)}</td>
+            <td style="text-align:center;">${g.qtdFornecedores}</td>
+            <td style="text-align:center;">${g.qtdManutencoes}</td>
+            <td class="col-valor">R$ ${formatarValor(g.valorTotal)}</td>
+        `;
+        tabela.appendChild(linha);
+    });
+}
+
 function alternarModoVisualizacao(modo) {
     if (modoVisualizacao === modo) return;
     modoVisualizacao = modo;
 
     document.getElementById('btnModoDetalhado')?.classList.toggle('active', modo === 'detalhado');
     document.getElementById('btnModoConsolidado')?.classList.toggle('active', modo === 'consolidado');
+    document.getElementById('btnModoResumoPlaca')?.classList.toggle('active', modo === 'resumoPlaca');
 
     if (modo === 'consolidado') {
         renderCabecalhoConsolidado();
+        document.getElementById('graficosResumoPlacaWrapper')?.classList.add('hidden');
+    } else if (modo === 'resumoPlaca') {
+        renderCabecalhoResumoPlaca();
+        document.getElementById('graficosConsolidadoWrapper')?.classList.add('hidden');
     } else {
         renderCabecalhoResultados();
         document.getElementById('graficosConsolidadoWrapper')?.classList.add('hidden');
+        document.getElementById('graficosResumoPlacaWrapper')?.classList.add('hidden');
     }
     filtrarERenderizarTabela();
 }
@@ -1255,6 +1423,11 @@ function exportarExcel() {
         return;
     }
 
+    if (modoVisualizacao === 'resumoPlaca') {
+        exportarExcelResumoPlaca();
+        return;
+    }
+
     const dadosFormatados = dadosExportacao.map(m => ({
         'TÍTULO_DA_MANUTENÇÃO': m.titulo || '',
         'FORNECEDOR': m.fornecedor || '',
@@ -1293,6 +1466,22 @@ function exportarExcelConsolidado() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Consolidado");
     XLSX.writeFile(wb, "Relatorio_Manutencao_Consolidado.xlsx");
+}
+
+function exportarExcelResumoPlaca() {
+    const grupos = consolidarPorPlaca(dadosExportacao).sort((a, b) => b.valorTotal - a.valorTotal);
+
+    const dadosFormatados = grupos.map(g => ({
+        'PLACA': g.veiculo,
+        'QTD_FORNECEDORES': g.qtdFornecedores,
+        'QTD_MANUTENCOES': g.qtdManutencoes,
+        'VALOR_TOTAL': g.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dadosFormatados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Resumo por Placa");
+    XLSX.writeFile(wb, "Relatorio_Manutencao_Resumo_Placa.xlsx");
 }
 
 async function getLogoBase64PDF() {
@@ -1366,6 +1555,11 @@ async function exportarPDF() {
 
     if (modoVisualizacao === 'consolidado') {
         await exportarPDFConsolidado();
+        return;
+    }
+
+    if (modoVisualizacao === 'resumoPlaca') {
+        await exportarPDFResumoPlaca();
         return;
     }
 
@@ -1555,6 +1749,94 @@ async function exportarPDFConsolidado() {
     }
 }
 
+async function exportarPDFResumoPlaca() {
+    const btn = document.getElementById('btnExportarPDF');
+    const originalText = btn?.innerHTML;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const logoBase64 = await getLogoBase64PDF();
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+        const nomeUsuario = usuarioLogado?.nome || 'Sistema';
+
+        const grupos = consolidarPorPlaca(dadosExportacao).sort((a, b) => b.valorTotal - a.valorTotal);
+        const totalGeral = grupos.reduce((acc, g) => acc + g.valorTotal, 0);
+
+        if (logoBase64) {
+            doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+        }
+
+        doc.setFontSize(18);
+        doc.setTextColor(0, 105, 55);
+        doc.text('Relatório de Manutenção - Resumo Consolidado por Placa', 60, 18);
+
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(`Gerado por: ${nomeUsuario}`, 14, 29);
+        doc.text(`Placas: ${grupos.length}`, 14, 34);
+        doc.text(`Total: R$ ${formatarValor(totalGeral)}`, 55, 34);
+
+        const filtrosTexto = doc.splitTextToSize(getFiltrosAtivosTexto(), 260);
+        doc.text(filtrosTexto, 14, 40);
+
+        const startY = 40 + (filtrosTexto.length * 4) + 4;
+        const columns = ['Placa', 'Qtd. Fornecedores', 'Qtd. Manutenções', 'Valor Total'];
+        const rows = grupos.map(g => [
+            g.veiculo,
+            String(g.qtdFornecedores),
+            String(g.qtdManutencoes),
+            `R$ ${formatarValor(g.valorTotal)}`
+        ]);
+
+        rows.push([
+            { content: 'TOTAL GERAL', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+            { content: `R$ ${formatarValor(totalGeral)}`, styles: { halign: 'right', fontStyle: 'bold' } }
+        ]);
+
+        doc.autoTable({
+            head: [columns],
+            body: rows,
+            startY,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 105, 55], textColor: 255, fontSize: 9 },
+            styles: { fontSize: 8, cellPadding: 3 },
+            alternateRowStyles: { fillColor: [245, 247, 246] },
+            columnStyles: {
+                1: { halign: 'center' },
+                2: { halign: 'center' },
+                3: { halign: 'right' }
+            }
+        });
+
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 10);
+            const pageText = `Página ${i} de ${pageCount}`;
+            doc.text(pageText, pageWidth - 14 - doc.getTextWidth(pageText), pageHeight - 10);
+        }
+
+        doc.save(`Relatorio_Manutencao_Resumo_Placa_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+        console.error('Erro ao exportar PDF resumo por placa:', err);
+        alert('Erro ao gerar PDF: ' + (err.message || err));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+}
+
 function setupColumnResizing() {
     const headers = document.querySelectorAll('.table-responsive th:not(.col-acoes-fixed)');
     
@@ -1613,6 +1895,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btnModoDetalhado')?.addEventListener('click', () => alternarModoVisualizacao('detalhado'));
   document.getElementById('btnModoConsolidado')?.addEventListener('click', () => alternarModoVisualizacao('consolidado'));
+  document.getElementById('btnModoResumoPlaca')?.addEventListener('click', () => alternarModoVisualizacao('resumoPlaca'));
 
   document.getElementById('btnExportarPDF').addEventListener('click', () => {
     exportarPDF();

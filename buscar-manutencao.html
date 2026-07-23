@@ -133,6 +133,7 @@
             <div class="modo-visualizacao-toggle" role="group" aria-label="Modo de visualização">
                 <button type="button" class="modo-btn active" data-modo="detalhado" id="btnModoDetalhado">Detalhado</button>
                 <button type="button" class="modo-btn" data-modo="consolidado" id="btnModoConsolidado">Consolidado</button>
+                <button type="button" class="modo-btn" data-modo="resumoPlaca" id="btnModoResumoPlaca">Resumo Consolidado</button>
             </div>
             <div class="resumo-valores" style="display: flex; align-items: center; gap: 15px;">
                 <input type="text" id="searchResultadosLocal" placeholder="🔍 Filtrar placa, tipo, fornecedor ou descrição..." class="glass-input" style="width: 280px; margin-bottom: 0;">
@@ -183,6 +184,31 @@
                     <div class="chart-container glass-panel marquee-item">
                         <h3><i class="fas fa-list-ol"></i> Top 10 Fornecedores por Quantidade</h3>
                         <div class="chart-wrapper"><canvas id="chartConsolidadoFornecedorQtd"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos do modo Resumo Consolidado (agrupado por Placa) -->
+        <div id="graficosResumoPlacaWrapper" class="hidden" style="margin-top: 20px;">
+            <h3 style="margin-bottom: 10px;"><i class="fas fa-chart-bar"></i> Gráficos - Resumo Consolidado</h3>
+            <div class="marquee-wrapper" id="graficosResumoPlacaMarqueeWrapper">
+                <div class="marquee-track" id="graficosResumoPlacaMarqueeTrack">
+                    <div class="chart-container glass-panel marquee-item">
+                        <h3><i class="fas fa-truck"></i> Top 10 Veículos por Custo</h3>
+                        <div class="chart-wrapper"><canvas id="chartResumoPlacaValor"></canvas></div>
+                    </div>
+                    <div class="chart-container glass-panel marquee-item">
+                        <h3><i class="fas fa-list-ol"></i> Top 10 Veículos por Qtd. de Manutenções</h3>
+                        <div class="chart-wrapper"><canvas id="chartResumoPlacaQtdManutencoes"></canvas></div>
+                    </div>
+                    <div class="chart-container glass-panel marquee-item">
+                        <h3><i class="fas fa-building"></i> Top 10 Veículos por Qtd. de Fornecedores</h3>
+                        <div class="chart-wrapper"><canvas id="chartResumoPlacaQtdFornecedores"></canvas></div>
+                    </div>
+                    <div class="chart-container glass-panel marquee-item">
+                        <h3><i class="fas fa-wrench"></i> Top 10 Títulos de Manutenção por Custo</h3>
+                        <div class="chart-wrapper"><canvas id="chartResumoPlacaTitulo"></canvas></div>
                     </div>
                 </div>
             </div>
@@ -271,7 +297,7 @@
   
   <!-- 🚀 Scripts -->
   <script type="module" src="./script/auth-guard.js"></script>
-  <script type="module" src="./script/buscar-manutencao.js?v=20260723-multiselect" defer></script>
+  <script type="module" src="./script/buscar-manutencao.js?v=20260723-grafico-titulo" defer></script>
   <script type="module" src="./script/menu.js" defer></script>
 </body>
 </html>
