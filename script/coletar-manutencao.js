@@ -1171,16 +1171,27 @@ const ColetarManutencaoUI = {
                 .eq('coletas_manutencao.placa', placa);
 
             const novaSituacao = (qtdInternados && qtdInternados > 0) ? 'INTERNADO' : 'ativo';
-            
+
             if (errCheckInternado) console.error('Erro ao verificar status internado:', errCheckInternado);
 
-            const { error: errVeiculo } = await supabaseClient
+            // Não mexe na placa se ela estiver marcada como INATIVO manualmente em veiculos.html
+            // (ex: veículo vendido/baixado) — esse controle é manual e não deve ser sobrescrito
+            // automaticamente pelo checklist de manutenção.
+            const { data: veiculoAtual } = await supabaseClient
                 .from('veiculos')
-                .update({ situacao: novaSituacao })
-                .eq('placa', placa);
+                .select('situacao')
+                .eq('placa', placa)
+                .single();
 
-            if (errVeiculo) {
-                console.error('Erro ao atualizar situação do veículo:', errVeiculo);
+            if (String(veiculoAtual?.situacao || '').toLowerCase() !== 'inativo') {
+                const { error: errVeiculo } = await supabaseClient
+                    .from('veiculos')
+                    .update({ situacao: novaSituacao })
+                    .eq('placa', placa);
+
+                if (errVeiculo) {
+                    console.error('Erro ao atualizar situação do veículo:', errVeiculo);
+                }
             }
 
             registrarAuditoria(this.editingId ? 'ALTERAR' : 'INCLUIR', MODULO_AUDITORIA, `${this.editingId ? 'Atualização' : 'Registro'} de coleta - Placa: ${placa}`);
