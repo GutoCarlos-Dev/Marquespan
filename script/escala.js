@@ -377,6 +377,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Registra a última alteração de uma filial+semana+contexto (dia) que não fica marcada em
+    // nenhuma linha específica — caso de ações em massa que apagam/substituem linhas inteiras
+    // (ex.: "Atualizar as abas diárias pelo Planejamento"), onde a linha que carregaria
+    // ultima_alteracao_por/em pode deixar de existir depois da operação.
+    async function registrarAlteracaoDiaEscala(filial, semana, contexto) {
+        if (!filial || !semana || !contexto) return;
+        try {
+            const { error } = await supabaseClient
+                .from('escala_alteracoes')
+                .upsert({
+                    filial,
+                    semana,
+                    contexto,
+                    usuario: getUsuarioAuditoria(),
+                    alterado_em: new Date().toISOString()
+                }, { onConflict: 'filial,semana,contexto' });
+            if (error) throw error;
+        } catch (err) {
+            console.error('Erro ao registrar alteração da escala:', err);
+        }
+    }
+
+    async function buscarUltimaAlteracaoRegistrada(filial, semana, contexto) {
+        if (!filial || !semana || !contexto) return null;
+        try {
+            const { data, error } = await supabaseClient
+                .from('escala_alteracoes')
+                .select('usuario, alterado_em')
+                .eq('filial', filial)
+                .eq('semana', semana)
+                .eq('contexto', contexto)
+                .maybeSingle();
+            if (error) throw error;
+            if (!data?.alterado_em) return null;
+            return { ultima_alteracao_por: data.usuario, ultima_alteracao_em: data.alterado_em };
+        } catch (err) {
+            console.error('Erro ao carregar registro de alteração da escala:', err);
+            return null;
+        }
+    }
+
     async function carregarUltimaAuditoriaEscala(contexto = {}) {
         if (!escalaAuditInfo) return;
 
@@ -428,6 +469,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (resFaltas.error) throw resFaltas.error;
                 registros = [...(resEscala.data || []), ...(resFaltas.data || [])];
             }
+
+            const alteracaoRegistrada = await buscarUltimaAlteracaoRegistrada(filialAcesso, semana, contextoAcesso);
+            if (alteracaoRegistrada) registros.push(alteracaoRegistrada);
 
             const ultima = registros
                 .filter(row => row.ultima_alteracao_em)
@@ -3628,6 +3672,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .insert(inserts.slice(i, i + chunkSize));
                 if (insertError) throw insertError;
             }
+
+            // As 7 abas diarias (PADRAO/TRANSFERENCIA/EQUIPAMENTO) foram apagadas e substituidas
+            // acima, mesmo que algum dia acabe sem nenhum registro novo — por isso registramos a
+            // alteracao explicitamente para todos os dias, independente de terem recebido inserts.
+            const filialAlteracao = getFilialEscala();
+            IMPORT_DAYS.forEach(diaAtualizado => {
+                registrarAlteracaoDiaEscala(filialAlteracao, semana, diaAtualizado);
+            });
 
             const activeDia = document.querySelector('.tab-btn.active')?.dataset.dia;
             if (activeDia) carregarDadosDia(activeDia, semana);
