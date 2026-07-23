@@ -689,6 +689,15 @@ const RotasUI = {
             return;
         }
 
+        // Confere a sessão ANTES de tentar gravar — evita mandar a planilha inteira pro banco
+        // só pra descobrir, via um "permission denied", que o login expirou nessa aba (comum
+        // quando há mais de uma aba aberta: o refresh token de uma invalida o da outra).
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) {
+            alert('Sua sessão expirou. Atualize a página (F5) e faça login novamente antes de importar.');
+            return;
+        }
+
         try {
             // O método 'upsert' do Supabase faz exatamente o que precisamos:
             // Insere se não existir, atualiza se existir, com base na chave primária ou em uma constraint.
@@ -703,7 +712,19 @@ const RotasUI = {
             this.renderGrid();
         } catch (error) {
             console.error('Erro detalhado no processamento:', error);
-            alert('Erro ao processar os dados e atualizar o banco: ' + error.message);
+
+            const mensagem = String(error.message || '');
+            if (mensagem.toLowerCase().includes('permission denied') || error.code === '42501') {
+                alert(
+                    'Não foi possível gravar as rotas: acesso negado pelo banco.\n\n' +
+                    'Isso costuma acontecer quando a sessão expirou nesta aba (ex.: outra aba do sistema ' +
+                    'foi aberta e "tomou" a sessão). Atualize a página (F5), faça login novamente e tente ' +
+                    'importar de novo.\n\nSe o erro persistir mesmo após relogar, seu nível de acesso pode ' +
+                    'não ter permissão para editar Rotas — fale com o administrador.'
+                );
+            } else {
+                alert('Erro ao processar os dados e atualizar o banco: ' + error.message);
+            }
         }
     },
 
