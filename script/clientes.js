@@ -871,7 +871,19 @@ const ClientesUI = {
         if (!confirm(`Confirma excluir ${alvo}?`)) return;
 
         try {
+            let tabelaExcluida = null;
+            let registroExcluido = null;
+
             if (cliente.rota) {
+                const { data } = await supabaseClient
+                    .from('cliente_rotas')
+                    .select('*')
+                    .eq('cliente_codigo', cliente.codigo)
+                    .eq('rota', cliente.rota)
+                    .maybeSingle();
+                registroExcluido = data;
+                tabelaExcluida = 'cliente_rotas';
+
                 const { error } = await supabaseClient
                     .from('cliente_rotas')
                     .delete()
@@ -879,6 +891,14 @@ const ClientesUI = {
                     .eq('rota', cliente.rota);
                 if (error) throw error;
             } else {
+                const { data } = await supabaseClient
+                    .from('clientes')
+                    .select('*')
+                    .eq('codigo', cliente.codigo)
+                    .maybeSingle();
+                registroExcluido = data;
+                tabelaExcluida = 'clientes';
+
                 const { error } = await supabaseClient
                     .from('clientes')
                     .delete()
@@ -886,7 +906,7 @@ const ClientesUI = {
                 if (error) throw error;
             }
 
-            await registrarAuditoria('EXCLUIR', 'Clientes', `Exclusao de ${alvo}`);
+            await registrarAuditoria('EXCLUIR', 'Clientes', `Exclusao de ${alvo}`, { tabela: tabelaExcluida, snapshot: registroExcluido });
             this.setStatus(`${alvo} excluido com sucesso.`);
             await this.carregarClientes();
         } catch (error) {

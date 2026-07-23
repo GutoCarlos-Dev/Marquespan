@@ -1456,10 +1456,12 @@ const ColetarManutencaoUI = {
 
         if (!confirm('Deseja realmente excluir este lançamento?')) return;
         try {
-            // Obtém a placa antes de deletar para atualizar situação do veículo depois
+            // Obtém o cabeçalho completo antes de deletar — usado tanto para atualizar a situação
+            // do veículo (placa) quanto como snapshot para o botão "Restaurar" da auditoria.
+            // Observação: só o cabeçalho é restaurado; os itens do checklist não são reinseridos.
             const { data: coletaDados } = await supabaseClient
                 .from('coletas_manutencao')
-                .select('placa')
+                .select('*')
                 .eq('id', id)
                 .single();
             const placaExcluida = coletaDados?.placa || null;
@@ -1487,7 +1489,7 @@ const ColetarManutencaoUI = {
                 }
             }
 
-            registrarAuditoria('EXCLUIR', MODULO_AUDITORIA, `Exclusão de coleta ID ${id}`);
+            registrarAuditoria('EXCLUIR', MODULO_AUDITORIA, `Exclusão de coleta ID ${id}`, { tabela: 'coletas_manutencao', snapshot: coletaDados || null });
             this.carregarLancamentos();
 
             // Se a aba de relatório estiver visível, atualiza ela também

@@ -315,13 +315,14 @@ async function excluirOficina(id) {
     if (!confirm('Tem certeza que deseja excluir esta oficina?')) return;
 
     try {
+        const { data: registroExcluido } = await supabaseClient.from('oficinas').select('*').eq('id', id).maybeSingle();
         const { error } = await supabaseClient.from('oficinas').delete().eq('id', id);
 
         if (error) {
             // Tratamento específico para erro de chave estrangeira (FK)
             if (error.message.includes('violates foreign key constraint') || error.code === '23503') {
                 if (confirm('Esta oficina possui registros vinculados em "Coletas de Manutenção".\n\nDeseja desvincular esses registros (definir como "Sem Oficina") e excluir a oficina permanentemente?')) {
-                    
+
                     // 1. Desvincular registros na tabela filha
                     const { error: updateError } = await supabaseClient
                         .from('coletas_manutencao_checklist')
@@ -334,7 +335,7 @@ async function excluirOficina(id) {
                     const { error: deleteError } = await supabaseClient.from('oficinas').delete().eq('id', id);
                     if (deleteError) throw deleteError;
 
-                    registrarAuditoria('EXCLUIR', 'Oficina', `Exclusão de oficina ID ${id} (com desvinculação de registros)`);
+                    registrarAuditoria('EXCLUIR', 'Oficina', `Exclusão de oficina ID ${id} (com desvinculação de registros)`, { tabela: 'oficinas', snapshot: registroExcluido });
                     alert('Oficina excluída e registros desvinculados com sucesso!');
                     carregarOficinas();
                     return;
@@ -342,6 +343,7 @@ async function excluirOficina(id) {
             }
             throw error; // Lança outros erros ou se o usuário cancelar
         }
+        registrarAuditoria('EXCLUIR', 'Oficina', `Exclusão de oficina ID ${id}`, { tabela: 'oficinas', snapshot: registroExcluido });
         carregarOficinas();
     } catch (err) {
         console.error('Erro ao excluir oficina:', err);

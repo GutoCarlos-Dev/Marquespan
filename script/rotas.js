@@ -486,9 +486,9 @@ const RotasUI = {
             }
             if (confirm('Tem certeza que deseja excluir esta rota?')) {
                 try {
-                    const rotaExcluida = this._data?.find(r => r.id == id);
+                    const rotaExcluida = this.displayedRotas?.find(r => r.id == id);
                     await this.SupabaseService.remove('rotas', { field: 'id', value: id });
-                    registrarAuditoria('EXCLUIR', 'Rotas', `Exclusão da rota nº ${rotaExcluida?.numero || id}`);
+                    registrarAuditoria('EXCLUIR', 'Rotas', `Exclusão da rota nº ${rotaExcluida?.numero || id}`, { tabela: 'rotas', snapshot: rotaExcluida || null });
                     this.renderGrid();
                 } catch (err) {
                     console.error('Erro ao excluir rota', err);

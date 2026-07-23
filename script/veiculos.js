@@ -1049,9 +1049,10 @@ async function excluirVeiculo(id) {
 
     if (!confirm('Tem certeza que deseja excluir este veículo?')) return;
     try {
+        const { data: registroExcluido } = await supabaseClient.from('veiculos').select('*').eq('id', id).maybeSingle();
         const { error } = await supabaseClient.from('veiculos').delete().eq('id', id);
         if (error) throw error;
-        registrarAuditoria('EXCLUIR', 'Veículos', `Exclusão do veículo ID ${id}`);
+        registrarAuditoria('EXCLUIR', 'Veículos', `Exclusão do veículo ID ${id}`, { tabela: 'veiculos', snapshot: registroExcluido });
         carregarVeiculos();
     } catch (err) {
         console.error('Erro ao excluir:', err);

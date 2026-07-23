@@ -1367,6 +1367,10 @@ async function excluirManutencao(id) {
   if (!confirm('Tem certeza que deseja excluir esta manutenção? Esta ação não pode ser desfeita.')) return;
 
   try {
+    // Snapshot do cabeçalho para o botão "Restaurar" da auditoria — só o cabeçalho é restaurado
+    // (itens/anexos do Storage não são reinseridos automaticamente).
+    const { data: manutencaoExcluida } = await supabaseClient.from('manutencao').select('*').eq('id', id).maybeSingle();
+
     // 1. Limpar arquivos do Storage (usando listagem direta da pasta para garantir limpeza total)
     // Lista todos os arquivos dentro da pasta do ID
     const { data: filesInStorage, error: listError } = await supabaseClient.storage
@@ -1391,7 +1395,7 @@ async function excluirManutencao(id) {
     const { error } = await supabaseClient.from('manutencao').delete().eq('id', id);
     if (error) throw error;
 
-    registrarAuditoria('EXCLUIR', 'Manutenção', `Exclusão de manutenção ID ${id}`);
+    registrarAuditoria('EXCLUIR', 'Manutenção', `Exclusão de manutenção ID ${id}`, { tabela: 'manutencao', snapshot: manutencaoExcluida || null });
     alert('✅ Manutenção excluída com sucesso!');
     buscarManutencao(); // Atualiza a tabela
   } catch (error) {

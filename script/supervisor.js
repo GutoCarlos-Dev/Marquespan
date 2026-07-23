@@ -269,9 +269,10 @@ const SupervisorUI = {
         if (!confirm('Deseja realmente excluir este supervisor?')) return;
 
         try {
+            const { data: registroExcluido } = await supabaseClient.from('supervisores').select('*').eq('id', id).maybeSingle();
             const { error } = await supabaseClient.from('supervisores').delete().eq('id', id);
             if (error) throw error;
-            registrarAuditoria('EXCLUIR', 'Supervisor', `Exclusão do supervisor ID ${id}`);
+            registrarAuditoria('EXCLUIR', 'Supervisor', `Exclusão do supervisor ID ${id}`, { tabela: 'supervisores', snapshot: registroExcluido });
             alert('✅ Supervisor excluído com sucesso!');
             this.carregarSupervisores();
         } catch (err) {

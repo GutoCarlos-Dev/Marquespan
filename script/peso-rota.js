@@ -2135,6 +2135,7 @@ async function excluirSelecionados() {
     if (!confirm(`Excluir ${indices.length} linha(s) selecionada(s)?`)) return;
 
     const idsParaExcluir = indices.map(index => gridData[index]?.id).filter(Boolean);
+    const linhasExcluidas = indices.map(index => gridData[index]).filter(Boolean);
 
     try {
         if (idsParaExcluir.length > 0) {
@@ -2151,7 +2152,7 @@ async function excluirSelecionados() {
             if (error) throw error;
         }
 
-        registrarAuditoria('EXCLUIR', 'Peso de Rota', `Exclusão de ${idsParaExcluir.length} linha(s) de peso de rota`);
+        registrarAuditoria('EXCLUIR', 'Peso de Rota', `Exclusão de ${idsParaExcluir.length} linha(s) de peso de rota`, { tabela: 'peso_rota', snapshot: linhasExcluidas });
         gridData = gridData.filter((_, index) => !indices.includes(index));
         renderGrid();
     } catch (error) {

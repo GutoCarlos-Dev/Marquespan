@@ -2306,8 +2306,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (confirm('Deseja remover esta linha?')) {
                     try {
                         if (tabela !== 'faltas_afastamentos' && tabela !== 'escala') throw new Error('Tabela inválida: ' + tabela);
+                        const { data: registroExcluido } = await supabaseClient.from(tabela).select('*').eq('id', id).maybeSingle();
                         const { error } = await supabaseClient.from(tabela).delete().eq('id', id);
                         if (error) throw error;
+                        registrarAuditoria('EXCLUIR', 'Escala', `Exclusão de linha da escala (${tabela})`, { tabela, snapshot: registroExcluido });
                         tr.remove();
                         // Limpa seleções para evitar exclusões acidentais em outras seções
                         document.querySelectorAll('.selected-cell').forEach(el => el.classList.remove('selected-cell'));
@@ -4374,13 +4376,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
+            // Log de auditoria separado por tabela (cada um com seu próprio snapshot), já que a
+            // restauração só sabe reinserir numa tabela por vez.
             for (const table in toDelete) {
                 if (toDelete[table].length > 0) {
+                    const { data: registrosExcluidos } = await supabaseClient.from(table).select('*').in('id', toDelete[table]);
                     const { error } = await supabaseClient.from(table).delete().in('id', toDelete[table]);
                     if (error) throw error;
+                    registrarAuditoria('EXCLUIR', 'Escala', `Exclusão de ${toDelete[table].length} linha(s) de células da escala (${table})`, { tabela: table, snapshot: registrosExcluidos });
                 }
             }
-            registrarAuditoria('EXCLUIR', 'Escala', 'Exclusão de células da escala');
             alert('Exclusão realizada com sucesso.');
             const dia = document.querySelector('.tab-btn.active')?.dataset.dia;
             const semana = selectSemana.value;
@@ -9320,13 +9325,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
 
             try {
+                const { data: registrosExcluidos } = await supabaseClient
+                    .from('planejamento_semanal')
+                    .select('*')
+                    .in('id', ids);
+
                 const { error } = await supabaseClient
                     .from('planejamento_semanal')
                     .delete()
                     .in('id', ids);
 
                 if (error) throw error;
-                registrarAuditoria('EXCLUIR', 'Escala', `Exclusão de ${ids.length} item(ns) do planejamento semanal`);
+                registrarAuditoria('EXCLUIR', 'Escala', `Exclusão de ${ids.length} item(ns) do planejamento semanal`, { tabela: 'planejamento_semanal', snapshot: registrosExcluidos });
                 alert('Itens excluídos com sucesso!');
                 carregarPlanejamento(selectSemana.value);
                 if (selectAllPlan) selectAllPlan.checked = false;
@@ -11039,6 +11049,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 const { error } = await supabaseClient.from('faltas_afastamentos').delete().eq('id', id);
                 if (error) throw error;
+                registrarAuditoria('EXCLUIR', 'Escala', 'Exclusão de falta/férias/afastamento do planejamento', { tabela: 'faltas_afastamentos', snapshot: linhaAtual });
             }
 
             await carregarFaltasPlanejamento(selectSemana.value);
@@ -11325,11 +11336,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 for (const table in toDelete) {
                     if (toDelete[table].length > 0) {
+                        const { data: registrosExcluidos } = await supabaseClient.from(table).select('*').in('id', toDelete[table]);
                         const { error } = await supabaseClient.from(table).delete().in('id', toDelete[table]);
                         if (error) throw error;
+                        registrarAuditoria('EXCLUIR', 'Escala', `Exclusão de ${toDelete[table].length} registro(s) selecionado(s) da escala (${table})`, { tabela: table, snapshot: registrosExcluidos });
                     }
                 }
-                registrarAuditoria('EXCLUIR', 'Escala', 'Exclusão de registros selecionados da escala');
                 alert('Exclusão realizada com sucesso.');
                 const activeTab = document.querySelector('.tab-btn.active');
                 if (activeTab.dataset.tab === 'planejamento') carregarPlanejamento(selectSemana.value);

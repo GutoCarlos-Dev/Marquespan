@@ -1097,6 +1097,13 @@ window.excluirBatchColeta = async function(dataColeta, filial) {
     if (!confirm('Tem certeza que deseja excluir TODO este lote de coletas? Esta ação não pode ser desfeita.')) return;
 
     try {
+        let selectQuery = supabaseClient
+            .from('coleta_km')
+            .select('*')
+            .eq('data_coleta', dataColeta);
+        selectQuery = filial ? selectQuery.eq('filial', filial) : selectQuery.is('filial', null);
+        const { data: registrosExcluidos } = await selectQuery;
+
         let query = supabaseClient
             .from('coleta_km')
             .delete()
@@ -1106,7 +1113,7 @@ window.excluirBatchColeta = async function(dataColeta, filial) {
 
         if (error) throw error;
 
-        registrarAuditoria('EXCLUIR', 'Coleta KM', `Exclusão do lote de coleta de KM da data ${dataColeta} (filial ${filial || 'sem filial'})`);
+        registrarAuditoria('EXCLUIR', 'Coleta KM', `Exclusão do lote de coleta de KM da data ${dataColeta} (filial ${filial || 'sem filial'})`, { tabela: 'coleta_km', snapshot: registrosExcluidos });
         alert('Lote excluído com sucesso!');
         carregarHistorico();
     } catch (error) {

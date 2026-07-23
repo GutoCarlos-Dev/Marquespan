@@ -905,6 +905,9 @@ async function deleteSelectedRows() {
     const idsToDelete = indices
         .map(index => gridData[index].id)
         .filter(Boolean);
+    const linhasExcluidas = indices
+        .map(index => gridData[index])
+        .filter(row => row && row.id);
 
     if (idsToDelete.length > 0) {
         try {
@@ -913,7 +916,7 @@ async function deleteSelectedRows() {
                 .delete()
                 .in('id', idsToDelete);
             if (error) throw error;
-            registrarAuditoria('EXCLUIR', 'Retorno de Rota', `Exclusão de ${idsToDelete.length} linha(s) de retorno de rota`);
+            registrarAuditoria('EXCLUIR', 'Retorno de Rota', `Exclusão de ${idsToDelete.length} linha(s) de retorno de rota`, { tabela: 'retorno_rota', snapshot: linhasExcluidas });
         } catch (error) {
             console.error('Erro ao excluir registros do banco:', error);
             alert('Erro ao excluir alguns registros do banco de dados.');
@@ -1738,6 +1741,7 @@ async function deleteRow(index) {
                 .eq('id', rowData.id);
 
             if (error) throw error;
+            registrarAuditoria('EXCLUIR', 'Retorno de Rota', `Exclusão de linha de retorno de rota ID ${rowData.id}`, { tabela: 'retorno_rota', snapshot: rowData });
         } catch (error) {
             console.error(`Erro ao excluir linha ${index} do banco de dados:`, error);
             alert('Não foi possível excluir a linha do banco de dados. A linha será removida apenas da visualização atual.');

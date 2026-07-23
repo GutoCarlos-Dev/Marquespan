@@ -1859,7 +1859,7 @@ const FuncionarioUI = {
             let query = supabaseClient.from('funcionario').delete().eq('id', id);
             query = this.aplicarFiltroFilialRestrita(query);
             await query;
-            registrarAuditoria('EXCLUIR', 'Funcionário', `Exclusão do colaborador ${nomeFuncionario}`);
+            registrarAuditoria('EXCLUIR', 'Funcionário', `Exclusão do colaborador ${nomeFuncionario}`, { tabela: 'funcionario', snapshot: func || null });
             await this.renderGrid();
         }
     },

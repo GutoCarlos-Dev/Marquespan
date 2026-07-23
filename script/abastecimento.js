@@ -1398,6 +1398,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!confirm('Deseja excluir este ajuste de estoque?')) return;
 
             try {
+                const { data: registroExcluido } = await supabaseClient
+                    .from('abastecimentos')
+                    .select('*')
+                    .eq('id', id)
+                    .eq('numero_nota', 'AJUSTE DE ESTOQUE')
+                    .maybeSingle();
+
                 const { error } = await supabaseClient
                     .from('abastecimentos')
                     .delete()
@@ -1406,7 +1413,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
 
-                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de ajuste de estoque ID ${id}`);
+                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de ajuste de estoque ID ${id}`, { tabela: 'abastecimentos', snapshot: registroExcluido });
                 alert('Ajuste excluído com sucesso!');
                 await this.renderAuditoriaEstoque();
                 await this.loadEstoqueAtual();
@@ -1608,9 +1615,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (button.classList.contains('btn-delete')) {
                 if (confirm('Tem certeza que deseja excluir este lançamento?')) {
                     try {
+                        const { data: registroExcluido } = await supabaseClient.from('abastecimentos').select('*').eq('id', id).maybeSingle();
                         const { error } = await supabaseClient.from('abastecimentos').delete().eq('id', id);
                         if (error) throw error;
-                        registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de entrada de abastecimento ID ${id}`);
+                        registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de entrada de abastecimento ID ${id}`, { tabela: 'abastecimentos', snapshot: registroExcluido });
                         this.renderTable();
                         await this.loadEstoqueAtual(false);
                     } catch (error) {
@@ -1932,9 +1940,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async deleteSaida(id) {
             try {
+                const { data: registroExcluido } = await supabaseClient.from('saidas_combustivel').select('*').eq('id', id).maybeSingle();
                 const { error } = await supabaseClient.from('saidas_combustivel').delete().eq('id', id);
                 if (error) throw error;
-                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de saída de combustível ID ${id}`);
+                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de saída de combustível ID ${id}`, { tabela: 'saidas_combustivel', snapshot: registroExcluido });
                 alert('Registro de saída excluído com sucesso!');
                 this.renderSaidasTable();
                 await this.loadEstoqueAtual(false);
@@ -2370,10 +2379,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async deleteExt(id) {
             if (!confirm('Deseja excluir este registro?')) return;
+            const { data: registroExcluido } = await supabaseClient.from('abastecimento_externo').select('*').eq('id', id).maybeSingle();
             const { error } = await supabaseClient.from('abastecimento_externo').delete().eq('id', id);
             if (error) alert('Erro ao excluir: ' + error.message);
             else {
-                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de abastecimento externo ID ${id}`);
+                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de abastecimento externo ID ${id}`, { tabela: 'abastecimento_externo', snapshot: registroExcluido });
                 this.renderExtTable();
             }
         },
@@ -2395,8 +2405,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!confirm(`Tem certeza que deseja excluir ${checkboxes.length} registros?`)) return;
 
             const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
-            
+
             try {
+                const { data: registrosExcluidos } = await supabaseClient
+                    .from('abastecimento_externo')
+                    .select('*')
+                    .in('id', ids);
+
                 const { error } = await supabaseClient
                     .from('abastecimento_externo')
                     .delete()
@@ -2404,7 +2419,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
 
-                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão em lote de ${ids.length} registro(s) de abastecimento externo`);
+                registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão em lote de ${ids.length} registro(s) de abastecimento externo`, { tabela: 'abastecimento_externo', snapshot: registrosExcluidos });
                 alert('Registros excluídos com sucesso!');
                 this.renderExtTable(); // Refresh table
                 
@@ -2645,6 +2660,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
+                const { data: registroExcluido } = await supabaseClient.from('postos').select('*').eq('id', id).maybeSingle();
                 const { error } = await supabaseClient.from('postos').delete().eq('id', id);
                 if(error) {
                     if (error.code === '23503') {
@@ -2653,7 +2669,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         alert('Erro ao excluir: ' + error.message);
                     }
                 } else {
-                    registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de posto ID ${id}`);
+                    registrarAuditoria('EXCLUIR', 'Abastecimento', `Exclusão de posto ID ${id}`, { tabela: 'postos', snapshot: registroExcluido });
                     this.renderPostosTable();
                     this.loadPostosOptions();
                 }

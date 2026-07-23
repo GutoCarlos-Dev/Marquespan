@@ -160,6 +160,17 @@ function acaoBadge(acao) {
     return `<span class="badge-acao acao-${escapeHtml(acao)}">${escapeHtml(acao)}</span>`;
 }
 
+// Só oferece "Restaurar" para exclusões que guardaram um snapshot (exclusões feitas antes da
+// migration de snapshot, ou de módulos ainda não adaptados, não têm essa opção) e que ainda não
+// foram restauradas.
+function botaoRestaurar(r) {
+    if (r.acao !== 'EXCLUIR' || !r.snapshot) return '-';
+    if (r.restaurado) {
+        return `<span title="Restaurado por ${escapeHtml(r.restaurado_por || '-')} em ${formatarTs(r.restaurado_em)}" style="font-size:0.78rem;color:#28a745;"><i class="fas fa-check"></i> Restaurado</span>`;
+    }
+    return `<button type="button" class="btn-glass btn-sm btn-blue" style="padding:4px 10px;font-size:0.78rem;" onclick="restaurarRegistro(${r.id})"><i class="fas fa-trash-restore"></i> Restaurar</button>`;
+}
+
 function getFiltros() {
     return {
         dataInicio: document.getElementById('filtroDataInicio').value,
@@ -235,7 +246,7 @@ function mostrarEstadoInicial() {
     const tbody = document.getElementById('tbodyAuditoria');
     tbody.innerHTML = `
         <tr>
-            <td colspan="6" style="text-align:center;padding:32px;color:#888;">
+            <td colspan="7" style="text-align:center;padding:32px;color:#888;">
                 <i class="fas fa-filter" style="font-size:2rem;margin-bottom:10px;display:block;opacity:0.3;"></i>
                 Use os filtros acima e clique em <strong>Filtrar</strong> para carregar os registros.
             </td>
@@ -247,7 +258,7 @@ function mostrarEstadoInicial() {
 
 async function carregarLog() {
     const tbody = document.getElementById('tbodyAuditoria');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>';
 
     const f = filtrosAtivos;
     const inicio = (paginaAtual - 1) * POR_PAGINA;
@@ -262,7 +273,7 @@ async function carregarLog() {
     );
 
     if (error) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">Erro ao carregar dados. Verifique se a tabela foi criada no Supabase.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:red;">Erro ao carregar dados. Verifique se a tabela foi criada no Supabase.</td></tr>';
         console.error('[Auditoria] Erro ao carregar log:', error);
         return;
     }
@@ -271,7 +282,7 @@ async function carregarLog() {
     document.getElementById('countTotal').textContent = totalRegistros.toLocaleString('pt-BR');
 
     if (!data?.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px;">Nenhum registro encontrado com os filtros aplicados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:20px;">Nenhum registro encontrado com os filtros aplicados.</td></tr>';
         document.getElementById('paginacaoInfo').textContent = '';
         document.getElementById('btnPrev').disabled = true;
         document.getElementById('btnNext').disabled = true;
@@ -286,6 +297,7 @@ async function carregarLog() {
             <td>${acaoBadge(r.acao)}</td>
             <td style="font-size:0.82rem;">${escapeHtml(r.modulo)}</td>
             <td class="descricao-cell" title="${escapeHtml(r.descricao)}">${escapeHtml(r.descricao)}</td>
+            <td style="text-align:center;">${botaoRestaurar(r)}</td>
         </tr>
     `).join('');
 
@@ -376,6 +388,56 @@ window.mudarPagina = function (dir) {
     if (!filtrosAtivos) return;
     paginaAtual = Math.max(1, paginaAtual + dir);
     carregarLog();
+};
+
+window.restaurarRegistro = async function (id) {
+    try {
+        const { data: registro, error: fetchError } = await supabaseClient
+            .from('auditoria_sistema')
+            .select('id, tabela_origem, snapshot, restaurado, descricao')
+            .eq('id', id)
+            .single();
+
+        if (fetchError) throw fetchError;
+        if (!registro) return alert('Registro de auditoria não encontrado.');
+        if (registro.restaurado) return alert('Este registro já foi restaurado anteriormente.');
+        if (!registro.tabela_origem || !registro.snapshot) {
+            return alert('Este registro não tem dados suficientes para restaurar (exclusão anterior à funcionalidade de restauração).');
+        }
+
+        const linhas = Array.isArray(registro.snapshot) ? registro.snapshot : [registro.snapshot];
+        if (!linhas.length) return alert('Nenhum dado para restaurar.');
+
+        if (!confirm(`Restaurar ${linhas.length} registro(s) na tabela "${registro.tabela_origem}"?\n\n${registro.descricao || ''}`)) {
+            return;
+        }
+
+        const { error: insertError } = await supabaseClient
+            .from(registro.tabela_origem)
+            .insert(linhas);
+
+        if (insertError) throw insertError;
+
+        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
+        const { error: updateError } = await supabaseClient
+            .from('auditoria_sistema')
+            .update({
+                restaurado: true,
+                restaurado_por: usuarioLogado?.nome || 'Desconhecido',
+                restaurado_em: new Date().toISOString()
+            })
+            .eq('id', id);
+
+        if (updateError) throw updateError;
+
+        await registrarAuditoria('INCLUIR', 'Auditoria', `Restauração de ${linhas.length} registro(s) da tabela "${registro.tabela_origem}" (exclusão original: ${registro.descricao || '-'})`);
+
+        alert('Registro(s) restaurado(s) com sucesso!');
+        carregarLog();
+    } catch (err) {
+        console.error('[Auditoria] Erro ao restaurar registro:', err);
+        alert('Erro ao restaurar: ' + (err.message || err));
+    }
 };
 
 window.exportarXLSX = async function () {
