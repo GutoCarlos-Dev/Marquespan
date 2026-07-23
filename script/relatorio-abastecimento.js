@@ -101,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
             this.filtroVeiculo = document.getElementById('filtroVeiculo');
             this.filtroRota = document.getElementById('filtroRota');
             this.filtroPosto = document.getElementById('filtroPosto');
-            this.postosFiltroCache = [];
             this.filiaisCache = [];
             this.btnLimpar = document.getElementById('btnLimparFiltros');
             
@@ -760,16 +759,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const { data, error } = await query;
                 if (error) throw error;
-    
-                const datalist = document.getElementById('listaVeiculosFiltro');
-                if (datalist) {
-                    datalist.innerHTML = '';
-                    data.forEach(v => {
-                        const option = document.createElement('option');
-                        option.value = v.placa;
-                        datalist.appendChild(option);
-                    });
-                }
+
+                const opcoes = (data || []).filter(v => v.placa).map(v => ({ value: v.placa, label: v.placa }));
+                this.popularMultiselectComBusca('filtroVeiculo', 'veiculo-placa-checkbox', opcoes);
             } catch (error) {
                 console.error('Erro ao carregar veículos para filtro:', error);
             }
@@ -803,18 +795,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const { data, error } = await query;
                 if (error) throw error;
-    
-                const datalist = document.getElementById('listaRotasFiltro');
-                if (datalist) {
-                    datalist.innerHTML = '';
-                    // Ordenação numérica correta
-                    data.sort((a, b) => String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true, sensitivity: 'base' }));
-                    data.forEach(r => {
-                        const option = document.createElement('option');
-                        option.value = r.numero;
-                        datalist.appendChild(option);
-                    });
-                }
+
+                // Ordenação numérica correta
+                data.sort((a, b) => String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true, sensitivity: 'base' }));
+                const opcoes = data.map(r => ({ value: String(r.numero), label: String(r.numero) }));
+                this.popularMultiselectComBusca('filtroRota', 'rota-checkbox', opcoes, 'Todas');
             } catch (error) {
                 console.error('Erro ao carregar rotas para filtro:', error);
             }
@@ -836,16 +821,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
 
-                this.postosFiltroCache = data || [];
-                const datalist = document.getElementById('listaPostosFiltro');
-                if (!datalist) return;
-
-                datalist.innerHTML = '';
-                (data || []).forEach(posto => {
-                    const option = document.createElement('option');
-                    option.value = this.formatPostoFiltro(posto);
-                    datalist.appendChild(option);
-                });
+                const opcoes = (data || []).map(p => ({ value: String(p.id), label: this.formatPostoFiltro(p) }));
+                this.popularMultiselectComBusca('filtroPosto', 'posto-checkbox', opcoes);
             } catch (error) {
                 console.error('Erro ao carregar postos para filtro:', error);
             }
@@ -855,18 +832,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${posto.razao_social}${posto.cnpj ? ` (${posto.cnpj})` : ''}`;
         },
 
-        getPostoIdFiltro() {
-            const valor = this.filtroPosto ? this.filtroPosto.value.trim() : '';
-            if (!valor) return '';
-
-            const valorNormalizado = valor.toUpperCase();
-            const posto = this.postosFiltroCache.find(p =>
-                this.formatPostoFiltro(p).toUpperCase() === valorNormalizado ||
-                String(p.razao_social || '').toUpperCase() === valorNormalizado ||
-                String(p.cnpj || '').toUpperCase() === valorNormalizado
-            );
-
-            return posto ? posto.id : null;
+        getPostoIdsFiltro() {
+            return this.getValoresMultiselectComBusca('filtroPosto', 'posto-checkbox').map(v => parseInt(v, 10));
         },
 
         tipoMovimentacaoPermitido(tiposSelecionados, tipo) {
@@ -1053,6 +1020,144 @@ document.addEventListener('DOMContentLoaded', () => {
             const checked = Array.from(this.filtroBicoOptions.querySelectorAll('.bico-checkbox:checked'));
             this.filtroBicoText.textContent = checked.length === 0 ? 'Todos' : (checked.length <= 2 ? checked.map(cb => cb.parentElement.textContent.trim().split(' ')[0]).join(', ') : `${checked.length} selecionados`);
         },
+
+        // === Multiselect com busca e "Limpar Seleção" (Veículo, Rota, Posto) ===
+        // Mesmo padrão visual do multiselect de Tipo de Veículo/Bico desta página, com a diferença
+        // de incluir um campo de busca e um botão de limpar seleção dentro do dropdown.
+
+        criarMultiselectComBusca(containerId) {
+            const displayId = `${containerId}Display`;
+            if (document.getElementById(displayId)) {
+                return {
+                    display: document.getElementById(displayId),
+                    options: document.getElementById(`${containerId}Options`),
+                    text: document.getElementById(`${containerId}Text`)
+                };
+            }
+
+            const container = document.getElementById(containerId);
+            if (!container) return null;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'custom-multiselect';
+            wrapper.style.position = 'relative';
+
+            const display = document.createElement('div');
+            display.id = displayId;
+            display.className = 'glass-input multiselect-display';
+            display.style.cssText = 'cursor: pointer; display: flex; justify-content: space-between; align-items: center; height: 38px; color: #000;';
+            display.innerHTML = `<span id="${containerId}Text">Todos</span> <i class="fas fa-chevron-down"></i>`;
+
+            const optionsContainer = document.createElement('div');
+            optionsContainer.id = `${containerId}Options`;
+            optionsContainer.className = 'glass-dropdown hidden';
+            optionsContainer.style.cssText = 'position: absolute; z-index: 1000; width: 100%; background-color: #fff; max-height: 260px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; top: 100%; color: #000;';
+
+            wrapper.appendChild(display);
+            wrapper.appendChild(optionsContainer);
+            container.appendChild(wrapper);
+
+            display.addEventListener('click', (e) => {
+                e.stopPropagation();
+                optionsContainer.classList.toggle('hidden');
+            });
+            document.addEventListener('click', (e) => {
+                if (!display.contains(e.target) && !optionsContainer.contains(e.target)) {
+                    optionsContainer.classList.add('hidden');
+                }
+            });
+
+            return { display, options: optionsContainer, text: document.getElementById(`${containerId}Text`) };
+        },
+
+        popularMultiselectComBusca(containerId, checkboxClass, opcoes, textoTodos = 'Todos') {
+            const refs = this.criarMultiselectComBusca(containerId);
+            if (!refs) return;
+            const { options } = refs;
+
+            options.innerHTML = '';
+
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = 'Buscar...';
+            searchInput.style.cssText = 'width: 100%; padding: 8px 10px; border: none; border-bottom: 1px solid #eee; outline: none; box-sizing: border-box; color: #000;';
+            searchInput.onclick = (e) => e.stopPropagation();
+            searchInput.addEventListener('input', (e) => {
+                const termo = e.target.value.toLowerCase();
+                options.querySelectorAll('label.custom-option').forEach(opt => {
+                    opt.style.display = opt.textContent.toLowerCase().includes(termo) ? 'block' : 'none';
+                });
+            });
+            options.appendChild(searchInput);
+
+            const btnLimpar = document.createElement('div');
+            btnLimpar.className = 'custom-option';
+            btnLimpar.style.cssText = 'padding: 8px; color: #dc3545; font-weight: bold; text-align: center; cursor: pointer; border-bottom: 1px solid #eee;';
+            btnLimpar.textContent = 'Limpar Seleção';
+            btnLimpar.onclick = (e) => {
+                e.stopPropagation();
+                options.querySelectorAll(`.${checkboxClass}`).forEach(cb => { cb.checked = false; });
+                options.dispatchEvent(new Event('change'));
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            };
+            options.appendChild(btnLimpar);
+
+            opcoes.forEach(({ value, label }) => {
+                const optLabel = document.createElement('label');
+                optLabel.className = 'custom-option';
+                optLabel.style.cssText = 'display: block; padding: 6px 8px; cursor: pointer; color: #000;';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = checkboxClass;
+                checkbox.value = value;
+                checkbox.style.marginRight = '8px';
+
+                optLabel.appendChild(checkbox);
+                optLabel.appendChild(document.createTextNode(label));
+                options.appendChild(optLabel);
+            });
+
+            // Evita empilhar listeners quando popularMultiselectComBusca é chamado de novo
+            // (ex.: troca de filial, limpar filtros) — options é o mesmo elemento reaproveitado.
+            if (!options.dataset.changeBound) {
+                options.dataset.changeBound = '1';
+                options.addEventListener('change', () => this.atualizarTextoMultiselectComBusca(containerId, checkboxClass, textoTodos));
+            }
+            this.atualizarTextoMultiselectComBusca(containerId, checkboxClass, textoTodos);
+        },
+
+        getValoresMultiselectComBusca(containerId, checkboxClass) {
+            const options = document.getElementById(`${containerId}Options`);
+            if (!options) return [];
+            return Array.from(options.querySelectorAll(`.${checkboxClass}:checked`)).map(cb => cb.value);
+        },
+
+        setValoresMultiselectComBusca(containerId, checkboxClass, valores) {
+            const options = document.getElementById(`${containerId}Options`);
+            if (!options) return;
+            const lista = Array.isArray(valores) ? valores : (valores ? [valores] : []);
+            const selecionados = new Set(lista.map(v => String(v)));
+            options.querySelectorAll(`.${checkboxClass}`).forEach(cb => {
+                cb.checked = selecionados.has(cb.value);
+            });
+            options.dispatchEvent(new Event('change'));
+        },
+
+        atualizarTextoMultiselectComBusca(containerId, checkboxClass, textoTodos = 'Todos') {
+            const textEl = document.getElementById(`${containerId}Text`);
+            if (!textEl) return;
+            const selecionados = this.getValoresMultiselectComBusca(containerId, checkboxClass);
+            if (selecionados.length === 0) {
+                textEl.textContent = textoTodos;
+            } else if (selecionados.length <= 2) {
+                textEl.textContent = selecionados.join(', ');
+            } else {
+                textEl.textContent = `${selecionados.length} selecionados`;
+            }
+        },
+
         updateFilterOptions() {
             if (document.getElementById('filtroTipoDisplay')) return;
             const select = this.filtroTipo;
@@ -1151,9 +1256,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 dataFinal: this.dataFinal.value,
                 filial: this.getFilialSelecionada(),
                 tanque: this.filtroTanque.value,
-                veiculo: this.filtroVeiculo.value,
-                rota: this.filtroRota.value,
-                posto: this.filtroPosto ? this.filtroPosto.value : '',
+                veiculos: this.getValoresMultiselectComBusca('filtroVeiculo', 'veiculo-placa-checkbox'),
+                rotas: this.getValoresMultiselectComBusca('filtroRota', 'rota-checkbox'),
+                postos: this.getPostoIdsFiltro(),
                 tiposMov: this.usuarioSomenteAbastecimentoExterno() ? ['EXTERNO'] : (this.filtroTipoOptions ? Array.from(this.filtroTipoOptions.querySelectorAll('.tipo-checkbox:checked')).map(cb => cb.value) : []),
                 bicos: this.filtroBicoOptions ? Array.from(this.filtroBicoOptions.querySelectorAll('.bico-checkbox:checked')).map(cb => cb.value) : [],
                 tiposVeiculo: this.filtroTipoVeiculoOptions ? Array.from(this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox:checked')).map(cb => cb.value) : []
@@ -1201,9 +1306,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.loadTiposVeiculo()
                 ]);
                 this.filtroTanque.value = filtros.tanque || '';
-                this.filtroVeiculo.value = filtros.veiculo || '';
-                this.filtroRota.value = filtros.rota || '';
-                if (this.filtroPosto) this.filtroPosto.value = filtros.posto || '';
+                this.setValoresMultiselectComBusca('filtroVeiculo', 'veiculo-placa-checkbox', filtros.veiculos);
+                this.setValoresMultiselectComBusca('filtroRota', 'rota-checkbox', filtros.rotas);
+                this.setValoresMultiselectComBusca('filtroPosto', 'posto-checkbox', filtros.postos);
                 this.marcarCheckboxes(this.filtroTipoOptions, '.tipo-checkbox', filtros.tiposMov);
                 this.marcarCheckboxes(this.filtroBicoOptions, '.bico-checkbox', filtros.bicos);
                 this.marcarCheckboxes(this.filtroTipoVeiculoOptions, '.tipo-veiculo-checkbox', filtros.tiposVeiculo);
@@ -1249,12 +1354,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const dtFim = this.dataFinal.value;
             const valoresFilial = this.getValoresFilialSelecionada();
             const tanqueId = this.filtroTanque.value;
-            const postoId = this.getPostoIdFiltro();
+            const postoIds = this.getPostoIdsFiltro();
             const tiposVeiculo = this.filtroTipoVeiculoOptions
                 ? Array.from(this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox:checked')).map(cb => cb.value)
                 : [];
-            const veiculoPlaca = this.filtroVeiculo.value.trim().toUpperCase();
-            const rota = this.filtroRota.value.trim();
+            const veiculosSelecionados = this.getValoresMultiselectComBusca('filtroVeiculo', 'veiculo-placa-checkbox').map(p => p.toUpperCase());
+            const rotasSelecionadas = this.getValoresMultiselectComBusca('filtroRota', 'rota-checkbox');
             const tiposMov = this.usuarioSomenteAbastecimentoExterno()
                 ? ['EXTERNO']
                 : (this.filtroTipoOptions 
@@ -1271,11 +1376,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (this.usuarioSomenteAbastecimentoExterno() && valoresFilial.length === 0) {
                 alert('Seu nivel acessa somente o relatorio externo da sua filial. Cadastre uma filial para este usuario.');
-                return;
-            }
-
-            if (postoId === null) {
-                alert('Posto informado nao encontrado. Selecione uma opcao da lista ou deixe em branco.');
                 return;
             }
 
@@ -1379,11 +1479,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         .gte('data_hora', `${dtIni}T00:00:00-03:00`)
                         .lte('data_hora', `${dtFim}T23:59:59-03:00`);
 
-                    if (veiculoPlaca) {
-                        querySaidas = querySaidas.eq('veiculo_placa', veiculoPlaca);
+                    if (veiculosSelecionados.length > 0) {
+                        querySaidas = querySaidas.in('veiculo_placa', veiculosSelecionados);
                     }
-                    if (rota) {
-                        querySaidas = querySaidas.eq('rota', rota);
+                    if (rotasSelecionadas.length > 0) {
+                        querySaidas = querySaidas.in('rota', rotasSelecionadas);
                     }
                     if (tiposVeiculo.length > 0) {
                         querySaidas = querySaidas.in('veiculo_placa', placasPorTipo);
@@ -1447,17 +1547,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         .gte('data_hora', `${dtIni}T00:00:00-03:00`)
                         .lte('data_hora', `${dtFim}T23:59:59-03:00`);
 
-                    if (veiculoPlaca) {
-                        queryExterno = queryExterno.eq('veiculo_placa', veiculoPlaca);
+                    if (veiculosSelecionados.length > 0) {
+                        queryExterno = queryExterno.in('veiculo_placa', veiculosSelecionados);
                     }
-                    if (rota) {
-                        queryExterno = queryExterno.eq('rota', rota);
+                    if (rotasSelecionadas.length > 0) {
+                        queryExterno = queryExterno.in('rota', rotasSelecionadas);
                     }
                     if (tiposVeiculo.length > 0) {
                         queryExterno = queryExterno.in('veiculo_placa', placasPorTipo);
                     }
-                    if (postoId) {
-                        queryExterno = queryExterno.eq('posto_id', postoId);
+                    if (postoIds.length > 0) {
+                        queryExterno = queryExterno.in('posto_id', postoIds);
                     }
                     if (valoresFilial.length > 0) {
                         queryExterno = queryExterno.in('filial', valoresFilial);
@@ -2611,9 +2711,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (this.filtroTipo) {
                 this.filtroTipo.value = "";
             }
-            if (this.filtroVeiculo) this.filtroVeiculo.value = '';
-            if (this.filtroRota) this.filtroRota.value = '';
-            if (this.filtroPosto) this.filtroPosto.value = '';
             if (this.filtroTipoVeiculoOptions) {
                 this.filtroTipoVeiculoOptions.querySelectorAll('.tipo-veiculo-checkbox').forEach(cb => cb.checked = false);
                 this.updateTipoVeiculoMultiselectText();
