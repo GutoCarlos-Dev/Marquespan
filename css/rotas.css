@@ -280,52 +280,58 @@ select.glass-input {
 .btn-icon.delete { color: #dc3545; }
 .btn-icon.delete:hover { color: #bd2130; }
 
-/* Estilos para o resumo */
+/* Estilos para o resumo — compacto, no mesmo estilo profissional da tabela principal (.glass-table) */
 #rotaSummary {
-    background-color: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
-}
-
-#rotaSummary h3 {
-    color: #333;
-    margin-top: 0;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+    max-width: 480px;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 10px;
 }
 
 #rotaSummary table {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
+    font-size: 0.85rem;
 }
 
 #rotaSummary th,
 #rotaSummary td {
-    border: 1px solid #ddd;
-    padding: 10px;
+    padding: 8px 12px;
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+#rotaSummary td {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    color: #444;
+}
+
+#rotaSummary tbody tr:nth-child(even) td {
+    background-color: #fafbfa;
+}
+
+#rotaSummary tbody tr:hover td {
+    background-color: #eef8f2;
+}
+
 #rotaSummary th {
-    background-color: #e9ecef;
-    font-weight: bold;
-    color: #495057;
-    position: relative;
+    background-color: #f8f9fa;
+    font-weight: 700;
+    color: var(--primary-color);
+    border-bottom: 2px solid rgba(0, 105, 55, 0.2);
+    position: sticky;
+    top: 0;
     min-width: 60px;
     cursor: pointer;
     user-select: none;
     box-sizing: border-box;
+    z-index: 10;
 }
 
 #rotaSummary th:hover {
-    background-color: #dfe4e8;
+    background-color: #eef2f0;
 }
 
 #rotaSummary th .sort-icon {
@@ -362,11 +368,16 @@ select.glass-input {
 }
 
 /* Estilo para a linha de total no resumo */
+#rotaSummary tfoot {
+    position: sticky;
+    bottom: 0;
+}
+
 #rotaSummary tfoot tr.summary-total td {
-    background-color: #c5c5c5; /* Um azul bem claro */
-    color: #004105;
-    font-weight: bold;
-    border-top: 2px solid #fd0505;
+    background-color: #eef8f2;
+    color: var(--primary-color);
+    font-weight: 700;
+    border-top: 2px solid rgba(0, 105, 55, 0.3);
     text-align: center;
 }
 

@@ -911,7 +911,6 @@ const RotasUI = {
         }).join('');
 
         let summaryHtml = `
-            <h3>Resumo por Supervisor</h3>
             <table>
                 <thead>
                     <tr>${cabecalhoResumo}</tr>
