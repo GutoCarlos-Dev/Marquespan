@@ -1347,6 +1347,28 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         },
 
+        // Busca em lotes de 1000 (limite padrão do Supabase/PostgREST por requisição) — sem
+        // isso, filtros de período amplo silenciosamente trazem só os 1000 registros mais
+        // recentes e cortam o resto. montarQuery deve retornar uma query nova a cada chamada
+        // (sem .range()), já com todos os filtros e um .order() aplicados.
+        async buscarTodosEmLotes(montarQuery) {
+            const TAMANHO_LOTE = 1000;
+            let offset = 0;
+            const todos = [];
+
+            while (true) {
+                const { data, error } = await montarQuery().range(offset, offset + TAMANHO_LOTE - 1);
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+
+                todos.push(...data);
+                if (data.length < TAMANHO_LOTE) break;
+                offset += TAMANHO_LOTE;
+            }
+
+            return todos;
+        },
+
         async handleSearch(e) {
             e.preventDefault();
             
@@ -1407,15 +1429,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 // --- Lógica de Preços ---
                 // 1. Busca o histórico de preços de compra (entradas) até a data final do relatório
-                const { data: priceHistory, error: priceError } = await supabaseClient
+                const priceHistory = await this.buscarTodosEmLotes(() => supabaseClient
                     .from('abastecimentos')
                     .select('tanque_id, valor_litro, data')
                     .neq('numero_nota', 'AJUSTE DE ESTOQUE') // Ignora ajustes de estoque
                     .gt('valor_litro', 0) // Apenas entradas com preço válido
                     .lte('data', `${dtFim}T23:59:59-03:00`) // Otimização: busca apenas até a data final do filtro
-                    .order('data', { ascending: false }); // Ordena do mais recente para o mais antigo
-
-                if (priceError) throw priceError;
+                    .order('data', { ascending: false }) // Ordena do mais recente para o mais antigo
+                );
 
                 // 2. Lookup de preços otimizado
                 const findLastPrice = this.getPriceLookup(priceHistory);
@@ -1426,28 +1447,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 1. Buscar Entradas e Ajustes (se o filtro permitir)
                 if (this.tipoMovimentacaoPermitido(tiposMov, 'ENTRADA') || this.tipoMovimentacaoPermitido(tiposMov, 'AJUSTE')) {
-                    let queryEntradas = supabaseClient
-                        .from('abastecimentos')
-                        .select('*, tanques(nome, tipo_combustivel, filial)')
-                        .gte('data', `${dtIni}T00:00:00-03:00`)
-                        .lte('data', `${dtFim}T23:59:59-03:00`);
-
-                    if (tanqueId) {
-                        queryEntradas = queryEntradas.eq('tanque_id', tanqueId);
-                    }
-
                     const wantEntrada = this.tipoMovimentacaoPermitido(tiposMov, 'ENTRADA');
                     const wantAjuste = this.tipoMovimentacaoPermitido(tiposMov, 'AJUSTE');
 
-                    if (wantEntrada && !wantAjuste) {
-                        queryEntradas = queryEntradas.neq('numero_nota', 'AJUSTE DE ESTOQUE');
-                    } else if (!wantEntrada && wantAjuste) { // Only adjustments
-                        queryEntradas = queryEntradas.eq('numero_nota', 'AJUSTE DE ESTOQUE');
-                    }
+                    const resEntradas = await this.buscarTodosEmLotes(() => {
+                        let q = supabaseClient
+                            .from('abastecimentos')
+                            .select('*, tanques(nome, tipo_combustivel, filial)')
+                            .gte('data', `${dtIni}T00:00:00-03:00`)
+                            .lte('data', `${dtFim}T23:59:59-03:00`)
+                            .order('id', { ascending: true });
 
-                    const { data: resEntradas, error: errEntradas } = await queryEntradas;
-                    if (errEntradas) throw errEntradas;
-                    
+                        if (tanqueId) q = q.eq('tanque_id', tanqueId);
+
+                        if (wantEntrada && !wantAjuste) {
+                            q = q.neq('numero_nota', 'AJUSTE DE ESTOQUE');
+                        } else if (!wantEntrada && wantAjuste) { // Only adjustments
+                            q = q.eq('numero_nota', 'AJUSTE DE ESTOQUE');
+                        }
+
+                        return q;
+                    });
+
                     // Normalizar dados de entrada
                     dadosEntradas = (resEntradas || [])
                         .filter(e => this.registroPertenceFilial(e.tanques?.filial))
@@ -1473,34 +1494,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 2. Buscar Saídas (se o filtro permitir)
                 if (this.tipoMovimentacaoPermitido(tiposMov, 'SAIDA')) {
-                    let querySaidas = supabaseClient
-                        .from('saidas_combustivel')
-                        .select('*, bicos!inner(nome, bombas!inner(tanque_id, tanques!inner(id, nome, tipo_combustivel, filial)))')
-                        .gte('data_hora', `${dtIni}T00:00:00-03:00`)
-                        .lte('data_hora', `${dtFim}T23:59:59-03:00`);
+                    const resSaidas = await this.buscarTodosEmLotes(() => {
+                        let q = supabaseClient
+                            .from('saidas_combustivel')
+                            .select('*, bicos!inner(nome, bombas!inner(tanque_id, tanques!inner(id, nome, tipo_combustivel, filial)))')
+                            .gte('data_hora', `${dtIni}T00:00:00-03:00`)
+                            .lte('data_hora', `${dtFim}T23:59:59-03:00`)
+                            .order('id', { ascending: true });
 
-                    if (veiculosSelecionados.length > 0) {
-                        querySaidas = querySaidas.in('veiculo_placa', veiculosSelecionados);
-                    }
-                    if (rotasSelecionadas.length > 0) {
-                        querySaidas = querySaidas.in('rota', rotasSelecionadas);
-                    }
-                    if (tiposVeiculo.length > 0) {
-                        querySaidas = querySaidas.in('veiculo_placa', placasPorTipo);
-                    }
-                    if (bicosSelecionados.length > 0) {
-                        querySaidas = querySaidas.in('bico_id', bicosSelecionados);
-                    }
-                    if (tanqueId) {
-                        querySaidas = querySaidas.eq('bicos.bombas.tanque_id', tanqueId);
-                    }
+                        if (veiculosSelecionados.length > 0) {
+                            q = q.in('veiculo_placa', veiculosSelecionados);
+                        }
+                        if (rotasSelecionadas.length > 0) {
+                            q = q.in('rota', rotasSelecionadas);
+                        }
+                        if (tiposVeiculo.length > 0) {
+                            q = q.in('veiculo_placa', placasPorTipo);
+                        }
+                        if (bicosSelecionados.length > 0) {
+                            q = q.in('bico_id', bicosSelecionados);
+                        }
+                        if (tanqueId) {
+                            q = q.eq('bicos.bombas.tanque_id', tanqueId);
+                        }
 
-                    // Filtro de tanque para saídas é mais complexo pois está aninhado
-                    // Faremos o filtro no cliente para simplificar, já que o volume filtrado por data não deve ser gigante
-                    
-                    const { data: resSaidas, error: errSaidas } = await querySaidas;
-                    if (errSaidas) throw errSaidas;
+                        return q;
+                    });
 
+                    // Filtro de tanque/filial para saídas é mais complexo pois está aninhado —
+                    // continua sendo feito no cliente, mas agora sobre o conjunto completo (sem
+                    // truncar em 1000 linhas).
                     let saidasFiltradas = resSaidas || [];
                     if (valoresFilial.length > 0) {
                         saidasFiltradas = saidasFiltradas.filter(s => this.registroPertenceFilial(s.bicos?.bombas?.tanques?.filial));
@@ -1541,30 +1564,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 3. Buscar Abastecimentos Externos (se o filtro permitir)
                 // Nota: Externo não tem 'tanque_id' da empresa, então ignoramos o filtro de tanque.
                 if (!tanqueId && this.tipoMovimentacaoPermitido(tiposMov, 'EXTERNO')) {
-                    let queryExterno = supabaseClient
-                        .from('abastecimento_externo')
-                        .select('id, data_hora, usuario, posto_id, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, valor_negociado, postos(razao_social)')
-                        .gte('data_hora', `${dtIni}T00:00:00-03:00`)
-                        .lte('data_hora', `${dtFim}T23:59:59-03:00`);
+                    const resExterno = await this.buscarTodosEmLotes(() => {
+                        let q = supabaseClient
+                            .from('abastecimento_externo')
+                            .select('id, data_hora, usuario, posto_id, veiculo_placa, rota, km_atual, litros, valor_unitario, valor_total, valor_negociado, postos(razao_social)')
+                            .gte('data_hora', `${dtIni}T00:00:00-03:00`)
+                            .lte('data_hora', `${dtFim}T23:59:59-03:00`)
+                            .order('id', { ascending: true });
 
-                    if (veiculosSelecionados.length > 0) {
-                        queryExterno = queryExterno.in('veiculo_placa', veiculosSelecionados);
-                    }
-                    if (rotasSelecionadas.length > 0) {
-                        queryExterno = queryExterno.in('rota', rotasSelecionadas);
-                    }
-                    if (tiposVeiculo.length > 0) {
-                        queryExterno = queryExterno.in('veiculo_placa', placasPorTipo);
-                    }
-                    if (postoIds.length > 0) {
-                        queryExterno = queryExterno.in('posto_id', postoIds);
-                    }
-                    if (valoresFilial.length > 0) {
-                        queryExterno = queryExterno.in('filial', valoresFilial);
-                    }
+                        if (veiculosSelecionados.length > 0) {
+                            q = q.in('veiculo_placa', veiculosSelecionados);
+                        }
+                        if (rotasSelecionadas.length > 0) {
+                            q = q.in('rota', rotasSelecionadas);
+                        }
+                        if (tiposVeiculo.length > 0) {
+                            q = q.in('veiculo_placa', placasPorTipo);
+                        }
+                        if (postoIds.length > 0) {
+                            q = q.in('posto_id', postoIds);
+                        }
+                        if (valoresFilial.length > 0) {
+                            q = q.in('filial', valoresFilial);
+                        }
 
-                    const { data: resExterno, error: errExterno } = await queryExterno;
-                    if (errExterno) throw errExterno;
+                        return q;
+                    });
 
                     dadosExternos = (resExterno || []).map(e => ({
                         id: e.id,
