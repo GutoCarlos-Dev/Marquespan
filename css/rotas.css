@@ -281,7 +281,7 @@ select.glass-input {
 .btn-icon.delete:hover { color: #bd2130; }
 
 /* Estilos para o resumo */
-.rota-summary {
+#rotaSummary {
     background-color: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -289,7 +289,7 @@ select.glass-input {
     margin-top: 20px;
 }
 
-.rota-summary h3 {
+#rotaSummary h3 {
     color: #333;
     margin-top: 0;
     margin-bottom: 15px;
@@ -297,26 +297,72 @@ select.glass-input {
     padding-bottom: 10px;
 }
 
-.rota-summary table {
+#rotaSummary table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
-.rota-summary th,
-.rota-summary td {
+#rotaSummary th,
+#rotaSummary td {
     border: 1px solid #ddd;
     padding: 10px;
-    text-align: left;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.rota-summary th {
+#rotaSummary th {
     background-color: #e9ecef;
     font-weight: bold;
     color: #495057;
+    position: relative;
+    min-width: 60px;
+    cursor: pointer;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+#rotaSummary th:hover {
+    background-color: #dfe4e8;
+}
+
+#rotaSummary th .sort-icon {
+    font-size: 0.8em;
+    color: #adb5bd;
+    margin-left: 4px;
+}
+
+#rotaSummary th.sort-asc .sort-icon::before {
+    content: '\f0de'; /* fa-sort-up */
+    color: #006937;
+}
+
+#rotaSummary th.sort-desc .sort-icon::before {
+    content: '\f0dd'; /* fa-sort-down */
+    color: #006937;
+}
+
+/* Alça de redimensionar coluna (arrastar para aumentar/diminuir) */
+#rotaSummary th .resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    z-index: 10;
+}
+
+#rotaSummary th .resizer:hover,
+#rotaSummary th .resizer.resizing {
+    background-color: #007bff;
 }
 
 /* Estilo para a linha de total no resumo */
-.rota-summary tfoot tr.summary-total td {
+#rotaSummary tfoot tr.summary-total td {
     background-color: #c5c5c5; /* Um azul bem claro */
     color: #004105;
     font-weight: bold;

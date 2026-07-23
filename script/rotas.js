@@ -325,6 +325,7 @@ const RotasUI = {
 
     setupInitialState() {
         this._sort = { field: 'numero', ascending: true };
+        this._summarySort = { field: 'supervisor', ascending: true };
         this.displayedRotas = []; // Armazena os dados filtrados para exportação
     },
 
@@ -869,9 +870,13 @@ const RotasUI = {
         const summaryData = {};
 
         rotasAtivas.forEach(rota => {
-            const supervisor = rota.supervisor || 'Não Atribuído';
+            // .trim() aqui é necessário: alguns registros têm o nome do supervisor salvo com
+            // espaços extras (" ALEX FURTADO "), o que fazia esse nome virar uma linha duplicada
+            // (não somada com a versão sem espaço) e ainda quebrava a ordenação alfabética.
+            const supervisor = String(rota.supervisor || '').trim() || 'Não Atribuído';
             if (!summaryData[supervisor]) {
                 summaryData[supervisor] = {
+                    supervisor,
                     quantidadeRotas: 0,
                     totalDias: 0
                 };
@@ -880,33 +885,48 @@ const RotasUI = {
             summaryData[supervisor].totalDias += (rota.dias || 0);
         });
 
+        const linhas = Object.values(summaryData);
+        const campoOrdenacao = this._summarySort.field;
+        const ordemAscendente = this._summarySort.ascending;
+        linhas.sort((a, b) => {
+            const valA = a[campoOrdenacao];
+            const valB = b[campoOrdenacao];
+            const resultado = typeof valA === 'string' ? valA.localeCompare(valB, 'pt-BR') : valA - valB;
+            return ordemAscendente ? resultado : -resultado;
+        });
+
         // --- Cálculos para o totalizador ---
-        const totalSupervisores = Object.keys(summaryData).length;
+        const totalSupervisores = linhas.length;
         const totalRotas = rotasAtivas.length; // Mais simples que somar, é só pegar o total de rotas ativas
-        const totalGeralDias = Object.values(summaryData).reduce((sum, data) => sum + data.totalDias, 0);
+        const totalGeralDias = linhas.reduce((sum, linha) => sum + linha.totalDias, 0);
+
+        const colunasResumo = [
+            { field: 'supervisor', label: 'Supervisor' },
+            { field: 'quantidadeRotas', label: 'Quantidade de Rotas' },
+            { field: 'totalDias', label: 'Total de Dias' }
+        ];
+        const cabecalhoResumo = colunasResumo.map(col => {
+            const classeSort = campoOrdenacao === col.field ? (ordemAscendente ? 'sort-asc' : 'sort-desc') : '';
+            return `<th data-field="${col.field}" class="${classeSort}">${col.label} <i class="fas fa-sort sort-icon"></i><span class="resizer"></span></th>`;
+        }).join('');
 
         let summaryHtml = `
             <h3>Resumo por Supervisor</h3>
             <table>
                 <thead>
-                    <tr>
-                        <th>Supervisor</th>
-                        <th>Quantidade de Rotas</th>
-                        <th>Total de Dias</th>
-                    </tr>
+                    <tr>${cabecalhoResumo}</tr>
                 </thead>
                 <tbody>
         `;
-        const supervisoresOrdenados = Object.keys(summaryData).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        for (const supervisor of supervisoresOrdenados) {
+        linhas.forEach(linha => {
             summaryHtml += `
                 <tr>
-                    <td>${supervisor}</td>
-                    <td>${summaryData[supervisor].quantidadeRotas}</td>
-                    <td>${summaryData[supervisor].totalDias}</td>
+                    <td>${linha.supervisor}</td>
+                    <td>${linha.quantidadeRotas}</td>
+                    <td>${linha.totalDias}</td>
                 </tr>
             `;
-        }
+        });
         summaryHtml += `
                 </tbody>
                 <tfoot>
@@ -918,6 +938,53 @@ const RotasUI = {
                 </tfoot>
             </table>`;
         this.rotaSummary.innerHTML = summaryHtml;
+        this.bindSummaryTableEvents();
+    },
+
+    bindSummaryTableEvents() {
+        const ths = this.rotaSummary?.querySelectorAll('th[data-field]');
+        ths?.forEach(th => {
+            th.addEventListener('click', (e) => {
+                if (e.target.closest('.resizer')) return;
+                const field = th.dataset.field;
+                if (this._summarySort.field === field) {
+                    this._summarySort.ascending = !this._summarySort.ascending;
+                } else {
+                    this._summarySort.field = field;
+                    this._summarySort.ascending = true;
+                }
+                this.renderSummary(this.displayedRotas || []);
+            });
+
+            const resizer = th.querySelector('.resizer');
+            if (resizer) this.tornarColunaRedimensionavel(th, resizer);
+        });
+    },
+
+    tornarColunaRedimensionavel(coluna, resizer) {
+        let xInicial = 0;
+        let larguraInicial = 0;
+
+        const mouseMoveHandler = (e) => {
+            const dx = e.clientX - xInicial;
+            coluna.style.width = `${Math.max(60, larguraInicial + dx)}px`;
+        };
+
+        const mouseUpHandler = () => {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            resizer.classList.remove('resizing');
+        };
+
+        resizer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            xInicial = e.clientX;
+            larguraInicial = parseInt(window.getComputedStyle(coluna).width, 10);
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            resizer.classList.add('resizing');
+        });
     }
 };
 
