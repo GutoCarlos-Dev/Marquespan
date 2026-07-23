@@ -897,7 +897,8 @@ const RotasUI = {
                 </thead>
                 <tbody>
         `;
-        for (const supervisor in summaryData) {
+        const supervisoresOrdenados = Object.keys(summaryData).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        for (const supervisor of supervisoresOrdenados) {
             summaryHtml += `
                 <tr>
                     <td>${supervisor}</td>
