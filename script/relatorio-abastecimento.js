@@ -7,16 +7,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const RelatorioUI = {
         dadosRelatorio: [],
         dadosResumoSemanal: null,
+        modoVisualizacao: 'detalhado', // 'detalhado' | 'consolidado' | 'resumoPlaca'
         sortConfig: {
             column: null,
             direction: 'asc'
         },
+        sortConfigConsolidado: {
+            column: 'valorTotal',
+            direction: 'desc'
+        },
+        sortConfigResumoPlaca: {
+            column: 'valorTotal',
+            direction: 'desc'
+        },
+        colunasConsolidado: [
+            { key: 'placa', label: 'Placa', align: 'left' },
+            { key: 'tipoVeiculo', label: 'Tipo de Veículo', align: 'left' },
+            { key: 'tanquePosto', label: 'Tanque/Posto', align: 'left' },
+            { key: 'qtd', label: 'Qtd. Abastecimentos', align: 'center' },
+            { key: 'litros', label: 'Litros', align: 'right' },
+            { key: 'valorTotal', label: 'Valor Total', align: 'right' }
+        ],
+        colunasResumoPlaca: [
+            { key: 'placa', label: 'Placa', align: 'left' },
+            { key: 'qtdPostos', label: 'Qtd. Postos/Tanques', align: 'center' },
+            { key: 'qtdAbastecimentos', label: 'Qtd. Abastecimentos', align: 'center' },
+            { key: 'litros', label: 'Litros', align: 'right' },
+            { key: 'kmRodado', label: 'KM Rodados', align: 'right' },
+            { key: 'mediaConsumo', label: 'Média Consumo (KM/L)', align: 'right' },
+            { key: 'valorTotal', label: 'Valor Total', align: 'right' }
+        ],
         charts: {
             mediaConsumo: null,
             evolucaoConsumo: null,
             topVeiculos: null,
-            tiposMovimentacao: null
+            tiposMovimentacao: null,
+            consolidadoVeiculoLitros: null,
+            consolidadoVeiculoValor: null,
+            consolidadoTanquePostoLitros: null,
+            consolidadoTanquePostoValor: null,
+            consolidadoTipoVeiculo: null,
+            resumoPlacaLitros: null,
+            resumoPlacaValor: null,
+            resumoPlacaQtdAbastecimentos: null,
+            resumoPlacaQtdPostos: null
         },
+        rolagemConsolidadoIniciada: false,
+        rolagemResumoPlacaIniciada: false,
 
         async init() {
             this.cache();
@@ -70,6 +107,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             this.cardResultados = document.getElementById('cardResultados');
             this.dashboardAbastecimento = document.getElementById('dashboardAbastecimento');
+            this.dashboardConsolidadoAbastecimento = document.getElementById('dashboardConsolidadoAbastecimento');
+            this.dashboardResumoPlacaAbastecimento = document.getElementById('dashboardResumoPlacaAbastecimento');
             this.tableBody = document.getElementById('tableBodyRelatorio');
             this.totalLitrosEl = document.getElementById('totalLitros');
             this.totalLancamentosEl = document.getElementById('totalLancamentos');
@@ -110,6 +149,10 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnFullscreenGrid?.addEventListener('click', this.toggleFullscreenGrid.bind(this));
             this.btnGerarResumoDiesel?.addEventListener('click', this.gerarResumoSemanalDiesel.bind(this));
             this.btnExportarResumoDieselPDF?.addEventListener('click', this.exportarResumoSemanalPDF.bind(this));
+
+            document.getElementById('btnModoDetalhadoAbastecimento')?.addEventListener('click', () => this.alternarModoVisualizacao('detalhado'));
+            document.getElementById('btnModoConsolidadoAbastecimento')?.addEventListener('click', () => this.alternarModoVisualizacao('consolidado'));
+            document.getElementById('btnModoResumoPlacaAbastecimento')?.addEventListener('click', () => this.alternarModoVisualizacao('resumoPlaca'));
             this.filtroFilial?.addEventListener('change', async () => {
                 await Promise.all([
                     this.loadTanques(),
@@ -731,7 +774,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Erro ao carregar veículos para filtro:', error);
             }
         },
-    
+
+        // Mapa placa -> tipo de veículo (ex: TRUCK, CAMINHÃO 3/4, BITREM...), usado nos modos
+        // Consolidado e Resumo Consolidado.
+        async fetchTiposVeiculoPorPlaca() {
+            const mapa = new Map();
+            try {
+                const { data, error } = await supabaseClient.from('veiculos').select('placa, tipo');
+                if (error) throw error;
+                (data || []).forEach(v => {
+                    if (v.placa) mapa.set(String(v.placa).trim().toUpperCase(), v.tipo || 'NÃO INFORMADO');
+                });
+            } catch (error) {
+                console.error('Erro ao carregar tipos de veículo:', error);
+            }
+            return mapa;
+        },
+
         async loadRotas() {
             try {
                 const valoresFilial = this.getValoresFilialSelecionada();
@@ -1242,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     if (placasPorTipo.length === 0) {
                         this.dadosRelatorio = [];
-                        this.renderTable();
+                        this.renderResultadosAtuais();
                         return;
                     }
                 }
@@ -1501,7 +1560,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Combina todos os registros novamente e ordena por data_hora decrescente
                 this.dadosRelatorio = [...otherRecords, ...consumptionsForKML].sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
-                this.renderTable();
+
+                // Tipo do Veículo (ex: TRUCK, CAMINHÃO 3/4...) vem do cadastro de veículos, não da
+                // tabela de abastecimento — usado pelos modos Consolidado/Resumo Consolidado.
+                const tiposPorPlaca = await this.fetchTiposVeiculoPorPlaca();
+                this.dadosRelatorio.forEach(reg => {
+                    reg.tipoVeiculo = tiposPorPlaca.get(String(reg.placa || '').trim().toUpperCase()) || 'NÃO INFORMADO';
+                });
+
+                this.renderResultadosAtuais();
                 this.renderizarGraficos(this.dadosRelatorio);
 
             } catch (error) {
@@ -1512,11 +1579,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderizarGraficos(data) {
             if (!data || data.length === 0) {
-                if (this.dashboardAbastecimento) this.dashboardAbastecimento.classList.add('hidden');
+                this.atualizarVisibilidadeDashboards();
                 return;
             }
-
-            if (this.dashboardAbastecimento) this.dashboardAbastecimento.classList.remove('hidden');
 
             // 1. Média de Consumo (KM/L) por Veículo
             const statsVeiculos = data.reduce((acc, item) => {
@@ -1572,6 +1637,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.criarGrafico('evolucaoConsumo', this.chartEvolucaoConsumoCanvas, 'line', sortedDates.map(d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')), sortedDates.map(d => evolucaoMap[d]), 'Consumo Diário (L)');
             this.criarGrafico('topVeiculos', this.chartTopVeiculosCanvas, 'bar', topVeiculos.map(v => v[0]), topVeiculos.map(v => v[1]), 'Consumo (L)', { indexAxis: 'y' });
             this.criarGrafico('tiposMovimentacao', this.chartTiposMovimentacaoCanvas, 'doughnut', Object.keys(tiposMap), Object.values(tiposMap), 'Movimentação');
+
+            this.atualizarVisibilidadeDashboards();
         },
 
         criarGrafico(id, canvas, type, labels, values, label, extraOptions = {}) {
@@ -1758,6 +1825,315 @@ document.addEventListener('DOMContentLoaded', () => {
             return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         },
 
+        formatLitros(value) {
+            return Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ' L';
+        },
+
+        // === Modo de visualização (Detalhado / Consolidado / Resumo Consolidado) ===
+
+        alternarModoVisualizacao(modo) {
+            if (this.modoVisualizacao === modo) return;
+            this.modoVisualizacao = modo;
+
+            document.getElementById('btnModoDetalhadoAbastecimento')?.classList.toggle('active', modo === 'detalhado');
+            document.getElementById('btnModoConsolidadoAbastecimento')?.classList.toggle('active', modo === 'consolidado');
+            document.getElementById('btnModoResumoPlacaAbastecimento')?.classList.toggle('active', modo === 'resumoPlaca');
+
+            document.getElementById('tabelaDetalhadoWrapper')?.classList.toggle('hidden', modo !== 'detalhado');
+            document.getElementById('tabelaConsolidadoWrapper')?.classList.toggle('hidden', modo !== 'consolidado');
+            document.getElementById('tabelaResumoPlacaWrapper')?.classList.toggle('hidden', modo !== 'resumoPlaca');
+
+            this.renderResultadosAtuais();
+        },
+
+        renderResultadosAtuais() {
+            if (this.modoVisualizacao === 'consolidado') {
+                this.renderConsolidado();
+            } else if (this.modoVisualizacao === 'resumoPlaca') {
+                this.renderResumoPlaca();
+            } else {
+                this.renderTable();
+            }
+            this.atualizarVisibilidadeDashboards();
+        },
+
+        atualizarVisibilidadeDashboards() {
+            const temDados = this.dadosRelatorio.length > 0;
+            this.dashboardAbastecimento?.classList.toggle('hidden', !(temDados && this.modoVisualizacao === 'detalhado'));
+            this.dashboardConsolidadoAbastecimento?.classList.toggle('hidden', !(temDados && this.modoVisualizacao === 'consolidado'));
+            this.dashboardResumoPlacaAbastecimento?.classList.toggle('hidden', !(temDados && this.modoVisualizacao === 'resumoPlaca'));
+        },
+
+        // Só entram nas visões Consolidado/Resumo Consolidado os lançamentos ligados a um veículo
+        // de verdade (Saída Interna ou Externo) — Entradas/Ajustes de tanque não têm placa.
+        registrosComVeiculo() {
+            return this.dadosRelatorio.filter(reg => reg.placa && reg.placa !== '-');
+        },
+
+        consolidarPorVeiculo(dados) {
+            const grupos = new Map();
+            dados.forEach(reg => {
+                const placa = reg.placa;
+                const tipoVeiculo = reg.tipoVeiculo || 'NÃO INFORMADO';
+                const tanquePosto = reg.tanque || '-';
+                const chave = `${placa.toUpperCase()}|${tipoVeiculo.toUpperCase()}|${tanquePosto.toUpperCase()}`;
+
+                if (!grupos.has(chave)) {
+                    grupos.set(chave, { placa, tipoVeiculo, tanquePosto, qtd: 0, litros: 0, valorTotal: 0 });
+                }
+                const g = grupos.get(chave);
+                g.qtd += 1;
+                g.litros += Math.abs(Number(reg.litros) || 0);
+                g.valorTotal += Number(reg.valor_total) || 0;
+            });
+            return Array.from(grupos.values());
+        },
+
+        consolidarPorPlaca(dados) {
+            const grupos = new Map();
+            dados.forEach(reg => {
+                const placa = reg.placa;
+                const chave = placa.toUpperCase();
+
+                if (!grupos.has(chave)) {
+                    grupos.set(chave, { placa, postos: new Set(), qtdAbastecimentos: 0, litros: 0, valorTotal: 0, kmRodado: 0 });
+                }
+                const g = grupos.get(chave);
+                g.postos.add((reg.tanque || '-').trim().toUpperCase());
+                g.qtdAbastecimentos += 1;
+                g.litros += Math.abs(Number(reg.litros) || 0);
+                g.valorTotal += Number(reg.valor_total) || 0;
+                // km_rodado só é um número válido quando há leitura anterior confiável (senão é null ou "Erro (KM menor)")
+                if (typeof reg.km_rodado === 'number' && !isNaN(reg.km_rodado)) {
+                    g.kmRodado += reg.km_rodado;
+                }
+            });
+            return Array.from(grupos.values()).map(g => ({
+                placa: g.placa,
+                qtdPostos: g.postos.size,
+                qtdAbastecimentos: g.qtdAbastecimentos,
+                litros: g.litros,
+                valorTotal: g.valorTotal,
+                kmRodado: g.kmRodado,
+                mediaConsumo: g.litros > 0 ? (g.kmRodado / g.litros) : 0
+            }));
+        },
+
+        ordenarGrupos(grupos, sortConfig) {
+            const { column, direction } = sortConfig;
+            const factor = direction === 'asc' ? 1 : -1;
+            grupos.sort((a, b) => {
+                let valA = a[column];
+                let valB = b[column];
+                if (typeof valA === 'string') {
+                    valA = valA.toLowerCase();
+                    valB = (valB || '').toLowerCase();
+                }
+                if (valA < valB) return -1 * factor;
+                if (valA > valB) return 1 * factor;
+                return 0;
+            });
+            return grupos;
+        },
+
+        renderCabecalhoGrupos(trId, colunas, sortConfig, onSort) {
+            const tr = document.getElementById(trId);
+            if (!tr) return;
+
+            tr.innerHTML = colunas.map(col => {
+                const ativo = sortConfig.column === col.key;
+                const icone = ativo ? (sortConfig.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort';
+                const alinhamento = col.align === 'right' ? 'text-align: right;' : (col.align === 'center' ? 'text-align: center;' : '');
+                return `<th data-sort="${col.key}" style="${alinhamento}">${col.label} <i class="fas ${icone}"></i></th>`;
+            }).join('');
+
+            tr.querySelectorAll('th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => onSort(th.dataset.sort));
+            });
+        },
+
+        renderConsolidado() {
+            const grupos = this.ordenarGrupos(this.consolidarPorVeiculo(this.registrosComVeiculo()), this.sortConfigConsolidado);
+
+            this.renderCabecalhoGrupos('cabecalhoConsolidadoAbastecimento', this.colunasConsolidado, this.sortConfigConsolidado, (col) => this.handleSortConsolidado(col));
+
+            const tbody = document.getElementById('tabelaConsolidadoBody');
+            if (!tbody) return;
+
+            if (!grupos.length) {
+                tbody.innerHTML = `<tr><td colspan="${this.colunasConsolidado.length}" style="text-align:center; padding:20px; color:#888;">Nenhum registro encontrado.</td></tr>`;
+                this.totalLitrosEl.textContent = '0,00 L';
+                if (this.totalLancamentosEl) this.totalLancamentosEl.textContent = '0';
+                this.totalValorEl.textContent = 'R$ 0,00';
+                this.renderizarGraficosConsolidado(grupos);
+                return;
+            }
+
+            let somaLitros = 0;
+            let somaValor = 0;
+            tbody.innerHTML = grupos.map(g => {
+                somaLitros += g.litros;
+                somaValor += g.valorTotal;
+                return `
+                    <tr>
+                        <td>${this.escapeHTML(g.placa)}</td>
+                        <td>${this.escapeHTML(g.tipoVeiculo)}</td>
+                        <td>${this.escapeHTML(g.tanquePosto)}</td>
+                        <td style="text-align:center;">${g.qtd}</td>
+                        <td style="text-align:right;">${this.formatLitros(g.litros)}</td>
+                        <td style="text-align:right;">${this.formatCurrency(g.valorTotal)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            this.totalLitrosEl.textContent = this.formatLitros(somaLitros);
+            if (this.totalLancamentosEl) this.totalLancamentosEl.textContent = grupos.length.toLocaleString('pt-BR');
+            this.totalValorEl.textContent = this.formatCurrency(somaValor);
+
+            this.renderizarGraficosConsolidado(grupos);
+        },
+
+        handleSortConsolidado(column) {
+            if (this.sortConfigConsolidado.column === column) {
+                this.sortConfigConsolidado.direction = this.sortConfigConsolidado.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortConfigConsolidado.column = column;
+                this.sortConfigConsolidado.direction = (column === 'placa' || column === 'tipoVeiculo' || column === 'tanquePosto') ? 'asc' : 'desc';
+            }
+            this.renderConsolidado();
+        },
+
+        renderResumoPlaca() {
+            const grupos = this.ordenarGrupos(this.consolidarPorPlaca(this.registrosComVeiculo()), this.sortConfigResumoPlaca);
+
+            this.renderCabecalhoGrupos('cabecalhoResumoPlacaAbastecimento', this.colunasResumoPlaca, this.sortConfigResumoPlaca, (col) => this.handleSortResumoPlaca(col));
+
+            const tbody = document.getElementById('tabelaResumoPlacaBody');
+            if (!tbody) return;
+
+            if (!grupos.length) {
+                tbody.innerHTML = `<tr><td colspan="${this.colunasResumoPlaca.length}" style="text-align:center; padding:20px; color:#888;">Nenhum registro encontrado.</td></tr>`;
+                this.totalLitrosEl.textContent = '0,00 L';
+                if (this.totalLancamentosEl) this.totalLancamentosEl.textContent = '0';
+                this.totalValorEl.textContent = 'R$ 0,00';
+                this.renderizarGraficosResumoPlaca(grupos);
+                return;
+            }
+
+            let somaLitros = 0;
+            let somaValor = 0;
+            tbody.innerHTML = grupos.map(g => {
+                somaLitros += g.litros;
+                somaValor += g.valorTotal;
+                return `
+                    <tr>
+                        <td>${this.escapeHTML(g.placa)}</td>
+                        <td style="text-align:center;">${g.qtdPostos}</td>
+                        <td style="text-align:center;">${g.qtdAbastecimentos}</td>
+                        <td style="text-align:right;">${this.formatLitros(g.litros)}</td>
+                        <td style="text-align:right;">${g.kmRodado.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</td>
+                        <td style="text-align:right;">${g.mediaConsumo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td style="text-align:right;">${this.formatCurrency(g.valorTotal)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            this.totalLitrosEl.textContent = this.formatLitros(somaLitros);
+            if (this.totalLancamentosEl) this.totalLancamentosEl.textContent = grupos.length.toLocaleString('pt-BR');
+            this.totalValorEl.textContent = this.formatCurrency(somaValor);
+
+            this.renderizarGraficosResumoPlaca(grupos);
+        },
+
+        handleSortResumoPlaca(column) {
+            if (this.sortConfigResumoPlaca.column === column) {
+                this.sortConfigResumoPlaca.direction = this.sortConfigResumoPlaca.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortConfigResumoPlaca.column = column;
+                this.sortConfigResumoPlaca.direction = (column === 'placa') ? 'asc' : 'desc';
+            }
+            this.renderResumoPlaca();
+        },
+
+        renderizarGraficosConsolidado(grupos) {
+            if (typeof Chart === 'undefined' || !grupos.length) return;
+
+            const top10 = (campo) => [...grupos].sort((a, b) => b[campo] - a[campo]).slice(0, 10);
+
+            const porTanquePosto = {};
+            const porTipoVeiculo = {};
+            grupos.forEach(g => {
+                porTanquePosto[g.tanquePosto] = porTanquePosto[g.tanquePosto] || { litros: 0, valor: 0 };
+                porTanquePosto[g.tanquePosto].litros += g.litros;
+                porTanquePosto[g.tanquePosto].valor += g.valorTotal;
+
+                porTipoVeiculo[g.tipoVeiculo] = (porTipoVeiculo[g.tipoVeiculo] || 0) + g.litros;
+            });
+
+            const topVeiculoLitros = top10('litros');
+            const topVeiculoValor = top10('valorTotal');
+            const topTanquePostoLitros = Object.entries(porTanquePosto).sort((a, b) => b[1].litros - a[1].litros).slice(0, 10);
+            const topTanquePostoValor = Object.entries(porTanquePosto).sort((a, b) => b[1].valor - a[1].valor).slice(0, 10);
+
+            this.criarGrafico('consolidadoVeiculoLitros', document.getElementById('chartConsolidadoVeiculoLitros'), 'bar', topVeiculoLitros.map(g => g.placa), topVeiculoLitros.map(g => g.litros), 'Litros');
+            this.criarGrafico('consolidadoVeiculoValor', document.getElementById('chartConsolidadoVeiculoValor'), 'bar', topVeiculoValor.map(g => g.placa), topVeiculoValor.map(g => g.valorTotal), 'Valor Total (R$)');
+            this.criarGrafico('consolidadoTanquePostoLitros', document.getElementById('chartConsolidadoTanquePostoLitros'), 'bar', topTanquePostoLitros.map(([k]) => k), topTanquePostoLitros.map(([, v]) => v.litros), 'Litros');
+            this.criarGrafico('consolidadoTanquePostoValor', document.getElementById('chartConsolidadoTanquePostoValor'), 'bar', topTanquePostoValor.map(([k]) => k), topTanquePostoValor.map(([, v]) => v.valor), 'Valor Total (R$)');
+            this.criarGrafico('consolidadoTipoVeiculo', document.getElementById('chartConsolidadoTipoVeiculo'), 'doughnut', Object.keys(porTipoVeiculo), Object.values(porTipoVeiculo), 'Litros por Tipo de Veículo');
+
+            if (!this.rolagemConsolidadoIniciada) {
+                this.rolagemConsolidadoIniciada = true;
+                requestAnimationFrame(() => this.iniciarRolagemCarrossel('.charts-scroll-consolidado'));
+            }
+        },
+
+        renderizarGraficosResumoPlaca(grupos) {
+            if (typeof Chart === 'undefined' || !grupos.length) return;
+
+            const top10 = (campo) => [...grupos].sort((a, b) => b[campo] - a[campo]).slice(0, 10);
+
+            const topLitros = top10('litros');
+            const topValor = top10('valorTotal');
+            const topQtdAbastecimentos = top10('qtdAbastecimentos');
+            const topQtdPostos = top10('qtdPostos');
+
+            this.criarGrafico('resumoPlacaLitros', document.getElementById('chartResumoPlacaLitros'), 'bar', topLitros.map(g => g.placa), topLitros.map(g => g.litros), 'Litros');
+            this.criarGrafico('resumoPlacaValor', document.getElementById('chartResumoPlacaValor'), 'bar', topValor.map(g => g.placa), topValor.map(g => g.valorTotal), 'Valor Total (R$)');
+            this.criarGrafico('resumoPlacaQtdAbastecimentos', document.getElementById('chartResumoPlacaQtdAbastecimentos'), 'bar', topQtdAbastecimentos.map(g => g.placa), topQtdAbastecimentos.map(g => g.qtdAbastecimentos), 'Qtd. Abastecimentos');
+            this.criarGrafico('resumoPlacaQtdPostos', document.getElementById('chartResumoPlacaQtdPostos'), 'bar', topQtdPostos.map(g => g.placa), topQtdPostos.map(g => g.qtdPostos), 'Qtd. Postos/Tanques');
+
+            if (!this.rolagemResumoPlacaIniciada) {
+                this.rolagemResumoPlacaIniciada = true;
+                requestAnimationFrame(() => this.iniciarRolagemCarrossel('.charts-scroll-resumo-placa'));
+            }
+        },
+
+        iniciarRolagemCarrossel(selector) {
+            const wrapper = document.querySelector(selector);
+            if (!wrapper) return;
+
+            let direction = 1;
+            const speed = 0.8;
+
+            const step = () => {
+                if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1) {
+                    direction = -1;
+                } else if (wrapper.scrollLeft <= 0) {
+                    direction = 1;
+                }
+                wrapper.scrollLeft += speed * direction;
+                requestAnimationFrame(step);
+            };
+
+            requestAnimationFrame(step);
+
+            wrapper.addEventListener('mouseenter', () => direction = 0);
+            wrapper.addEventListener('mouseleave', () => {
+                if (wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 10) direction = -1;
+                else direction = 1;
+            });
+        },
+
         visualizarLancamento(id, tipo) {
             const reg = this.dadosRelatorio.find(item => String(item.id) === String(id) && item.tipo === tipo);
             if (!reg) {
@@ -1821,6 +2197,9 @@ document.addEventListener('DOMContentLoaded', () => {
         exportXLS() {
             if (this.dadosRelatorio.length === 0) return alert('Sem dados para exportar.');
 
+            if (this.modoVisualizacao === 'consolidado') return this.exportXLSConsolidado();
+            if (this.modoVisualizacao === 'resumoPlaca') return this.exportXLSResumoPlaca();
+
             const dadosFormatados = this.dadosRelatorio.map(reg => ({
                 'Data/Hora': new Date(reg.data_hora).toLocaleString('pt-BR'),
                 'Tipo': reg.tipo,
@@ -1871,8 +2250,50 @@ document.addEventListener('DOMContentLoaded', () => {
             XLSX.writeFile(wb, "Relatorio_Abastecimentos.xlsx");
         },
 
+        exportXLSConsolidado() {
+            const grupos = this.ordenarGrupos(this.consolidarPorVeiculo(this.registrosComVeiculo()), { column: 'valorTotal', direction: 'desc' });
+            if (!grupos.length) return alert('Sem dados para exportar.');
+
+            const dadosFormatados = grupos.map(g => ({
+                'PLACA': g.placa,
+                'TIPO_DE_VEICULO': g.tipoVeiculo,
+                'TANQUE_POSTO': g.tanquePosto,
+                'QTD_ABASTECIMENTOS': g.qtd,
+                'LITROS': g.litros.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+                'VALOR_TOTAL': g.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dadosFormatados);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Consolidado");
+            XLSX.writeFile(wb, "Relatorio_Abastecimentos_Consolidado.xlsx");
+        },
+
+        exportXLSResumoPlaca() {
+            const grupos = this.ordenarGrupos(this.consolidarPorPlaca(this.registrosComVeiculo()), { column: 'valorTotal', direction: 'desc' });
+            if (!grupos.length) return alert('Sem dados para exportar.');
+
+            const dadosFormatados = grupos.map(g => ({
+                'PLACA': g.placa,
+                'QTD_POSTOS_TANQUES': g.qtdPostos,
+                'QTD_ABASTECIMENTOS': g.qtdAbastecimentos,
+                'LITROS': g.litros.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+                'KM_RODADOS': g.kmRodado.toLocaleString('pt-BR', { maximumFractionDigits: 0 }),
+                'MEDIA_CONSUMO_KML': g.mediaConsumo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                'VALOR_TOTAL': g.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dadosFormatados);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Resumo por Placa");
+            XLSX.writeFile(wb, "Relatorio_Abastecimentos_Resumo_Placa.xlsx");
+        },
+
         async exportPDF() {
             if (this.dadosRelatorio.length === 0) return alert('Sem dados para exportar.');
+
+            if (this.modoVisualizacao === 'consolidado') return this.exportPDFConsolidado();
+            if (this.modoVisualizacao === 'resumoPlaca') return this.exportPDFResumoPlaca();
 
             const btn = this.btnExportarPDF;
             const originalText = btn.innerHTML;
@@ -2004,6 +2425,167 @@ document.addEventListener('DOMContentLoaded', () => {
                 doc.save(`Relatorio_Abastecimentos_${new Date().toISOString().slice(0,10)}.pdf`);
             } catch (err) {
                 console.error('Erro ao exportar PDF:', err);
+                alert('Erro ao gerar PDF: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        },
+
+        async exportPDFConsolidado() {
+            const grupos = this.ordenarGrupos(this.consolidarPorVeiculo(this.registrosComVeiculo()), { column: 'valorTotal', direction: 'desc' });
+            if (!grupos.length) return alert('Sem dados para exportar.');
+
+            const btn = this.btnExportarPDF;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'landscape' });
+
+                const logoBase64 = await this.getLogoBase64PDF();
+                if (logoBase64) doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+
+                const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+                const nomeUsuario = usuarioLogado?.nome || 'Sistema';
+                const totalLitros = grupos.reduce((sum, g) => sum + g.litros, 0);
+                const totalValor = grupos.reduce((sum, g) => sum + g.valorTotal, 0);
+
+                doc.setFontSize(18);
+                doc.setTextColor(0, 105, 55);
+                doc.text('Relatório de Abastecimento - Consolidado', 60, 18);
+                doc.setFontSize(10);
+                doc.setTextColor(40);
+                doc.text(`Gerado por: ${nomeUsuario}`, 14, 29);
+                doc.text(`Grupos: ${grupos.length} | Litros: ${totalLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} L | Total: ${this.formatCurrency(totalValor)}`, 14, 34);
+
+                const columns = ['Placa', 'Tipo de Veículo', 'Tanque/Posto', 'Qtd. Abastecimentos', 'Litros', 'Valor Total'];
+                const rows = grupos.map(g => [
+                    g.placa,
+                    g.tipoVeiculo,
+                    g.tanquePosto,
+                    String(g.qtd),
+                    g.litros.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+                    this.formatCurrency(g.valorTotal)
+                ]);
+                rows.push([
+                    { content: 'TOTAL GERAL', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: '', styles: { fontStyle: 'bold' } },
+                    { content: totalLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: this.formatCurrency(totalValor), styles: { halign: 'right', fontStyle: 'bold' } }
+                ]);
+
+                doc.autoTable({
+                    head: [columns],
+                    body: rows,
+                    startY: 40,
+                    theme: 'grid',
+                    headStyles: { fillColor: [0, 105, 55], textColor: 255, fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 3 },
+                    alternateRowStyles: { fillColor: [245, 247, 246] },
+                    columnStyles: { 3: { halign: 'center' }, 4: { halign: 'right' }, 5: { halign: 'right' } }
+                });
+
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    const pageHeight = doc.internal.pageSize.getHeight();
+                    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 10);
+                    const pageText = `Página ${i} de ${pageCount}`;
+                    doc.text(pageText, pageWidth - 14 - doc.getTextWidth(pageText), pageHeight - 10);
+                }
+
+                doc.save(`Relatorio_Abastecimentos_Consolidado_${new Date().toISOString().slice(0, 10)}.pdf`);
+            } catch (err) {
+                console.error('Erro ao exportar PDF consolidado:', err);
+                alert('Erro ao gerar PDF: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        },
+
+        async exportPDFResumoPlaca() {
+            const grupos = this.ordenarGrupos(this.consolidarPorPlaca(this.registrosComVeiculo()), { column: 'valorTotal', direction: 'desc' });
+            if (!grupos.length) return alert('Sem dados para exportar.');
+
+            const btn = this.btnExportarPDF;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'landscape' });
+
+                const logoBase64 = await this.getLogoBase64PDF();
+                if (logoBase64) doc.addImage(logoBase64, 'JPEG', 14, 10, 40, 10);
+
+                const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+                const nomeUsuario = usuarioLogado?.nome || 'Sistema';
+                const totalLitros = grupos.reduce((sum, g) => sum + g.litros, 0);
+                const totalValor = grupos.reduce((sum, g) => sum + g.valorTotal, 0);
+                const totalKmRodado = grupos.reduce((sum, g) => sum + g.kmRodado, 0);
+                const mediaConsumoGeral = totalLitros > 0 ? (totalKmRodado / totalLitros) : 0;
+
+                doc.setFontSize(18);
+                doc.setTextColor(0, 105, 55);
+                doc.text('Relatório de Abastecimento - Resumo Consolidado por Placa', 60, 18);
+                doc.setFontSize(10);
+                doc.setTextColor(40);
+                doc.text(`Gerado por: ${nomeUsuario}`, 14, 29);
+                doc.text(`Placas: ${grupos.length} | Litros: ${totalLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} L | Total: ${this.formatCurrency(totalValor)}`, 14, 34);
+
+                const columns = ['Placa', 'Qtd. Postos/Tanques', 'Qtd. Abastecimentos', 'Litros', 'KM Rodados', 'Média Consumo (KM/L)', 'Valor Total'];
+                const rows = grupos.map(g => [
+                    g.placa,
+                    String(g.qtdPostos),
+                    String(g.qtdAbastecimentos),
+                    g.litros.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+                    g.kmRodado.toLocaleString('pt-BR', { maximumFractionDigits: 0 }),
+                    g.mediaConsumo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                    this.formatCurrency(g.valorTotal)
+                ]);
+                rows.push([
+                    { content: 'TOTAL GERAL', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: '', styles: { fontStyle: 'bold' } },
+                    { content: totalLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: totalKmRodado.toLocaleString('pt-BR', { maximumFractionDigits: 0 }), styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: mediaConsumoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: this.formatCurrency(totalValor), styles: { halign: 'right', fontStyle: 'bold' } }
+                ]);
+
+                doc.autoTable({
+                    head: [columns],
+                    body: rows,
+                    startY: 40,
+                    theme: 'grid',
+                    headStyles: { fillColor: [0, 105, 55], textColor: 255, fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 3 },
+                    alternateRowStyles: { fillColor: [245, 247, 246] },
+                    columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } }
+                });
+
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    const pageHeight = doc.internal.pageSize.getHeight();
+                    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, pageHeight - 10);
+                    const pageText = `Página ${i} de ${pageCount}`;
+                    doc.text(pageText, pageWidth - 14 - doc.getTextWidth(pageText), pageHeight - 10);
+                }
+
+                doc.save(`Relatorio_Abastecimentos_Resumo_Placa_${new Date().toISOString().slice(0, 10)}.pdf`);
+            } catch (err) {
+                console.error('Erro ao exportar PDF resumo por placa:', err);
                 alert('Erro ao gerar PDF: ' + err.message);
             } finally {
                 btn.disabled = false;

@@ -106,12 +106,14 @@
                             <datalist id="listaPostosFiltro"></datalist>
                         </div>
                     </div>
-                </div>
 
-                <div class="form-actions" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
-                    <div class="form-group" style="flex-direction: row; gap: 10px; margin-left: auto;">
-                        <button type="submit" class="btn-glass btn-primary"><i class="fas fa-search"></i> Buscar</button>
-                        <button type="button" id="btnLimparFiltros" class="btn-glass btn-secondary"><i class="fas fa-eraser"></i> Limpar</button>
+                    <!-- Card: Ação -->
+                    <div class="filtro-card">
+                        <h4>Ação</h4>
+                        <div class="form-group" style="flex-direction: row; gap: 10px;">
+                            <button type="submit" class="btn-glass btn-primary" style="flex:1;"><i class="fas fa-search"></i> Buscar</button>
+                            <button type="button" id="btnLimparFiltros" class="btn-glass btn-secondary" style="flex:1;"><i class="fas fa-eraser"></i> Limpar</button>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -159,6 +161,15 @@
 
         <!-- Resultados -->
         <section id="cardResultados" class="glass-panel hidden">
+            <div class="resumo-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:15px;">
+                <h3 style="margin:0;"><i class="fas fa-list"></i> Resultados</h3>
+                <div class="modo-visualizacao-toggle" role="group" aria-label="Modo de visualização">
+                    <button type="button" class="modo-btn active" data-modo="detalhado" id="btnModoDetalhadoAbastecimento">Detalhado</button>
+                    <button type="button" class="modo-btn" data-modo="consolidado" id="btnModoConsolidadoAbastecimento">Consolidado</button>
+                    <button type="button" class="modo-btn" data-modo="resumoPlaca" id="btnModoResumoPlacaAbastecimento">Resumo Consolidado</button>
+                </div>
+            </div>
+
             <div class="resumo-container">
                 <div class="kpi-card">
                     <h3>Total Litros</h3>
@@ -180,7 +191,8 @@
                 <button id="btnFullscreenGrid" class="btn-glass btn-secondary" type="button"><i class="fas fa-expand"></i> FullScreen</button>
             </div>
 
-            <div class="table-responsive">
+            <!-- Modo Detalhado -->
+            <div id="tabelaDetalhadoWrapper" class="table-responsive">
                 <table>
                     <thead>
                         <tr>
@@ -206,6 +218,26 @@
                     <tbody id="tableBodyRelatorio">
                         <!-- Dados aqui -->
                     </tbody>
+                </table>
+            </div>
+
+            <!-- Modo Consolidado (agrupado por Veículo + Tipo de Veículo + Tanque/Posto) -->
+            <div id="tabelaConsolidadoWrapper" class="table-responsive hidden">
+                <table>
+                    <thead>
+                        <tr id="cabecalhoConsolidadoAbastecimento"></tr>
+                    </thead>
+                    <tbody id="tabelaConsolidadoBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Modo Resumo Consolidado (agrupado só por Veículo) -->
+            <div id="tabelaResumoPlacaWrapper" class="table-responsive hidden">
+                <table>
+                    <thead>
+                        <tr id="cabecalhoResumoPlacaAbastecimento"></tr>
+                    </thead>
+                    <tbody id="tabelaResumoPlacaBody"></tbody>
                 </table>
             </div>
         </section>
@@ -249,6 +281,84 @@
                 </div>
             </div>
         </div>
+
+        <!-- Gráficos do modo Consolidado (Rolagem Automática) -->
+        <div id="dashboardConsolidadoAbastecimento" class="glass-panel hidden" style="margin-top: 20px; overflow: hidden;">
+            <div class="panel-header-actions">
+                <h3><i class="fas fa-chart-bar"></i> Gráficos - Consolidado</h3>
+            </div>
+
+            <div class="charts-scroll-container charts-scroll-consolidado" style="overflow-x: auto; white-space: nowrap; padding: 10px 0; scroll-behavior: smooth;">
+                <div style="display: inline-flex; gap: 20px; padding: 0 10px;">
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Top 10 Veículos por Litros</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartConsolidadoVeiculoLitros"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Top 10 Veículos por Valor</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartConsolidadoVeiculoValor"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Top 10 Tanques/Postos por Litros</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartConsolidadoTanquePostoLitros"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Top 10 Tanques/Postos por Valor</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartConsolidadoTanquePostoValor"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Distribuição de Litros por Tipo de Veículo</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartConsolidadoTipoVeiculo"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos do modo Resumo Consolidado (Rolagem Automática) -->
+        <div id="dashboardResumoPlacaAbastecimento" class="glass-panel hidden" style="margin-top: 20px; overflow: hidden;">
+            <div class="panel-header-actions">
+                <h3><i class="fas fa-chart-bar"></i> Gráficos - Resumo Consolidado</h3>
+            </div>
+
+            <div class="charts-scroll-container charts-scroll-resumo-placa" style="overflow-x: auto; white-space: nowrap; padding: 10px 0; scroll-behavior: smooth;">
+                <div style="display: inline-flex; gap: 20px; padding: 0 10px;">
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Top 10 Veículos por Litros</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartResumoPlacaLitros"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Top 10 Veículos por Valor</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartResumoPlacaValor"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Top 10 Veículos por Qtd. Abastecimentos</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartResumoPlacaQtdAbastecimentos"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container-wrapper" style="display: inline-block; min-width: 350px; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                        <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: #006937; border-bottom: 1px solid #eee; padding-bottom: 5px;">Top 10 Veículos por Qtd. Postos/Tanques</h4>
+                        <div style="position: relative; height: 220px; width: 100%;">
+                            <canvas id="chartResumoPlacaQtdPostos"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <div id="modalVisualizarLancamento" class="modal-backdrop hidden">
@@ -272,6 +382,6 @@
     </footer>
     <script type="module" src="./script/auth-guard.js"></script>
     <script type="module" src="script/menu.js"></script>
-    <script type="module" src="script/relatorio-abastecimento.js?v=20260623-1"></script>
+    <script type="module" src="script/relatorio-abastecimento.js?v=20260723-km-rodado"></script>
 </body>
 </html>

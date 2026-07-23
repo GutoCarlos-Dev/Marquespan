@@ -128,6 +128,37 @@ body {
     background-color: #343a40;
 }
 
+.modo-visualizacao-toggle {
+    display: flex;
+    background: #eef1f0;
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+}
+
+.modo-visualizacao-toggle .modo-btn {
+    border: none;
+    background: transparent;
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.modo-visualizacao-toggle .modo-btn:hover {
+    color: var(--primary-color);
+}
+
+.modo-visualizacao-toggle .modo-btn.active {
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
 /* Cards de Resumo */
 .resumo-container {
     display: flex;
