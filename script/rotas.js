@@ -667,16 +667,22 @@ const RotasUI = {
             return;
         }
 
-        const upsertPayload = importedRows.map(row => ({
-            numero: row.ROTA,
-            semana: row.SEMANA,
-            supervisor: row.SUPERVISOR,
-            responsavel: row.RESPONSAVEL || row.RESPONSÁVEL || row.SUPERVISOR || '',
-            cidades: row.CIDADES,
-            dias: row.DIAS,
-            status: row.STATUS || 'ATIVA',
-            filial: row.FILIAL // Novo campo Filial
-        })).filter(r => r.numero); // Garante que a rota tenha um número
+        const upsertPayload = importedRows.map(row => {
+            // Vazio, em branco (só espaços) ou ausente -> ATIVA. Também normaliza a caixa
+            // (ex.: "ativa"/"Inativa" na planilha) para bater com os valores usados no sistema.
+            const statusPlanilha = String(row.STATUS ?? '').trim().toUpperCase();
+
+            return {
+                numero: row.ROTA,
+                semana: row.SEMANA,
+                supervisor: row.SUPERVISOR,
+                responsavel: row.RESPONSAVEL || row.RESPONSÁVEL || row.SUPERVISOR || '',
+                cidades: row.CIDADES,
+                dias: row.DIAS,
+                status: statusPlanilha || 'ATIVA',
+                filial: row.FILIAL // Novo campo Filial
+            };
+        }).filter(r => r.numero); // Garante que a rota tenha um número
 
         if (upsertPayload.length === 0) {
             alert("Nenhuma rota válida encontrada na planilha para importar.");
