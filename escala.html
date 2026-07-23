@@ -77,8 +77,14 @@
             </div>
 
             <div id="escalaAuditInfo" class="escala-audit-info">
-                <i class="fa-solid fa-clock-rotate-left"></i>
-                <span>Nenhuma alteração registrada para a escala aberta.</span>
+                <div class="escala-audit-linha">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span id="escalaAuditAlteracao">Nenhuma alteração registrada para a escala aberta.</span>
+                </div>
+                <div class="escala-audit-linha">
+                    <i class="fa-solid fa-eye"></i>
+                    <span id="escalaAuditAcesso">—</span>
+                </div>
             </div>
 
             <!-- Container das Abas e Tabela (Inicialmente Oculto) -->
@@ -587,7 +593,7 @@
     <!-- Assumindo que os scripts principais são carregados por um loader ou estão no menu -->
     <script type="module" src="script/supabase.js"></script>
     <script type="module" src="script/menu.js?v=20260609-1" defer></script>
-    <script type="module" src="script/escala.js?v=20260721-gerencia-tmg"></script>
+    <script type="module" src="script/escala.js?v=20260723-ultimo-acesso"></script>
     <footer class="footer">
         &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
     </footer>

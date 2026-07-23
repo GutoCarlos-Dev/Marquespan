@@ -153,6 +153,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
+    // Usado por rotinas automáticas de sincronização em segundo plano (reservas automáticas,
+    // normalização de nomes, criação de linhas de planejamento para veículos novos) — essas
+    // gravações são feitas pelo sistema ao carregar a tela, não são uma "alteração" do usuário
+    // que só está visualizando, então não devem contar para "Última alteração".
+    function semAuditoria(payload = {}) {
+        return { ...payload };
+    }
+
     async function verificarPermissaoPaginaEscala() {
         if (nivelUsuarioEscala === 'administrador') return true;
 
@@ -305,8 +313,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function atualizarInfoAuditoria(row = null) {
-        if (!escalaAuditInfo) return;
-        const span = escalaAuditInfo.querySelector('span') || escalaAuditInfo;
+        const span = document.getElementById('escalaAuditAlteracao');
+        if (!span) return;
 
         if (!row?.ultima_alteracao_em) {
             span.textContent = 'Nenhuma alteração registrada para a escala aberta.';
@@ -314,6 +322,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         span.textContent = `Última alteração: ${row.ultima_alteracao_por || 'Sistema'} em ${formatarDataHoraAuditoria(row.ultima_alteracao_em)}`;
+    }
+
+    function atualizarInfoAcesso(row = null) {
+        const span = document.getElementById('escalaAuditAcesso');
+        if (!span) return;
+
+        if (!row?.acessado_em) {
+            span.textContent = 'Nenhum acesso registrado para a escala aberta.';
+            return;
+        }
+
+        span.textContent = `Último acesso: ${row.usuario || 'Sistema'} em ${formatarDataHoraAuditoria(row.acessado_em)}`;
+    }
+
+    // Registra que o usuário atual visualizou esta filial+semana+contexto — não conta como
+    // "alteração", é só um registro de acesso (view). Feito via upsert (uma linha por contexto).
+    async function registrarAcessoEscala(filial, semana, contexto) {
+        if (!filial || !semana || !contexto) return;
+        try {
+            const { error } = await supabaseClient
+                .from('escala_acessos')
+                .upsert({
+                    filial,
+                    semana,
+                    contexto,
+                    usuario: getUsuarioAuditoria(),
+                    acessado_em: new Date().toISOString()
+                }, { onConflict: 'filial,semana,contexto' });
+            if (error) throw error;
+        } catch (err) {
+            console.error('Erro ao registrar acesso da escala:', err);
+        }
+    }
+
+    async function carregarUltimoAcessoEscala(filial, semana, contexto) {
+        if (!filial || !semana || !contexto) {
+            atualizarInfoAcesso(null);
+            return;
+        }
+        try {
+            const { data, error } = await supabaseClient
+                .from('escala_acessos')
+                .select('usuario, acessado_em')
+                .eq('filial', filial)
+                .eq('semana', semana)
+                .eq('contexto', contexto)
+                .maybeSingle();
+            if (error) throw error;
+            atualizarInfoAcesso(data || null);
+        } catch (err) {
+            console.error('Erro ao carregar último acesso da escala:', err);
+            atualizarInfoAcesso(null);
+        }
     }
 
     async function carregarUltimaAuditoriaEscala(contexto = {}) {
@@ -324,8 +385,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isPlanejamento = contexto.planejamento || document.querySelector('.tab-btn.active')?.dataset.tab === 'planejamento';
         if (!semana) {
             atualizarInfoAuditoria(null);
+            atualizarInfoAcesso(null);
             return;
         }
+
+        const filialAcesso = getFilialEscala();
+        const contextoAcesso = isPlanejamento ? 'PLANEJAMENTO' : (dia || '');
+        registrarAcessoEscala(filialAcesso, semana, contextoAcesso);
+        carregarUltimoAcessoEscala(filialAcesso, semana, contextoAcesso);
 
         try {
             let registros = [];
@@ -1804,7 +1871,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (Object.values(restante).every(valor => !cleanImportValue(valor))) {
                 deletes.push(item.id);
             } else {
-                updates.push({ id: item.id, payload: comAuditoria(payload) });
+                updates.push({ id: item.id, payload: semAuditoria(payload) });
             }
         });
 
@@ -1812,7 +1879,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ['motorista', 'auxiliar'].forEach(campo => {
             desejados[campo].forEach((nome, chave) => {
                 if (encontrados[campo].has(chave)) return;
-                inserts.push(comAuditoria({
+                inserts.push(semAuditoria({
                     semana_nome: semana,
                     data_escala: dataISO,
                     filial: getFilialEscala(),
@@ -10511,7 +10578,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updates.push(
                     supabaseClient
                         .from('planejamento_semanal')
-                        .update(comAuditoria(payload))
+                        .update(semAuditoria(payload))
                         .eq('id', row.id)
                 );
             }
@@ -10530,7 +10597,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         listaVeiculos.forEach(veiculo => {
             if (!veiculo.placa_normalizada || placasExistentes.has(veiculo.placa_normalizada)) return;
             placasExistentes.add(veiculo.placa_normalizada);
-            novosRegistros.push(comAuditoria({
+            novosRegistros.push(semAuditoria({
                 semana_nome: semana,
                 filial: getFilialEscala(),
                 placa: veiculo.placa_normalizada,
@@ -10583,6 +10650,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             aplicarModoVisualizacaoEscala();
             await carregarFaltasPlanejamento(semana);
             await carregarReservasPlanejamento(semana);
+            carregarUltimaAuditoriaEscala({ semana, planejamento: true });
         } catch (err) {
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="22" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';

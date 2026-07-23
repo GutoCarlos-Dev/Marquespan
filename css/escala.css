@@ -323,8 +323,8 @@
 
 .escala-audit-info {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    gap: 4px;
     min-height: 36px;
     margin: -8px 0 16px;
     padding: 8px 12px;
@@ -333,6 +333,12 @@
     background: #f8fafc;
     color: #475569;
     font-size: 12px;
+}
+
+.escala-audit-linha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .escala-audit-info i {
