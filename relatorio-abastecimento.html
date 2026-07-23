@@ -182,10 +182,17 @@
                 </div>
             </div>
 
-            <div class="acoes-exportacao">
-                <button id="btnExportarXLS" class="btn-glass btn-success"><i class="fas fa-file-excel"></i> Exportar Excel</button>
-                <button id="btnExportarPDF" class="btn-glass btn-danger"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
-                <button id="btnFullscreenGrid" class="btn-glass btn-secondary" type="button"><i class="fas fa-expand"></i> FullScreen</button>
+            <div class="acoes-exportacao" style="justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <input type="text" id="filtroPlacaLocal" class="glass-input" placeholder="🔍 Buscar por Placa..." style="width: 200px; margin-bottom: 0;">
+                    <input type="text" id="filtroRotaLocal" class="glass-input" placeholder="🔍 Buscar por Rota..." style="width: 200px; margin-bottom: 0;">
+                    <button type="button" id="btnLimparFiltroLocal" class="btn-glass btn-secondary" title="Limpar busca de Placa/Rota"><i class="fas fa-eraser"></i></button>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button id="btnExportarXLS" class="btn-glass btn-success"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                    <button id="btnExportarPDF" class="btn-glass btn-danger"><i class="fas fa-file-pdf"></i> Exportar PDF</button>
+                    <button id="btnFullscreenGrid" class="btn-glass btn-secondary" type="button"><i class="fas fa-expand"></i> FullScreen</button>
+                </div>
             </div>
 
             <!-- Modo Detalhado -->
@@ -379,6 +386,6 @@
     </footer>
     <script type="module" src="./script/auth-guard.js"></script>
     <script type="module" src="script/menu.js"></script>
-    <script type="module" src="script/relatorio-abastecimento.js?v=20260723-busca-em-lotes"></script>
+    <script type="module" src="script/relatorio-abastecimento.js?v=20260723-busca-placa-rota"></script>
 </body>
 </html>

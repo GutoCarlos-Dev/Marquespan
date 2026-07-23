@@ -116,6 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btnExportarXLS = document.getElementById('btnExportarXLS');
             this.btnExportarPDF = document.getElementById('btnExportarPDF');
             this.btnFullscreenGrid = document.getElementById('btnFullscreenGrid');
+            this.filtroPlacaLocal = document.getElementById('filtroPlacaLocal');
+            this.filtroRotaLocal = document.getElementById('filtroRotaLocal');
+            this.btnLimparFiltroLocal = document.getElementById('btnLimparFiltroLocal');
             this.filtroFilialResumoDiesel = document.getElementById('filtroFilialResumoDiesel');
             this.semanaResumoDiesel = document.getElementById('semanaResumoDiesel');
             this.btnGerarResumoDiesel = document.getElementById('btnGerarResumoDiesel');
@@ -152,6 +155,15 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btnModoDetalhadoAbastecimento')?.addEventListener('click', () => this.alternarModoVisualizacao('detalhado'));
             document.getElementById('btnModoConsolidadoAbastecimento')?.addEventListener('click', () => this.alternarModoVisualizacao('consolidado'));
             document.getElementById('btnModoResumoPlacaAbastecimento')?.addEventListener('click', () => this.alternarModoVisualizacao('resumoPlaca'));
+
+            this.filtroPlacaLocal?.addEventListener('input', () => this.renderResultadosAtuais());
+            this.filtroRotaLocal?.addEventListener('input', () => this.renderResultadosAtuais());
+            this.btnLimparFiltroLocal?.addEventListener('click', () => {
+                if (this.filtroPlacaLocal) this.filtroPlacaLocal.value = '';
+                if (this.filtroRotaLocal) this.filtroRotaLocal.value = '';
+                this.renderResultadosAtuais();
+            });
+
             this.filtroFilial?.addEventListener('change', async () => {
                 await Promise.all([
                     this.loadTanques(),
@@ -1870,12 +1882,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        // Filtro local (client-side) por Placa/Rota dentro do grid de Resultados — não refaz a
+        // busca no banco, só filtra o que já foi carregado. Usado nos 3 modos de visualização e
+        // nas exportações, para que reflitam exatamente o que está sendo mostrado na tela.
+        obterDadosFiltradosLocal() {
+            const placa = (this.filtroPlacaLocal?.value || '').trim().toUpperCase();
+            const rota = (this.filtroRotaLocal?.value || '').trim().toUpperCase();
+            if (!placa && !rota) return this.dadosRelatorio;
+
+            return this.dadosRelatorio.filter(reg => {
+                const okPlaca = !placa || String(reg.placa || '').toUpperCase().includes(placa);
+                const okRota = !rota || String(reg.rota || '').toUpperCase().includes(rota);
+                return okPlaca && okRota;
+            });
+        },
+
         renderTable() {
             this.tableBody.innerHTML = '';
             let somaLitros = 0;
             let somaValor = 0;
+            const dados = this.obterDadosFiltradosLocal();
 
-            if (this.dadosRelatorio.length === 0) {
+            if (dados.length === 0) {
                 this.tableBody.innerHTML = '<tr><td colspan="16" style="text-align:center;">Nenhum registro encontrado no período.</td></tr>';
                 this.totalLitrosEl.textContent = '0,00 L';
                 if (this.totalLancamentosEl) this.totalLancamentosEl.textContent = '0';
@@ -1883,7 +1911,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            this.dadosRelatorio.forEach(reg => {
+            dados.forEach(reg => {
                 // Para o totalizador, somamos tudo como valor absoluto de movimentação ou consideramos sinal?
                 // Geralmente relatório de movimentação soma o volume movimentado.
                 // Se for ajuste negativo, ele vem negativo do banco.
@@ -1935,7 +1963,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             this.totalLitrosEl.textContent = somaLitros.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' L';
             if (this.totalLancamentosEl) {
-                this.totalLancamentosEl.textContent = this.dadosRelatorio.length.toLocaleString('pt-BR');
+                this.totalLancamentosEl.textContent = dados.length.toLocaleString('pt-BR');
             }
             this.totalValorEl.textContent = somaValor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
         },
@@ -1991,8 +2019,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Só entram nas visões Consolidado/Resumo Consolidado os lançamentos ligados a um veículo
         // de verdade (Saída Interna ou Externo) — Entradas/Ajustes de tanque não têm placa.
+        // Já respeita o filtro local de Placa/Rota do grid de Resultados.
         registrosComVeiculo() {
-            return this.dadosRelatorio.filter(reg => reg.placa && reg.placa !== '-');
+            return this.obterDadosFiltradosLocal().filter(reg => reg.placa && reg.placa !== '-');
         },
 
         consolidarPorVeiculo(dados) {
@@ -2325,7 +2354,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.modoVisualizacao === 'consolidado') return this.exportXLSConsolidado();
             if (this.modoVisualizacao === 'resumoPlaca') return this.exportXLSResumoPlaca();
 
-            const dadosFormatados = this.dadosRelatorio.map(reg => ({
+            const dadosParaExportar = this.obterDadosFiltradosLocal();
+            if (dadosParaExportar.length === 0) return alert('Sem dados para exportar com o filtro de Placa/Rota atual.');
+
+            const dadosFormatados = dadosParaExportar.map(reg => ({
                 'Data/Hora': new Date(reg.data_hora).toLocaleString('pt-BR'),
                 'Tipo': reg.tipo,
                 'Usuário': reg.usuario || '-',
@@ -2346,8 +2378,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }));
 
             // Calcular totais para adicionar ao final da planilha
-            const totalLitros = this.dadosRelatorio.reduce((sum, reg) => sum + Number(reg.litros), 0);
-            const totalValor = this.dadosRelatorio.reduce((sum, reg) => sum + Number(reg.valor_total), 0);
+            const totalLitros = dadosParaExportar.reduce((sum, reg) => sum + Number(reg.litros), 0);
+            const totalValor = dadosParaExportar.reduce((sum, reg) => sum + Number(reg.valor_total), 0);
 
             dadosFormatados.push({
                 'Data/Hora': 'TOTAIS GERAIS',
@@ -2420,6 +2452,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.modoVisualizacao === 'consolidado') return this.exportPDFConsolidado();
             if (this.modoVisualizacao === 'resumoPlaca') return this.exportPDFResumoPlaca();
 
+            const dadosParaExportar = this.obterDadosFiltradosLocal();
+            if (dadosParaExportar.length === 0) return alert('Sem dados para exportar com o filtro de Placa/Rota atual.');
+
             const btn = this.btnExportarPDF;
             const originalText = btn.innerHTML;
             btn.disabled = true;
@@ -2474,7 +2509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let totalLitros = 0;
                 let totalValor = 0;
 
-                this.dadosRelatorio.forEach(reg => {
+                dadosParaExportar.forEach(reg => {
                     totalLitros += Number(reg.litros);
                     totalValor += Number(reg.valor_total);
 
