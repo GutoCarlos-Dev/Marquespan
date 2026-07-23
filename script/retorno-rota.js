@@ -128,14 +128,28 @@ function canManageGrid() {
 
 function canImportarEscalaOnline() {
     const nivel = getUserLevel();
-    return canManageGrid() || isEncarregadoRetorno() || nivel === 'pr_lider' || nivel === 'mg_lider';
+    return canManageGrid() || isEncarregadoRetorno() || nivel === 'pr_lider' || nivel === 'mg_lider' || nivel === 'ms_lider';
 }
 
-// Libera edição das células, Salvar Tudo e Incluir Dia Seguinte para mg_lider. Excluir linha
-// (botão e flutuante) é liberado à parte por canDelete(). Adicionar Linha/Importar Roteiro e os
-// botões Materiais/Devoluções por linha continuam restritos a canManageGrid().
+// Libera edição das células, Salvar Tudo e Incluir Dia Seguinte para mg_lider e ms_lider.
+// Excluir linha (botão e flutuante) é liberado à parte por canDelete() (também inclui ms_lider).
+// Materiais/Devoluções por linha e Importar Roteiro continuam restritos a canManageGrid().
 function podeEditarRetornoBasico() {
-    return canManageGrid() || getUserLevel() === 'mg_lider';
+    const nivel = getUserLevel();
+    return canManageGrid() || nivel === 'mg_lider' || nivel === 'ms_lider';
+}
+
+// Adicionar Linha (botão e flutuante) também é liberado pra ms_lider, mas sem dar o resto do
+// canManageGrid (Materiais/Devoluções por linha, Importar Roteiro) — por isso é uma checagem
+// separada, e não apenas mais um nível dentro de canManageGrid().
+function podeAdicionarLinha() {
+    return canManageGrid() || getUserLevel() === 'ms_lider';
+}
+
+// Materiais e Produtos (Devoluções) por linha, incluindo o botão de Limpar Lançamento —
+// libera também pra ms_lider (quem edita esses dados também pode limpá-los).
+function podeGerenciarMateriaisProdutos() {
+    return canManageGrid() || getUserLevel() === 'ms_lider';
 }
 
 function isPrEncarregado() {
@@ -143,7 +157,8 @@ function isPrEncarregado() {
 }
 
 function canDelete() {
-    return canManageGrid() || getUserLevel() === 'mg_lider';
+    const nivel = getUserLevel();
+    return canManageGrid() || nivel === 'mg_lider' || nivel === 'ms_lider';
 }
 
 function applyGridPermissionUI() {
@@ -154,14 +169,21 @@ function applyGridPermissionUI() {
         });
     }
 
+    // Adicionar Linha (botao e flutuante) tem checagem propria — libera tambem pra ms_lider,
+    // sem depender do canManageGrid completo (que tambem libera Materiais/Devolucoes/Importar Roteiro).
+    if (!podeAdicionarLinha()) {
+        ['btnAdicionarLinha', 'btnFabAdicionarLinha'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.style.display = 'none';
+        });
+    }
+
     if (canManageGrid()) return;
 
-    ['btnAdicionarLinha', 'btnFabAdicionarLinha', 'btnImportarRoteiro'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) element.style.display = 'none';
-    });
+    const btnImportarRoteiro = document.getElementById('btnImportarRoteiro');
+    if (btnImportarRoteiro) btnImportarRoteiro.style.display = 'none';
 
-    // Excluir (botao e flutuante) usa canDelete(), que tambem inclui mg_lider.
+    // Excluir (botao e flutuante) usa canDelete(), que tambem inclui mg_lider e ms_lider.
     if (!canDelete()) {
         ['btnExcluirSelecionados', 'btnFabExcluirSelecionados'].forEach(id => {
             const element = document.getElementById(id);
@@ -588,7 +610,7 @@ async function importarEscalaOnline() {
 }
 
 function incluirLinhaVazia() {
-    if (!canManageGrid() || isPrEncarregado()) return;
+    if (!podeAdicionarLinha() || isPrEncarregado()) return;
 
     addEmptyRow();
     renderGrid();
@@ -836,7 +858,7 @@ async function handleTableClick(e) {
     const target = e.target.closest('button');
     if (!target) return;
 
-    if (!canManageGrid() && (target.classList.contains('btn-devolucoes') || target.classList.contains('btn-materiais') || target.classList.contains('btn-limpar-linha'))) {
+    if (!podeGerenciarMateriaisProdutos() && (target.classList.contains('btn-devolucoes') || target.classList.contains('btn-materiais') || target.classList.contains('btn-limpar-linha'))) {
         return;
     }
     if (!canDelete() && target.classList.contains('btn-delete-row')) {
@@ -1086,7 +1108,9 @@ function applyRowStyle(trElement, rowData) {
  * Adiciona uma nova linha vazia à grid.
  */
 function addEmptyRow() {
-    if (!canManageGrid()) return;
+    // Chamada tanto por incluirLinhaVazia() (Adicionar Linha) quanto por handlePaste() (colar
+    // dados que ultrapassam as linhas existentes) — libera pra quem pode qualquer uma das duas.
+    if (!podeAdicionarLinha() && !podeEditarRetornoBasico()) return;
 
     const newRow = {};
     COLUMN_MAP.forEach(key => newRow[key] = null);
@@ -1145,12 +1169,12 @@ function renderGrid() {
         return;
     }
 
-    // userCanEdit: campos principais + checkbox de selecao (inclui mg_lider, necessario p/ Incluir Dia Seguinte).
-    // userCanDelete: botao de excluir linha (inclui mg_lider).
-    // userCanManageRows: botoes Materiais/Devolucoes (continua restrito a canManageGrid()).
+    // userCanEdit: campos principais + checkbox de selecao (inclui mg_lider e ms_lider).
+    // userCanDelete: botao de excluir linha (inclui mg_lider e ms_lider).
+    // userCanManageRows: botoes Materiais/Devolucoes (inclui ms_lider).
     const userCanEdit = podeEditarRetornoBasico();
     const userCanDelete = canDelete();
-    const userCanManageRows = canManageGrid();
+    const userCanManageRows = podeGerenciarMateriaisProdutos();
 
     dataToRender.forEach((rowData) => {
         // É crucial pegar o índice original para que a edição e o salvamento funcionem corretamente
@@ -1417,7 +1441,7 @@ function openDevolucoesModal(index) {
  * Salva os dados do modal de devoluções de volta para o `gridData`.
  */
 async function saveDevolucoesData() {
-    if (!canManageGrid()) return;
+    if (!podeGerenciarMateriaisProdutos()) return;
     if (currentRowIndex === null) return;
     const modal = document.getElementById('modalDevolucoes');
 
@@ -1481,7 +1505,7 @@ function openMateriaisModal(index) {
  * Salva os dados do modal de materiais de volta para o `gridData`.
  */
 async function saveMateriaisData() {
-    if (!canManageGrid()) return;
+    if (!podeGerenciarMateriaisProdutos()) return;
     if (currentRowIndex === null) return;
     const modal = document.getElementById('modalMateriais');
     const rowData = gridData[currentRowIndex];
@@ -1646,7 +1670,7 @@ async function saveRow(index) {
  * @param {number} index - O índice da linha em `gridData`.
  */
 async function limparLancamentoLinha(index) {
-    if (!canManageGrid()) return;
+    if (!podeGerenciarMateriaisProdutos()) return;
 
     const rowData = gridData[index];
     if (!rowData) return;
