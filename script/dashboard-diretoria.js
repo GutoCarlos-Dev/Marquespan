@@ -152,7 +152,7 @@ async function carregarFrotaPesada(filial) {
     try {
         let query = supabaseClient.from('veiculos')
             .select('*', { count: 'exact', head: true })
-            .eq('situacao', 'ativo')
+            .in('situacao', ['ativo', 'INTERNADO'])
             .not('tipo', 'in', TIPOS_FROTA_EXCLUIDOS)
             .neq('filial', 'RS');
         if (filial) query = query.eq('filial', filial);
