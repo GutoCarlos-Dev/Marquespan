@@ -938,6 +938,22 @@
     <!-- Cards de exportação -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
 
+      <!-- Relatório Geral (busca direto no Supabase, sem precisar carregar um dia) -->
+      <div class="card" style="margin-bottom:0;overflow:hidden">
+        <div style="height:4px;background:#0369a1"></div>
+        <div style="padding:24px 20px;text-align:center">
+          <div style="width:54px;height:54px;border-radius:14px;background:#e0f2fe;border:2px solid #7dd3fc;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:#0369a1;fill:none;stroke-width:1.8"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Relatório Geral</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px">Busca <strong>todo o histórico direto no Supabase</strong> (fonte oficial) — sem precisar abrir o Histórico e carregar um dia antes. Escolha o período e o tipo de ocorrência na tela seguinte.</div>
+          <button onclick="exportRelatorioGeral()" style="width:100%;padding:10px;border-radius:var(--r);border:none;background:#0369a1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Gerar Relatório
+          </button>
+        </div>
+      </div>
+
       <!-- PDF -->
       <div class="card" style="margin-bottom:0;overflow:hidden">
         <div style="height:4px;background:var(--red)"></div>
@@ -1414,7 +1430,7 @@
 <!-- Bibliotecas Externas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
-<script src="./script/controle-de-jornada.js?v=20260724-fix-filtro-interj"></script>
+<script src="./script/controle-de-jornada.js?v=20260724-relatorio-geral"></script>
 <!-- Expõe o supabaseClient do sistema para os scripts regulares -->
 <script type="module">
   import { supabaseClient } from './script/supabase.js';

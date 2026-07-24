@@ -5962,6 +5962,27 @@ async function buscarAnalisesSupabase(){
   }catch(e){ console.warn('[buscarAnalisesSupabase]', e); return []; }
 }
 
+// Busca TODAS as linhas de TODAS as análises já salvas no Supabase (dias e semanas),
+// paginado em lotes de 1000 (limite padrão do PostgREST) para não truncar silenciosamente
+// o histórico. Usado pelo Relatório Geral — que acessa a nuvem direto, sem precisar
+// carregar um dia específico antes pelo modal Histórico.
+async function buscarTodasLinhasAnaliseSupabase(){
+  const cols = 'id,analise_id,linha_origem,data_ref,placa,cidade,rota,stat,nome,role,colaborador,funcao,saida,entrada,interj,obs,dados_brutos';
+  const PAGE = 1000;
+  let offset = 0;
+  const todas = [];
+  while(true){
+    const resp = await sbFetch(`/rest/v1/analise_linhas?select=${cols}&order=data_ref.asc,linha_origem.asc&limit=${PAGE}&offset=${offset}`);
+    if(!resp.ok) throw new Error(await resp.text());
+    const lote = await resp.json();
+    if(!lote.length) break;
+    todas.push(...lote);
+    if(lote.length < PAGE) break;
+    offset += PAGE;
+  }
+  return todas;
+}
+
 
 function isoDateToBRSafe(iso){
   const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -8344,6 +8365,154 @@ async function exportS4PDF(){
   `;
   printPDF(doc, 'Relatorio_Controle_Jornada');
 }
+
+// ── PDF: Relatório Geral — direto do Supabase (fonte oficial), sem precisar ──
+// carregar um dia específico pelo modal Histórico. Busca TODAS as análises
+// (dias e semanas) já salvas na nuvem e deixa o usuário filtrar por período
+// e tipo de ocorrência na mesma tela usada pelos demais relatórios.
+async function exportRelatorioGeral(){
+  if(!supabaseAvailable()) return alert('Sessão Supabase indisponível. Faça login novamente para acessar os dados da nuvem.');
+
+  let linhas;
+  try{
+    linhas = await buscarTodasLinhasAnaliseSupabase();
+  }catch(e){
+    console.error('[Relatório Geral]', e);
+    return alert('Falha ao buscar os dados da nuvem: ' + (e.message || e));
+  }
+  if(!linhas.length) return alert('Nenhum registro encontrado no Supabase. Salve ao menos um dia/semana antes de gerar este relatório.');
+
+  // Normaliza cada linha salva no mesmo formato usado por s4Rows/checkIssues
+  // (mesma lógica de carregarAnaliseSupabase, só que para todas as análises de uma vez).
+  let rows = linhas.map(l => {
+    const raw = l.dados_brutos && typeof l.dados_brutos === 'object' ? {...l.dados_brutos} : {};
+    return {
+      ...raw,
+      _date: raw._date || isoDateToBRSafe(l.data_ref),
+      placa: raw.placa || l.placa || '',
+      cidade: raw.cidade || l.cidade || '',
+      rota: raw.rota || l.rota || '',
+      stat: raw.stat || l.stat || '',
+      nome: raw.nome || l.nome || l.colaborador || '',
+      role: raw.role || l.role || l.funcao || '',
+      saida: raw.saida || l.saida || '',
+      entrada: raw.entrada || l.entrada || '',
+      interj: raw.interj || l.interj || '',
+      obs: raw.obs || l.obs || '',
+      _analise_id: l.analise_id
+    };
+  });
+
+  // Modal de período — igual ao usado nos demais relatórios (data + tipo de ocorrência).
+  const periodo = await pedirPeriodo('Período do Relatório Geral');
+  if(periodo === null) return;
+  let dados = filterByPeriodo(rows, periodo);
+  if(!dados.length) return alert('Nenhum registro encontrado com esse período/tipo de ocorrência.');
+
+  // Um mesmo dia pode ter sido salvo tanto como snapshot "Dia" quanto dentro de uma
+  // "Semana" — remove duplicatas exatas (mesma placa+nome+data+horários).
+  {
+    const seen = new Set();
+    dados = dados.filter(r => {
+      const k = [r.placa, r.nome, r._date, r.saida, r.entrada, r.interj].join('|');
+      if(seen.has(k)) return false;
+      seen.add(k); return true;
+    });
+  }
+
+  dados.sort((a,b) => {
+    const da = parseDateBR(a._date)?.getTime() || 0;
+    const db = parseDateBR(b._date)?.getTime() || 0;
+    if(da !== db) return da - db;
+    const ra = parseInt(String(a.rota||'').replace(/[^0-9]/g,'')) || 9999;
+    const rb = parseInt(String(b.rota||'').replace(/[^0-9]/g,'')) || 9999;
+    if(ra !== rb) return ra - rb;
+    return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');
+  });
+
+  // Sumário (mesma contagem usada no cabeçalho salvo em analises_jornada)
+  let totalOk=0, totalInf=0, totalSem=0, totalIJ=0;
+  for(const r of dados){
+    const issues = checkIssues(r.saida, r.entrada, r.interj) || [];
+    const real = issues.filter(i => i.type !== 'AUSENCIA_JUSTIFICADA');
+    const sem = issues.some(i => String(i.text||'').toUpperCase() === 'SEM REGISTRO')
+      || isSpec(r.saida) || isSpec(r.entrada) || isSpec(r.interj);
+    if(sem) totalSem++;
+    if(real.length) totalInf++;
+    else if(!sem) totalOk++;
+    if(issues.some(i => i.type === 'IJ_CURTA')) totalIJ++;
+  }
+
+  const logoSrc = (typeof SHARED_LOGO_SRC!=='undefined') ? SHARED_LOGO_SRC : '';
+  const logoHTML = logoSrc
+    ? `<img src="${logoSrc}" style="height:48px;width:auto;object-fit:contain" />`
+    : `<div style="font-weight:800;color:#0B6E46;font-size:22px;letter-spacing:.5px">MARQUE<span style="color:#C5160A">SPAN</span></div>`;
+  const tipoFilterTxt = (periodo.types && periodo.types.length) ? fmtTypeFilters(periodo) : 'TODOS';
+
+  const doc = document.createElement('div');
+  doc.style.cssText = 'padding:24px 28px;font-size:10.5px;font-family:Arial,sans-serif;color:#333;background:#fff';
+  doc.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:3px solid #0B6E46">
+      ${logoHTML}
+      <div style="text-align:right">
+        <div style="font-weight:700;font-size:13px;color:#0B6E46">RELATÓRIO GERAL — HISTÓRICO COMPLETO (SUPABASE)</div>
+        ${fmtPeriodo(periodo) ? `<div style="font-size:11px;font-weight:700;color:#222;margin-top:3px">Período: ${fmtPeriodo(periodo)}</div>` : ''}
+        <div style="font-size:10.5px;color:#444;margin-top:2px">Tipos: <strong>${tipoFilterTxt}</strong></div>
+        <div style="color:#666;font-size:10px;margin-top:3px">Total: ${dados.length} registro(s)</div>
+        <div style="color:#999;font-size:10px;margin-top:2px">Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px;background:#fafafa;border-radius:6px">
+      <div style="padding:8px 12px;background:#fff;border:1px solid #d1d5db;border-left:3px solid #0B6E46;border-radius:5px;min-width:80px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#0B6E46">${totalOk}</div>
+        <div style="font-size:9.5px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">Conformes</div>
+      </div>
+      <div style="padding:8px 12px;background:#fff;border:1px solid #d1d5db;border-left:3px solid #C5160A;border-radius:5px;min-width:80px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#C5160A">${totalInf}</div>
+        <div style="font-size:9.5px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">Com infração</div>
+      </div>
+      <div style="padding:8px 12px;background:#fff;border:1px solid #d1d5db;border-left:3px solid #888;border-radius:5px;min-width:80px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#888">${totalSem}</div>
+        <div style="font-size:9.5px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">Sem registro</div>
+      </div>
+      <div style="padding:8px 12px;background:#fff;border:1px solid #d1d5db;border-left:3px solid #d97706;border-radius:5px;min-width:80px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#d97706">${totalIJ}</div>
+        <div style="font-size:9.5px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">Interjornada &lt;11h</div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-top:6px">
+      <thead><tr style="background:#0B6E46;color:#fff">
+        ${['Data','Placa','Rota','Stat','Colaborador','Função','Saída','Entrada','Interj.','Status']
+          .map(h=>`<th style="border:1px solid #bbb;padding:6px 7px;text-align:left;font-size:10px">${h}</th>`).join('')}
+      </tr></thead>
+      <tbody>${dados.map((r,i) => {
+        const iss = checkIssues(r.saida, r.entrada, r.interj);
+        const st = iss.length ? iss.map(x=>x.text).join(' | ') : 'OK';
+        const stColor = st==='OK' ? '#0B6E46' : (st.includes('SEM REGISTRO') ? '#888' : '#c5160a');
+        return `<tr style="background:${i%2?'#fff':'#f8fdf9'}">
+          <td style="border:1px solid #ddd;padding:5px 7px;white-space:nowrap">${esc(r._date||'-')}</td>
+          <td style="border:1px solid #ddd;padding:5px 7px">${esc(r.placa||'-')}</td>
+          <td style="border:1px solid #ddd;padding:5px 7px">${esc(r.rota||'-')}</td>
+          <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-weight:600">${esc(r.stat||'-')}</td>
+          <td style="border:1px solid #ddd;padding:5px 7px">${esc(r.nome||'-')}</td>
+          <td style="border:1px solid #ddd;padding:5px 7px;font-size:10px">${esc(r.role||'-')}</td>
+          <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-family:monospace">${esc(r.saida||'-')}</td>
+          <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-family:monospace">${esc(r.entrada||'-')}</td>
+          <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-family:monospace;color:${iss.find(x=>x.type==='IJ_CURTA')?'#c5160a':'#333'};font-weight:600">${esc(r.interj||'-')}</td>
+          <td style="border:1px solid #ddd;padding:5px 7px;font-size:9.5px;color:${stColor};font-weight:600">${esc(st)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #ddd;font-size:10px;color:#555">
+      <strong>Fonte:</strong> todas as análises salvas no Supabase (dias e semanas) — não requer carregar um dia específico pelo Histórico.<br>
+      <strong>Legenda:</strong> Saída após 19:20 / Entrada antes 06:45 / Interjornada &lt; 11h (CLT Art. 66) / Sem registro = ponto faltando
+    </div>
+  `;
+  printPDF(doc, 'Relatorio_Geral_Controle_Jornada');
+}
+
 // ── PDF: Relatório de Rotas OK ─────────────────────────────
 async function exportRelatorioRotasOK(){
   if(!s4Rows.length) return alert('Nenhuma análise carregada.');
