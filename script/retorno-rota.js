@@ -339,6 +339,7 @@ function criarHtmlClienteExtra(index, data = {}) {
                     <option value="DEVOLUÇÃO (AVARIA)" ${data.motivo === 'DEVOLUÇÃO (AVARIA)' ? 'selected' : ''}>DEVOLUÇÃO (AVARIA)</option>
                     <option value="DEVOLUÇÃO (PROD. INVERTIDO)" ${data.motivo === 'DEVOLUÇÃO (PROD. INVERTIDO)' ? 'selected' : ''}>DEVOLUÇÃO (PROD. INVERTIDO)</option>
                     <option value="DEVOLUÇÃO (DIVERGENCIA NA NF)" ${data.motivo === 'DEVOLUÇÃO (DIVERGENCIA NA NF)' ? 'selected' : ''}>DEVOLUÇÃO (DIVERGENCIA NA NF)</option>
+                    <option value="DEVOLUÇÃO (S/ RECURSO PIX)" ${data.motivo === 'DEVOLUÇÃO (S/ RECURSO PIX)' ? 'selected' : ''}>DEVOLUÇÃO (S/ RECURSO PIX)</option>
                     <option value="TROCA" ${data.motivo === 'TROCA' ? 'selected' : ''}>TROCA</option>
                     <option value="FALTOU TEMPO HÁBIL" ${data.motivo === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
                     <option value="OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)" ${data.motivo === 'OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)' ? 'selected' : ''}>OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)</option>
@@ -1415,6 +1416,7 @@ function openDevolucoesModal(index) {
                         <option value="DEVOLUÇÃO (AVARIA)" ${rowData[`motivo${i}`] === 'DEVOLUÇÃO (AVARIA)' ? 'selected' : ''}>DEVOLUÇÃO (AVARIA)</option>
                         <option value="DEVOLUÇÃO (PROD. INVERTIDO)" ${rowData[`motivo${i}`] === 'DEVOLUÇÃO (PROD. INVERTIDO)' ? 'selected' : ''}>DEVOLUÇÃO (PROD. INVERTIDO)</option>
                         <option value="DEVOLUÇÃO (DIVERGENCIA NA NF)" ${rowData[`motivo${i}`] === 'DEVOLUÇÃO (DIVERGENCIA NA NF)' ? 'selected' : ''}>DEVOLUÇÃO (DIVERGENCIA NA NF)</option>
+                        <option value="DEVOLUÇÃO (S/ RECURSO PIX)" ${rowData[`motivo${i}`] === 'DEVOLUÇÃO (S/ RECURSO PIX)' ? 'selected' : ''}>DEVOLUÇÃO (S/ RECURSO PIX)</option>
                         <option value="TROCA" ${rowData[`motivo${i}`] === 'TROCA' ? 'selected' : ''}>TROCA</option>
                         <option value="FALTOU TEMPO HÁBIL" ${rowData[`motivo${i}`] === 'FALTOU TEMPO HÁBIL' ? 'selected' : ''}>FALTOU TEMPO HÁBIL</option>
                         <option value="OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)" ${rowData[`motivo${i}`] === 'OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)' ? 'selected' : ''}>OUTROS MOTIVOS ( ESPECIFICAR NO CAMPO OBS)</option>
