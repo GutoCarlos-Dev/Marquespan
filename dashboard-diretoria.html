@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Diretoria - Marquespan</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/monitoramento.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script type="module" src="./script/auth-guard.js"></script>
+  <style>
+    .kpi-subvalue {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #888;
+    }
+    .section-subtitle {
+        margin: 25px 0 10px 0;
+        font-size: 1.05rem;
+        color: #444;
+        font-weight: 700;
+    }
+    .section-subtitle i { color: #006937; margin-right: 6px; }
+    .hidden { display: none !important; }
+  </style>
+  <link rel="icon" href="img/logonavegador.png" type="image/png">
+</head>
+<body>
+  <div class="container">
+    <!-- O menu será injetado aqui pelo menu.js -->
+    <div id="menu-container"></div>
+
+    <div class="main-content">
+      <header class="header glass-header header-flex">
+        <span><i class="fas fa-user-tie"></i> Dashboard Diretoria</span>
+        <div class="header-controls">
+            <span id="last-update" class="last-update-text">Atualizado às: --:--</span>
+            <button id="btn-toggle-sidebar" class="btn-glass btn-blue" title="Ocultar/Mostrar Menu"><i class="fas fa-bars"></i></button>
+        </div>
+      </header>
+
+      <section class="section">
+        <!-- Filtros -->
+        <div class="filter-bar glass-panel" style="display: flex; align-items: flex-end; gap: 15px; padding: 15px; margin-bottom: 20px;">
+            <div class="form-group">
+                <label for="filtroFilial">Filial:</label>
+                <select id="filtroFilial" class="glass-input" disabled>
+                    <option value="">Carregando...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="dataInicial">De:</label>
+                <input type="date" id="dataInicial" class="glass-input">
+            </div>
+            <div class="form-group">
+                <label for="dataFinal">Até:</label>
+                <input type="date" id="dataFinal" class="glass-input">
+            </div>
+            <button id="btn-aplicar-filtro" class="btn-glass btn-blue">Aplicar Filtro</button>
+        </div>
+
+        <!-- KPIs Gerais (respeitam apenas o filtro de Filial) -->
+        <div class="kpi-grid">
+            <div class="kpi-card glass-card red">
+                <div class="kpi-icon"><i class="fas fa-truck-moving"></i></div>
+                <div class="kpi-info">
+                    <h3>Total Frota Pesada</h3>
+                    <p id="kpi-frota-pesada">0</p>
+                </div>
+            </div>
+            <div class="kpi-card glass-card blue">
+                <div class="kpi-icon"><i class="fas fa-route"></i></div>
+                <div class="kpi-info">
+                    <h3>Total de Rotas</h3>
+                    <p id="kpi-total-rotas">0</p>
+                </div>
+            </div>
+            <div class="kpi-card glass-card green">
+                <div class="kpi-icon"><i class="fas fa-users"></i></div>
+                <div class="kpi-info">
+                    <h3>Total de Colaboradores</h3>
+                    <p id="kpi-total-colaboradores">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicadores de Custos (respeitam Filial e Período) -->
+        <h3 class="section-subtitle"><i class="fas fa-dollar-sign"></i> Indicadores de Custos (Período)</h3>
+        <div class="kpi-grid">
+            <div class="kpi-card glass-card orange">
+                <div class="kpi-icon"><i class="fas fa-tools"></i></div>
+                <div class="kpi-info">
+                    <h3>Manutenções</h3>
+                    <p id="kpi-manutencao-valor">R$ 0,00</p>
+                    <span class="kpi-subvalue"><span id="kpi-manutencao-qtd">0</span> lançamentos</span>
+                </div>
+            </div>
+            <div class="kpi-card glass-card yellow">
+                <div class="kpi-icon"><i class="fas fa-gas-pump"></i></div>
+                <div class="kpi-info">
+                    <h3>Abastecimento Interno/Externo</h3>
+                    <p id="kpi-abastecimento-valor">R$ 0,00</p>
+                    <span class="kpi-subvalue"><span id="kpi-abastecimento-qtd">0</span> abastecimentos</span>
+                </div>
+            </div>
+            <div class="kpi-card glass-card brown">
+                <div class="kpi-icon"><i class="fas fa-hotel"></i></div>
+                <div class="kpi-info">
+                    <h3>Hospedagens</h3>
+                    <p id="kpi-hospedagem-valor">R$ 0,00</p>
+                    <span class="kpi-subvalue"><span id="kpi-hospedagem-qtd">0</span> hospedagens</span>
+                </div>
+            </div>
+            <div class="kpi-card glass-card blue1">
+                <div class="kpi-icon"><i class="fas fa-money-check-alt"></i></div>
+                <div class="kpi-info">
+                    <h3>Pedágio</h3>
+                    <p id="kpi-pedagio-valor">R$ 0,00</p>
+                    <span class="kpi-subvalue"><span id="kpi-pedagio-qtd">0</span> passagens (mensalidade incl.)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operacional Logística (respeita Filial e Período) -->
+        <h3 class="section-subtitle"><i class="fas fa-truck-loading"></i> Operacional Logística (Período)</h3>
+        <div class="kpi-grid">
+            <div class="kpi-card glass-card blue">
+                <div class="kpi-icon"><i class="fas fa-shipping-fast"></i></div>
+                <div class="kpi-info">
+                    <h3>Nº de Entregas</h3>
+                    <p id="kpi-entregas-qtd">0</p>
+                </div>
+            </div>
+            <div class="kpi-card glass-card green">
+                <div class="kpi-icon"><i class="fas fa-box"></i></div>
+                <div class="kpi-info">
+                    <h3>Nº Total de Caixas Entregues</h3>
+                    <p id="kpi-caixas-qtd">0</p>
+                </div>
+            </div>
+            <div class="kpi-card glass-card orange">
+                <div class="kpi-icon"><i class="fas fa-weight-hanging"></i></div>
+                <div class="kpi-info">
+                    <h3>Total de Toneladas (Peso da Carga)</h3>
+                    <p id="kpi-toneladas">0</p>
+                </div>
+            </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="./script/menu.js" defer></script>
+  <script type="module" src="script/dashboard-diretoria.js?v=20260724-2"></script>
+  <footer class="footer">
+    &copy; 2025 GTSYSTEM - Marquespan. Todos os direitos reservados.
+  </footer>
+</body>
+</html>
