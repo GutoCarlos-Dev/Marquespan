@@ -20,10 +20,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     aplicarModoAcessoVeiculos();
     await carregarFiliais();
     carregarTipos();
+    carregarSituacoes();
     carregarFabricantes();
     carregarVeiculos();
     setupEventListeners();
     setupMultiselect();
+    setupSituacaoMultiselect();
+    setupFilialMultiselect();
     setupSorting();
 });
 
@@ -300,7 +303,8 @@ function handleTableClick(e) {
 }
 
 async function carregarFiliais() {
-    const select = document.getElementById('campo-filial');
+    const container = document.getElementById('campo-filial-options');
+    const text = document.getElementById('campo-filial-text');
     const selectImport = document.getElementById('importFilial');
     const selectModal = document.getElementById('veiculoFilial');
     const filialUsuario = getFilialUsuarioVeiculos();
@@ -315,9 +319,9 @@ async function carregarFiliais() {
         if (error) throw error;
 
         // Limpa opções exceto a primeira
-        if (select) select.innerHTML = '<option value="">Todas</option>';
         if (selectImport) selectImport.innerHTML = '<option value="">Não alterar / não preencher</option>';
         if (selectModal) selectModal.innerHTML = '<option value="">Selecione</option>';
+        if (container) container.innerHTML = '';
 
         const filiais = restringirFilial
             ? (data || []).filter(f => String(f.sigla || f.nome || '').trim().toUpperCase() === filialUsuario)
@@ -325,24 +329,38 @@ async function carregarFiliais() {
 
         if (filiais.length > 0) {
             filiais.forEach(f => {
-                const option = document.createElement('option');
-                option.value = f.sigla || f.nome;
-                option.textContent = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
+                const value = f.sigla || f.nome;
+                const rotulo = f.sigla ? `${f.nome} (${f.sigla})` : f.nome;
 
-                if (select) select.appendChild(option.cloneNode(true));
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = rotulo;
                 if (selectImport) selectImport.appendChild(option.cloneNode(true));
                 if (selectModal) selectModal.appendChild(option.cloneNode(true));
+
+                if (container) {
+                    const label = document.createElement('label');
+                    label.style.display = 'block';
+                    label.style.padding = '5px';
+                    label.style.cursor = 'pointer';
+                    label.innerHTML = `<input type="checkbox" class="filtro-filial-checkbox" value="${value}"${restringirFilial ? ' checked disabled' : ''}> ${rotulo}`;
+                    container.appendChild(label);
+                }
             });
         }
 
         if (restringirFilial) {
-            [select, selectImport, selectModal].filter(Boolean).forEach(item => {
+            [selectImport, selectModal].filter(Boolean).forEach(item => {
                 if (!Array.from(item.options).some(option => String(option.value).toUpperCase() === filialUsuario)) {
                     item.add(new Option(filialUsuario, filialUsuario));
                 }
                 item.value = filialUsuario;
                 item.disabled = true;
             });
+            // Filtro do grid fica travado na filial do usuário, sem opção de trocar.
+            if (text) text.textContent = filialUsuario;
+            const display = document.getElementById('campo-filial-display');
+            if (display) { display.style.opacity = '0.7'; display.style.cursor = 'not-allowed'; }
         }
     } catch (err) {
         console.error('Erro ao carregar filiais:', err);
@@ -406,6 +424,28 @@ function carregarTipos() {
     }
 }
 
+function carregarSituacoes() {
+    const container = document.getElementById('campo-situacao-options');
+    if (!container) return;
+
+    // Mesmos valores gravados na tabela (veiculoSituacao no modal de cadastro)
+    const situacoes = [
+        { value: 'ativo', label: 'ATIVO' },
+        { value: 'INTERNADO', label: 'INTERNADO' },
+        { value: 'inativo', label: 'INATIVO' }
+    ];
+
+    container.innerHTML = '';
+    situacoes.forEach(sit => {
+        const label = document.createElement('label');
+        label.style.display = 'block';
+        label.style.padding = '5px';
+        label.style.cursor = 'pointer';
+        label.innerHTML = `<input type="checkbox" class="filtro-situacao-checkbox" value="${sit.value}"> ${sit.label}`;
+        container.appendChild(label);
+    });
+}
+
 async function carregarVeiculos() {
     const tbody = document.getElementById('grid-veiculos-body');
     if (!tbody) return;
@@ -413,17 +453,17 @@ async function carregarVeiculos() {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
 
     const filialUsuario = getFilialUsuarioVeiculos();
-    const filial = usuarioRestritoPorFilialVeiculos()
-        ? filialUsuario
-        : document.getElementById('campo-filial').value;
     const placa = document.getElementById('campo-placa').value.trim();
     const modelo = document.getElementById('campo-modelo').value.trim();
-    const situacao = document.getElementById('campo-situacao').value;
     const tipoMotor = document.getElementById('campo-tipo-motor')?.value || '';
     const fabricante = document.getElementById('campo-fabricante')?.value || '';
 
-    // Tipos selecionados
+    // Filiais, Tipos e Situações selecionados (multi-seleção)
+    const filiaisSelecionadas = usuarioRestritoPorFilialVeiculos()
+        ? [filialUsuario]
+        : Array.from(document.querySelectorAll('.filtro-filial-checkbox:checked')).map(cb => cb.value);
     const tiposSelecionados = Array.from(document.querySelectorAll('.filtro-tipo-checkbox:checked')).map(cb => cb.value);
+    const situacoesSelecionadas = Array.from(document.querySelectorAll('.filtro-situacao-checkbox:checked')).map(cb => cb.value);
 
     try {
         let query = supabaseClient
@@ -431,13 +471,13 @@ async function carregarVeiculos() {
             .select('*')
             .order('placa');
 
-        if (filial) query = query.eq('filial', filial);
+        if (filiaisSelecionadas.length > 0) query = query.in('filial', filiaisSelecionadas);
         if (placa) query = query.ilike('placa', `%${placa}%`);
         if (modelo) query = query.ilike('modelo', `%${modelo}%`);
-        if (situacao) query = query.eq('situacao', situacao);
         if (tipoMotor) query = query.eq('tipo_motor', tipoMotor);
         if (fabricante) query = query.eq('fabricante', fabricante);
         if (tiposSelecionados.length > 0) query = query.in('tipo', tiposSelecionados);
+        if (situacoesSelecionadas.length > 0) query = query.in('situacao', situacoesSelecionadas);
 
         const { data, error } = await query;
 
@@ -560,6 +600,93 @@ function updateTipoFilterText(optionsContainer, textElement) {
         textElement.textContent = checked.map(cb => cb.value).join(', ');
     } else {
         textElement.textContent = `${checked.length} selecionados`;
+    }
+}
+
+function setupSituacaoMultiselect() {
+    const display = document.getElementById('campo-situacao-display');
+    const options = document.getElementById('campo-situacao-options');
+    const text = document.getElementById('campo-situacao-text');
+
+    if (!display || !options) return;
+
+    // Toggle Dropdown
+    display.addEventListener('click', (e) => {
+        e.stopPropagation();
+        options.classList.toggle('hidden');
+    });
+
+    // Fechar ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!display.contains(e.target) && !options.contains(e.target)) {
+            options.classList.add('hidden');
+        }
+    });
+
+    // Mesmo padrão do multiselect de Tipo
+    options.addEventListener('change', () => {
+        updateSituacaoFilterText(options, text);
+        carregarVeiculos();
+    });
+}
+
+/**
+ * Atualiza o texto exibido no seletor de Situação baseado nas seleções.
+ * Segue exatamente o mesmo padrão de updateTipoFilterText.
+ */
+function updateSituacaoFilterText(optionsContainer, textElement) {
+    const checked = Array.from(optionsContainer.querySelectorAll('.filtro-situacao-checkbox:checked'));
+    if (checked.length === 0) {
+        textElement.textContent = 'Todas';
+    } else {
+        const labels = { ativo: 'ATIVO', INTERNADO: 'INTERNADO', inativo: 'INATIVO' };
+        textElement.textContent = checked.map(cb => labels[cb.value] || cb.value).join(', ');
+    }
+}
+
+function setupFilialMultiselect() {
+    const display = document.getElementById('campo-filial-display');
+    const options = document.getElementById('campo-filial-options');
+    const text = document.getElementById('campo-filial-text');
+
+    if (!display || !options) return;
+
+    // Usuário restrito por filial: o próprio carregarFiliais() já deixa o
+    // checkbox marcado/disabled e o texto travado — não abrir o dropdown.
+    if (usuarioRestritoPorFilialVeiculos()) return;
+
+    // Toggle Dropdown
+    display.addEventListener('click', (e) => {
+        e.stopPropagation();
+        options.classList.toggle('hidden');
+    });
+
+    // Fechar ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!display.contains(e.target) && !options.contains(e.target)) {
+            options.classList.add('hidden');
+        }
+    });
+
+    // Mesmo padrão do multiselect de Tipo/Situação
+    options.addEventListener('change', () => {
+        updateFilialFilterText(options, text);
+        carregarVeiculos();
+    });
+}
+
+/**
+ * Atualiza o texto exibido no seletor de Filial baseado nas seleções.
+ * Segue exatamente o mesmo padrão de updateTipoFilterText.
+ */
+function updateFilialFilterText(optionsContainer, textElement) {
+    const checked = Array.from(optionsContainer.querySelectorAll('.filtro-filial-checkbox:checked'));
+    if (checked.length === 0) {
+        textElement.textContent = 'Todas';
+    } else if (checked.length <= 2) {
+        textElement.textContent = checked.map(cb => cb.value).join(', ');
+    } else {
+        textElement.textContent = `${checked.length} selecionadas`;
     }
 }
 
