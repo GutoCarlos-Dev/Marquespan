@@ -1902,22 +1902,24 @@ async function exportToPDF(type) {
                         row.rota || '-',
                         row.placa || '-',
                         row.nome_mot || '-',
-                        'DEVOLUÇÃO PÃO',
+                        row[`motivo${i}`] || '-',
                         detalhes,
                         row.nome_supervisor || '-'
                     ]);
                 }
             }
 
-            const extras = getDevolucoesExtras(row);
+            const extrasParsed = parseDevolucoesExtras(row);
+            const extras = extrasParsed.map((item, index) => formatClienteExtra(item, index)).join('\n\n');
             if (extras) {
+                const motivosExtras = [...new Set(extrasParsed.map(item => item.motivo || '-'))].join(', ');
                 tableRows.push([
                     row.created_at ? formatarDataHoraSaoPaulo(row.created_at) : '-',
                     row.operador_recebimento || '-',
                     row.rota || '-',
                     row.placa || '-',
                     row.nome_mot || '-',
-                    'DEVOLUCAO PAO',
+                    motivosExtras || '-',
                     `Clientes adicionais: ${extras}`,
                     row.nome_supervisor || '-'
                 ]);
@@ -1939,7 +1941,7 @@ async function exportToPDF(type) {
 
     doc.autoTable({
         startY: 35,
-        head: [['Lançamento', 'Operador', 'Rota', 'Placa', 'Motorista', 'Tipo Evento', 'Descrição Detalhada para Auditoria', 'Supervisor']],
+        head: [['Lançamento', 'Operador', 'Rota', 'Placa', 'Motorista', 'Retorno', 'Descrição Detalhada para Auditoria', 'Supervisor']],
         body: tableRows,
         theme: 'grid',
         margin: { top: 35 },
