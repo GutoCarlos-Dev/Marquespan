@@ -5576,13 +5576,17 @@ function filterByPeriodo(rows, per){
         if(tFim && t > tFim) return false;
       }
     }
-    // Filtro de tipo de ocorrência
+    // Filtro de tipo de ocorrencia -- usa a mesma deteccao estrutural (checkIssues) do
+    // resto do sistema, em vez de vasculhar o texto livre de r.obs. Esse campo e
+    // digitado a mao na planilha (coluna OBS) e nem sempre menciona a ocorrencia --
+    // por isso infracoes reais de interjornada em registros STAT "P" (pernoite)
+    // ficavam de fora do relatorio assim que o filtro "Interjornada" era marcado.
     if(!noTypes){
-      const o = String(r.obs||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
-      const hasSem    = o.includes('SEM REGISTRO');
-      const hasInterj = o.includes('INTERJORNADA') || o.includes('< 11') || o.includes('<11');
-      const hasTardia = o.includes('SAIDA APOS') || o.includes('APOS 19');
-      const hasPrecoc = o.includes('ENTRADA ANT') || o.includes('ANTES 06');
+      const iss = checkIssues(r.saida, r.entrada, r.interj);
+      const hasSem    = iss.some(i => i.type === 'SEM_SAIDA' || i.type === 'SEM_ENTRADA' || i.type === 'SEM_INTERJ');
+      const hasInterj = iss.some(i => i.type === 'IJ_CURTA');
+      const hasTardia = iss.some(i => i.type === 'SAIDA_TARDIA');
+      const hasPrecoc = iss.some(i => i.type === 'ENTRADA_PRECOCE');
       const matches = (
         (per.types.includes('SEM')     && hasSem)    ||
         (per.types.includes('INTERJ')  && hasInterj) ||
