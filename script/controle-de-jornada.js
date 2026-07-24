@@ -5343,7 +5343,7 @@ function copyWhatsAppText(digits, msg){
 // ═══════════════════════════════════════════════════════
 //  PREVIEW UNIVERSAL — Visualizar antes de imprimir/baixar
 // ═══════════════════════════════════════════════════════
-function showPreview(htmlContent, title, onPrint){
+function showPreview(htmlContent, title, onPrint, onExcel){
   // Remove preview anterior se existir
   document.querySelector('.preview-overlay')?.remove();
 
@@ -5360,6 +5360,7 @@ function showPreview(htmlContent, title, onPrint){
       <span style="font-size:11px;color:#666">Confira o conteúdo antes de imprimir</span>
     </div>
     <div style="display:flex;gap:8px">
+      ${onExcel ? `<button id="btn-prev-excel" style="padding:8px 16px;background:#1F71B8;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">📊 Gerar XLS</button>` : ''}
       <button id="btn-prev-print" style="padding:8px 16px;background:#0B6E46;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨 Imprimir / Salvar PDF</button>
       <button id="btn-prev-close" style="padding:8px 14px;background:#888;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">Fechar</button>
     </div>
@@ -5391,6 +5392,12 @@ function showPreview(htmlContent, title, onPrint){
     iframeWin.focus();
     iframeWin.print();
   };
+  if(onExcel){
+    document.getElementById('btn-prev-excel').onclick = ()=>{
+      try{ onExcel(); }
+      catch(e){ console.error('[showPreview onExcel]', e); alert('Falha ao gerar o XLS: '+(e.message||e)); }
+    };
+  }
   overlay.onclick = (e)=>{ if(e.target===overlay) overlay.remove(); };
 }
 
@@ -7875,10 +7882,10 @@ const assinanteName = lookupNomeCompleto(row.nome || (row.role==='AUXILIAR' ? au
 }
 
 
-function printPDF(element, filename){
+function printPDF(element, filename, onExcel){
   // Agora usa showPreview ao invés de print direto
   const htmlStr = element.outerHTML || element.innerHTML || '';
-  showPreview(htmlStr, filename || 'Relatório');
+  showPreview(htmlStr, filename || 'Relatório', null, onExcel);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -8430,40 +8437,233 @@ async function exportRelatorioGeral(){
     return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');
   });
 
-  // Sumário (mesma contagem usada no cabeçalho salvo em analises_jornada)
-  let totalOk=0, totalInf=0, totalSem=0, totalIJ=0;
-  for(const r of dados){
-    const issues = checkIssues(r.saida, r.entrada, r.interj) || [];
-    const real = issues.filter(i => i.type !== 'AUSENCIA_JUSTIFICADA');
-    const sem = issues.some(i => String(i.text||'').toUpperCase() === 'SEM REGISTRO')
-      || isSpec(r.saida) || isSpec(r.entrada) || isSpec(r.interj);
-    if(sem) totalSem++;
-    if(real.length) totalInf++;
-    else if(!sem) totalOk++;
-    if(issues.some(i => i.type === 'IJ_CURTA')) totalIJ++;
-  }
+  // Tratativas (ações) locais, para casar com cada linha por placa+nome+data —
+  // mesma lógica usada em cfBuildDiaSnapshot/exportS4PDF.
+  const acts = await dbGetAll('actions');
 
-  const logoSrc = (typeof SHARED_LOGO_SRC!=='undefined') ? SHARED_LOGO_SRC : '';
-  const logoHTML = logoSrc
-    ? `<img src="${logoSrc}" style="height:48px;width:auto;object-fit:contain" />`
-    : `<div style="font-weight:800;color:#0B6E46;font-size:22px;letter-spacing:.5px">MARQUE<span style="color:#C5160A">SPAN</span></div>`;
-  const tipoFilterTxt = (periodo.types && periodo.types.length) ? fmtTypeFilters(periodo) : 'TODOS';
+  // Tela interativa: filtros de Stat/Status/Tratativa que atualizam a tabela e
+  // os totais na hora, sem precisar refazer a consulta ao Supabase.
+  abrirRelatorioGeralInterativo(dados, periodo, acts);
+}
 
-  const doc = document.createElement('div');
-  doc.style.cssText = 'padding:24px 28px;font-size:10.5px;font-family:Arial,sans-serif;color:#333;background:#fff';
-  doc.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:3px solid #0B6E46">
-      ${logoHTML}
-      <div style="text-align:right">
-        <div style="font-weight:700;font-size:13px;color:#0B6E46">RELATÓRIO GERAL — HISTÓRICO COMPLETO (SUPABASE)</div>
-        ${fmtPeriodo(periodo) ? `<div style="font-size:11px;font-weight:700;color:#222;margin-top:3px">Período: ${fmtPeriodo(periodo)}</div>` : ''}
-        <div style="font-size:10.5px;color:#444;margin-top:2px">Tipos: <strong>${tipoFilterTxt}</strong></div>
-        <div style="color:#666;font-size:10px;margin-top:3px">Total: ${dados.length} registro(s)</div>
-        <div style="color:#999;font-size:10px;margin-top:2px">Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+// ── Tela interativa do Relatório Geral — filtros de Stat (campo da linha),
+// Status (conformidade calculada por checkIssues) e Tratativa (com/sem ação
+// registrada) que recalculam os cards de totais e a tabela ao vivo. Gerar
+// PDF/XLS sempre usam o subconjunto filtrado no momento do clique.
+function abrirRelatorioGeralInterativo(dadosCompletos, periodo, acts){
+  document.querySelector('.rg-overlay')?.remove();
+
+  const statsUnicos = Array.from(new Set(
+    dadosCompletos.map(r => String(r.stat||'').trim().toUpperCase()).filter(Boolean)
+  )).sort();
+
+  const statusCategoria = (r) => {
+    const iss = checkIssues(r.saida, r.entrada, r.interj) || [];
+    const sem = iss.some(i => i.type==='SEM_SAIDA' || i.type==='SEM_ENTRADA' || i.type==='SEM_INTERJ');
+    if(sem) return 'SEM';
+    if(iss.some(i=>i.type==='IJ_CURTA')) return 'INTERJ';
+    if(iss.some(i=>i.type==='SAIDA_TARDIA')) return 'TARDIA';
+    if(iss.some(i=>i.type==='ENTRADA_PRECOCE')) return 'PRECOCE';
+    return 'OK';
+  };
+
+  // Tratativa da linha, casando por placa+nome e pela data da infração (mesma
+  // regra usada em cfBuildDiaSnapshot/exportS4PDF): sem data_infracao registrada
+  // conta como válida para qualquer data do mesmo colaborador/placa.
+  const getTratativa = (r) => {
+    const doColaborador = (acts||[]).filter(a => a.placa === r.placa && a.nome === r.nome
+      && (!a.data_infracao || cdjDateBRFromAny(a.data_infracao) === r._date));
+    return doColaborador.length ? doColaborador.slice().reverse()[0] : null;
+  };
+
+  const linhaHTML = (r,i) => {
+    const iss = checkIssues(r.saida, r.entrada, r.interj);
+    const st = iss.length ? iss.map(x=>x.text).join(' | ') : 'OK';
+    const stColor = st==='OK' ? '#0B6E46' : (st.includes('SEM REGISTRO') ? '#888' : '#c5160a');
+    const trat = getTratativa(r);
+    const tratTxt = trat ? `${trat.acao}${trat.data_acao ? ' — '+trat.data_acao : ''}` : '—';
+    return `<tr style="background:${i%2?'#fff':'#f8fdf9'}">
+      <td style="border:1px solid #ddd;padding:5px 7px;white-space:nowrap">${esc(r._date||'-')}</td>
+      <td style="border:1px solid #ddd;padding:5px 7px">${esc(r.placa||'-')}</td>
+      <td style="border:1px solid #ddd;padding:5px 7px">${esc(r.rota||'-')}</td>
+      <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-weight:600">${esc(r.stat||'-')}</td>
+      <td style="border:1px solid #ddd;padding:5px 7px">${esc(r.nome||'-')}</td>
+      <td style="border:1px solid #ddd;padding:5px 7px;font-size:10px">${esc(r.role||'-')}</td>
+      <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-family:monospace">${esc(r.saida||'-')}</td>
+      <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-family:monospace">${esc(r.entrada||'-')}</td>
+      <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-family:monospace;color:${iss.find(x=>x.type==='IJ_CURTA')?'#c5160a':'#333'};font-weight:600">${esc(r.interj||'-')}</td>
+      <td style="border:1px solid #ddd;padding:5px 7px;font-size:9.5px;color:${stColor};font-weight:600">${esc(st)}</td>
+      <td style="border:1px solid #ddd;padding:5px 7px;font-size:9.5px;color:${trat?'#0B6E46':'#999'};font-weight:${trat?'600':'400'}">${esc(tratTxt)}</td>
+    </tr>`;
+  };
+
+  const overlay = document.createElement('div');
+  overlay.className = 'rg-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:10002;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:12px;width:100%;max-width:1100px;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden">
+      <div style="padding:16px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:#0B6E46">📋 Relatório Geral — Histórico Completo (Supabase)</div>
+          <div style="font-size:11.5px;color:#666;margin-top:2px">${fmtPeriodo(periodo) ? `Período: ${esc(fmtPeriodo(periodo))} · ` : ''}${dadosCompletos.length} registro(s) no total</div>
+        </div>
+        <button id="rg-close-top" style="border:none;background:#f1f5f9;width:32px;height:32px;border-radius:8px;font-size:18px;line-height:1;color:#64748b;cursor:pointer">×</button>
+      </div>
+
+      <div style="padding:14px 22px;border-bottom:1px solid #eee;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:#fafafa">
+        <div style="position:relative">
+          <label style="font-size:11px;font-weight:700;color:#444;display:block;margin-bottom:4px">STAT</label>
+          <button type="button" id="rg-stat-btn" style="padding:8px 10px;border:1.5px solid #c4d1c4;border-radius:6px;font-size:13px;min-width:170px;background:#fff;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#0f172a;font-family:inherit">
+            <span id="rg-stat-label">Todos</span><span style="font-size:10px;color:#888">▾</span>
+          </button>
+          <div id="rg-stat-panel" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);width:230px;z-index:30;padding:10px">
+            <input type="text" id="rg-stat-busca" placeholder="🔎 Buscar STAT..." style="width:100%;padding:7px 9px;border:1px solid #c4d1c4;border-radius:6px;font-size:12.5px;box-sizing:border-box;font-family:inherit">
+            <div id="rg-stat-opcoes" style="max-height:190px;overflow-y:auto;margin-top:8px;display:flex;flex-direction:column;gap:1px"></div>
+            <div style="display:flex;justify-content:space-between;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid #eee">
+              <button type="button" id="rg-stat-limpar" style="padding:6px 10px;background:#fff;border:1px solid #c4d1c4;border-radius:6px;font-size:11.5px;font-weight:700;color:#64748b;cursor:pointer">Limpar selecionados</button>
+              <button type="button" id="rg-stat-ok" style="padding:6px 14px;background:#0B6E46;border:none;border-radius:6px;font-size:11.5px;font-weight:700;color:#fff;cursor:pointer">OK</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#444;display:block;margin-bottom:4px">STATUS</label>
+          <select id="rg-filtro-status" style="padding:8px 10px;border:1.5px solid #c4d1c4;border-radius:6px;font-size:13px;min-width:190px">
+            <option value="">Todos</option>
+            <option value="OK">OK / Conforme</option>
+            <option value="INTERJ">Interjornada &lt; 11h</option>
+            <option value="SEM">Sem registro</option>
+            <option value="TARDIA">Saída após 19:20</option>
+            <option value="PRECOCE">Entrada antes 06:45</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#444;display:block;margin-bottom:4px">TRATATIVA</label>
+          <select id="rg-filtro-tratativa" style="padding:8px 10px;border:1.5px solid #c4d1c4;border-radius:6px;font-size:13px;min-width:140px">
+            <option value="">Todos</option>
+            <option value="COM">Com tratativa</option>
+            <option value="SEM">Sem tratativa</option>
+          </select>
+        </div>
+        <button id="rg-filtro-limpar" style="padding:8px 12px;background:#fff;border:1.5px solid #c4d1c4;border-radius:6px;font-size:12.5px;font-weight:700;color:#64748b;cursor:pointer">Limpar filtros</button>
+        <div style="flex:1"></div>
+        <div id="rg-total-filtrado" style="font-size:12.5px;font-weight:700;color:#0B6E46"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:14px 22px 0;padding:10px;background:#fafafa;border-radius:6px" id="rg-cards"></div>
+
+      <div style="flex:1;overflow:auto;padding:14px 22px">
+        <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+          <thead><tr style="background:#0B6E46;color:#fff">
+            ${['Data','Placa','Rota','Stat','Colaborador','Função','Saída','Entrada','Interj.','Status','Tratativa']
+              .map(h=>`<th style="border:1px solid #bbb;padding:6px 7px;text-align:left;font-size:10.5px;position:sticky;top:0;background:#0B6E46">${h}</th>`).join('')}
+          </tr></thead>
+          <tbody id="rg-tbody"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid #e5e7eb;background:#fafafa">
+        <button id="rg-close" style="padding:9px 16px;background:#888;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">Fechar</button>
+        <button id="rg-xls" style="padding:9px 16px;background:#1F71B8;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">📊 Gerar XLS</button>
+        <button id="rg-pdf" style="padding:9px 16px;background:#0B6E46;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨 Gerar PDF</button>
       </div>
     </div>
+  `;
+  document.body.appendChild(overlay);
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px;background:#fafafa;border-radius:6px">
+  const selStatus = overlay.querySelector('#rg-filtro-status');
+  const selTratativa = overlay.querySelector('#rg-filtro-tratativa');
+  const cardsEl = overlay.querySelector('#rg-cards');
+  const tbodyEl = overlay.querySelector('#rg-tbody');
+  const totalEl = overlay.querySelector('#rg-total-filtrado');
+
+  // ── Filtro STAT: multi-seleção com busca (checkboxes num painel) ──────────
+  const statSelecionados = new Set();
+  const statBtn = overlay.querySelector('#rg-stat-btn');
+  const statPanel = overlay.querySelector('#rg-stat-panel');
+  const statBusca = overlay.querySelector('#rg-stat-busca');
+  const statOpcoes = overlay.querySelector('#rg-stat-opcoes');
+  const statLabel = overlay.querySelector('#rg-stat-label');
+
+  const updateStatLabel = () => {
+    if(!statSelecionados.size){ statLabel.textContent = 'Todos'; statLabel.style.color = '#0f172a'; return; }
+    statLabel.style.color = '#0B6E46';
+    statLabel.textContent = statSelecionados.size === 1
+      ? [...statSelecionados][0]
+      : `${statSelecionados.size} selecionados`;
+  };
+
+  const renderStatOpcoes = (filtro='') => {
+    const termo = filtro.trim().toUpperCase();
+    const visiveis = statsUnicos.filter(s => !termo || s.includes(termo));
+    statOpcoes.innerHTML = visiveis.length
+      ? visiveis.map(s => `
+        <label style="display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:5px;cursor:pointer;font-size:12.5px">
+          <input type="checkbox" class="rg-stat-cb" value="${esc(s)}" ${statSelecionados.has(s)?'checked':''} style="cursor:pointer;accent-color:#0B6E46">
+          <span>${esc(s)}</span>
+        </label>
+      `).join('')
+      : `<div style="font-size:11.5px;color:#888;padding:6px 2px">Nenhum STAT encontrado.</div>`;
+    statOpcoes.querySelectorAll('.rg-stat-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if(cb.checked) statSelecionados.add(cb.value);
+        else statSelecionados.delete(cb.value);
+        updateStatLabel();
+        render();
+      });
+    });
+  };
+
+  statBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const abrindo = statPanel.style.display === 'none';
+    statPanel.style.display = abrindo ? 'block' : 'none';
+    if(abrindo){ statBusca.value=''; renderStatOpcoes(); statBusca.focus(); }
+  });
+  statPanel.addEventListener('click', (e) => e.stopPropagation());
+  statBusca.addEventListener('input', () => renderStatOpcoes(statBusca.value));
+  overlay.querySelector('#rg-stat-limpar').onclick = () => {
+    statSelecionados.clear();
+    renderStatOpcoes(statBusca.value);
+    updateStatLabel();
+    render();
+  };
+  overlay.querySelector('#rg-stat-ok').onclick = () => { statPanel.style.display = 'none'; };
+
+  const fecharStatPanelSeForaClick = (e) => {
+    if(statPanel.style.display !== 'none' && !statPanel.contains(e.target) && e.target !== statBtn){
+      statPanel.style.display = 'none';
+    }
+  };
+  document.addEventListener('click', fecharStatPanelSeForaClick);
+
+  let filtradosAtual = dadosCompletos;
+
+  const render = () => {
+    const status = selStatus.value;
+    const tratativa = selTratativa.value;
+    filtradosAtual = dadosCompletos.filter(r => {
+      if(statSelecionados.size && !statSelecionados.has(String(r.stat||'').trim().toUpperCase())) return false;
+      if(status && statusCategoria(r) !== status) return false;
+      if(tratativa){
+        const temTratativa = !!getTratativa(r);
+        if(tratativa==='COM' && !temTratativa) return false;
+        if(tratativa==='SEM' && temTratativa) return false;
+      }
+      return true;
+    });
+
+    let totalOk=0, totalInf=0, totalSem=0, totalIJ=0;
+    for(const r of filtradosAtual){
+      const issues = checkIssues(r.saida, r.entrada, r.interj) || [];
+      const real = issues.filter(i => i.type !== 'AUSENCIA_JUSTIFICADA');
+      const sem = issues.some(i => i.type==='SEM_SAIDA' || i.type==='SEM_ENTRADA' || i.type==='SEM_INTERJ');
+      if(sem) totalSem++;
+      if(real.length) totalInf++;
+      else if(!sem) totalOk++;
+      if(issues.some(i => i.type === 'IJ_CURTA')) totalIJ++;
+    }
+
+    cardsEl.innerHTML = `
       <div style="padding:8px 12px;background:#fff;border:1px solid #d1d5db;border-left:3px solid #0B6E46;border-radius:5px;min-width:80px;text-align:center">
         <div style="font-size:18px;font-weight:800;color:#0B6E46">${totalOk}</div>
         <div style="font-size:9.5px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">Conformes</div>
@@ -8480,37 +8680,91 @@ async function exportRelatorioGeral(){
         <div style="font-size:18px;font-weight:800;color:#d97706">${totalIJ}</div>
         <div style="font-size:9.5px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">Interjornada &lt;11h</div>
       </div>
-    </div>
+    `;
 
-    <table style="width:100%;border-collapse:collapse;margin-top:6px">
-      <thead><tr style="background:#0B6E46;color:#fff">
-        ${['Data','Placa','Rota','Stat','Colaborador','Função','Saída','Entrada','Interj.','Status']
-          .map(h=>`<th style="border:1px solid #bbb;padding:6px 7px;text-align:left;font-size:10px">${h}</th>`).join('')}
-      </tr></thead>
-      <tbody>${dados.map((r,i) => {
-        const iss = checkIssues(r.saida, r.entrada, r.interj);
-        const st = iss.length ? iss.map(x=>x.text).join(' | ') : 'OK';
-        const stColor = st==='OK' ? '#0B6E46' : (st.includes('SEM REGISTRO') ? '#888' : '#c5160a');
-        return `<tr style="background:${i%2?'#fff':'#f8fdf9'}">
-          <td style="border:1px solid #ddd;padding:5px 7px;white-space:nowrap">${esc(r._date||'-')}</td>
-          <td style="border:1px solid #ddd;padding:5px 7px">${esc(r.placa||'-')}</td>
-          <td style="border:1px solid #ddd;padding:5px 7px">${esc(r.rota||'-')}</td>
-          <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-weight:600">${esc(r.stat||'-')}</td>
-          <td style="border:1px solid #ddd;padding:5px 7px">${esc(r.nome||'-')}</td>
-          <td style="border:1px solid #ddd;padding:5px 7px;font-size:10px">${esc(r.role||'-')}</td>
-          <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-family:monospace">${esc(r.saida||'-')}</td>
-          <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-family:monospace">${esc(r.entrada||'-')}</td>
-          <td style="border:1px solid #ddd;padding:5px 7px;text-align:center;font-family:monospace;color:${iss.find(x=>x.type==='IJ_CURTA')?'#c5160a':'#333'};font-weight:600">${esc(r.interj||'-')}</td>
-          <td style="border:1px solid #ddd;padding:5px 7px;font-size:9.5px;color:${stColor};font-weight:600">${esc(st)}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>
-    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #ddd;font-size:10px;color:#555">
-      <strong>Fonte:</strong> todas as análises salvas no Supabase (dias e semanas) — não requer carregar um dia específico pelo Histórico.<br>
-      <strong>Legenda:</strong> Saída após 19:20 / Entrada antes 06:45 / Interjornada &lt; 11h (CLT Art. 66) / Sem registro = ponto faltando
-    </div>
-  `;
-  printPDF(doc, 'Relatorio_Geral_Controle_Jornada');
+    totalEl.textContent = `${filtradosAtual.length} de ${dadosCompletos.length} registro(s)`;
+    tbodyEl.innerHTML = filtradosAtual.length
+      ? filtradosAtual.map(linhaHTML).join('')
+      : `<tr><td colspan="11" style="text-align:center;padding:20px;color:#888">Nenhum registro com esses filtros.</td></tr>`;
+  };
+
+  selStatus.addEventListener('change', render);
+  selTratativa.addEventListener('change', render);
+  overlay.querySelector('#rg-filtro-limpar').onclick = () => {
+    statSelecionados.clear();
+    renderStatOpcoes(statBusca.value);
+    updateStatLabel();
+    selStatus.value = ''; selTratativa.value = ''; render();
+  };
+
+  const fechar = () => {
+    document.removeEventListener('click', fecharStatPanelSeForaClick);
+    overlay.remove();
+  };
+  overlay.querySelector('#rg-close').onclick = fechar;
+  overlay.querySelector('#rg-close-top').onclick = fechar;
+  overlay.onclick = (e) => { if(e.target===overlay) fechar(); };
+
+  overlay.querySelector('#rg-xls').onclick = () => {
+    const out = filtradosAtual.map(r => {
+      const iss = checkIssues(r.saida, r.entrada, r.interj);
+      const st = iss.length ? iss.map(x=>x.text).join(' | ') : 'OK';
+      const trat = getTratativa(r);
+      const tratTxt = trat ? `${trat.acao}${trat.data_acao ? ' — '+trat.data_acao : ''}` : '';
+      return {
+        Data: r._date || '', Placa: r.placa || '', Rota: r.rota || '', Stat: r.stat || '',
+        Colaborador: r.nome || '', Função: r.role || '',
+        Saída: r.saida || '', Entrada: r.entrada || '', Interjornada: r.interj || '', Status: st,
+        Tratativa: tratTxt
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(out);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Relatório Geral');
+    XLSX.writeFile(wb, `Relatorio_Geral_Controle_Jornada_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
+  overlay.querySelector('#rg-pdf').onclick = () => {
+    const logoSrc = (typeof SHARED_LOGO_SRC!=='undefined') ? SHARED_LOGO_SRC : '';
+    const logoHTML = logoSrc
+      ? `<img src="${logoSrc}" style="height:48px;width:auto;object-fit:contain" />`
+      : `<div style="font-weight:800;color:#0B6E46;font-size:22px;letter-spacing:.5px">MARQUE<span style="color:#C5160A">SPAN</span></div>`;
+    const tipoFilterTxt = (periodo.types && periodo.types.length) ? fmtTypeFilters(periodo) : 'TODOS';
+    const filtroStatTxt = statSelecionados.size ? `Stat: ${esc([...statSelecionados].join(', '))}` : '';
+    const filtroStatusTxt = selStatus.value ? `Status: ${esc(selStatus.selectedOptions[0].textContent)}` : '';
+    const filtroTratativaTxt = selTratativa.value ? `Tratativa: ${esc(selTratativa.selectedOptions[0].textContent)}` : '';
+
+    const doc = document.createElement('div');
+    doc.style.cssText = 'padding:24px 28px;font-size:10.5px;font-family:Arial,sans-serif;color:#333;background:#fff';
+    doc.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:3px solid #0B6E46">
+        ${logoHTML}
+        <div style="text-align:right">
+          <div style="font-weight:700;font-size:13px;color:#0B6E46">RELATÓRIO GERAL — HISTÓRICO COMPLETO (SUPABASE)</div>
+          ${fmtPeriodo(periodo) ? `<div style="font-size:11px;font-weight:700;color:#222;margin-top:3px">Período: ${fmtPeriodo(periodo)}</div>` : ''}
+          <div style="font-size:10.5px;color:#444;margin-top:2px">Tipos: <strong>${tipoFilterTxt}</strong></div>
+          ${(filtroStatTxt || filtroStatusTxt || filtroTratativaTxt) ? `<div style="font-size:10.5px;color:#0B6E46;margin-top:2px">${[filtroStatTxt,filtroStatusTxt,filtroTratativaTxt].filter(Boolean).join(' · ')}</div>` : ''}
+          <div style="color:#666;font-size:10px;margin-top:3px">Total: ${filtradosAtual.length} registro(s)</div>
+          <div style="color:#999;font-size:10px;margin-top:2px">Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+        </div>
+      </div>
+      ${cardsEl.outerHTML}
+      <table style="width:100%;border-collapse:collapse;margin-top:6px">
+        <thead><tr style="background:#0B6E46;color:#fff">
+          ${['Data','Placa','Rota','Stat','Colaborador','Função','Saída','Entrada','Interj.','Status','Tratativa']
+            .map(h=>`<th style="border:1px solid #bbb;padding:6px 7px;text-align:left;font-size:10px">${h}</th>`).join('')}
+        </tr></thead>
+        <tbody>${tbodyEl.innerHTML}</tbody>
+      </table>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid #ddd;font-size:10px;color:#555">
+        <strong>Fonte:</strong> todas as análises salvas no Supabase (dias e semanas) — não requer carregar um dia específico pelo Histórico.<br>
+        <strong>Legenda:</strong> Saída após 19:20 / Entrada antes 06:45 / Interjornada &lt; 11h (CLT Art. 66) / Sem registro = ponto faltando
+      </div>
+    `;
+    printPDF(doc, 'Relatorio_Geral_Controle_Jornada');
+  };
+
+  render();
 }
 
 // ── PDF: Relatório de Rotas OK ─────────────────────────────
