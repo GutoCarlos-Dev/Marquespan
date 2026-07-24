@@ -6,20 +6,38 @@ const ROTAS_PAGE_ID = 'rotas.html';
 
 class SupabaseService {
   static async list(table, cols='*', opts={}){
-    let q = supabaseClient.from(table).select(cols).order(opts.orderBy||'id',{ascending:!!opts.ascending});
-    if(opts.eq) q = q.eq(opts.eq.field, opts.eq.value);
-    if(Array.isArray(opts.eqList)) {
-      opts.eqList.forEach(filter => {
-        if (filter?.field && filter.value !== undefined && filter.value !== null && filter.value !== '') {
-          q = q.eq(filter.field, filter.value);
-        }
-      });
+    const montarQuery = () => {
+      let q = supabaseClient.from(table).select(cols).order(opts.orderBy||'id',{ascending:!!opts.ascending});
+      if(opts.eq) q = q.eq(opts.eq.field, opts.eq.value);
+      if(Array.isArray(opts.eqList)) {
+        opts.eqList.forEach(filter => {
+          if (filter?.field && filter.value !== undefined && filter.value !== null && filter.value !== '') {
+            q = q.eq(filter.field, filter.value);
+          }
+        });
+      }
+      if(opts.ilike) q = q.ilike(opts.ilike.field, opts.ilike.value);
+      if(opts.or) q = q.or(opts.or);
+      return q;
+    };
+
+    // Busca em lotes de 1000 (limite padrão do Supabase/PostgREST por requisição) — sem
+    // isso, tabelas com mais de 1000 linhas truncavam silenciosamente, e cada filtro
+    // cortava em um ponto diferente do conjunto de dados (ex.: filtrar por Status=ATIVA
+    // trazia MAIS linhas no resumo do que "Todos", pois os dois cortavam em 1000 mas a
+    // partir de recortes distintos da tabela).
+    const TAMANHO_LOTE = 1000;
+    let offset = 0;
+    const todos = [];
+    while (true) {
+      const { data, error } = await montarQuery().range(offset, offset + TAMANHO_LOTE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      todos.push(...data);
+      if (data.length < TAMANHO_LOTE) break;
+      offset += TAMANHO_LOTE;
     }
-    if(opts.ilike) q = q.ilike(opts.ilike.field, opts.ilike.value);
-    if(opts.or) q = q.or(opts.or);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data;
+    return todos;
   }
 
   static async insert(table, payload){
@@ -857,19 +875,24 @@ const RotasUI = {
     renderSummary(rotas) {
         if (!this.rotaSummary) return;
 
-        // O Resumo por Supervisor só considera rotas ATIVAS com supervisor real atribuído —
-        // rotas INATIVAS e rotas cujo campo SUPERVISOR ainda é o placeholder "DISPONIVEL"
-        // continuam aparecendo na grade (conforme o filtro escolhido), mas não entram nessa
-        // contagem. Sem status definido, trata como ATIVA (mesma regra usada na importação).
-        const rotasAtivas = rotas.filter(rota => {
+        // O Resumo por Supervisor ignora sempre o placeholder "DISPONIVEL" (rota sem
+        // supervisor real atribuído). Quanto ao Status: por padrão (filtro "Todos" ou
+        // "ATIVA") só conta rotas ATIVAS, para refletir a operação em andamento — mas se
+        // o usuário filtrar explicitamente por "INATIVA" na grade, o resumo passa a somar
+        // as INATIVAS, senão ficaria sempre zerado nesse filtro (a grade mostra só
+        // inativas, e todas seriam descartadas da contagem). Sem status definido no
+        // registro, trata como ATIVA (mesma regra usada na importação).
+        const statusFiltro = String(this.filtroGridStatus?.value || '').toUpperCase();
+        const rotasParaResumo = rotas.filter(rota => {
             const status = String(rota.status || 'ATIVA').toUpperCase();
             const supervisor = String(rota.supervisor || '').trim().toUpperCase();
-            return status !== 'INATIVA' && supervisor !== 'DISPONIVEL';
+            if (supervisor === 'DISPONIVEL') return false;
+            return statusFiltro === 'INATIVA' ? status === 'INATIVA' : status !== 'INATIVA';
         });
 
         const summaryData = {};
 
-        rotasAtivas.forEach(rota => {
+        rotasParaResumo.forEach(rota => {
             // .trim() aqui é necessário: alguns registros têm o nome do supervisor salvo com
             // espaços extras (" ALEX FURTADO "), o que fazia esse nome virar uma linha duplicada
             // (não somada com a versão sem espaço) e ainda quebrava a ordenação alfabética.
@@ -897,7 +920,7 @@ const RotasUI = {
 
         // --- Cálculos para o totalizador ---
         const totalSupervisores = linhas.length;
-        const totalRotas = rotasAtivas.length; // Mais simples que somar, é só pegar o total de rotas ativas
+        const totalRotas = rotasParaResumo.length; // Mais simples que somar, é só pegar o total já filtrado
         const totalGeralDias = linhas.reduce((sum, linha) => sum + linha.totalDias, 0);
 
         const colunasResumo = [
